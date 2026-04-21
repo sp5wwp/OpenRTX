@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <errno.h>
 #include <stdlib.h>
 #include <pthread.h>
 #include "core/state.h"
@@ -17,6 +18,11 @@ Uint32 SDL_Backlight_Event;  // Shared custom SDL event to change backlight
 static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *displayTexture;
+
+// Id and outcome of the last synchronous screenshot request served, written by
+// the SDL thread and read by the thread waiting for it
+static _Atomic int32_t screenshotDoneId;
+static _Atomic int screenshotResult;
 
 static bool ready = false;  // Signal if the main loop is ready
 static keyboard_t sdl_keys; // Store the keyboard status
@@ -316,8 +322,14 @@ void sdlEngine_run()
 
             if (ev.type == SDL_Screenshot_Event) {
                 char *filename = (char *)ev.user.data1;
-                screenshot_display(filename);
+                int err = screenshot_display(filename);
                 free(ev.user.data1);
+
+                // A synchronous request is waiting for its outcome
+                if (ev.user.code != 0) {
+                    screenshotResult = (err == 0) ? 0 : -EIO;
+                    screenshotDoneId = ev.user.code;
+                }
             } else if (ev.type == SDL_Backlight_Event) {
                 set_brightness(*((uint8_t *)ev.user.data1));
                 free(ev.user.data1);
@@ -349,6 +361,24 @@ void sdlEngine_run()
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
+}
+
+int sdlEngine_waitScreenshot(int32_t id, uint32_t timeout)
+{
+    /*
+     * Poll instead of waiting on a semaphore with a timeout: such waits have
+     * a wall clock deadline, which expires early when the emulator runs with
+     * the wall clock frozen, for example under faketime.
+     */
+    for (uint32_t waited = 0; waited < timeout; waited++) {
+        if (screenshotDoneId == id) {
+            return screenshotResult;
+        }
+
+        SDL_Delay(1);
+    }
+
+    return -ETIMEDOUT;
 }
 
 bool sdlEngine_ready()

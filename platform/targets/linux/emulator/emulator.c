@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <errno.h>
 #include <pthread.h>
 #include <unistd.h>
 #include <stdio.h>
@@ -45,6 +46,9 @@ enum shell_retvals {
     SH_WHAT = 1,
     SH_EXIT_OK = 2,
 };
+
+// Number of synchronous screenshots requested so far, used as request id
+static int32_t screenshotRequests;
 
 static keyboard_t _shellkeyq[25] = { 0 };
 static int _skq_cap = 25;
@@ -222,13 +226,19 @@ static int pressMultiKeys(void *_self, int _argc, char **_argv)
 //     return SH_CONTINUE; // continue
 // }
 
-static int screenshot(void *_self, int _argc, char **_argv)
+/*
+ * How long screenshot_sync waits for the SDL thread to write the file. It is
+ * generous because the SDL thread may be busy rendering when the request is
+ * queued.
+ */
+#define SCREENSHOT_SYNC_TIMEOUT_MS 5000
+
+static int queueScreenshot(int argc, char **argv, bool sync)
 {
-    (void)_self;
     char *filename = "screenshot.bmp";
 
-    if (_argc && _argv[0] != NULL) {
-        filename = _argv[0];
+    if (argc && argv[0] != NULL) {
+        filename = argv[0];
     }
 
     int len = strlen(filename);
@@ -236,11 +246,41 @@ static int screenshot(void *_self, int _argc, char **_argv)
     SDL_Event e;
     SDL_zero(e);
     e.type = SDL_Screenshot_Event;
+    e.user.code = sync ? ++screenshotRequests : 0; // Nonzero: report back
     e.user.data1 = malloc(len + 1);
     memset(e.user.data1, 0, len + 1);
     strcpy(e.user.data1, filename);
 
-    return SDL_PushEvent(&e) == 1 ? SH_CONTINUE : SH_ERR;
+    if (SDL_PushEvent(&e) != 1) {
+        free(e.user.data1);
+        return SH_ERR;
+    }
+
+    if (!sync) {
+        return SH_CONTINUE;
+    }
+
+    int err = sdlEngine_waitScreenshot(e.user.code, SCREENSHOT_SYNC_TIMEOUT_MS);
+    if (err == -ETIMEDOUT) {
+        printf("screenshot_sync: timed out after %d ms waiting for %s\n",
+               SCREENSHOT_SYNC_TIMEOUT_MS, filename);
+    } else if (err < 0) {
+        printf("screenshot_sync: could not save %s\n", filename);
+    }
+
+    return (err == 0) ? SH_CONTINUE : SH_ERR;
+}
+
+static int screenshot(void *_self, int _argc, char **_argv)
+{
+    (void)_self;
+    return queueScreenshot(_argc, _argv, false);
+}
+
+static int screenshot_sync(void *_self, int _argc, char **_argv)
+{
+    (void)_self;
+    return queueScreenshot(_argc, _argv, true);
 }
 
 static int setFloat(void *_self, int _argc, char **_argv)
@@ -335,6 +375,9 @@ static _climenu_option _options[] = {
     {"show",     "Show current radio state (ptt, rssi, etc)", NULL, printState},
     {"screenshot", "[screenshot.bmp] Save screenshot to first arg or screenshot.bmp if none given",
                                 NULL,   screenshot
+    },
+    {"screenshot_sync", "[screenshot.bmp] Like screenshot, but return only once the file is written",
+                                NULL,   screenshot_sync
     },
     {"sleep",   "Wait some number of ms",           NULL,   shell_sleep },
     {"help",    "Print this help",                  NULL,   shell_help },

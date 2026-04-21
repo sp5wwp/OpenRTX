@@ -10,6 +10,7 @@
 #include "interfaces/keyboard.h"
 #include "SDL2/SDL.h"
 #include <stdbool.h>
+#include <stdint.h>
 #include "core/chan.h"
 
 /*
@@ -41,6 +42,17 @@ void sdlEngine_init();
  * SDL main loop. Must be called in the Main Thread.
  */
 void sdlEngine_run();
+
+/**
+ * Wait until the SDL main loop has served a screenshot request.
+ *
+ * @param id: nonzero id of the request, sent as the user code of its
+ * SDL_Screenshot_Event. Each request needs an id of its own.
+ * @param timeout: maximum time to wait, in milliseconds.
+ * @return zero if the screenshot was saved, -EIO if saving it failed and
+ * -ETIMEDOUT on timeout.
+ */
+int sdlEngine_waitScreenshot(int32_t id, uint32_t timeout);
 
 /**
  * Thread-safe check to verify if the application entered the SDL main loop.
