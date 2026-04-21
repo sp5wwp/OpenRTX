@@ -153,14 +153,17 @@ xpowerslib_proj = subproject('XPowersLib')
 subdir('lib/miosix-kernel')
 
 ##
-## Current git commit or tag
+## Current git commit or tag, unless a fixed one is given for test builds
 ##
-r = run_command('git', 'describe', '--tags', '--dirty', '--always')
-if r.returncode() != 0
-  # it failed
+git_version = get_option('test_version')
+if git_version == ''
+  r = run_command('git', 'describe', '--tags', '--dirty', '--always')
+  if r.returncode() != 0
+    # it failed
+  endif
+  git_version = r.stdout().strip()
 endif
-git_version  = '"'+r.stdout().strip()+'"'
-openrtx_def += {'GIT_VERSION': git_version}
+openrtx_def += {'GIT_VERSION': '"'+git_version+'"'}
 
 ##
 ## --------------------- Family-dependent source files -------------------------

@@ -1,3 +1,4 @@
 option('asan', type : 'boolean', value : false, description : 'Compile the software with AddressSanitizer')
 option('ubsan', type : 'boolean', value : false, description : 'Compile the software with Undefined Behaviour Sanitizer')
 option('test', type: 'string', description: 'Replace the main OpenRTX source file with a specialized test')
+option('test_version', type : 'string', value : '', description : 'Version string shown instead of the git revision, for reproducible test builds')
