@@ -24,6 +24,16 @@ static SDL_Texture *displayTexture;
 static _Atomic int32_t screenshotDoneId;
 static _Atomic int screenshotResult;
 
+// Hash of the last frame received from the display driver and number of frames
+// received so far, both protected by frameLock
+static SDL_mutex *frameLock;
+static uint64_t frameHash;
+static uint32_t frameCount;
+
+// Parameters of the 64-bit FNV-1a hash
+#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
+#define FNV_PRIME 0x100000001b3ULL
+
 static bool ready = false;  // Signal if the main loop is ready
 static keyboard_t sdl_keys; // Store the keyboard status
 
@@ -233,6 +243,31 @@ cleanup:
     return err;
 }
 
+/**
+ * \internal
+ * Compute the 64-bit FNV-1a hash of a frame in the display texture.
+ *
+ * @param pixels: frame data, as returned by SDL_LockTexture().
+ * @param pitch: length of a texture row in bytes, padding included.
+ * @return the hash of the visible part of the frame.
+ */
+static uint64_t hashFrame(const uint8_t *pixels, int pitch)
+{
+    const size_t rowSize = CONFIG_SCREEN_WIDTH * sizeof(PIXEL_SIZE);
+    uint64_t hash = FNV_OFFSET_BASIS;
+
+    for (size_t y = 0; y < CONFIG_SCREEN_HEIGHT; y++) {
+        const uint8_t *row = pixels + (y * pitch);
+
+        for (size_t i = 0; i < rowSize; i++) {
+            hash ^= row[i];
+            hash *= FNV_PRIME;
+        }
+    }
+
+    return hash;
+}
+
 static bool set_brightness(uint8_t brightness)
 {
     /*
@@ -270,6 +305,13 @@ void sdlEngine_init()
     // Register SDL custom events to handle screenshot requests and backlight
     SDL_Screenshot_Event = SDL_RegisterEvents(2);
     SDL_Backlight_Event = SDL_Screenshot_Event + 1;
+
+    // Never destroyed: other threads may still use it while the process ends
+    frameLock = SDL_CreateMutex();
+    if (frameLock == NULL) {
+        printf("SDL mutex creation error: %s\n", SDL_GetError());
+        exit(1);
+    }
 
     chan_init(&fb_sync);
 
@@ -349,6 +391,12 @@ void sdlEngine_run()
             chan_send(&fb_sync, pixels);
             chan_recv(&fb_sync, NULL);
 
+            uint64_t hash = hashFrame((const uint8_t *)pixels, pitch);
+            SDL_LockMutex(frameLock);
+            frameHash = hash;
+            frameCount++;
+            SDL_UnlockMutex(frameLock);
+
             SDL_UnlockTexture(displayTexture);
             SDL_RenderCopy(renderer, displayTexture, NULL, NULL);
             SDL_RenderPresent(renderer);
@@ -379,6 +427,16 @@ int sdlEngine_waitScreenshot(int32_t id, uint32_t timeout)
     }
 
     return -ETIMEDOUT;
+}
+
+uint64_t sdlEngine_getFrameHash(uint32_t *count)
+{
+    SDL_LockMutex(frameLock);
+    uint64_t hash = frameHash;
+    *count = frameCount;
+    SDL_UnlockMutex(frameLock);
+
+    return hash;
 }
 
 bool sdlEngine_ready()

@@ -55,6 +55,16 @@ void sdlEngine_run();
 int sdlEngine_waitScreenshot(int32_t id, uint32_t timeout);
 
 /**
+ * Thread-safe function returning a hash of the last frame received from the
+ * display driver, used to tell when the screen content has settled.
+ *
+ * @param count: filled with the number of frames received so far, so that the
+ * caller can tell a new frame from the previous one.
+ * @return the 64-bit FNV-1a hash of the last frame.
+ */
+uint64_t sdlEngine_getFrameHash(uint32_t *count);
+
+/**
  * Thread-safe check to verify if the application entered the SDL main loop.
  *
  * @return true after sdl_task() started.

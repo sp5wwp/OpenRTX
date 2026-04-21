@@ -50,6 +50,10 @@ enum shell_retvals {
 // Number of synchronous screenshots requested so far, used as request id
 static int32_t screenshotRequests;
 
+// Calls to emulator_getKeys(), which the UI makes once per iteration of its
+// main loop
+static _Atomic uint32_t uiLoops;
+
 static keyboard_t _shellkeyq[25] = { 0 };
 static int _skq_cap = 25;
 static int _skq_head;
@@ -321,6 +325,85 @@ static int shell_sleep(void *_self, int _argc, char **_argv)
     return SH_CONTINUE;
 }
 
+/*
+ * Default arguments of wait_stable: give up after 5s unless three consecutive
+ * frames are identical, checking every 10ms. A UI that redraws only when
+ * something changes stops sending frames once it has settled, so half a second
+ * without a new frame counts as stable too.
+ */
+#define WAIT_STABLE_TIMEOUT_MS 5000
+#define WAIT_STABLE_FRAMES 3
+#define WAIT_STABLE_POLL_MS 10
+#define WAIT_STABLE_QUIET_MS 500
+
+/*
+ * The UI handles one event per iteration of its main loop, so a key press is
+ * queued behind any pending status update and can take effect some loops
+ * after it was read, while frames identical to the previous screen keep
+ * coming. The event queue of the UI holds 16 events, so after 16 loops all
+ * the events queued before then have been handled.
+ */
+#define WAIT_STABLE_UI_LOOPS 16
+
+static int shell_waitStable(void *_self, int _argc, char **_argv)
+{
+    (void)_self;
+
+    uint32_t timeout = WAIT_STABLE_TIMEOUT_MS;
+    uint32_t frames = WAIT_STABLE_FRAMES;
+
+    // An argument that is missing or not a positive number keeps the default
+    if ((_argc >= 1) && (_argv[0] != NULL)) {
+        int value = atoi(_argv[0]);
+        if (value > 0) {
+            timeout = value;
+        }
+    }
+
+    if ((_argc >= 2) && (_argv[1] != NULL)) {
+        int value = atoi(_argv[1]);
+        if (value > 0) {
+            frames = value;
+        }
+    }
+
+    // Only frames rendered and UI loops run from now on count
+    uint32_t startLoop = uiLoops;
+    uint32_t lastCount;
+    uint64_t lastHash = sdlEngine_getFrameHash(&lastCount);
+    uint32_t identical = 0;
+    uint32_t quiet = 0; // Time since the last new frame, in ms
+
+    for (uint32_t waited = 0; waited < timeout; waited += WAIT_STABLE_POLL_MS) {
+        usleep(WAIT_STABLE_POLL_MS * 1000);
+
+        uint32_t count;
+        uint64_t hash = sdlEngine_getFrameHash(&count);
+        if (count != lastCount) {
+            if ((identical > 0) && (hash == lastHash)) {
+                identical++;
+            } else {
+                identical = 1;
+            }
+
+            lastCount = count;
+            lastHash = hash;
+            quiet = 0;
+        } else {
+            quiet += WAIT_STABLE_POLL_MS;
+        }
+
+        bool settled = (identical >= frames) || (quiet >= WAIT_STABLE_QUIET_MS);
+        uint32_t loops = uiLoops - startLoop;
+        if ((loops >= WAIT_STABLE_UI_LOOPS) && settled) {
+            return SH_CONTINUE;
+        }
+    }
+
+    printf("wait_stable: screen not stable after %u ms\n", timeout);
+    return SH_ERR;
+}
+
 static int shell_quit(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -380,6 +463,9 @@ static _climenu_option _options[] = {
                                 NULL,   screenshot_sync
     },
     {"sleep",   "Wait some number of ms",           NULL,   shell_sleep },
+    {"wait_stable", "[timeout_ms=5000] [frames=3] Wait until the UI has handled all input and the screen stopped changing (that many identical frames, or none for 500 ms)",
+                                NULL,   shell_waitStable
+    },
     {"help",    "Print this help",                  NULL,   shell_help },
     {"nop",     "Do nothing (useful for comments)", NULL,   shell_nop},
     {"quit",    "Quit, close the emulator",         NULL,   shell_quit },
@@ -547,6 +633,9 @@ void emulator_start()
 
 keyboard_t emulator_getKeys()
 {
+    // The UI thread calls this once per iteration of its main loop
+    uiLoops++;
+
     if (_skq_in > _skq_out) {
         //only if we've fallen behind and there's data in there:
         keyboard_t out = _shellkeyq[_skq_head];
