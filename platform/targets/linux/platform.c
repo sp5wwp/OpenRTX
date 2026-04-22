@@ -8,6 +8,7 @@
 #include "interfaces/platform.h"
 #include "interfaces/nvmem.h"
 #include <stdio.h>
+#include <unistd.h>
 #include "core/gps.h"
 #include "emulator.h"
 #include "toneGenerator_sdl.h"
@@ -40,7 +41,17 @@ void platform_init()
 void platform_terminate()
 {
     printf("Platform terminate\n");
-    exit(0);
+
+    /*
+     * On the radios this function cuts the power and never returns: end the
+     * process right away in the same way. exit() would instead run the exit
+     * handlers and the C++ static destructors while the UI and rtx threads,
+     * which are not joined before getting here, may still be using the
+     * objects being destroyed. Settings have already been saved at this
+     * point, so there is nothing left to do.
+     */
+    fflush(NULL);
+    _exit(0);
 }
 
 // Simulate a fully charged lithium battery
