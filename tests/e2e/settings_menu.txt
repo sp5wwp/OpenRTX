@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+wait_stable 5000 3
+# Menu > Settings
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync settings_top.bmp
+# Scroll down to M17
+key DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync settings_scrolled.bmp
+quit

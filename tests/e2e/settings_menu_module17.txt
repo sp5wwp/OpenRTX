@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+wait_stable 5000 3
+# Menu > Settings
+key ENTER
+wait_stable
+key ENTER
+wait_stable
+screenshot_sync settings_top.bmp
+key DOWN DOWN DOWN
+wait_stable
+screenshot_sync settings_scrolled.bmp
+quit

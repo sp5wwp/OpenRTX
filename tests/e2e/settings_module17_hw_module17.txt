@@ -1,0 +1,18 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+wait_stable 5000 3
+# Menu > Settings > Module 17: mic gain, PTT in and out, TX phase
+key ENTER
+wait_stable
+key ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+screenshot_sync module17_hw_top.bmp
+# Scroll down: RX phase, TX and RX softpots
+key DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync module17_hw_scrolled.bmp
+quit
