@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Main screen after boot. The Module17 emulator boots in FM mode, where its
+# main screen shows only the callsign.
+wait_stable 5000 3
+screenshot_sync vfo.bmp
+quit
