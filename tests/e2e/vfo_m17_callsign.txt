@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+wait_stable 5000 3
+# Switch from FM to M17 with MONI+5
+keycombo MONI 5
+wait_stable
+screenshot_sync vfo_m17_mode.bmp
+# Edit the M17 destination with #
+key HASH
+wait_stable
+screenshot_sync vfo_callsign_edit_empty.bmp
+# Type "A"
+key 2
+wait_stable
+screenshot_sync vfo_callsign_edit_typing.bmp
+key ENTER
+wait_stable
+screenshot_sync vfo_callsign_confirmed.bmp
+quit

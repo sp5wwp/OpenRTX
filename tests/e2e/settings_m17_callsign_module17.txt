@@ -1,0 +1,25 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+wait_stable 5000 3
+# Menu > Settings > M17
+key ENTER
+wait_stable
+key ENTER
+wait_stable
+key DOWN ENTER
+wait_stable
+screenshot_sync m17_settings.bmp
+# Edit the callsign, which is selected
+key ENTER
+wait_stable
+screenshot_sync callsign_edit_empty.bmp
+# Type a character: UP cycles through the symbols
+key UP
+wait_stable
+screenshot_sync callsign_edit_typing.bmp
+key ENTER
+wait_stable
+screenshot_sync callsign_confirmed.bmp
+quit
