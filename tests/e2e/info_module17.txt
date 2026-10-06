@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+wait_stable 5000 3
+# Menu > Info: version, heap, hardware version, HMI, tuning pot
+key ENTER
+wait_stable
+key DOWN ENTER
+wait_stable
+screenshot_sync info_top.bmp
+key DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync info_scrolled.bmp
+quit

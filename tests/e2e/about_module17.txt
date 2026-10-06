@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+wait_stable 5000 3
+# Menu > About
+key ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+screenshot_sync about_top.bmp
+# Scroll to the bottom of the author list
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync about_bottom.bmp
+quit

@@ -1,0 +1,17 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+wait_stable 5000 3
+# Menu > Info: version, battery voltage and charge, RSSI
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync info_top.bmp
+# Scroll down: heap, bands, hardware version
+key DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync info_scrolled.bmp
+quit
