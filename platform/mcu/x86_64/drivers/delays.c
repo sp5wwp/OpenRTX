@@ -5,7 +5,7 @@
  */
 
 #include "interfaces/delays.h"
-#include <sys/time.h>
+#include <time.h>
 #include <unistd.h>
 #include <stdio.h>
 
@@ -40,11 +40,13 @@ long long getTick()
 {
     /*
      * Return current time in milliseconds, consistently with the miosix kernel
-     * having a tick rate of 1kHz.
+     * having a tick rate of 1kHz. Like the kernel tick, it comes from a
+     * monotonic clock so that it keeps counting steadily when the wall clock
+     * is changed or frozen.
      */
 
-    struct timeval te;
-    gettimeofday(&te, NULL);
-    long long milliseconds = te.tv_sec*1000LL + te.tv_usec/1000;
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    long long milliseconds = ts.tv_sec*1000LL + ts.tv_nsec/1000000;
     return milliseconds;
 }
