@@ -194,6 +194,35 @@ jobs:
             build_rt950pro/rt950pro/openrtx_rt950pro.BTF
             build_rt950pro/rt950pro/zephyr/zephyr.bin
           if-no-files-found: error
+  # Golden-image tests of the UI on the three Linux emulator variants. This is
+  # its own job, rather than a step of `build`, so that a failing screenshot
+  # does not hold back the firmware artifacts; the emulators are built with a
+  # fixed version string, which the released Linux binary must not have.
+  ui-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Run UI tests using devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: ./.devcontainer/miosix/devcontainer.json
+          cacheFrom: ${{ env.DEVCONTAINER_NAME }}
+          push: never
+          runCmd: |
+            meson setup build_e2e -Dtest_version=e2e-test &&
+            meson compile -C build_e2e openrtx_linux openrtx_linux_smallscreen openrtx_linux_mod17 &&
+            python3 scripts/run_e2e.py --build-dir build_e2e
+      - name: Upload screenshots of failed UI tests
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-test-failures
+          path: build_e2e/e2e-failures
+          if-no-files-found: ignore
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 120
