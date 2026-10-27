@@ -21,6 +21,9 @@ manifest:
     - name: zephyr
       url-base: https://github.com/zephyrproject-rtos
 
+    - name: sp5wwp
+      url-base: https://github.com/sp5wwp
+
   projects:
     # Zephyr mainline modules
     - name: zephyr
@@ -98,6 +101,24 @@ manifest:
       remote: openrtx
       revision: openrtx-c62
       path: modules/lib/lsf
+      groups:
+        - csk6
+
+    # TETRA receiver library, for the C62 TETRA mode
+    - name: libtetra
+      remote: sp5wwp
+      revision: 187bb545a321c8e99425c15fcbcf871fc5d0aac6
+      path: modules/lib/libtetra
+      groups:
+        - csk6
+
+    # ACELP speech decoder, for TETRA speech. The ETSI codebooks it needs are
+    # generated at build time, see scripts/c62/build.sh
+    - name: openacelp
+      remote: sp5wwp
+      repo-path: OpenACELP
+      revision: 59ba884532c15fb2e7a2d269526d5bd5c01a93e0
+      path: modules/lib/openacelp
       groups:
         - csk6
 

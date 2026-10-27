@@ -14,6 +14,153 @@
 #include "ui/ui_strings.h"
 #include "core/utils.h"
 #include "ui/utils.h"
+#ifdef CONFIG_TETRA
+#include "protocols/TETRA/TetraStatus.h"
+
+/* An SDS text stays on the main screen this long */
+#define TETRA_SDS_SHOW_MS 30000
+
+/**
+ * Print an SSI, or a dash if it is not known.
+ */
+static void _ui_printSsi(point_t pos, fontSize_t font, const char *prefix,
+                         uint32_t ssi)
+{
+    if (ssi != 0)
+        gfx_print(pos, font, TEXT_ALIGN_CENTER, color_white, "%s%lu", prefix,
+                  (unsigned long)ssi);
+    else
+        gfx_print(pos, font, TEXT_ALIGN_CENTER, color_white, "%s-", prefix);
+}
+
+/**
+ * Check whether a TETRA call takes over the main screen.
+ */
+static bool _ui_tetraCallShown(const struct tetraStatus *ts)
+{
+    return ts->sync && ts->call;
+}
+
+/**
+ * TETRA cell or call information, from line 1 to line 4 during a call,
+ * on line 2 otherwise.
+ */
+static void _ui_drawTetraInfo(void)
+{
+    struct tetraStatus ts;
+    tetra_getStatus(&ts);
+
+    if (_ui_tetraCallShown(&ts)) {
+        // Talking party
+        gfx_drawSymbol(layout.line1_pos, layout.line1_symbol_size,
+                       TEXT_ALIGN_LEFT, color_white, SYMBOL_CALL_MADE);
+        _ui_printSsi(layout.line1_pos, layout.line2_font, "", ts.talker);
+
+        // Called group or individual
+        gfx_drawSymbol(layout.line2_pos, layout.line2_symbol_size,
+                       TEXT_ALIGN_LEFT, color_white, SYMBOL_CALL_RECEIVED);
+        _ui_printSsi(layout.line2_pos, layout.line2_font,
+                     ts.callGroup ? "G " : "", ts.callDst);
+
+        // Cell
+        gfx_drawSymbol(layout.line3_pos, layout.line3_symbol_size,
+                       TEXT_ALIGN_LEFT, color_white,
+                       SYMBOL_TRANSMISSION_TOWER);
+        gfx_print(layout.line3_pos, layout.line3_font, TEXT_ALIGN_CENTER,
+                  color_white, "%u-%u LA %u", ts.mcc, ts.mnc, ts.la);
+
+        // Call state
+        if (ts.callEncrypted) {
+            gfx_drawSymbol(layout.line4_pos, layout.line4_symbol_size,
+                           TEXT_ALIGN_LEFT, color_white, SYMBOL_LOCK);
+            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
+                      color_white, "Encrypted");
+        } else if (ts.callId != 0) {
+            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
+                      color_white, "%s, call %u",
+                      ts.voice ? "Voice" : "Idle", ts.callId);
+        } else {
+            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
+                      color_white, "%s", ts.voice ? "Voice" : "Idle");
+        }
+        return;
+    }
+
+    if (!ts.sync) {
+        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
+                  color_white, "T searching");
+        return;
+    }
+
+    gfx_drawSymbol(layout.line2_pos, layout.line2_symbol_size,
+                   TEXT_ALIGN_LEFT, color_white, SYMBOL_TRANSMISSION_TOWER);
+    if (ts.sysinfo)
+        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
+                  color_white, "T %u-%u LA %u%s", ts.mcc, ts.mnc, ts.la,
+                  ts.airEncryption ? " enc" : "");
+    else
+        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
+                  color_white, "T %u-%u CC %u", ts.mcc, ts.mnc,
+                  ts.colourCode);
+}
+
+/**
+ * TETRA line 1 in VFO mode, when no call is shown: the last SDS (scrolling)
+ * or the demodulator quality.
+ */
+static void _ui_drawTetraLine1(ui_state_t *ui_state)
+{
+    struct tetraStatus ts;
+    tetra_getStatus(&ts);
+
+    if (_ui_tetraCallShown(&ts))
+        return;
+
+    long long now = getTick();
+    if (ts.sdsSrc != 0 && now - ts.sdsTime < TETRA_SDS_SHOW_MS) {
+        char text[96];
+        char msg[14];
+        snprintf(text, sizeof(text), "%lu: %s   ", (unsigned long)ts.sdsSrc,
+                 ts.sds);
+        scrollTextPeek(text, msg, sizeof(msg),
+                       ui_state->m17_meta_text_scroll_position);
+        if (now - ui_state->m17_meta_text_last_scroll_tick >= 100) {
+            scrollTextAdvance(text, sizeof(msg),
+                              &ui_state->m17_meta_text_scroll_position);
+            ui_state->m17_meta_text_last_scroll_tick = now;
+        }
+        gfx_print(layout.line1_pos, layout.line1_font, TEXT_ALIGN_CENTER,
+                  color_white, "%s", msg);
+        return;
+    }
+
+    // Phase error, carrier offset, lost sample blocks, resyncs
+    ui_state->m17_meta_text_scroll_position = 0;
+    gfx_print(layout.line1_pos, layout.line1_font, TEXT_ALIGN_CENTER,
+              color_white, "e%u%% %+dHz o%u r%u", ts.phaseErr, ts.carrierHz,
+              ts.overruns, ts.resyncs);
+}
+#endif
+
+/**
+ * Check whether the current mode shows a call instead of the frequency.
+ */
+static bool _ui_callShown(void)
+{
+#ifdef CONFIG_M17
+    rtxStatus_t status = rtx_getCurrentStatus();
+    if ((status.opMode == OPMODE_M17) && status.lsfOk)
+        return true;
+#endif
+#ifdef CONFIG_TETRA
+    if (last_state.channel.mode == OPMODE_TETRA) {
+        struct tetraStatus ts;
+        tetra_getStatus(&ts);
+        return _ui_tetraCallShown(&ts);
+    }
+#endif
+    return false;
+}
 
 void _ui_drawMainBackground()
 {
@@ -214,6 +361,13 @@ void _ui_drawModeInfo(ui_state_t* ui_state)
             break;
         }
         #endif
+
+        #ifdef CONFIG_TETRA
+        case OPMODE_TETRA:
+            (void) ui_state;
+            _ui_drawTetraInfo();
+            break;
+        #endif
     }
 }
 
@@ -350,6 +504,17 @@ void _ui_drawMainBottom()
                                 true);
             break;
         #endif
+        #ifdef CONFIG_TETRA
+        case OPMODE_TETRA:
+            gfx_drawSmeterLevel(meter_pos,
+                                meter_width,
+                                meter_height,
+                                rssi,
+                                mic_level,
+                                volume,
+                                true);
+            break;
+        #endif
     }
 }
 
@@ -359,12 +524,14 @@ void _ui_drawMainVFO(ui_state_t* ui_state)
     _ui_drawMainTop(ui_state);
     _ui_drawModeInfo(ui_state);
 
-    #ifdef CONFIG_M17
-    // Show VFO frequency if the OpMode is not M17 or there is no valid LSF data
-    rtxStatus_t status = rtx_getCurrentStatus();
-    if((status.opMode != OPMODE_M17) || (status.lsfOk == false))
-    #endif
+    // Show VFO frequency unless the mode shows a call (M17 LSF, TETRA call)
+    if(_ui_callShown() == false)
         _ui_drawFrequency();
+
+    #ifdef CONFIG_TETRA
+    if(last_state.channel.mode == OPMODE_TETRA)
+        _ui_drawTetraLine1(ui_state);
+    #endif
 
     _ui_drawMainBottom();
 }
@@ -383,11 +550,8 @@ void _ui_drawMainMEM(ui_state_t* ui_state)
     _ui_drawMainTop(ui_state);
     _ui_drawModeInfo(ui_state);
 
-    #ifdef CONFIG_M17
-    // Show channel data if the OpMode is not M17 or there is no valid LSF data
-    rtxStatus_t status = rtx_getCurrentStatus();
-    if((status.opMode != OPMODE_M17) || (status.lsfOk == false))
-    #endif
+    // Show channel data unless the mode shows a call (M17 LSF, TETRA call)
+    if(_ui_callShown() == false)
     {
         _ui_drawBankChannel();
         _ui_drawFrequency();

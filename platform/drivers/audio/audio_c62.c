@@ -12,6 +12,9 @@
 #include <hwconfig.h>
 #include <interfaces/radio.h>
 #include "csk6_codec.h"
+#ifdef C62_BASEBAND_DUMP
+#include "baseband_dump_c62.h"
+#endif
 
 /*
  * Board layer: radio AF output and speaker GPIOs, then the codec driver
@@ -94,6 +97,11 @@ void audio_init(void)
     restore_console();
     initialized = csk6codec_init() == 0;
     restore_console();
+#ifdef C62_BASEBAND_DUMP
+    /* After restore_console(): switches the UART to the dump baud rate */
+    if (initialized)
+        baseband_dump_init();
+#endif
     k_mutex_unlock(&board_mutex);
 }
 

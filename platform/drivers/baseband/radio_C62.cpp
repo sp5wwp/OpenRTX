@@ -17,6 +17,9 @@
 
 #include "drivers/baseband/BK4819.h"
 #include "radioUtils.h"
+#ifdef C62_BASEBAND_DUMP
+#include "../audio/baseband_dump_c62.h"
+#endif
 
 #include <zephyr/drivers/pwm.h>
 #include <zephyr/kernel.h>
@@ -52,6 +55,59 @@ static enum opstatus radioStatus; // Current operating status
 static enum opmode radioMode;     // Current operating mode
 
 /*
+ * BK4819 REG_43 for M17 RX, written whole (see the V3 register list):
+ *   <14:12> RF filter bandwidth, 7 = 4.5 kHz (the widest)
+ *   <11:9>  RF filter bandwidth used when the signal is weak, same table.
+ *           Leaving it narrower than <14:12> makes the chip narrow the
+ *           channel filter at low SNR, so set it to the same value.
+ *   <8:6>   AF TX LPF2, TX only
+ *   <5:4>   BW mode: 0 = 12.5 kHz, 1 = 6.25 kHz, 2 = 25 kHz. <5> doubles
+ *           the RF filter bandwidths and the IF (REG_3D).
+ *   <3>     undocumented, 1 in every known firmware
+ *   <2>     +6 dB after FM demodulation
+ *
+ * 0x7808: 4.5 kHz / weak 3.75 kHz, 12.5 kHz mode (M17 default)
+ * 0x7828: 4.5 kHz / weak 3.75 kHz, 25 kHz mode (doubled)
+ * 0x7e28: 4.5 kHz / weak 4.5 kHz,  25 kHz mode (widest documented setting)
+ */
+#ifdef C62_WIDE_RX
+#define C62_M17_RX_REG43 0x7e28
+#else
+#define C62_M17_RX_REG43 0x7808
+#endif
+
+/* Read by the baseband dump: the REG_43 value currently in use for RX */
+extern "C" {
+volatile uint16_t c62_rx_reg43 = C62_M17_RX_REG43;
+}
+
+#ifdef C62_REG43_SWEEP
+/*
+ * Cycle REG_43 through these values in M17 RX, C62_REG43_SWEEP_MS each, to
+ * measure them with a fixed test signal. Each dump packet carries the value
+ * in use. The last three have undocumented bits set. The sweep clock only
+ * runs while the dump records, so with the default dwell one 10.4 s burst
+ * covers all seven values.
+ */
+static const uint16_t reg43Sweep[] = {
+    0x7808, // M17 default, 12.5 kHz
+    0x7828, // 25 kHz, weak-signal filter 3.75 kHz
+    0x7e28, // 25 kHz, weak-signal filter 4.5 kHz
+    0x7e2c, // as above, +6 dB after demodulation
+    0x7e38, // BW mode 3 (undocumented)
+    0x7e20, // bit 3 cleared (undocumented)
+    0xfe28, // bit 15 set (undocumented)
+};
+#ifndef C62_REG43_SWEEP_MS
+#define C62_REG43_SWEEP_MS 1400
+#endif
+static size_t reg43SweepIndex;
+static int64_t reg43SweepLast;    // Uptime at the previous check
+static int64_t reg43SweepElapsed; // Recorded time on the current value
+static bool reg43SweepStarted;
+#endif
+
+/*
  * C62 BK4819 fields for M17, on top of bk4819_setFlatAudio(): RX and TX
  * values, and the bits that keep their FM value in TX. M17 RX uses AF bypass,
  * REG_47 bit 1 and RX gain2 0x3f, see
@@ -68,7 +124,8 @@ static const struct {
     // TX deviation on, raw value 0x582 (not Hz) for the TX DAC gain in
     // hwconfig.h
     { BK4819_REG_40, 0x1fff, 0x1582, 0x1582, 0x0000 },
-    // 4.5 kHz RF / 3.75 kHz weak-signal filter, 12.5 kHz channel
+    // TX: 4.5 kHz RF / 3.75 kHz weak-signal filter, 12.5 kHz channel.
+    // RX: overwritten with c62_rx_reg43 by applyM17Fields()
     { BK4819_REG_43, 0x7ffc, 0x7808, 0x7808, 0x0000 },
     { BK4819_REG_47, 0x0002, 0x0002, 0x0000, 0x0002 }, // Bit 1
     // RX gain1 -6 dB, RX gain2 0x3f
@@ -78,6 +135,15 @@ static const struct {
 };
 
 static uint16_t fmFields[ARRAY_SIZE(m17Fields)];
+
+/**
+ * Digital modes receive through the flat, wide M17 audio path: M17, and
+ * TETRA (receive only).
+ */
+static bool flatMode(enum opmode mode)
+{
+    return (mode == OPMODE_M17) || (mode == OPMODE_TETRA);
+}
 
 /**
  * Apply the M17 audio settings for receiving or transmitting.
@@ -94,6 +160,9 @@ static void applyM17Fields(bool transmit)
         value |= transmit ? field.tx | (fmFields[i] & field.txFm) : field.rx;
         BK4819_writeReg(&c62_bk4819, field.reg, value);
     }
+
+    if (!transmit)
+        BK4819_writeReg(&c62_bk4819, BK4819_REG_43, c62_rx_reg43);
 }
 
 /* The BK4819 GPIOs to control the C62 LNA and PA */
@@ -139,7 +208,7 @@ void radio_setOpmode(const enum opmode mode)
     radio_disableRtx();
     radio_disableAfOutput();
 
-    if (radioMode == OPMODE_M17) {
+    if (flatMode(radioMode)) {
         for (size_t i = 0; i < ARRAY_SIZE(m17Fields); i++) {
             const auto &field = m17Fields[i];
             uint16_t value = BK4819_readReg(&c62_bk4819, field.reg);
@@ -150,7 +219,7 @@ void radio_setOpmode(const enum opmode mode)
     }
 
     // Save the FM values; radio_enableRx/Tx() apply the M17 ones
-    if (mode == OPMODE_M17) {
+    if (flatMode(mode)) {
         for (size_t i = 0; i < ARRAY_SIZE(m17Fields); i++) {
             const auto &field = m17Fields[i];
             fmFields[i] = BK4819_readReg(&c62_bk4819, field.reg) & field.mask;
@@ -167,7 +236,7 @@ bool radio_checkRxDigitalSquelch()
 
 void radio_enableAfOutput()
 {
-    if (radioMode == OPMODE_M17)
+    if (flatMode(radioMode))
         BK4819_SetAF(&c62_bk4819, BK4819_AF_TYPE_BYPASS);
     else
         bk4819_set_modulation(&c62_bk4819, true);
@@ -197,7 +266,7 @@ void radio_enableRx()
 
     bk4819_set_freq(&c62_bk4819, config->rxFrequency);
 
-    if (radioMode == OPMODE_M17) {
+    if (flatMode(radioMode)) {
         applyM17Fields(false);
     } else {
         bk4819_SetFilterBandwidth(&c62_bk4819, config->bandwidth);
@@ -211,7 +280,7 @@ void radio_enableRx()
 
 void radio_enableTx()
 {
-    if (config->txDisable == 1)
+    if (config->txDisable == 1 || radioMode == OPMODE_TETRA)
         return;
 
     gpioDev_clear(&c62_bk4819_gpio, GPIO_VHF_RX_LNA);
@@ -228,7 +297,7 @@ void radio_enableTx()
 
     bk4819_set_freq(&c62_bk4819, config->txFrequency);
 
-    if (radioMode == OPMODE_M17)
+    if (flatMode(radioMode))
         applyM17Fields(true);
     else if (config->txToneEn)
         bk4819_enable_tx_ctcss(&c62_bk4819, config->txTone);
@@ -285,6 +354,28 @@ void radio_updateConfiguration()
 
 rssi_t radio_getRssi()
 {
+#ifdef C62_REG43_SWEEP
+    /* Called by the rtx thread in RX, so it can own the BK4819 here */
+    if (flatMode(radioMode) && radioStatus == RX) {
+        int64_t now = k_uptime_get();
+        bool recording = true;
+#ifdef C62_BASEBAND_DUMP
+        recording = baseband_dump_recording();
+#endif
+        if (reg43SweepStarted && recording)
+            reg43SweepElapsed += now - reg43SweepLast;
+        reg43SweepLast = now;
+        if (!reg43SweepStarted || reg43SweepElapsed >= C62_REG43_SWEEP_MS) {
+            if (reg43SweepStarted)
+                reg43SweepIndex = (reg43SweepIndex + 1)
+                                % ARRAY_SIZE(reg43Sweep);
+            reg43SweepStarted = true;
+            reg43SweepElapsed = 0;
+            c62_rx_reg43 = reg43Sweep[reg43SweepIndex];
+            BK4819_writeReg(&c62_bk4819, BK4819_REG_43, c62_rx_reg43);
+        }
+    }
+#endif
     return bk4819_get_rssi(&c62_bk4819);
 }
 

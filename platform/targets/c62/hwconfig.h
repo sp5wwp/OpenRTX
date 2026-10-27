@@ -39,6 +39,14 @@ extern "C" {
 
 #define CONFIG_M17
 
+/*
+ * TETRA mode: starting taps of the demodulator's equalizer, measured on the
+ * BK4819 flat RX path (REG_43 0x7e28). They undo the filters' inter-symbol
+ * interference; the equalizer keeps adapting from there.
+ */
+#define CONFIG_TETRA_EQ_INIT \
+    { 0.007f, -0.004f, 0.036f, -0.185f, 1.149f, -0.187f, 0.033f, -0.001f, 0.0f }
+
 /* Microphone audio input, set for C62_ADC_MIC_GAIN_D below */
 #define CONFIG_MIC_GAIN 13
 

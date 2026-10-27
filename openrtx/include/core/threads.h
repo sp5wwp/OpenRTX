@@ -13,7 +13,13 @@
  * Threads' stack sizes
  */
 #define UI_THREAD_STKSIZE     2048
-#ifdef PLATFORM_C62
+#if defined(PLATFORM_C62) && defined(CONFIG_TETRA)
+/*
+ * The TETRA mode decodes in the rtx thread: libtetra needs up to about 1.5
+ * KB (Viterbi, MAC, SDS), plus the event callback and newlib's snprintf.
+ */
+#define RTX_THREAD_STKSIZE    4096
+#elif defined(PLATFORM_C62)
 #define RTX_THREAD_STKSIZE    1024
 #else
 #define RTX_THREAD_STKSIZE    512

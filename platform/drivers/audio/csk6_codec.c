@@ -17,6 +17,9 @@
 #include "AudioSystem.h"
 #include "AudioTrack.h"
 #include "AudioRecord.h"
+#ifdef C62_BASEBAND_DUMP
+#include "baseband_dump_c62.h"
+#endif
 
 /* One worker services the DSP's 48 kHz stereo transport:
  *   capture: microphone left, radio right -> application buffers or FM queues
@@ -341,6 +344,9 @@ static void apply_routes(void)
         if (capture) {
             AudioRecord_start(&record);
             disable_adc_hpf2();
+#ifdef C62_BASEBAND_DUMP
+            baseband_dump_restart();
+#endif
         } else
             AudioRecord_stop(&record);
         capture_running = capture;
@@ -379,7 +385,20 @@ static void capture_frame(void)
     if (ret != IC_OK)
         goto fail;
     const int16_t *samples = frame;
+#ifdef C62_BASEBAND_DUMP
+    /* Raw 48 kHz radio samples, before any rate selection */
+    int16_t dump[64];
+    size_t dumped = 0;
+#endif
     for (size_t n = 0; n < record.mCblk->frameCount; n++) {
+#ifdef C62_BASEBAND_DUMP
+        dump[dumped++] = samples[n * ic->share->channelCount
+                                 + record.mChannelOutIdx[SOURCE_RTX]];
+        if (dumped == ARRAY_SIZE(dump)) {
+            baseband_dump_push(dump, dumped);
+            dumped = 0;
+        }
+#endif
         for (unsigned int source = 0; source < 2; source++) {
             int16_t sample = samples[n * ic->share->channelCount
                                      + record.mChannelOutIdx[source]];
@@ -413,6 +432,9 @@ static void capture_frame(void)
             }
         }
     }
+#ifdef C62_BASEBAND_DUMP
+    baseband_dump_push(dump, dumped);
+#endif
     ret = ICStream_Consumer_releaseFrame(ic, frame);
     if (ret == IC_OK)
         ret = ICStream_Consumer_commitRemote(ic);
