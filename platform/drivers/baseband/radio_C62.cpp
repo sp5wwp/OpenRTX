@@ -163,6 +163,21 @@ static void applyM17Fields(bool transmit)
 
     if (!transmit)
         BK4819_writeReg(&c62_bk4819, BK4819_REG_43, c62_rx_reg43);
+
+#ifdef C62_TETRA_IF_DC_FILTER
+    /*
+     * TETRA receive: re-enable the RX IF DC filter (REG_7E<2:0>, default
+     * 0b110) that the flat audio mode bypasses. With it off, the IF DC
+     * offset of this low-IF receiver reaches the demodulator as a tone at
+     * the IF (16.9 kHz in 25 kHz mode), one-sided: it distorts the +3pi/4
+     * symbols much more than the -3pi/4 ones. The wanted signal is centred
+     * on the IF, so filtering DC at the IF input does not touch it.
+     */
+    if (!transmit && radioMode == OPMODE_TETRA) {
+        uint16_t value = BK4819_readReg(&c62_bk4819, BK4819_REG_7E);
+        BK4819_writeReg(&c62_bk4819, BK4819_REG_7E, (value & ~0x0007) | 0x0006);
+    }
+#endif
 }
 
 /* The BK4819 GPIOs to control the C62 LNA and PA */

@@ -64,6 +64,9 @@ option(C62_REG43_SWEEP "Cycle REG_43 test values in M17 RX" OFF)
 # C62_TETRA: TETRA TMO downlink receive mode ("T" under key 5), decoded with
 #   libtetra, which west fetches to modules/lib/libtetra.
 option(C62_TETRA "TETRA receive mode" ON)
+# C62_TETRA_IF_DC_FILTER: keep the BK4819 RX IF DC filter on in T mode (the
+#   flat audio mode bypasses it). OFF to compare.
+option(C62_TETRA_IF_DC_FILTER "BK4819 RX IF DC filter in TETRA mode" ON)
 # C62_TETRA_SPEECH: play TETRA speech with OpenACELP. Needs the ETSI
 #   codebooks in modules/lib/openacelp/build/tetra_tables.c, which
 #   scripts/c62/build.sh generates. AUTO (default): on when they are there.
@@ -105,6 +108,9 @@ if(C62_TETRA)
     ${OPENRTX_ROOT}/openrtx/src/protocols/TETRA/TetraStatus.c
     ${OPENRTX_ROOT}/openrtx/src/rtx/OpMode_TETRA.cpp)
   target_compile_definitions(app PRIVATE CONFIG_TETRA)
+  if(C62_TETRA_IF_DC_FILTER)
+    target_compile_definitions(app PRIVATE C62_TETRA_IF_DC_FILTER)
+  endif()
 
   set(C62_OPENACELP ${WEST_TOPDIR}/modules/lib/openacelp)
   set(C62_ETSI_TABLES ${C62_OPENACELP}/build/tetra_tables.c)

@@ -305,6 +305,9 @@ def main():
                     help="LMS step size (default 0.002)")
     ap.add_argument("--invert", choices=["auto", "yes", "no"], default="auto")
     ap.add_argument("--phases", help="save the phase changes (float32)")
+    ap.add_argument("--levels", action="store_true",
+                    help="print the spread of each of the four symbol levels "
+                    "(an asymmetry points at the receiver, see the README)")
     args = ap.parse_args()
 
     x, rate = read_audio(args.input)
@@ -312,6 +315,15 @@ def main():
     taps = args.taps or (9 if args.eq == "ls" else 33)
     bits, phi = demod(x, rate, eq=args.eq, taps=taps, mu=args.mu, invert=inv)
     ext = ".soft" if args.soft else ".bits"
+    if args.levels:
+        q = decide(phi)
+        print("level   mean   spread (RMS, % of pi/4)   beyond half-way")
+        for lvl in (-3, -1, 1, 3):
+            m = q == lvl
+            e = phi[m] / (np.pi / 4) - lvl
+            print("%+dpi/4  %+.3f  %5.1f%%                    %5.2f%%"
+                  % (lvl, lvl + e.mean(), 100 * e.std(),
+                     100 * np.mean(np.abs(e) > 0.5)))
     out = args.output or args.input.rsplit(".", 1)[0] + ext
     (to_soft(phi) if args.soft else bits).tofile(out)
     print("wrote %d %s bits to %s, then: tetra_rx -m tmo -t %s %s"
