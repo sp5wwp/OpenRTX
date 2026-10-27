@@ -17,7 +17,7 @@ CSK6 modules, next to the OpenRTX checkout, so make a folder to hold both:
 
 ```bash
 mkdir c62-ws && cd c62-ws
-git clone -b c62/m17 https://github.com/turnrye/OpenRTX.git
+git clone -b c62/tetra https://github.com/sp5wwp/OpenRTX.git
 # (if you were given patches: git -C OpenRTX am ../*.patch)
 
 # Build the image once (5-10 minutes, ~2 GB)
