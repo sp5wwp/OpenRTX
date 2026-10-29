@@ -40,6 +40,16 @@ elseif (${BOARD} STREQUAL "c62")
     list(APPEND ZEPHYR_EXTRA_MODULES ${WEST_TOPDIR}/modules/lib/freertos_shims)
     list(APPEND ZEPHYR_EXTRA_MODULES ${WEST_TOPDIR}/modules/lib/lsf)
     list(APPEND ZEPHYR_EXTRA_MODULES ${WEST_TOPDIR}/modules/lib/urpc)
+elseif (${BOARD} STREQUAL "rt950pro")
+    set(ARCH arm)
+    set(CONF_FILE ${CMAKE_CURRENT_LIST_DIR}/platform/mcu/AT32F403A/zephyr.conf)
+
+    # The west workspace hosts several Zephyr trees and module sets (ESP32,
+    # CSK6, Artery): list the modules explicitly so that only the Artery ones
+    # are picked up, instead of relying on west module discovery.
+    set(ZEPHYR_MODULES
+        ${WEST_TOPDIR}/modules/hal/at32
+        ${WEST_TOPDIR}/modules/hal/cmsis_6)
 endif()
 
 #

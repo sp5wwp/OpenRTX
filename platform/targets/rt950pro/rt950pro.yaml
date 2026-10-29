@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+identifier: rt950pro
+name: Radtel RT-950 Pro
+type: mcu
+arch: arm
+toolchain:
+  - zephyr
+ram: 96
+flash: 1012
+supported:
+  - gpio
+  - display

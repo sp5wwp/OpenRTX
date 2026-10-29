@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+#
+# Radtel RT-950 Pro board-specific configuration.
+#
+# Only options strictly related to the RT-950 Pro hardware belong here.
+# SoC-level options for the Artery AT32F403A live in
+# platform/mcu/AT32F403A/zephyr.conf.
+#
+
+# The vendor bootloader occupies the first 12kB of flash, the application is
+# linked at the start of the code partition (0x08003000).
+CONFIG_USE_DT_CODE_PARTITION=y
+
+# Battery voltage ADC
+CONFIG_ADC=y
+
+# ST7789V LCD on a bit-banged 8-bit 8080 parallel bus
+CONFIG_DISPLAY=y
+CONFIG_MIPI_DBI=y
+CONFIG_MIPI_DBI_BITBANG=y
+CONFIG_ST7789V=y
+CONFIG_ST7789V_RGB565=y
+
+# LCD backlight brightness control
+CONFIG_PWM=y

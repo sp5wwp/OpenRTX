@@ -13,6 +13,7 @@ manifest:
   group-filter:
     - -csk6
     - -esp32
+    - -artery
 
   remotes:
     - name: openrtx
@@ -20,6 +21,12 @@ manifest:
 
     - name: zephyr
       url-base: https://github.com/zephyrproject-rtos
+
+    - name: artery
+      url-base: https://github.com/ArteryTek
+
+    - name: marko13-dev
+      url-base: https://github.com/Marko13-dev
 
   projects:
     # Zephyr mainline modules
@@ -107,3 +114,30 @@ manifest:
       path: modules/lib/urpc
       groups:
         - csk6
+
+    # Artery fork-specific modules (AT32F403A, Radtel RT-950 Pro).
+    # Zephyr and hal_at32 include path-casing fixes for Linux filesystems.
+    # CMSIS_6 matches the revision pinned by the Artery Zephyr fork itself.
+    - name: artery-zephyr
+      remote: marko13-dev
+      repo-path: zephyr-artery
+      revision: 2f81d3b5e2d0a9fe9b38f7076902cf93fc7062c3
+      path: zephyr-artery
+      west-commands: scripts/west-commands.yml
+      groups:
+        - artery
+
+    - name: hal_at32
+      remote: marko13-dev
+      revision: e1ecf2f58bec14d9de06acd9afb00c79dfb13786
+      path: modules/hal/at32
+      groups:
+        - artery
+
+    - name: cmsis_6
+      remote: zephyr
+      repo-path: CMSIS_6
+      revision: 30a859f44ef8ab4dc8f84b03ed586fd16ccf9d74
+      path: modules/hal/cmsis_6
+      groups:
+        - artery

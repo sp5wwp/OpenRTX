@@ -30,6 +30,10 @@ static int gpioZephyr_mode(const struct gpioDev *dev, const uint8_t pin,
             flags = GPIO_INPUT | GPIO_PULL_DOWN;
             break;
 
+        case ANALOG:
+            flags = GPIO_DISCONNECTED;
+            break;
+
         case OUTPUT:
             flags = GPIO_OUTPUT;
             break;
@@ -80,3 +84,18 @@ const struct gpioDev GpioA = { .api = &gpioZephyr_api,
 
 const struct gpioDev GpioB = { .api = &gpioZephyr_api,
                                .priv = DEVICE_DT_GET(DT_NODELABEL(gpiob)) };
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioc), okay)
+const struct gpioDev GpioC = { .api = &gpioZephyr_api,
+                               .priv = DEVICE_DT_GET(DT_NODELABEL(gpioc)) };
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpiod), okay)
+const struct gpioDev GpioD = { .api = &gpioZephyr_api,
+                               .priv = DEVICE_DT_GET(DT_NODELABEL(gpiod)) };
+#endif
+
+#if DT_NODE_HAS_STATUS(DT_NODELABEL(gpioe), okay)
+const struct gpioDev GpioE = { .api = &gpioZephyr_api,
+                               .priv = DEVICE_DT_GET(DT_NODELABEL(gpioe)) };
+#endif

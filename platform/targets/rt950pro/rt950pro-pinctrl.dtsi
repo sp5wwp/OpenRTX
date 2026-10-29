@@ -1,0 +1,23 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#include <dt-bindings/pinctrl/at32f403av(g)xx-pinctrl.h>
+
+&pinctrl {
+	/* UART4 on the programming cable connector */
+	usart4_default: usart4_default {
+		group1 {
+			pinmux = <UART4_TX_PC10>, <UART4_RX_PC11>;
+		};
+	};
+
+	/* LCD backlight PWM */
+	tmr8_ch1_default: tmr8_ch1_default {
+		group1 {
+			pinmux = <TMR8_CH1_PC6_OUTPUT_NORMP>;
+		};
+	};
+};

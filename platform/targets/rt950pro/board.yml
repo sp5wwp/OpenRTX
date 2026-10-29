@@ -1,0 +1,9 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+board:
+  name: rt950pro
+  full_name: Radtel RT-950 Pro
+  socs:
+    - name: at32f403a

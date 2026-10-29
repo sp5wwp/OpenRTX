@@ -1,0 +1,252 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+/*
+ * Radtel RT-950 Pro, Artery AT32F403AVGT7 (Cortex-M4F, 1MB flash, 96kB SRAM)
+ */
+
+/dts-v1/;
+#include <at/at32f403a_407/at32f403avgt7.dtsi>
+#include <zephyr/dt-bindings/adc/adc.h>
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/pwm/pwm.h>
+#include "rt950pro-pinctrl.dtsi"
+
+/ {
+	model = "Radtel RT-950 Pro";
+	compatible = "radtel,rt950pro";
+
+	chosen {
+		zephyr,console = &usart4;
+		zephyr,shell-uart = &usart4;
+		zephyr,sram = &sram0;
+		zephyr,flash = &flash0;
+		zephyr,code-partition = &code_partition;
+		zephyr,display = &st7789v;
+	};
+
+	/*
+	 * ST7789V 240x320 IPS panel on an 8-bit 8080 parallel bus, bit-banged
+	 * on GPIOD. The data lines share GPIOD with the keypad rows (PD4-PD7):
+	 * the bit-bang driver only touches the data/control pins.
+	 */
+	mipi_dbi: mipi-dbi {
+		compatible = "zephyr,mipi-dbi-bitbang";
+		#address-cells = <1>;
+		#size-cells = <0>;
+		status = "okay";
+
+		wr-gpios = <&gpiod 0 GPIO_ACTIVE_HIGH>;
+		cs-gpios = <&gpiod 1 GPIO_ACTIVE_LOW>;
+		reset-gpios = <&gpiod 2 GPIO_ACTIVE_LOW>;
+		dc-gpios = <&gpiod 3 GPIO_ACTIVE_HIGH>;
+		data-gpios = <&gpiod 8 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 9 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 10 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 11 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 12 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 13 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 14 GPIO_ACTIVE_HIGH>,
+			     <&gpiod 15 GPIO_ACTIVE_HIGH>;
+
+		/* Init values from the vendor firmware V0.27 LCD_Init sequence */
+		st7789v: st7789v@0 {
+			compatible = "sitronix,st7789v";
+			reg = <0>;
+			mipi-max-frequency = <20000000>;
+			mipi-mode = "MIPI_DBI_MODE_8080_BUS_8_BIT";
+			width = <240>;
+			height = <320>;
+			x-offset = <0>;
+			y-offset = <0>;
+			vcom = <0x3f>;
+			gctrl = <0x35>;
+			vrhs = <0x0f>;
+			vdvs = <0x20>;
+			mdac = <0xc0>;
+			gamma = <0x01>;
+			colmod = <0x05>;
+			lcm = <0x2c>;
+			porch-param = [05 05 00 33 33];
+			cmd2en-param = [5a 69 02 01];
+			pwctrl1-param = [a4 a1];
+			pvgam-param = [d0 05 09 09 08 14 28 33 3f 07 13 14 28 30];
+			nvgam-param = [d0 05 09 09 08 03 24 32 32 3b 14 13 28 2f];
+			ram-param = [00 f0];
+			rgb-param = [cd 08 14];
+		};
+	};
+
+	/*
+	 * Board GPIOs used directly by the OpenRTX platform, display and
+	 * keyboard drivers.
+	 */
+	zephyr,user {
+		io-channels = <&adc1 1>;
+		io-channel-names = "vbat";
+
+		/* Main power latch: must stay high to keep the radio powered */
+		pwr-latch-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
+
+		/* Power/volume knob switch, low when the radio is switched on */
+		pwr-switch-gpios = <&gpioe 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+
+		/* Power off */
+		pwr-enable-gpios = <&gpioa 11 GPIO_ACTIVE_HIGH>;
+
+		/* Keypad backlight, on/off only */
+		kbd-bl-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
+
+		led-red-gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>;
+		led-green-gpios = <&gpioc 14 GPIO_ACTIVE_HIGH>;
+
+		/* Battery voltage through a resistive divider, ADC1 channel 1 */
+		vbat-gpios = <&gpioa 1 0>;
+
+		ptt-gpios = <&gpioe 3 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+			    <&gpioe 2 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+
+		/* Programmable side keys: top (PE5) and bottom (PA12) */
+		side-key-gpios = <&gpioe 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				 <&gpioa 12 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+
+		/*
+		 * Keypad matrix, columns are driven low one at a time and rows
+		 * read back. PC4 is the VHF/UHF antenna relay and must never be
+		 * touched by the keypad scan.
+		 */
+		kbd-col-gpios = <&gpioc 0 GPIO_ACTIVE_LOW>,
+				<&gpioc 1 GPIO_ACTIVE_LOW>,
+				<&gpioc 2 GPIO_ACTIVE_LOW>,
+				<&gpioc 3 GPIO_ACTIVE_LOW>;
+				
+		/* Rows from top to bottom: PD7, PD6, PD5, PD4 */
+		kbd-row-gpios = <&gpiod 7 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				<&gpiod 6 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				<&gpiod 5 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>,
+				<&gpiod 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+
+		/* Rotary encoder, channel A and B */
+		encoder-gpios = <&gpiob 4 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>,
+				<&gpiob 5 (GPIO_PULL_UP | GPIO_ACTIVE_HIGH)>;
+	};
+
+	pwmleds {
+		compatible = "pwm-leds";
+
+		/* LCD backlight brightness, PC6 driven by TMR8 channel 1 */
+		lcd_bl_pwm: lcd-bl-pwm {
+			pwms = <&pwm8 1 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+		};
+	};
+};
+
+/* 1MHz timer clock: 120MHz / (119 + 1) */
+&timer8 {
+	at,prescaler = <119>;
+	status = "okay";
+
+	pwm8: pwm {
+		pinctrl-0 = <&tmr8_ch1_default>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
+};
+
+&gpioa {
+	status = "okay";
+};
+
+&gpiob {
+	status = "okay";
+};
+
+&gpioc {
+	status = "okay";
+};
+
+&gpiod {
+	status = "okay";
+};
+
+&gpioe {
+	status = "okay";
+};
+
+/* 8MHz crystal, PLL x15: 120MHz system clock as in the vendor firmware */
+&clk_hext {
+	clock-frequency = <DT_FREQ_M(8)>;
+	status = "okay";
+};
+
+&pll {
+	/* Values are the HAL enumerators: mul = 14 is CRM_PLL_MULT_15 */
+	mul = <14>;
+	/* xtpre = 0 selects HEXT undivided as PLL input */
+	xtpre = <0>;
+	/* CRM_USB_DIV_2_5: 120MHz / 2.5 = 48MHz */
+	div_fu = <2>;
+	clocks = <&clk_hext>;
+	status = "okay";
+};
+
+&sysclk {
+	clock-frequency = <DT_FREQ_M(120)>;
+	status = "okay";
+};
+
+&crm {
+	clocks = <&pll>;
+	clock-frequency = <DT_FREQ_M(120)>;
+	ahb-prescaler = <1>;
+	apb1-prescaler = <2>;
+	apb2-prescaler = <2>;
+	status = "okay";
+};
+
+&usart4 {
+	pinctrl-0 = <&usart4_default>;
+	pinctrl-names = "default";
+	current-speed = <115200>;
+	status = "okay";
+};
+
+&adc1 {
+	at,adc-clock-source = "SYNC";
+	at,adc-prescaler = <2>;
+	status = "okay";
+	#address-cells = <1>;
+	#size-cells = <0>;
+
+	channel@1 {
+		reg = <1>;
+		zephyr,gain = "ADC_GAIN_1";
+		zephyr,reference = "ADC_REF_INTERNAL";
+		zephyr,acquisition-time = <ADC_ACQ_TIME(ADC_ACQ_TIME_TICKS, 240)>;
+		zephyr,resolution = <12>;
+	};
+};
+
+&flash0 {
+	partitions {
+		compatible = "fixed-partitions";
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		/* Vendor bootloader, never overwritten */
+		boot_partition: partition@0 {
+			label = "bootloader";
+			reg = <0x00000000 DT_SIZE_K(12)>;
+			read-only;
+		};
+
+		/* OpenRTX image, uploaded through the vendor bootloader */
+		code_partition: partition@3000 {
+			label = "code";
+			reg = <0x00003000 DT_SIZE_K(1012)>;
+		};
+	};
+};
