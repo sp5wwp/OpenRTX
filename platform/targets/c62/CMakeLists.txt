@@ -67,10 +67,9 @@ option(C62_TETRA "TETRA receive mode" ON)
 # C62_TETRA_IF_DC_FILTER: keep the BK4819 RX IF DC filter on in T mode (the
 #   flat audio mode bypasses it). OFF to compare.
 option(C62_TETRA_IF_DC_FILTER "BK4819 RX IF DC filter in TETRA mode" ON)
-# C62_TETRA_SPEECH: play TETRA speech with OpenACELP. Needs the ETSI
-#   codebooks in modules/lib/openacelp/build/tetra_tables.c, which
-#   scripts/c62/build.sh generates. AUTO (default): on when they are there.
-#   A firmware built with them contains ETSI material: do not distribute it.
+# C62_TETRA_SPEECH: play clear TETRA speech with OpenACELP, which west
+#   fetches to modules/lib/openacelp.
+option(C62_TETRA_SPEECH "TETRA speech with OpenACELP" ON)
 set(C62_REG43_SWEEP_MS 1400 CACHE STRING "REG_43 sweep dwell time, ms")
 
 if(C62_WIDE_RX)
@@ -112,47 +111,28 @@ if(C62_TETRA)
     target_compile_definitions(app PRIVATE C62_TETRA_IF_DC_FILTER)
   endif()
 
-  set(C62_OPENACELP ${WEST_TOPDIR}/modules/lib/openacelp)
-  set(C62_ETSI_TABLES ${C62_OPENACELP}/build/tetra_tables.c)
-  # Re-run CMake when the codebooks appear in or leave that folder
-  if(EXISTS ${C62_OPENACELP}/build)
-    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
-                 ${C62_OPENACELP}/build)
-  endif()
-  set(C62_TETRA_SPEECH AUTO CACHE STRING
-      "TETRA speech with OpenACELP: AUTO (if the codebooks exist), ON, OFF")
-  if(C62_TETRA_SPEECH STREQUAL "AUTO")
-    if(EXISTS ${C62_ETSI_TABLES})
-      set(c62_speech ON)
-    else()
-      set(c62_speech OFF)
-    endif()
-  else()
-    set(c62_speech ${C62_TETRA_SPEECH})
-  endif()
-  if(c62_speech)
-    if(NOT EXISTS ${C62_ETSI_TABLES})
-      message(FATAL_ERROR "C62_TETRA_SPEECH needs ${C62_ETSI_TABLES}: see "
-                          "scripts/c62/build.sh")
+  if(C62_TETRA_SPEECH)
+    set(C62_OPENACELP ${WEST_TOPDIR}/modules/lib/openacelp)
+    if(NOT EXISTS ${C62_OPENACELP}/src/oa_tables_tetra.c)
+      message(FATAL_ERROR "OpenACELP not found in ${C62_OPENACELP}: run "
+                          "'west update --group-filter +csk6', or build with "
+                          "-DC62_TETRA_SPEECH=OFF")
     endif()
     target_sources(app PRIVATE
       ${C62_OPENACELP}/src/oa_dsp.c
       ${C62_OPENACELP}/src/oa_bits.c
       ${C62_OPENACELP}/src/oa_dec.c
-      ${C62_ETSI_TABLES})
+      ${C62_OPENACELP}/src/oa_tables_tetra.c)
     target_include_directories(app PRIVATE
-      ${C62_OPENACELP}/include ${C62_OPENACELP}/src ${C62_OPENACELP}/build)
+      ${C62_OPENACELP}/include ${C62_OPENACELP}/src)
     target_compile_definitions(app PRIVATE CONFIG_TETRA_SPEECH)
-    message(WARNING "C62: TETRA speech enabled. This firmware contains ETSI "
-                    "codebooks: do not distribute it.")
-  else()
-    message(STATUS "C62: TETRA speech disabled (no ETSI codebooks)")
   endif()
   target_sources(app PRIVATE
     ${OPENRTX_ROOT}/openrtx/src/protocols/TETRA/TetraSpeech.c)
 endif()
 
-message(STATUS "C62: wide RX ${C62_WIDE_RX}, TETRA ${C62_TETRA}, REG_43 sweep ${C62_REG43_SWEEP}, "
+message(STATUS "C62: wide RX ${C62_WIDE_RX}, TETRA ${C62_TETRA} "
+               "(speech ${C62_TETRA_SPEECH}), REG_43 sweep ${C62_REG43_SWEEP}, "
                "baseband dump ${C62_BASEBAND_DUMP} "
                "(${C62_BASEBAND_DUMP_BAUD} baud, format "
                "${C62_BASEBAND_DUMP_FORMAT}, burst ${C62_BASEBAND_DUMP_BURST})")

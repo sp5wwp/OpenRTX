@@ -112,12 +112,11 @@ manifest:
       groups:
         - csk6
 
-    # ACELP speech decoder, for TETRA speech. The ETSI codebooks it needs are
-    # generated at build time, see scripts/c62/build.sh
+    # ACELP speech codec, for TETRA speech
     - name: openacelp
       remote: sp5wwp
       repo-path: OpenACELP
-      revision: 59ba884532c15fb2e7a2d269526d5bd5c01a93e0
+      revision: 93c33b9ef852e4fd787c23a5168fa5220cf070cf
       path: modules/lib/openacelp
       groups:
         - csk6

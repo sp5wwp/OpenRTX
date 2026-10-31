@@ -37,22 +37,6 @@ The outputs are:
 Run the same `docker run` command after each code change. The build is
 incremental.
 
-**TETRA speech (ETSI codebooks).** Playing TETRA speech needs the codebooks
-of the ETSI ACELP codec (EN 300 395-2). They are ETSI material, so they are
-never stored in git. The build script downloads the standard from etsi.org
-once and extracts them into `modules/lib/openacelp/build/`. etsi.org often
-refuses scripted downloads (HTTP 403). The build then prints a warning and
-continues without speech. In that case, download the ZIP in a web browser:
-
-<https://www.etsi.org/deliver/etsi_en/300300_300399/30039502/01.03.03_60/en_30039502v010303p0.zip>
-
-Put it in your workspace folder, next to `OpenRTX`, and run the same
-`docker run` command again. It is found automatically and checked against
-its SHA-256. A ZIP elsewhere in the workspace can be passed with
-`-e ETSI_ZIP=/work/path/to/en_30039502v010303p0.zip` (the workspace is
-`/work` inside the container). **A firmware built with the codebooks
-contains ETSI material: keep it for yourself, do not distribute it.**
-
 **Build options** go after the image name, for example:
 
 ```bash
@@ -68,7 +52,7 @@ docker run --rm -it --user "$(id -u):$(id -g)" \
 | `C62_BASEBAND_DUMP_BURST` | `ON` | Record 1 MiB (10.4 s) to PSRAM, send it, repeat |
 | `C62_BASEBAND_DUMP_FORMAT` | `1` | `1` = 16-bit samples, `2` = 12-bit packed (13.9 s per burst) |
 | `C62_TETRA` | `ON` | TETRA receive mode "T" (section 5), with libtetra |
-| `C62_TETRA_SPEECH` | `AUTO` | TETRA speech: on when the ETSI codebooks exist (section 1) |
+| `C62_TETRA_SPEECH` | `ON` | Play clear TETRA speech, with OpenACELP (section 5) |
 | `C62_REG43_SWEEP` | `OFF` | Cycle `REG_43` through 7 test values in M17 RX |
 | `C62_REG43_SWEEP_MS` | `1400` | Recorded time per sweep value (one burst covers all 7 values) |
 
@@ -204,12 +188,12 @@ symbol, a timing loop for the sample clock offset, a running fit of gain
 and carrier offset, and a 9-tap equalizer seeded with taps measured on the
 C62 (`CONFIG_TETRA_EQ_INIT` in `hwconfig.h`). Its soft bits go to libtetra.
 
-Speech: with the ETSI codebooks (section 1), clear (not encrypted) speech
-is played on the speaker. libtetra decodes each traffic slot into two
-speech frames, and [OpenACELP](https://github.com/sp5wwp/OpenACELP) decodes
-them into 8 kHz audio. The speaker is released after one second without
-speech. The build log says `C62: TETRA speech enabled` or `disabled`.
-`-DC62_TETRA_SPEECH=OFF` turns it off even with the codebooks present.
+Speech: clear (not encrypted) speech is played on the speaker. libtetra
+decodes each traffic slot into two speech frames, and
+[OpenACELP](https://github.com/sp5wwp/OpenACELP) decodes them into 8 kHz
+audio, with its built-in TETRA codebooks (EN 300 395-2). The speaker is
+released after one second without speech. `-DC62_TETRA_SPEECH=OFF` builds
+without it.
 
 The baseband dump keeps working in T mode, to capture what the radio
 receives.

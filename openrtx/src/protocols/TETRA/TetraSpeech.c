@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openacelp.h>
-#include <tetra_tables.h>
 #include <tetra/tetra.h>
 #include "core/audio_path.h"
 #include "core/audio_stream.h"

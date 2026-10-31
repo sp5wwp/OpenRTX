@@ -21,8 +21,8 @@ struct tetra_traffic;
  * speaker path when speech arrives and releases it after one second of
  * silence.
  *
- * OpenACELP needs the ETSI EN 300 395-2 codebooks, generated at build time
- * (CONFIG_TETRA_SPEECH). Without them these functions do nothing.
+ * Built with CONFIG_TETRA_SPEECH (CMake option C62_TETRA_SPEECH); without it
+ * these functions do nothing.
  */
 
 /**

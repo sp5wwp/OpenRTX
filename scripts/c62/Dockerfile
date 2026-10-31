@@ -15,7 +15,7 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y --no-install-recommends \
         ca-certificates git cmake ninja-build gperf device-tree-compiler \
         python3 python3-venv python3-pip wget xz-utils file make gcc g++ \
-        ccache meson sudo curl unzip \
+        ccache meson sudo \
     && rm -rf /var/lib/apt/lists/*
 
 # Zephyr SDK: only the arm-zephyr-eabi toolchain. x86_64 and arm64 hosts
