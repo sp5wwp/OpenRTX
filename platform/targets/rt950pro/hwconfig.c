@@ -28,6 +28,8 @@ BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR_BY_IDX(USER_NODE, ptt_gpios, 1),
                           DT_NODELABEL(gpioe)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, vbat_gpios),
                           DT_NODELABEL(gpioa)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, gps_pwr_gpios),
+                          DT_NODELABEL(gpioa)));
 
 const struct gpioPin rt950_pwr_switch = GPIO_PIN(GpioE, USER_NODE,
                                                  pwr_switch_gpios, 0);
@@ -41,6 +43,8 @@ const struct gpioPin rt950_led_green = GPIO_PIN(GpioC, USER_NODE,
 const struct gpioPin rt950_ptt = GPIO_PIN(GpioE, USER_NODE, ptt_gpios, 0);
 const struct gpioPin rt950_ptt2 = GPIO_PIN(GpioE, USER_NODE, ptt_gpios, 1);
 const struct gpioPin rt950_vbat = GPIO_PIN(GpioA, USER_NODE, vbat_gpios, 0);
+const struct gpioPin rt950_gps_pwr = GPIO_PIN(GpioA, USER_NODE, gps_pwr_gpios,
+                                              0);
 
 const struct pwm_dt_spec rt950_lcd_bl_pwm =
     PWM_DT_SPEC_GET(DT_NODELABEL(lcd_bl_pwm));

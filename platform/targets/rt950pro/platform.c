@@ -9,8 +9,14 @@
 #include <interfaces/keyboard.h>
 #include <interfaces/delays.h>
 #include <hwconfig.h>
+#include <peripherals/rtc.h>
+#include "core/gps.h"
+#include "drivers/GPS/gps_zephyr.h"
 #include <zephyr/drivers/adc.h>
+#include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
+#include <errno.h>
+#include <string.h>
 
 LOG_MODULE_REGISTER(platform, LOG_LEVEL_INF);
 
@@ -37,6 +43,59 @@ static const hwInfo_t hwInfo = {
 };
 
 static uint8_t pwrOffCount;
+static bool gpsPowerReady;
+static const struct device *const gpsUart = DEVICE_DT_GET(DT_ALIAS(gps));
+static bool gpsInitialized;
+
+static void gpsEnable(void *priv)
+{
+    (void)priv;
+    /* Reset stale sentences while the module is still powered off. */
+    gpsZephyr_terminate();
+    gpsZephyr_init();
+    gpioPin_clear(&rt950_gps_pwr);
+}
+
+static void gpsDisable(void *priv)
+{
+    (void)priv;
+    gpioPin_set(&rt950_gps_pwr);
+}
+
+static int gpsGetSentence(void *priv, char *buf, const size_t maxLength)
+{
+    /*
+     * The shared reader does not terminate strings and can overrun a small
+     * destination on truncation. A full-ring-sized scratch buffer avoids
+     * that path without changing the shared driver. Only the device thread
+     * calls this function; static storage keeps it off the small stack.
+     */
+    static char sentence[CONFIG_NMEA_RBUF_SIZE + 1];
+    (void)priv;
+    unsigned int readKey = irq_lock();
+    int ret = gpsZephyr_getNmeaSentence(NULL, sentence, sizeof(sentence));
+    irq_unlock(readKey);
+    if (ret > 0) {
+        sentence[ret] = '\0';
+        if ((size_t)ret >= maxLength) {
+            LOG_ERR("GPS sentence exceeds destination buffer");
+            if (maxLength > 0)
+                buf[0] = '\0';
+            ret = -EMSGSIZE;
+        } else {
+            memcpy(buf, sentence, ret + 1);
+        }
+    } else if (ret < 0) {
+        LOG_ERR("GPS sentence read failed: %d", ret);
+    }
+    return ret;
+}
+
+static const struct gpsDevice gps = {
+    .enable = gpsEnable,
+    .disable = gpsDisable,
+    .getSentence = gpsGetSentence,
+};
 
 static void configureGpio(const struct gpioPin *pin, uint16_t mode)
 {
@@ -64,6 +123,15 @@ void platform_init()
     gpioPin_clear(&rt950_led_green);
     configureGpio(&rt950_led_green, OUTPUT);
 
+    gpioPin_set(&rt950_gps_pwr);
+    int gpsRet = gpioPin_setMode(&rt950_gps_pwr, OUTPUT);
+    if (gpsRet < 0)
+        LOG_ERR("GPS power GPIO configuration failed (%d)", gpsRet);
+    else
+        gpsPowerReady = true;
+
+    rtc_init();
+
     configureGpio(&rt950_vbat, ANALOG);
     int ret = adc_channel_setup_dt(&vbatAdc);
     if (ret < 0) {
@@ -84,10 +152,14 @@ void platform_terminate()
     gpioPin_clear(&rt950_led_green);
 
     kbd_terminate();
+    gpsDisable(NULL);
+    if (gpsInitialized)
+        gpsZephyr_terminate();
+    rtc_terminate();
 
     /* Power enable switch off */
     gpioPin_clear(&rt950_power_enable);
-    delayMs(100);  // Wait for the power to actually turn off
+    delayMs(100); // Wait for the power to actually turn off
     NVIC_SystemReset();
 }
 
@@ -200,4 +272,31 @@ void platform_beepStop()
 const hwInfo_t *platform_getHwInfo()
 {
     return &hwInfo;
+}
+
+const struct gpsDevice *platform_initGps()
+{
+    if (!gpsPowerReady) {
+        LOG_ERR("GPS power GPIO is not ready");
+        return NULL;
+    }
+    if (!device_is_ready(gpsUart)) {
+        LOG_ERR("GPS UART %s is not ready", gpsUart->name);
+        return NULL;
+    }
+    if (!gpsInitialized) {
+        gpsZephyr_init();
+        gpsInitialized = true;
+    }
+    return &gps;
+}
+
+datetime_t platform_getCurrentTime()
+{
+    return rtc_getTime();
+}
+
+void platform_setTime(datetime_t time)
+{
+    rtc_setTime(time);
 }

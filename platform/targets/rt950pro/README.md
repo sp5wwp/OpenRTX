@@ -22,7 +22,7 @@ The hardware description comes from the reverse engineering work done in
 | Broadcast RX     | SI4732 (FM/AM/SSB)                         |
 | Display          | ST7789V, 240x320                           |
 | External Flash   | SPI 4MB, contains config, 64 KiB read back |
-| GPS              | GPS Module                                 |
+| GPS              | ATGM336H                                   |
 | Bluetooth        | HC-05                                      |
 
 ## Status
@@ -39,6 +39,11 @@ Supported:
   cable
 - power switch: the radio is switched off when the knob is turned off
 - battery voltage: ADC1 channel 1 (PA1) through a resistive divider
+- GPS: NMEA at 9600 baud on USART3 (PB10 TX, PB11 RX), powered by PA8
+  (active low)
+- time/date: the AT32 hardware RTC, using the existing 8 MHz main crystal
+  divided by 128 (62,500 Hz). Manual setting and optional GPS time
+  synchronization use the existing OpenRTX settings.
 
 Not supported yet:
 
@@ -47,7 +52,7 @@ Not supported yet:
 - Audio
 - External flash and settings storage
 - Bluetooth
-- GPS
+
 
 ### Key mapping
 

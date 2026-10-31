@@ -7,6 +7,13 @@
 #include <dt-bindings/pinctrl/at32f403av(g)xx-pinctrl.h>
 
 &pinctrl {
+	/* GPS module */
+	usart3_default: usart3_default {
+		group1 {
+			pinmux = <USART3_TX_PB10>, <USART3_RX_PB11>;
+		};
+	};
+
 	/* UART4 on the programming cable connector */
 	usart4_default: usart4_default {
 		group1 {

@@ -17,6 +17,9 @@ CONFIG_USE_DT_CODE_PARTITION=y
 # Battery voltage ADC
 CONFIG_ADC=y
 
+# GPS NMEA reception on USART3
+CONFIG_UART_INTERRUPT_DRIVEN=y
+
 # ST7789V LCD on a bit-banged 8-bit 8080 parallel bus
 CONFIG_DISPLAY=y
 CONFIG_MIPI_DBI=y

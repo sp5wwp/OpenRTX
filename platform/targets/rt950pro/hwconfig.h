@@ -29,10 +29,14 @@ extern "C" {
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 
+/* GPS and real time clock */
+#define CONFIG_GPS
+#define CONFIG_NMEA_RBUF_SIZE 128
+#define CONFIG_RTC
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
-
 
 /* Battery voltage measurement */
 #define RT950_VBAT_SCALE_NUM 482
@@ -46,6 +50,7 @@ extern const struct gpioPin rt950_led_red;
 extern const struct gpioPin rt950_led_green;
 extern const struct gpioPin rt950_ptt;
 extern const struct gpioPin rt950_ptt2;
+extern const struct gpioPin rt950_gps_pwr;
 extern const struct pwm_dt_spec rt950_lcd_bl_pwm;
 
 #ifdef __cplusplus
