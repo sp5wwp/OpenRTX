@@ -44,13 +44,14 @@ Supported:
 - time/date: the AT32 hardware RTC, using the existing 8 MHz main crystal
   divided by 128 (62,500 Hz). Manual setting and optional GPS time
   synchronization use the existing OpenRTX settings.
+- NVM settings storage in last 8kB of internal flash
 
 Not supported yet:
 
 - RF (BK4829)
 - FM/AM/SSB receiver (SI4732)
 - Audio
-- External flash and settings storage
+- External flash (e.g. calibration, CPS reading)
 - Bluetooth
 
 

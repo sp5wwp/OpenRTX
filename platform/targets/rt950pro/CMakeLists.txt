@@ -15,13 +15,13 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/mcu/AT32F403A/drivers/rtc.c
     ${OPENRTX_ROOT}/platform/drivers/GPS/nmea_rbuf.c
     ${OPENRTX_ROOT}/platform/drivers/GPS/gps_zephyr.c
+    ${OPENRTX_ROOT}/platform/drivers/NVM/nvmem_rt950pro.c
 
     ${OPENRTX_ROOT}/platform/drivers/display/display_rt950pro.c
     ${OPENRTX_ROOT}/platform/drivers/keyboard/keyboard_rt950pro.c
 
     ${OPENRTX_ROOT}/platform/drivers/stubs/audio_stub.c
     ${OPENRTX_ROOT}/platform/drivers/stubs/radio_stub.c
-    ${OPENRTX_ROOT}/platform/drivers/stubs/nvmem_stub.c
     ${OPENRTX_ROOT}/platform/drivers/stubs/cps_io_stub.c
 
     ${OPENRTX_ROOT}/platform/targets/rt950pro/board_init.c

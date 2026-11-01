@@ -8,6 +8,7 @@
 #include <interfaces/display.h>
 #include <interfaces/keyboard.h>
 #include <interfaces/delays.h>
+#include <interfaces/nvmem.h>
 #include <hwconfig.h>
 #include <peripherals/rtc.h>
 #include "core/gps.h"
@@ -108,6 +109,9 @@ void platform_init()
 {
     LOG_INF("Radtel RT-950 Pro, OpenRTX %s", GIT_VERSION);
 
+    /* Initialise non volatile memory manager */
+    nvm_init();
+
     gpioPin_set(&rt950_power_enable);
     configureGpio(&rt950_power_enable, OUTPUT);
 
@@ -156,6 +160,8 @@ void platform_terminate()
     if (gpsInitialized)
         gpsZephyr_terminate();
     rtc_terminate();
+
+    nvm_terminate();
 
     /* Power enable switch off */
     gpioPin_clear(&rt950_power_enable);
