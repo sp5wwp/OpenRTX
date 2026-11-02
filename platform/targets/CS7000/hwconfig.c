@@ -31,7 +31,7 @@ static const struct spiConfig spiDetCfg =
     .mosi      = { DET_DAT },
     .miso      = { DET_DAT },
     .clkPeriod = SCK_PERIOD_FROM_FREQ(1000000),
-    .flags     = SPI_HALF_DUPLEX
+    .flags     = SPI_FLAG_HALF_DUPLEX
 };
 
 static const struct spiConfig spiPllCfg =
@@ -40,7 +40,7 @@ static const struct spiConfig spiPllCfg =
     .mosi      = { PLL_DAT },
     .miso      = { PLL_DAT },
     .clkPeriod = SCK_PERIOD_FROM_FREQ(1000000),
-    .flags     = SPI_HALF_DUPLEX
+    .flags     = SPI_FLAG_HALF_DUPLEX
 };
 
 /**

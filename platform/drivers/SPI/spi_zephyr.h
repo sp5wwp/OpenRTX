@@ -9,7 +9,8 @@
 
 #include <stdbool.h>
 #include "peripherals/spi.h"
-#include "spi_zephyr_bus.h"
+
+struct device;
 
 #ifdef __cplusplus
 extern "C" {

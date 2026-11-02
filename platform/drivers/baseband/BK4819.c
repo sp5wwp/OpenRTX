@@ -46,16 +46,16 @@ uint16_t BK4819_readReg(const struct BK4819 *dev, uint8_t reg)
     const uint8_t cmd = reg | BK4819_REG_READ;
     uint8_t rx[2];
 
-    spi_acquire(dev->spi);
+    spiDevice_acquire(dev->spi);
     gpioPin_clear(&dev->scn);
     delayUs(1);
 
-    spi_send(dev->spi, &cmd, 1);
-    spi_receive(dev->spi, rx, sizeof(rx));
+    spiDevice_send(dev->spi, &cmd, 1);
+    spiDevice_receive(dev->spi, rx, sizeof(rx));
 
     delayUs(1);
     gpioPin_set(&dev->scn);
-    spi_release(dev->spi);
+    spiDevice_release(dev->spi);
 
     return ((uint16_t)rx[0] << 8) | rx[1];
 }
@@ -65,16 +65,16 @@ void BK4819_writeReg(const struct BK4819 *dev, bk4819_reg_t reg, uint16_t data)
     const uint8_t cmd = reg | BK4819_REG_WRITE;
     const uint8_t tx[2] = { (data >> 8) & 0xFF, data & 0xFF };
 
-    spi_acquire(dev->spi);
+    spiDevice_acquire(dev->spi);
     gpioPin_clear(&dev->scn);
     delayUs(1);
 
-    spi_send(dev->spi, &cmd, 1);
-    spi_send(dev->spi, tx, sizeof(tx));
+    spiDevice_send(dev->spi, &cmd, 1);
+    spiDevice_send(dev->spi, tx, sizeof(tx));
 
     delayUs(1);
     gpioPin_set(&dev->scn);
-    spi_release(dev->spi);
+    spiDevice_release(dev->spi);
 }
 
 void bk4819_init(const struct BK4819 *dev)

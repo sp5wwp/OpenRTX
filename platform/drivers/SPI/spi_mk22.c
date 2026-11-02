@@ -70,7 +70,7 @@ int spiMk22_init(const struct spiDevice *dev, const uint8_t pbr, const uint8_t b
     if((flags & SPI_FLAG_CPHA) != 0)
         spi->CTAR[0] |= SPI_CTAR_CPHA_MASK;
 
-    if((flags & SPI_LSB_FIRST) != 0)
+    if((flags & SPI_FLAG_LSB_FIRST) != 0)
         spi->CTAR[0] |= SPI_CTAR_LSBFE_MASK;
 
     if(dev->mutex != NULL)
@@ -133,4 +133,3 @@ int spiMk22_transfer(const struct spiDevice *dev, const void *txBuf,
 
     return 0;
 }
-

@@ -22,8 +22,8 @@ enum SPIFlags
 {
     SPI_FLAG_CPOL   = 1,  ///< Clock line is high when idle.
     SPI_FLAG_CPHA   = 2,  ///< Data lines are sampled on clock falling edge.
-    SPI_LSB_FIRST   = 4,  ///< Transfer data LSB first.
-    SPI_HALF_DUPLEX = 8   ///< Half-duplex data transfer mode, on a single data line
+    SPI_FLAG_LSB_FIRST = 4, ///< Transfer data LSB first.
+    SPI_FLAG_HALF_DUPLEX = 8   ///< Half-duplex data transfer mode, on a single data line
 };
 
 struct spiDevice;
@@ -37,7 +37,7 @@ struct spiDevice;
  * @param size: number of bytes to transfer.
  * @return zero on success, a negative error code otherwise.
  */
-typedef int (*spi_transfer_impl)(const struct spiDevice *dev, const void *txBuf,
+typedef int (*spiDevice_transfer_impl)(const struct spiDevice *dev, const void *txBuf,
                                  void *rxBuf, const size_t size);
 
 /**
@@ -45,7 +45,7 @@ typedef int (*spi_transfer_impl)(const struct spiDevice *dev, const void *txBuf,
  */
 struct spiDevice
 {
-    spi_transfer_impl transfer; ///< Device-specific implementation of the SPI transfer function
+    spiDevice_transfer_impl transfer; ///< Device-specific implementation of the SPI transfer function
     const void        *priv;    ///< Pointer to device driver private data
     pthread_mutex_t   *mutex;   ///< Pointer to mutex for exclusive access
 };
@@ -55,7 +55,7 @@ struct spiDevice
  *
  * @param dev: pointer to peripheral descriptor.
  */
-static inline void spi_init(const struct spiDevice *dev)
+static inline void spiDevice_init(const struct spiDevice *dev)
 {
     if(dev->mutex != NULL)
         pthread_mutex_init(dev->mutex, NULL);
@@ -66,7 +66,7 @@ static inline void spi_init(const struct spiDevice *dev)
  *
  * @param dev: pointer to peripheral descriptor.
  */
-static inline void spi_terminate(const struct spiDevice *dev)
+static inline void spiDevice_terminate(const struct spiDevice *dev)
 {
     if(dev->mutex != NULL)
         pthread_mutex_destroy(dev->mutex);
@@ -78,7 +78,7 @@ static inline void spi_terminate(const struct spiDevice *dev)
  * @param dev: pointer to peripheral descriptor.
  * @return zero on success, a negative error code on failure.
  */
-static inline int spi_acquire(const struct spiDevice *dev)
+static inline int spiDevice_acquire(const struct spiDevice *dev)
 {
     if(dev->mutex == NULL)
         return 0;
@@ -92,7 +92,7 @@ static inline int spi_acquire(const struct spiDevice *dev)
  * @param dev: pointer to peripheral descriptor.
  * @return zero on success, a negative error code on failure.
  */
-static inline int spi_tryAcquire(const struct spiDevice *dev)
+static inline int spiDevice_tryAcquire(const struct spiDevice *dev)
 {
     if(dev->mutex == NULL)
         return 0;
@@ -106,7 +106,7 @@ static inline int spi_tryAcquire(const struct spiDevice *dev)
  * @param dev: pointer to peripheral descriptor.
  * @return zero on success, a negative error code on failure.
  */
-static inline int spi_release(const struct spiDevice *dev)
+static inline int spiDevice_release(const struct spiDevice *dev)
 {
     if(dev->mutex == NULL)
         return 0;
@@ -123,7 +123,7 @@ static inline int spi_release(const struct spiDevice *dev)
  * @param size: number of bytes to transfer.
  * @return zero on success, a negative error code otherwise.
  */
-static inline int spi_transfer(const struct spiDevice *dev, const void *txBuf,
+static inline int spiDevice_transfer(const struct spiDevice *dev, const void *txBuf,
                                void *rxBuf, const size_t size)
 {
     return dev->transfer(dev, txBuf, rxBuf, size);
@@ -136,7 +136,7 @@ static inline int spi_transfer(const struct spiDevice *dev, const void *txBuf,
  * @param txSize: number of bytes to send.
  * @return zero on success, a negative error code otherwise.
  */
-static inline int spi_send(const struct spiDevice *dev, const void *txBuf,
+static inline int spiDevice_send(const struct spiDevice *dev, const void *txBuf,
                            const size_t txSize)
 {
     return dev->transfer(dev, txBuf, NULL, txSize);
@@ -149,7 +149,7 @@ static inline int spi_send(const struct spiDevice *dev, const void *txBuf,
  * @param rxSize: number of bytes to receive.
  * @return zero on success, a negative error code otherwise.
  */
-static inline int spi_receive(const struct spiDevice *dev, void *rxBuf,
+static inline int spiDevice_receive(const struct spiDevice *dev, void *rxBuf,
                               const size_t rxSize)
 {
     return dev->transfer(dev, NULL, rxBuf, rxSize);

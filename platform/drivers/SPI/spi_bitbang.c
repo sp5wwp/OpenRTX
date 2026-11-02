@@ -51,7 +51,7 @@ int spiBitbang_init(const struct spiCustomDevice *dev)
     const struct spiConfig *cfg = (const struct spiConfig *) dev->priv;
 
     // Basic driver init
-    spi_init((const struct spiDevice *) dev);
+    spiDevice_init((const struct spiDevice *) dev);
 
     // Setup MOSI and clock lines as output, low level
     gpio_setMode(cfg->clk.port,   cfg->clk.pin,  OUTPUT);
@@ -60,7 +60,7 @@ int spiBitbang_init(const struct spiCustomDevice *dev)
     gpio_clearPin(cfg->clk.port,  cfg->clk.pin);
 
     // Set MISO line as input only for full-duplex operation
-    if((cfg->flags & SPI_HALF_DUPLEX) == 0)
+    if((cfg->flags & SPI_FLAG_HALF_DUPLEX) == 0)
         gpio_setMode(cfg->miso.port, cfg->miso.pin, INPUT);
 
     return 0;
@@ -75,5 +75,5 @@ void spiBitbang_terminate(const struct spiCustomDevice* dev)
     gpio_setMode(cfg->mosi.port, cfg->mosi.pin, INPUT);
 
     // Final driver cleanup
-    spi_terminate((const struct spiDevice *) dev);
+    spiDevice_terminate((const struct spiDevice *) dev);
 }

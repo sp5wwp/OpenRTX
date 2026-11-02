@@ -16,7 +16,7 @@ const struct spiConfig spi_display_config = {
     .mosi = { LCD_DAT },
     .miso = { LCD_DAT },
     .clkPeriod = SCK_PERIOD_FROM_FREQ(1000000),
-    .flags = SPI_HALF_DUPLEX,
+    .flags = SPI_FLAG_HALF_DUPLEX,
 };
 
 const struct spiConfig spi_flash_config = {

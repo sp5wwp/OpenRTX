@@ -73,7 +73,7 @@ int spiStm32_init(const struct spiDevice *dev, const uint32_t speed, const uint8
     if((flags & SPI_FLAG_CPHA) != 0)
         spi->CR1 |= SPI_CR1_CPHA;
 
-    if((flags & SPI_LSB_FIRST) != 0)
+    if((flags & SPI_FLAG_LSB_FIRST) != 0)
         spi->CR1 |= SPI_CR1_LSBFIRST;
 
     spi->CR1 |= SPI_CR1_SPE;    // Enable peripheral
@@ -141,4 +141,3 @@ int spiStm32_transfer(const struct spiDevice *dev, const void *txBuf,
 
     return 0;
 }
-

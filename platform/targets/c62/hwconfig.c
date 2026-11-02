@@ -22,7 +22,7 @@
 static const struct spiZephyrCfg c62_bk4819_spiCfg = {
     .bus = DEVICE_DT_GET(DT_NODELABEL(bk4819_spi)),
     .frequency = 200000,
-    .flags = SPI_HALF_DUPLEX
+    .flags = SPI_FLAG_HALF_DUPLEX
 };
 
 SPI_ZEPHYR_DEVICE_DEFINE(c62_bk4819_spi, c62_bk4819_spiCfg, NULL)

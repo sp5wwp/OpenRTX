@@ -104,7 +104,7 @@ int spiStm32_init(const struct spiDevice *dev, const uint32_t speed, const uint8
     if((flags & SPI_FLAG_CPHA) != 0)
         spi->CFG2 |= SPI_CFG2_CPHA;
 
-    if((flags & SPI_LSB_FIRST) != 0)
+    if((flags & SPI_FLAG_LSB_FIRST) != 0)
         spi->CFG2 |= SPI_CFG2_LSBFRST;
 
     if(dev->mutex != NULL)

@@ -45,7 +45,7 @@ int spiCustom_transfer(const struct spiDevice *dev, const void *txBuf,
  */
 struct spiCustomDevice
 {
-    spi_transfer_impl transfer; ///< Device-specific implementation of the SPI transfer function
+    spiDevice_transfer_impl transfer; ///< Device-specific implementation of the SPI transfer function
     const void        *priv;    ///< Pointer to device driver private data
     pthread_mutex_t   *mutex;   ///< Pointer to mutex for exclusive access
     spi_func          spiFunc;  ///< Pointer to driver configuration data.

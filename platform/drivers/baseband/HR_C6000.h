@@ -95,7 +95,7 @@ private:
         data[3] = value;
 
         ScopedChipSelect cs(uSpi, uCs);
-        spi_send(uSpi, data, 4);
+        spiDevice_send(uSpi, data, 4);
     }
 
     /**
@@ -116,8 +116,8 @@ private:
         data[1] = addr & 0xFF;
 
         ScopedChipSelect cs(uSpi, uCs);
-        spi_send(uSpi, data, sizeof(data));
-        spi_receive(uSpi, value, 1);
+        spiDevice_send(uSpi, data, sizeof(data));
+        spiDevice_receive(uSpi, value, 1);
 
         return value[0];
     }
