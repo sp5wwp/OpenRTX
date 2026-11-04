@@ -5,12 +5,18 @@
  */
 
 #include <interfaces/display.h>
+#include <core/state.h>
 #include <hwconfig.h>
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/sys_io.h>
+#include <string.h>
+
+#include "fonts/adafruit/gfxfont.h"
+#include "fonts/adafruit/UbuntuRegular12pt7b.h"
+#include "fonts/adafruit/UbuntuRegular16pt7b.h"
 
 LOG_MODULE_REGISTER(display, LOG_LEVEL_INF);
 
@@ -35,6 +41,19 @@ LOG_MODULE_REGISTER(display, LOG_LEVEL_INF);
 BUILD_ASSERT(PANEL_WIDTH >= OUT_WIDTH);
 BUILD_ASSERT(PANEL_HEIGHT >= OUT_HEIGHT);
 BUILD_ASSERT(SCALE_NUM >= SCALE_DEN);
+
+/*
+ * The rows above the scaled frame are never touched by the framebuffer
+ * rendering. They are used to show the OpenRTX logo and the callsign shown by
+ * the boot screen, rasterized one row at a time to avoid a framebuffer for
+ * this area.
+ */
+#define HEADER_WIDTH PANEL_WIDTH
+#define HEADER_HEIGHT OUT_Y_OFFSET
+#define HEADER_LOGO_Y 40
+#define HEADER_CALLSIGN_Y 112
+#define HEADER_LOGO_COLOR 0xFDA2 /* RGB565 of 0xFAB413 */
+#define HEADER_CALLSIGN_COLOR 0xFFFF
 
 /* Timer driving the LCD backlight PWM output */
 #define LCD_BL_TIMER_BASE \
@@ -98,6 +117,7 @@ static const struct mipi_dbi_config dbiConfig = {
 
 static uint8_t srcColumn[OUT_WIDTH];
 static bool displayReady;
+static bool headerDrawn;
 static uint8_t backlightLevel;
 static K_MUTEX_DEFINE(displayMutex);
 
@@ -270,6 +290,80 @@ static void writeRows(uint8_t startRow, uint8_t endRow, const uint16_t *fb)
     busEndData();
 }
 
+/*
+ * Draw the pixels of a centered text which lie on a row of the header area.
+ * Same glyph rendering of the OpenRTX graphics code: y is the baseline of the
+ * first line and '\n' starts a new line.
+ */
+static void headerTextRow(uint16_t *line, int16_t row, const GFXfont *font,
+                          int16_t baseline, uint16_t color, const char *text)
+{
+    int16_t y = baseline;
+    const char *ptr = text;
+
+    while (*ptr != '\0') {
+        uint16_t lineWidth = 0;
+
+        for (const char *c = ptr; *c != '\0' && *c != '\n'; c++) {
+            if ((*c >= font->first) && (*c <= font->last))
+                lineWidth += font->glyph[*c - font->first].xAdvance;
+        }
+
+        int16_t x = (HEADER_WIDTH > lineWidth) ?
+                        (HEADER_WIDTH - lineWidth) / 2 :
+                        0;
+
+        for (; *ptr != '\0' && *ptr != '\n'; ptr++) {
+            if ((*ptr < font->first) || (*ptr > font->last))
+                continue;
+
+            const GFXglyph *glyph = &font->glyph[*ptr - font->first];
+            int16_t glyphRow = row - (y + glyph->yOffset);
+
+            if ((glyphRow >= 0) && (glyphRow < glyph->height)) {
+                for (uint8_t gx = 0; gx < glyph->width; gx++) {
+                    uint16_t bit = (glyphRow * glyph->width) + gx;
+                    uint8_t bits =
+                        font->bitmap[glyph->bitmapOffset + (bit >> 3)];
+                    int16_t px = x + glyph->xOffset + gx;
+
+                    if ((bits & (0x80 >> (bit & 7))) && (px >= 0)
+                        && (px < HEADER_WIDTH))
+                        line[px] = color;
+                }
+            }
+
+            x += glyph->xAdvance;
+        }
+
+        if (*ptr == '\n')
+            ptr++;
+
+        y += font->yAdvance;
+    }
+}
+
+static void drawHeader()
+{
+    uint16_t line[HEADER_WIDTH];
+
+    for (uint16_t row = 0; row < HEADER_HEIGHT; row++) {
+        memset(line, 0x00, sizeof(line));
+        headerTextRow(line, row, &UbuntuRegular16pt7b, HEADER_LOGO_Y,
+                      HEADER_LOGO_COLOR, "O P N\nR T X");
+        headerTextRow(line, row, &UbuntuRegular12pt7b, HEADER_CALLSIGN_Y,
+                      HEADER_CALLSIGN_COLOR, state.settings.callsign);
+
+        setWindow(0, row, HEADER_WIDTH, 1);
+        busStartData();
+
+        for (uint16_t x = 0; x < HEADER_WIDTH; x++)
+            busWritePixel(line[x]);
+
+        busEndData();
+    }
+}
+
 void display_init()
 {
     /* Keep the backlights off until the first frame has been drawn */
@@ -342,6 +436,21 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
 void display_render(void *fb)
 {
     display_renderRows(0, CONFIG_SCREEN_HEIGHT - 1, fb);
+
+    /*
+     * The boot screen is rendered while the device is starting up. Draw the
+     * header with the first frame rendered afterwards, the main screen.
+     */
+    if (!headerDrawn && (state.devStatus == RUNNING)) {
+        k_mutex_lock(&displayMutex, K_FOREVER);
+
+        if (displayReady) {
+            drawHeader();
+            headerDrawn = true;
+        }
+
+        k_mutex_unlock(&displayMutex);
+    }
 }
 
 void display_setContrast(uint8_t contrast)
