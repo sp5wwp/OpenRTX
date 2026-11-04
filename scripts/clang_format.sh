@@ -184,6 +184,7 @@ platform/drivers/audio/audio_CS7000.cpp
 platform/drivers/audio/audio_GDx.c
 platform/drivers/audio/audio_MDx.cpp
 platform/drivers/audio/audio_Mod17.c
+platform/drivers/audio/audio_rt950pro.c
 platform/drivers/audio/audio_ttwrplus.c
 platform/drivers/audio/stm32_adc.cpp
 platform/drivers/audio/stm32_adc.h

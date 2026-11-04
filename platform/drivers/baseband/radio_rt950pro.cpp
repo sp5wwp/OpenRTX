@@ -144,7 +144,7 @@ void radio_enableRx()
                                    &rt950_bk4829_vhf;
 
     bk4829_rtx_off(other);
-
+    bk4829_set_af(other, BK4829_AF_TYPE_MUTE);
     rfPathRx(band);
 
     // Allow the RF switches to settle
@@ -168,6 +168,8 @@ void radio_disableRtx()
 {
     bk4829_rtx_off(&rt950_bk4829_vhf);
     bk4829_rtx_off(&rt950_bk4829_uhf);
+    bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);
+    bk4829_set_af(&rt950_bk4829_uhf, BK4829_AF_TYPE_MUTE);
     rfPathIdle();
 
     rxChip = NULL;

@@ -58,13 +58,23 @@ Supported:
   (136-174MHz) or UHF (400-470MHz) chip and reports the RSSI to the UI. The
   receive RF path switches (PE13, PE12, PB0) are controlled according to the
   selected band. Transmit path switches (PE7, PB1, PE14) and the band relay
-  (PC4) remain untouched. Audio is not routed.
+  (PC4) remain untouched.
+- RX audio: `audio_rt950pro.c` routes the receiving BK4829 to the speaker. At
+  boot the speaker is muted (PE1 high), the amplifier is powered (PE4), the
+  audio source switch selects the BK4829 chips (PC12 high) and the Bluetooth
+  switch the speaker (PE9 low). Connecting the transceiver to the speaker
+  enables the amplifier (PB8) and unmutes it, following the squelch. The
+  chip which is not receiving has its AF registers cleared, as both chips share
+  the same audio bus. The routing comes from the reverse engineering work and is
+  not validated on hardware yet.
 
 Not supported yet:
 
-- RF transmission and the BK4829 GPIO driver
+- RF transmission
+- BK4829 GPIO driver (not required for RT950 pro)
 - FM/AM/SSB receiver (SI4732)
-- Audio
+- Audio routing transmission
+- Baseband Audio access (to support digital modes)
 - External flash (e.g. calibration, CPS reading)
 - Bluetooth
 

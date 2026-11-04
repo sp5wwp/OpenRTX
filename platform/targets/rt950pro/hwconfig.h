@@ -55,6 +55,17 @@ extern const struct gpioPin rt950_gps_pwr;
 extern const struct pwm_dt_spec rt950_lcd_bl_pwm;
 
 /*
+ * Audio path: speaker mute (high mutes), amplifier power and enable, audio
+ * source selection (high for the BK4829 chips, low for the MCU DAC) and
+ * Bluetooth switch (low routes the audio to the speaker).
+ */
+extern const struct gpioPin rt950_spk_mute;
+extern const struct gpioPin rt950_amp_pwr;
+extern const struct gpioPin rt950_amp_en;
+extern const struct gpioPin rt950_audio_sw;
+extern const struct gpioPin rt950_bt_sw;
+
+/*
  * RF path switches. They are driven by the physical level: high is
  * deasserted, as in the vendor firmware.
  */

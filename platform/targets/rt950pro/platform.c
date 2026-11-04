@@ -5,6 +5,7 @@
  */
 
 #include <interfaces/platform.h>
+#include <interfaces/audio.h>
 #include <interfaces/display.h>
 #include <interfaces/keyboard.h>
 #include <interfaces/delays.h>
@@ -137,6 +138,9 @@ void platform_init()
 
     rtc_init();
 
+    /* Mute the speaker and set up the audio path before the radio chips */
+    audio_init();
+
     /* Initialise the BK4829 serial bus and the two transceivers */
     int rfRet = spiZephyr_init(&rt950_bk4829_bus);
     if (rfRet < 0) {
@@ -166,6 +170,7 @@ void platform_terminate()
     gpioPin_clear(&rt950_led_green);
 
     kbd_terminate();
+    audio_terminate();
     gpsDisable(NULL);
     if (gpsInitialized)
         gpsZephyr_terminate();

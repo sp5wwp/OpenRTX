@@ -32,6 +32,17 @@ BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, vbat_gpios),
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, gps_pwr_gpios),
                           DT_NODELABEL(gpioa)));
 
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, spk_mute_gpios),
+                          DT_NODELABEL(gpioe)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, amp_pwr_gpios),
+                          DT_NODELABEL(gpioe)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, amp_en_gpios),
+                          DT_NODELABEL(gpiob)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, audio_sw_gpios),
+                          DT_NODELABEL(gpioc)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, bt_sw_gpios),
+                          DT_NODELABEL(gpioe)));
+
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, rf_u6r_gpios),
                           DT_NODELABEL(gpioe)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, rf_u3r_gpios),
@@ -63,6 +74,15 @@ const struct gpioPin rt950_ptt2 = GPIO_PIN(GpioE, USER_NODE, ptt_gpios, 1);
 const struct gpioPin rt950_vbat = GPIO_PIN(GpioA, USER_NODE, vbat_gpios, 0);
 const struct gpioPin rt950_gps_pwr = GPIO_PIN(GpioA, USER_NODE, gps_pwr_gpios,
                                               0);
+
+const struct gpioPin rt950_spk_mute = GPIO_PIN(GpioE, USER_NODE,
+                                               spk_mute_gpios, 0);
+const struct gpioPin rt950_amp_pwr = GPIO_PIN(GpioE, USER_NODE, amp_pwr_gpios,
+                                              0);
+const struct gpioPin rt950_amp_en = GPIO_PIN(GpioB, USER_NODE, amp_en_gpios, 0);
+const struct gpioPin rt950_audio_sw = GPIO_PIN(GpioC, USER_NODE,
+                                               audio_sw_gpios, 0);
+const struct gpioPin rt950_bt_sw = GPIO_PIN(GpioE, USER_NODE, bt_sw_gpios, 0);
 
 const struct gpioPin rt950_rf_u6r = GPIO_PIN(GpioE, USER_NODE, rf_u6r_gpios, 0);
 const struct gpioPin rt950_rf_u3r = GPIO_PIN(GpioE, USER_NODE, rf_u3r_gpios, 0);
