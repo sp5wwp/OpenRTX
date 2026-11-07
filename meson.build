@@ -1516,6 +1516,9 @@ c62_calib_test = executable('c62_calib_test',
                             sources : ['tests/unit/C62_calib.cpp',
                                        'platform/targets/c62/calib_C62.c'],
                             kwargs  : unit_test_opts)
+m17_decoder_test = executable('m17_decoder_test',
+                              sources : unit_test_src + ['tests/unit/M17_decoder.cpp'],
+                              kwargs  : unit_test_opts)
 
 dsp_oversampling_test = executable('dsp_oversampling_test',
                                     sources : unit_test_src + ['tests/unit/dsp_oversampling.cpp'],
@@ -1648,6 +1651,7 @@ test('UI Settings Test', ui_settings_test)
 test('UI Tuners Test', ui_tuners_test)
 test('M17 Packet Frame Test', m17_packet_test)
 test('C62 Calibration Test', c62_calib_test)
+test('M17 Frame Decoder Test', m17_decoder_test)
 test('DSP Oversampling Test', dsp_oversampling_test)
 test('GFX Text Test',        gfx_text_test)
 test('GFX Band Test',        gfx_band_test)
