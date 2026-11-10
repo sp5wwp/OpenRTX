@@ -337,6 +337,31 @@ at32f423_inc += miosix_cm4f_inc
 at32f423_def += miosix_cm4f_def
 
 ##
+## STM32U575
+##
+## Cortex-M33 core, run with the Cortex-M4F kernel port and code generation.
+##
+
+stm32u575_src = ['platform/mcu/STM32U5xx/boot/startup.cpp',
+                 'platform/mcu/STM32U5xx/boot/bsp.cpp',
+                 'platform/mcu/STM32U5xx/boot/libc_integration.cpp',
+                 'platform/mcu/STM32U5xx/drivers/delays.cpp',
+                 'platform/drivers/GPIO/gpio_stm32.c',
+                 'platform/drivers/ADC/adc_stm32u5.c',
+                 'platform/mcu/CMSIS/Device/ST/STM32U5xx/Source/system_stm32u5xx.c']
+
+stm32u575_inc = ['platform/mcu/STM32U5xx',
+                 'platform/mcu/STM32U5xx/drivers',
+                 'platform/mcu/CMSIS/Core_v5/Include',
+                 'platform/mcu/CMSIS/Device/ST/STM32U5xx/Include']
+
+stm32u575_def = {'STM32U575xx': ''}
+
+stm32u575_src += miosix_cm4f_src
+stm32u575_inc += miosix_cm4f_inc
+stm32u575_def += miosix_cm4f_def
+
+##
 ## ----------------------- Platform specializations ----------------------------
 ##
 
@@ -636,6 +661,29 @@ rt4d_inc += openrtx_inc + at32f423_inc
 rt4d_def += openrtx_def + at32f423_def
 
 ##
+## AnyTone AT-D890UV
+##
+
+d890uv_src = ['platform/targets/D890UV/platform.c',
+              'platform/targets/D890UV/hwconfig.c',
+              'platform/drivers/display/ST7735S_D890UV.c',
+              'platform/drivers/backlight/backlight_D890UV.c',
+              'platform/drivers/audio/audio_D890UV.c',
+              'platform/drivers/stubs/cps_io_stub.c',
+              'platform/drivers/keyboard/keyboard_D890UV.c',
+              'platform/drivers/stubs/nvmem_stub.c',
+              'platform/drivers/baseband/WX4818N.c',
+              'platform/drivers/baseband/radio_D890UV.c',
+              'platform/drivers/NVM/spiNand_D890UV.c']
+d890uv_inc = ['platform/targets/D890UV']
+d890uv_def = {'PLATFORM_D890UV': '',
+              'VECT_TAB_OFFSET': '0xC000U'}  # Stock bootloader in first 48KB
+
+d890uv_src += openrtx_src + stm32u575_src + ui_src_default
+d890uv_inc += openrtx_inc + stm32u575_inc
+d890uv_def += openrtx_def + stm32u575_def
+
+##
 ## -------------------------- Compilation arguments ----------------------------
 ##
 
@@ -766,6 +814,15 @@ foreach k, v : rt4d_def
   endif
 endforeach
 
+d890uv_args = []
+foreach k, v : d890uv_def
+  if v == ''
+    d890uv_args += '-D@0@'.format(k)
+  else
+    d890uv_args += '-D@0@=@1@'.format(k, v)
+  endif
+endforeach
+
 linux_opts = {
   'sources'            : linux_default_src,
   'include_directories': linux_inc,
@@ -854,6 +911,16 @@ rt4d_opts = {
   'c_args'             : rt4d_args,
   'cpp_args'           : rt4d_args,
   'link_args'          : ['-Wl,-T../platform/mcu/AT32F423/linker_script.ld',
+                          '-Wl,--print-memory-usage'],
+}
+
+d890uv_opts = {
+  'sources'            : d890uv_src,
+  'include_directories': d890uv_inc,
+  'dependencies'       : [codec2_dep],
+  'c_args'             : d890uv_args,
+  'cpp_args'           : d890uv_args,
+  'link_args'          : ['-Wl,-T../platform/mcu/STM32U5xx/linker_script.ld',
                           '-Wl,--print-memory-usage'],
 }
 
@@ -974,6 +1041,14 @@ targets = [
     'cpu'      : 'cm4'
   },
   {
+    'name'     : 'd890uv',
+    'opts'     : d890uv_opts,
+    'flashable': true,
+    'wrap'     : 'D890UV',
+    'load_addr': '0x0800C000',
+    'cpu'      : 'cm4'
+  },
+  {
     'name'     : 'ttwrplus',
     'opts'     : ttwrplus_opts,
     'flashable': true,
@@ -1016,6 +1091,8 @@ west        = find_program('west',                             required:false, d
 uf2conv     = find_program('scripts/uf2conv.py',               required:false, disabler:true)
 dfu_convert = find_program('scripts/dfu-convert.py',           required:false, disabler:true)
 cs7000_wrap = find_program('scripts/cs7000_wrap.py',           required:false, disabler:true)
+anytone_wrap = find_program('scripts/anytone_wrap.py',         required:false, disabler:true)
+anytone_flash = find_program('flash_anytone.py',               required:false, disabler:true)
 
 cm4_targets = []
 cm7_targets = []
@@ -1114,6 +1191,23 @@ foreach t : targets
                                  '-a', '0',
                                  '-D', '@INPUT@',
                                  '-s', '0x08000000'])
+
+      # AnyTone radios use the vendor .spi/.CDI/.CDD update file set
+      elif name == 'openrtx_d890uv'
+
+        wrap = custom_target(name+'_wrap',
+                             output  : [name+'.spi', name+'.CDI', name+'.CDD'],
+                             input   : bin,
+                             command : [anytone_wrap, '@INPUT@',
+                                        '@OUTDIR@/'+name,
+                                        '--model', t['wrap'],
+                                        '--hwver', 'V100',
+                                        '--addr', t['load_addr']])
+
+        custom_target(name+'_flash',
+                      input   : wrap[0],
+                      output  : name+'_flash',
+                      command : [anytone_flash, '@INPUT@'])
 
       elif name == 'openrtx_cs7000' or name == 'openrtx_cs7000p'
 

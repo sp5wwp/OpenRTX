@@ -13,6 +13,9 @@
 #elif defined(STM32H743xx)
 #include "stm32h7xx.h"
 #include "drivers/GPIO/gpio_stm32.h"
+#elif defined(STM32U575xx)
+#include "stm32u5xx.h"
+#include "drivers/GPIO/gpio_stm32.h"
 #elif defined(MK22FN512xx)
 #include "drivers/GPIO/gpio_mk22.h"
 #elif defined(AT32F423xx)
