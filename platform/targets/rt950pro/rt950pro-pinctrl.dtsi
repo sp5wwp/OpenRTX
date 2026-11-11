@@ -14,6 +14,13 @@
 		};
 	};
 
+	/* Bluetooth serial module */
+	usart1_default: usart1_default {
+		group1 {
+			pinmux = <USART1_TX_PA9>, <USART1_RX_PA10>;
+		};
+	};
+
 	/* UART4 on the programming cable connector */
 	usart4_default: usart4_default {
 		group1 {

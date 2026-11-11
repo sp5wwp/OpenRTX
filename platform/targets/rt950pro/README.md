@@ -23,7 +23,7 @@ The hardware description comes from the reverse engineering work done in
 | Display          | ST7789V, 240x320                           |
 | External Flash   | SPI 4MB, contains config, 64 KiB read back |
 | GPS              | ATGM336H                                   |
-| Bluetooth        | HC-05                                      |
+| Bluetooth        | BLE module, transparent UART link          |
 
 ## Status
 
@@ -70,6 +70,10 @@ Supported:
   the same audio bus. The routing comes from the reverse engineering work and is
   not validated on hardware yet.
 - SI4732 driver (FM only)
+- Bluetooth BLE module on USART1 (TX PA9, RX PA10), driven by
+  `bluetooth_rt950pro.c` as a transparent data link. The module is enabled by
+  PB9 (high) and its UART runs at 9600 baud.
+  
 
 Not supported yet:
 
@@ -79,7 +83,7 @@ Not supported yet:
 - Audio routing transmission
 - Baseband Audio access (to support digital modes)
 - External flash (e.g. calibration, CPS reading)
-- Bluetooth
+- Bluetooth core integration (CPS over Bluetooth, menu) and audio
 
 
 ### Key mapping

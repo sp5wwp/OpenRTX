@@ -16,6 +16,9 @@
 #include "drivers/GPS/gps_zephyr.h"
 #include "drivers/SPI/spi_zephyr.h"
 #include "drivers/I2C/i2c_bitbang.h"
+#ifdef CONFIG_BLUETOOTH
+#include "bluetooth_rt950pro.h"
+#endif
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
@@ -229,6 +232,12 @@ void platform_init()
 #ifdef CONFIG_BROADCAST_FM
     si4732Test();
 #endif
+
+#ifdef CONFIG_BLUETOOTH
+    int btRet = bluetooth_init();
+    if (btRet < 0)
+        LOG_ERR("Bluetooth initialization failed (%d)", btRet);
+#endif
 }
 
 void platform_terminate()
@@ -242,6 +251,9 @@ void platform_terminate()
 
     kbd_terminate();
     audio_terminate();
+#ifdef CONFIG_BLUETOOTH
+    bluetooth_terminate();
+#endif
     gpsDisable(NULL);
     if (gpsInitialized)
         gpsZephyr_terminate();

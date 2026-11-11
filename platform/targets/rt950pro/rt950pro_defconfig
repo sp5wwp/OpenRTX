@@ -24,6 +24,9 @@ CONFIG_SPI_BITBANG=y
 # GPS NMEA reception on USART3
 CONFIG_UART_INTERRUPT_DRIVEN=y
 
+# Receive buffer of the Bluetooth serial module on USART1
+CONFIG_RING_BUFFER=y
+
 # ST7789V LCD on a bit-banged 8-bit 8080 parallel bus
 CONFIG_DISPLAY=y
 CONFIG_MIPI_DBI=y

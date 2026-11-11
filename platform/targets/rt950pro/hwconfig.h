@@ -39,6 +39,9 @@ extern "C" {
 /* Broadcast FM receiver */
 //#define CONFIG_BROADCAST_FM
 
+/* Bluetooth module on USART1 */
+//#define CONFIG_BLUETOOTH
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
@@ -68,6 +71,7 @@ extern const struct gpioPin rt950_amp_pwr;
 extern const struct gpioPin rt950_amp_en;
 extern const struct gpioPin rt950_audio_sw;
 extern const struct gpioPin rt950_bt_sw;
+extern const struct gpioPin rt950_bt_pwr;
 
 /*
  * RF path switches. They are driven by the physical level: high is

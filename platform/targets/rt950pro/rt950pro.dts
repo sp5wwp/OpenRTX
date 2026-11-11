@@ -21,6 +21,7 @@
 
 	aliases {
 		gps = &usart3;
+		bluetooth = &usart1;
 	};
 
 	chosen {
@@ -105,8 +106,12 @@
 		io-channels = <&adc1 1>;
 		io-channel-names = "vbat";
 
-		/* Main power latch: must stay high to keep the radio powered */
-		pwr-latch-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
+		/*
+		 * Bluetooth module enable, high powers it on. The vendor firmware
+		 * sets it high when the Bluetooth setting is on and low
+		 * otherwise, right after configuring USART1.
+		 */
+		bt-pwr-gpios = <&gpiob 9 GPIO_ACTIVE_HIGH>;
 
 		/* Power/volume knob switch, low when the radio is switched on */
 		pwr-switch-gpios = <&gpioe 0 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
@@ -272,6 +277,14 @@
 	pinctrl-0 = <&usart4_default>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
+	status = "okay";
+};
+
+/* Bluetooth serial module (SPP) */
+&usart1 {
+	pinctrl-0 = <&usart1_default>;
+	pinctrl-names = "default";
+	current-speed = <9600>;
 	status = "okay";
 };
 

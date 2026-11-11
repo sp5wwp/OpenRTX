@@ -29,6 +29,7 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/drivers/baseband/radio_rt950pro.cpp
     ${OPENRTX_ROOT}/platform/drivers/stubs/cps_io_stub.c
 
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/bluetooth_rt950pro.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/board_init.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/hwconfig.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/platform.c
