@@ -157,6 +157,13 @@
 		audio-sw-gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
 		bt-sw-gpios = <&gpioe 9 GPIO_ACTIVE_HIGH>;
 
+		/*
+		 * SI4732 broadcast receiver at address 0x11
+		 */
+		si4732-rst-gpios = <&gpioa 6 GPIO_ACTIVE_LOW>;
+		si4732-scl-gpios = <&gpiob 6 GPIO_ACTIVE_HIGH>;
+		si4732-sda-gpios = <&gpiob 7 GPIO_ACTIVE_HIGH>;
+
 		/* Battery voltage through a resistive divider, ADC1 channel 1 */
 		vbat-gpios = <&gpioa 1 0>;
 

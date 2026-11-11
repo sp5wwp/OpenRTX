@@ -12,6 +12,7 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/mcu/AT32F403A/drivers/delays.c
     ${OPENRTX_ROOT}/platform/drivers/GPIO/gpio_zephyr.c
     ${OPENRTX_ROOT}/platform/drivers/SPI/spi_zephyr.c
+    ${OPENRTX_ROOT}/platform/drivers/I2C/i2c_bitbang.c
 
     ${OPENRTX_ROOT}/platform/mcu/AT32F403A/drivers/rtc.c
     ${OPENRTX_ROOT}/platform/drivers/GPS/nmea_rbuf.c
@@ -19,6 +20,7 @@ target_sources(app
 
     ${OPENRTX_ROOT}/platform/drivers/NVM/nvmem_rt950pro.c
     ${OPENRTX_ROOT}/platform/drivers/baseband/BK4829.c
+    ${OPENRTX_ROOT}/platform/drivers/baseband/SI4732.c
 
     ${OPENRTX_ROOT}/platform/drivers/display/display_rt950pro.c
     ${OPENRTX_ROOT}/platform/drivers/keyboard/keyboard_rt950pro.c

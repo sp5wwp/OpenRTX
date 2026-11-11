@@ -15,6 +15,7 @@
 #include "core/gps.h"
 #include "drivers/GPS/gps_zephyr.h"
 #include "drivers/SPI/spi_zephyr.h"
+#include "drivers/I2C/i2c_bitbang.h"
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
@@ -100,6 +101,72 @@ static const struct gpsDevice gps = {
     .getSentence = gpsGetSentence,
 };
 
+/*
+ * SI4732 test: receive a fixed FM broadcast station at boot.
+ *
+ */
+static void si4732Test(void)
+{
+    const struct SI4732 *si = &rt950_si4732;
+    uint8_t status = 0;
+
+    i2cBitbang_init(si->i2c);
+
+    int ret = si4732_probe(si, &status);
+    if (ret < 0) {
+        LOG_ERR("SI4732 not answering at 0x%02x (%d)", si->addr, ret);
+        return;
+    }
+
+    LOG_INF("SI4732 found at 0x%02x, status 0x%02x", si->addr, status);
+
+    si4732_fm_power_up(si, true);
+
+    struct si4732Rev rev;
+    si4732_get_rev(si, &rev);
+
+    LOG_INF("SI4732: Si47%02u, firmware %c.%c, patch 0x%04x, component %c.%c, "
+            "chip revision %c",
+            rev.partNumber, rev.fwMajor, rev.fwMinor, rev.patchId, rev.cmpMajor,
+            rev.cmpMinor, rev.chipRev);
+
+    si4732_fm_set_deemphasis(si, 50);
+    si4732_set_volume(si, 63);
+    si4732_set_mute(si, false);
+
+    struct si4732TuneStatus tune;
+    si4732_fm_tune(si, 92200000UL, &tune);
+
+    LOG_INF("SI4732 tuned to %u.%02u MHz: RSSI %u dBuV, SNR %u dB, "
+            "multipath %u, %s",
+            (unsigned int)(tune.freq / 1000000),
+            (unsigned int)((tune.freq / 10000) % 100), tune.rssi, tune.snr,
+            tune.mult, tune.valid ? "valid" : "not valid");
+
+    // Let the receiver settle before reading the signal quality
+    delayMs(100);
+
+    struct si4732Rsq rsq;
+    ret = si4732_fm_get_rsq(si, &rsq);
+    if (ret < 0) {
+        LOG_ERR("SI4732 FM_RSQ_STATUS failed (%d)", ret);
+    } else {
+        LOG_INF("SI4732 signal: RSSI %u dBuV, SNR %u dB, multipath %u, "
+                "offset %d kHz, %s, blend %u%%, %s%s",
+                rsq.rssi, rsq.snr, rsq.mult, rsq.freqOff,
+                rsq.pilot ? "stereo pilot" : "no pilot", rsq.blend,
+                rsq.valid ? "valid" : "not valid",
+                rsq.softMuted ? ", soft muted" : "");
+    }
+
+    // Route the audio to the speaker
+    gpioPin_set(&rt950_audio_sw);
+
+    // Enable the audio amplifier and unmute the speaker
+    gpioPin_set(&rt950_amp_en);
+    gpioPin_clear(&rt950_spk_mute);
+}
+
 static void configureGpio(const struct gpioPin *pin, uint16_t mode)
 {
     int ret = gpioPin_setMode(pin, mode);
@@ -158,6 +225,10 @@ void platform_init()
         vbatAdcReady = true;
         LOG_INF("Battery voltage %u mV", (unsigned int)platform_getVbat());
     }
+
+#ifdef CONFIG_BROADCAST_FM
+    si4732Test();
+#endif
 }
 
 void platform_terminate()

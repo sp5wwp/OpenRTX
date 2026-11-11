@@ -13,6 +13,7 @@
 #include <zephyr/drivers/pwm.h>
 #include <peripherals/gpio.h>
 #include "drivers/baseband/BK4829.h"
+#include "drivers/baseband/SI4732.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -34,6 +35,9 @@ extern "C" {
 #define CONFIG_GPS
 #define CONFIG_NMEA_RBUF_SIZE 128
 #define CONFIG_RTC
+
+/* Broadcast FM receiver */
+//#define CONFIG_BROADCAST_FM
 
 /* Battery type */
 #define CONFIG_BAT_LIION
@@ -83,6 +87,10 @@ extern const struct gpioPin rt950_rf_sw3t;
 extern const struct BK4829 rt950_bk4829_vhf;
 extern const struct BK4829 rt950_bk4829_uhf;
 extern const struct spiDevice rt950_bk4829_bus;
+
+/* SI4732 broadcast receiver, on a bit-banged I2C bus */
+extern const struct i2cDevice rt950_si4732_i2c;
+extern const struct SI4732 rt950_si4732;
 
 #ifdef __cplusplus
 }

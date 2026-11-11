@@ -69,12 +69,13 @@ Supported:
   chip which is not receiving has its AF registers cleared, as both chips share
   the same audio bus. The routing comes from the reverse engineering work and is
   not validated on hardware yet.
+- SI4732 driver (FM only)
 
 Not supported yet:
 
 - RF transmission
 - BK4829 GPIO driver (not required for RT950 pro)
-- FM/AM/SSB receiver (SI4732)
+- SI4732 AM/SSB reception
 - Audio routing transmission
 - Baseband Audio access (to support digital modes)
 - External flash (e.g. calibration, CPS reading)

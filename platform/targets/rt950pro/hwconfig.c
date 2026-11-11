@@ -7,6 +7,7 @@
 #include <hwconfig.h>
 #include "drivers/GPIO/gpio_zephyr.h"
 #include "drivers/SPI/spi_zephyr.h"
+#include "drivers/I2C/i2c_bitbang.h"
 
 #define USER_NODE DT_PATH(zephyr_user)
 
@@ -31,6 +32,13 @@ BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, vbat_gpios),
                           DT_NODELABEL(gpioa)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, gps_pwr_gpios),
                           DT_NODELABEL(gpioa)));
+
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, si4732_rst_gpios),
+                          DT_NODELABEL(gpioa)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, si4732_scl_gpios),
+                          DT_NODELABEL(gpiob)));
+BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, si4732_sda_gpios),
+                          DT_NODELABEL(gpiob)));
 
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, spk_mute_gpios),
                           DT_NODELABEL(gpioe)));
@@ -75,13 +83,13 @@ const struct gpioPin rt950_vbat = GPIO_PIN(GpioA, USER_NODE, vbat_gpios, 0);
 const struct gpioPin rt950_gps_pwr = GPIO_PIN(GpioA, USER_NODE, gps_pwr_gpios,
                                               0);
 
-const struct gpioPin rt950_spk_mute = GPIO_PIN(GpioE, USER_NODE,
-                                               spk_mute_gpios, 0);
+const struct gpioPin rt950_spk_mute = GPIO_PIN(GpioE, USER_NODE, spk_mute_gpios,
+                                               0);
 const struct gpioPin rt950_amp_pwr = GPIO_PIN(GpioE, USER_NODE, amp_pwr_gpios,
                                               0);
 const struct gpioPin rt950_amp_en = GPIO_PIN(GpioB, USER_NODE, amp_en_gpios, 0);
-const struct gpioPin rt950_audio_sw = GPIO_PIN(GpioC, USER_NODE,
-                                               audio_sw_gpios, 0);
+const struct gpioPin rt950_audio_sw = GPIO_PIN(GpioC, USER_NODE, audio_sw_gpios,
+                                               0);
 const struct gpioPin rt950_bt_sw = GPIO_PIN(GpioE, USER_NODE, bt_sw_gpios, 0);
 
 const struct gpioPin rt950_rf_u6r = GPIO_PIN(GpioE, USER_NODE, rf_u6r_gpios, 0);
@@ -121,4 +129,25 @@ const struct BK4829 rt950_bk4829_vhf = {
 const struct BK4829 rt950_bk4829_uhf = {
     .bus = &rt950_bk4829_bus,
     .scn = GPIO_PIN(GpioE, USER_NODE, bk4829_scn_gpios, 1),
+};
+
+/*
+ * SI4732 broadcast receiver: bit-banged I2C (SCL PB6, SDA PB7), reset PA6.
+ * The 5us clock half period gives a bus clock below 100kHz.
+ */
+static struct i2cBitbangState rt950_si4732_i2cState;
+
+static const struct i2cBitbangCfg rt950_si4732_i2cCfg = {
+    .sck = GPIO_PIN(GpioB, USER_NODE, si4732_scl_gpios, 0),
+    .sda = GPIO_PIN(GpioB, USER_NODE, si4732_sda_gpios, 0),
+    .clkPeriod = 5,
+    .state = &rt950_si4732_i2cState,
+};
+
+I2C_BITBANG_DEVICE_DEFINE(rt950_si4732_i2c, rt950_si4732_i2cCfg, NULL)
+
+const struct SI4732 rt950_si4732 = {
+    .i2c = &rt950_si4732_i2c,
+    .rst = GPIO_PIN(GpioA, USER_NODE, si4732_rst_gpios, 0),
+    .addr = SI4732_I2C_ADDR_SEN_LOW,
 };
