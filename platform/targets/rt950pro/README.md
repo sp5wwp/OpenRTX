@@ -45,10 +45,24 @@ Supported:
   divided by 128 (62,500 Hz). Manual setting and optional GPS time
   synchronization use the existing OpenRTX settings.
 - NVM settings storage in last 8kB of internal flash
+- BK4829 transceivers: both chips are reset and initialised at boot. They
+  share a Zephyr SPI bit-banged, half-duplex 3-wire serial bus at 100 kHz
+  (SCLK PE10, SDATA PE11); chip 0 (PE8
+  chip select) is wired to the VHF LNA and PA, chip 1 (PE15) to the UHF ones.
+  Both chips use one generic OpenRTX SPI device with a shared transaction
+  mutex; the BK4829 driver controls chip select across command and data.
+  The Zephyr SPI adapter performs transfers directly, without a separate
+  bus bridge module.
+  The driver is not validated on hardware yet.
+- RF reception, for testing only: `radio_rt950pro.cpp` tunes the VHF
+  (136-174MHz) or UHF (400-470MHz) chip and reports the RSSI to the UI. The
+  receive RF path switches (PE13, PE12, PB0) are controlled according to the
+  selected band. Transmit path switches (PE7, PB1, PE14) and the band relay
+  (PC4) remain untouched. Audio is not routed.
 
 Not supported yet:
 
-- RF (BK4829)
+- RF transmission and the BK4829 GPIO driver
 - FM/AM/SSB receiver (SI4732)
 - Audio
 - External flash (e.g. calibration, CPS reading)

@@ -13,6 +13,7 @@
 #include <peripherals/rtc.h>
 #include "core/gps.h"
 #include "drivers/GPS/gps_zephyr.h"
+#include "drivers/SPI/spi_zephyr.h"
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
@@ -135,6 +136,15 @@ void platform_init()
         gpsPowerReady = true;
 
     rtc_init();
+
+    /* Initialise the BK4829 serial bus and the two transceivers */
+    int rfRet = spiZephyr_init(&rt950_bk4829_bus);
+    if (rfRet < 0) {
+        LOG_ERR("BK4829 SPI bus initialization failed (%d)", rfRet);
+    } else {
+        bk4829_init(&rt950_bk4829_vhf);
+        bk4829_init(&rt950_bk4829_uhf);
+    }
 
     configureGpio(&rt950_vbat, ANALOG);
     int ret = adc_channel_setup_dt(&vbatAdc);

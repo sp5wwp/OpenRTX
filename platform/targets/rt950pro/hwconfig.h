@@ -12,6 +12,7 @@
 #include <zephyr/devicetree.h>
 #include <zephyr/drivers/pwm.h>
 #include <peripherals/gpio.h>
+#include "drivers/baseband/BK4829.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -52,6 +53,25 @@ extern const struct gpioPin rt950_ptt;
 extern const struct gpioPin rt950_ptt2;
 extern const struct gpioPin rt950_gps_pwr;
 extern const struct pwm_dt_spec rt950_lcd_bl_pwm;
+
+/*
+ * RF path switches. They are driven by the physical level: high is
+ * deasserted, as in the vendor firmware.
+ */
+extern const struct gpioPin rt950_rf_u6r;
+extern const struct gpioPin rt950_rf_u3r;
+extern const struct gpioPin rt950_rf_v3r;
+extern const struct gpioPin rt950_rf_u3t;
+extern const struct gpioPin rt950_rf_v3t;
+extern const struct gpioPin rt950_rf_sw3t;
+
+/*
+ * BK4829 transceivers sharing the same serial bus: the VHF one, wired to the
+ * VHF LNA and PA, and the UHF one, wired to the UHF LNA and PA.
+ */
+extern const struct BK4829 rt950_bk4829_vhf;
+extern const struct BK4829 rt950_bk4829_uhf;
+extern const struct spiDevice rt950_bk4829_bus;
 
 #ifdef __cplusplus
 }
