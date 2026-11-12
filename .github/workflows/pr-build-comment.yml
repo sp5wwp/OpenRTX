@@ -119,6 +119,7 @@ jobs:
               ['openrtx-mod17',   'Module 17'],
               ['openrtx-ttwrplus', 'Lilygo T-TWR Plus'],
               ['openrtx-c62',     'Retevis C62'],
+              ['openrtx-rt950pro', 'Radtel RT-950 Pro'],
             ]);
 
             const artifacts = await github.paginate(
@@ -182,10 +183,10 @@ jobs:
 
             const extras = [];
             // release-bins comes from the devcontainer build job, so it has
-            // every radio except the Zephyr-built T-TWR Plus and C62.
+            // every radio except the Zephyr-built T-TWR Plus, C62 and RT-950 Pro.
             if (have.has('release-bins')) {
               extras.push(
-                `[every radio except the T-TWR Plus and C62 in one file](${link('release-bins')})`,
+                `[every radio except the T-TWR Plus, C62 and RT-950 Pro in one file](${link('release-bins')})`,
               );
             }
             if (have.has('coverage-report')) {

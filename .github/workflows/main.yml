@@ -166,6 +166,34 @@ jobs:
             app/build/zephyr/zephyr.bin
             app/build/zephyr/dsp_firmware.bin
           if-no-files-found: error
+  build-rt950pro:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - name: Compile RT-950 Pro using devcontainer
+        uses: devcontainers/ci@v0.3
+        with:
+          configFile: ./.devcontainer/zephyr/devcontainer.json
+          cacheFrom: ghcr.io/openrtx/openrtx-sdk-zephyr
+          push: never
+          runCmd: |
+            west update --group-filter +artery &&
+            uv pip install --python "$VENV/bin/python" -r "$(west topdir)/zephyr-artery/scripts/requirements-base.txt" &&
+            meson setup build_rt950pro &&
+            meson compile -C build_rt950pro openrtx_rt950pro &&
+            chmod -R a+rX build_rt950pro
+      - name: Upload RT-950 Pro firmware
+        uses: actions/upload-artifact@v4
+        with:
+          name: openrtx-rt950pro
+          path: |
+            build_rt950pro/rt950pro/openrtx_rt950pro.BTF
+            build_rt950pro/rt950pro/zephyr/zephyr.bin
+          if-no-files-found: error
   build:
     runs-on: ubuntu-24.04
     timeout-minutes: 120

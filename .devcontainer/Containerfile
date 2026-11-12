@@ -19,7 +19,11 @@ LABEL org.opencontainers.image.source=$SOURCE
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# Install development dependencies
+# Install development dependencies. /workspaces/openrtx is the mount point of
+# the openrtx-workspace volume, which copies its permissions from this
+# directory. It is world-writable because the devcontainer tooling changes the
+# UID of the ubuntu user to match the host user (e.g. the CI runner), which
+# would otherwise lose write access to the volume and break `west init`.
 RUN apt-get update -y && apt-get install -y --no-install-recommends \
   build-essential \
   ca-certificates \
@@ -38,7 +42,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
   wget \
   xz-utils \
   && rm -rf /var/lib/apt/lists/* \
-  && install -d -m 0755 -o ubuntu -g ubuntu /workspaces/openrtx
+  && install -d -m 0777 -o ubuntu -g ubuntu /workspaces/openrtx
 
 # Add uv to manage Python dependencies
 COPY --from=uv /uv /uvx /bin/
