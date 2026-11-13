@@ -95,6 +95,34 @@ void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq);
  */
 void wx4818n_setFrequency(const struct wx4818n *dev, uint32_t freq);
 
+/**
+ * FM transmission parameters.
+ */
+struct wx4818nTxConfig {
+    uint32_t freq;    ///< Frequency in Hz, already corrected for the crystal
+    bool wide;        ///< 25kHz channel (12.5kHz otherwise)
+    uint16_t ctcss;   ///< CTCSS tone in 0.1Hz, 0 for none
+    uint16_t modCal;  ///< Modulation calibration, register 0x31 bits 11:0
+    uint16_t toneCal; ///< Modulation calibration, register 0x2E entry 6
+};
+
+/**
+ * Configure the chip for FM transmission and switch it to TX mode, with the
+ * sequence of the stock firmware. The RF power stage is not handled here.
+ *
+ * @param dev: device.
+ * @param cfg: transmission parameters.
+ */
+void wx4818n_startFmTx(const struct wx4818n *dev,
+                       const struct wx4818nTxConfig *cfg);
+
+/**
+ * Put the chip in standby.
+ *
+ * @param dev: device.
+ */
+void wx4818n_standby(const struct wx4818n *dev);
+
 #ifdef __cplusplus
 }
 #endif
