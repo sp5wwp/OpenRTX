@@ -85,17 +85,23 @@ void platform_init()
 
 void platform_terminate()
 {
-    usb_terminate();
     DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(SPK_EN);
     gpio_clearPin(LED_ANL_RX);
     gpio_clearPin(LED_TX);
+
+    /*
+     * Release the supply, as stock does at the end of its power-off
+     * sequence. The settings are already saved (state_terminate()). Done
+     * before stopping the other subsystems, so that one of them hanging
+     * cannot keep the radio on with the power switch off.
+     */
+    gpio_clearPin(PWR_HOLD);
+
     backlight_terminate();
     adcStm32_terminate(&adc1);
-
-    // Release the supply, as stock does at the end of its power-off sequence
-    gpio_clearPin(PWR_HOLD);
+    usb_terminate();
 }
 
 /*
