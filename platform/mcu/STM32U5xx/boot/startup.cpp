@@ -58,11 +58,23 @@ void program_startup()
 }
 
 /**
+ * Target hook run before any initialization: .data and .bss are not set up
+ * and the clocks are as the bootloader left them. It must not use globals.
+ * The default does nothing.
+ */
+extern "C" void early_boot_hook() __attribute__((weak));
+extern "C" void early_boot_hook()
+{
+}
+
+/**
  * Reset handler, called by hardware immediately after reset
  */
 void Reset_Handler() __attribute__((__interrupt__, noreturn));
 void Reset_Handler()
 {
+    early_boot_hook();
+
     /*
      * Initialize process stack and switch to it.
      * This is required for booting Miosix, a small portion of the top of the
@@ -70,11 +82,13 @@ void Reset_Handler()
      * this stack will be abandoned and the process stack will point to the
      * current thread's stack.
      */
-    asm volatile("ldr r0,  =_heap_end          \n\t"
-                 "msr psp, r0                  \n\t"
-                 "movw r0, #2                  \n\n" // Privileged, process stack
-                 "msr control, r0              \n\t"
-                 "isb                          \n\t" ::: "r0");
+    asm volatile(
+        "ldr r0,  =_heap_end          \n\t"
+        "msr psp, r0                  \n\t"
+        "movw r0, #2                  \n\n" // Privileged, process stack
+        "msr control, r0              \n\t"
+        "isb                          \n\t" ::
+            : "r0");
 
     program_startup();
 }

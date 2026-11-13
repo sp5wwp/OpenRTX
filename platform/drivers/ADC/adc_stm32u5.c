@@ -37,8 +37,8 @@
  * (HAL_ADCEx_Calibration_Start) to ADC1 on silicon revisions from 0x3000 on:
  * load these linearity calibration factors at CALINDEX 9 before calibrating.
  */
-#define ADC1_CAL_WORKAROUND_REV  0x3000
-#define ADC1_CAL_WORKAROUND_IDX  9
+#define ADC1_CAL_WORKAROUND_REV 0x3000
+#define ADC1_CAL_WORKAROUND_IDX 9
 #define ADC1_CAL_WORKAROUND_FACT 0x03021100
 #define ADC1_CAL_WORKAROUND_MASK 0xFFFFFF00
 
@@ -116,7 +116,7 @@ static int adcDisable(ADC_TypeDef *pAdc)
 static int adcCalibrate(ADC_TypeDef *pAdc)
 {
     uint32_t revId = (DBGMCU->IDCODE & DBGMCU_IDCODE_REV_ID)
-                   >> DBGMCU_IDCODE_REV_ID_Pos;
+                  >> DBGMCU_IDCODE_REV_ID_Pos;
     int ret;
 
     if (revId >= ADC1_CAL_WORKAROUND_REV) {
@@ -161,7 +161,8 @@ static int adcStart(ADC_TypeDef *pAdc, bool calibrate)
     __DSB();
 
     RCC->CCIPR3 &= ~RCC_CCIPR3_ADCDACSEL;
-    ADC12_COMMON->CCR = (ADC12_COMMON->CCR & ~ADC_CCR_PRESC) | ADC_CCR_PRESC_DIV4;
+    ADC12_COMMON->CCR = (ADC12_COMMON->CCR & ~ADC_CCR_PRESC)
+                      | ADC_CCR_PRESC_DIV4;
 
     /*
      * Write ADC_CR as a whole, as the HAL does: ADEN may only be set while all

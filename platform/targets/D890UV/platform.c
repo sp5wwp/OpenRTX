@@ -9,8 +9,19 @@
 #include <interfaces/nvmem.h>
 #include <interfaces/platform.h>
 #include <peripherals/gpio.h>
+#include "drivers/backlight/backlight.h"
+#include "drivers/USB/usb.h"
 
 void radio_setVolume(uint8_t volume);
+
+/*
+ * Power switch level on PA0 while the switch is on. The stock firmware
+ * (0x080D6954) treats PA0 high as "switch off", the I/O table says the
+ * opposite. At start-up the switch is necessarily on, so the level read
+ * then is taken as the "on" level.
+ */
+static uint8_t pwrOnLevel;
+static uint8_t pwrOffCount;
 
 static const hwInfo_t hwInfo = {
     .vhf_maxFreq = 174,
@@ -28,6 +39,11 @@ void platform_init()
 {
     gpio_setMode(PTT_SW, INPUT_PULL_UP);
     gpio_setMode(PWR_ON_DET, INPUT_PULL_UP);
+
+    // Hold the supply on, so that settings can be saved after the power
+    // switch is turned off. Stock does the same with PC3.
+    gpio_setPin(PWR_HOLD);
+    gpio_setMode(PWR_HOLD, OUTPUT);
     gpio_setMode(AIN_VBAT, ANALOG);
     gpio_setMode(AIN_VOLUME, ANALOG);
 
@@ -42,18 +58,30 @@ void platform_init()
     gpio_setMode(UHF_FILTER, ANALOG);
     RCC->AHB3ENR |= RCC_AHB3ENR_DAC1EN;
     __DSB();
-    DAC1->MCR = (DAC1->MCR & ~(DAC_MCR_HFSEL | DAC_MCR_MODE2)) | DAC_MCR_HFSEL_0;
+    DAC1->MCR = (DAC1->MCR & ~(DAC_MCR_HFSEL | DAC_MCR_MODE2))
+              | DAC_MCR_HFSEL_0;
     DAC1->DHR12R2 = 0x800;
     DAC1->CR |= DAC_CR_EN2;
 
     adcStm32_init(&adc1);
     nvm_init();
+
+    pwrOnLevel = gpio_readPin(PWR_ON_DET);
+    pwrOffCount = 0;
+
+    usb_init();
 }
 
 void platform_terminate()
 {
+    usb_terminate();
     gpio_clearPin(TX_PWR_EN);
+    gpio_clearPin(SPK_EN);
+    backlight_terminate();
     adcStm32_terminate(&adc1);
+
+    // Release the supply, as stock does at the end of its power-off sequence
+    gpio_clearPin(PWR_HOLD);
 }
 
 /*
@@ -66,7 +94,7 @@ void platform_terminate()
  * pin per battery volt (divider ratio ~3.97) and a 20mV offset.
  */
 #define VBAT_PIN_UV_PER_V 251770
-#define VBAT_OFFSET_MV    20
+#define VBAT_OFFSET_MV 20
 
 uint16_t platform_getVbat()
 {
@@ -114,8 +142,21 @@ bool platform_getPttStatus()
 
 bool platform_pwrButtonStatus()
 {
-    // The power switch cuts the supply directly while PWR_HOLD is low
-    return true;
+    /*
+     * Called every 5ms. Like stock, require the "off" level for at least
+     * 10ms before shutting down.
+     */
+    if (gpio_readPin(PWR_ON_DET) == pwrOnLevel) {
+        pwrOffCount = 0;
+        return true;
+    }
+
+    if (pwrOffCount < 2) {
+        pwrOffCount++;
+        return true;
+    }
+
+    return false;
 }
 
 void platform_ledOn(led_t led)

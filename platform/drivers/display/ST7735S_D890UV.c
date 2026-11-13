@@ -23,9 +23,9 @@
 enum st7735sCmd {
     ST7735S_CMD_SLPOUT = 0x11,
     ST7735S_CMD_DISPON = 0x29,
-    ST7735S_CMD_CASET  = 0x2A,
-    ST7735S_CMD_RASET  = 0x2B,
-    ST7735S_CMD_RAMWR  = 0x2C,
+    ST7735S_CMD_CASET = 0x2A,
+    ST7735S_CMD_RASET = 0x2B,
+    ST7735S_CMD_RAMWR = 0x2C,
     ST7735S_CMD_MADCTL = 0x36,
     ST7735S_CMD_COLMOD = 0x3A,
     ST7735S_CMD_FRMCTR1 = 0xB1,
@@ -44,7 +44,7 @@ enum st7735sCmd {
 
 /* Frame memory size, in panel coordinates */
 #define MEM_COLUMNS CONFIG_SCREEN_HEIGHT
-#define MEM_ROWS    CONFIG_SCREEN_WIDTH
+#define MEM_ROWS CONFIG_SCREEN_WIDTH
 
 static inline GPIO_TypeDef *portOf(const void *port, const uint8_t pin)
 {
@@ -99,10 +99,10 @@ static void sendCmdData(const uint8_t cmd, const uint8_t *data, size_t len)
         writeByte(data[i]);
 }
 
-#define CMD(c, ...)                                                   \
-    do {                                                              \
-        static const uint8_t _d[] = { __VA_ARGS__ };                  \
-        sendCmdData(c, _d, sizeof(_d));                               \
+#define CMD(c, ...)                                  \
+    do {                                             \
+        static const uint8_t _d[] = { __VA_ARGS__ }; \
+        sendCmdData(c, _d, sizeof(_d));              \
     } while (0)
 
 static void setWindow(uint8_t col0, uint8_t col1, uint8_t row0, uint8_t row1)
@@ -135,7 +135,7 @@ void display_init()
     gpio_setMode(LCD_D6, OUTPUT);
     gpio_setMode(LCD_D7, OUTPUT);
 
-    gpio_setPin(LCD_CS);    /* CS idle state is high level */
+    gpio_setPin(LCD_CS); /* CS idle state is high level */
     gpio_setPin(LCD_DC);
     gpio_setPin(LCD_WR);
     gpio_setPin(LCD_RST);
@@ -170,12 +170,12 @@ void display_init()
     CMD(ST7735S_CMD_PWCTR4, 0x8C, 0x2A);
     CMD(ST7735S_CMD_PWCTR5, 0x8A, 0xEE);
     CMD(ST7735S_CMD_VMCTR1, 0x0C);
-    CMD(ST7735S_CMD_MADCTL, 0x88);   /* MY | BGR */
+    CMD(ST7735S_CMD_MADCTL, 0x88); /* MY | BGR */
     CMD(ST7735S_CMD_GMCTRP1, 0x05, 0x1A, 0x0C, 0x0E, 0x3A, 0x34, 0x2D, 0x2F,
         0x2D, 0x2A, 0x2F, 0x3C, 0x00, 0x01, 0x02, 0x10);
     CMD(ST7735S_CMD_GMCTRN1, 0x04, 0x1B, 0x0D, 0x0E, 0x2D, 0x29, 0x24, 0x29,
         0x28, 0x26, 0x31, 0x3B, 0x00, 0x00, 0x03, 0x12);
-    CMD(ST7735S_CMD_COLMOD, 0x55);   /* 16bpp, RGB565 */
+    CMD(ST7735S_CMD_COLMOD, 0x55); /* 16bpp, RGB565 */
 
     clearMemory();
     sendCmd(ST7735S_CMD_DISPON);

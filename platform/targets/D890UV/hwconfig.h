@@ -12,8 +12,8 @@
 #include "drivers/baseband/WX4818N.h"
 
 enum adcChannel {
-    ADC_VBAT_CH = 2,    // PC1, ADC1_IN2
-    ADC_VOL_CH  = 3,    // PC2, ADC1_IN3
+    ADC_VBAT_CH = 2, // PC1, ADC1_IN2
+    ADC_VOL_CH = 3,  // PC2, ADC1_IN3
 };
 
 extern const struct Adc adc1;

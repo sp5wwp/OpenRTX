@@ -10,17 +10,17 @@
 #include "hwconfig.h"
 
 enum spiNandCmd {
-    CMD_READ_ID    = 0x9F,
-    CMD_PAGE_READ  = 0x13,  ///< Load a page into the chip cache
-    CMD_GET_FEAT   = 0x0F,
-    CMD_READ_CACHE = 0x03,  ///< Read from the chip cache
+    CMD_READ_ID = 0x9F,
+    CMD_PAGE_READ = 0x13,  ///< Load a page into the chip cache
+    CMD_GET_FEAT = 0x0F,
+    CMD_READ_CACHE = 0x03, ///< Read from the chip cache
 };
 
-#define FEAT_STATUS    0xC0
-#define STATUS_BUSY    0x01
-#define PAGE_SHIFT     12
-#define PAGE_MASK      0x0FFF
-#define BUSY_TIMEOUT   1000    // Status polls, about 1us each
+#define FEAT_STATUS 0xC0
+#define STATUS_BUSY 0x01
+#define PAGE_SHIFT 12
+#define PAGE_MASK 0x0FFF
+#define BUSY_TIMEOUT 1000 // Status polls, about 1us each
 
 static void sendByte(uint8_t byte)
 {
@@ -107,8 +107,8 @@ static int waitReady()
 int spiNand_read(uint32_t addr, void *buf, size_t len)
 {
     uint32_t page = addr >> PAGE_SHIFT;
-    uint16_t col  = addr & PAGE_MASK;
-    uint8_t *dst  = (uint8_t *)buf;
+    uint16_t col = addr & PAGE_MASK;
+    uint8_t *dst = (uint8_t *)buf;
 
     select();
     sendByte(CMD_PAGE_READ);

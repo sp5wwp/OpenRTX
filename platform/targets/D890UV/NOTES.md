@@ -18,6 +18,12 @@ signal generator and spectrum analyser.
 | Area | State |
 |---|---|
 | Boot, 160 MHz clock, display, keypad, side keys, knob | Working |
+| Backlight brightness (TIM3 PWM, stock levels) | Working |
+| Settings and VFO persistence (internal flash) | Working |
+| Power-off with save (PC3 hold, PA0 detect) | Working |
+| USB CDC serial port (tinyusb) | Working, enumerates as 0483:4001 |
+| Debug monitor over USB | Working, see 3.2 |
+| Reboot into update mode from USB | Working, see 3.3 |
 | Battery voltage (ADC) | Working, calibrated |
 | FM receive, UHF and VHF | Working, factory calibration applied |
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
@@ -35,6 +41,8 @@ signal generator and spectrum analyser.
   the `packagefiles` contents.
 - Flasher: <https://github.com/sp5wwp/anytone-flasher>:
   `python3 flash_anytone.py build_cm4/openrtx_d890uv.spi /dev/ttyACM0 --yes`.
+- With OpenRTX running, no keys are needed (see 3.3):
+  `FLASHER=.../flash_anytone.py re-tools/reflash.sh build_cm4/openrtx_d890uv.spi`.
 - **Update mode**: power on while holding **PTT + top key** (PF3, the
   emergency key). The radio shows "UPDATE MODE". PTT + PF2 gives a
   different mode that does not install firmware.
@@ -65,23 +73,41 @@ AT32F435 board revision, is mostly valid. The display and keypad pins differ.
   - Volume pot on PC2 (IN3).
   - The bootloader leaves ADC1 unusable: reset it through RCC
     (`adc_stm32u5.c`).
-- **Power**: PC3 power hold, PA0 power-on detect, PA15 TX power,
-  PB0 backlight.
+- **Power**: PC3 power hold, PA0 power-on detect, PA15 TX power.
+  - Stock polls PA0 in its main loop (`0x080D6954`): PA0 **high** for
+    10 ms means the switch is off. It then shuts the chips down and clears
+    PC3, which cuts the supply. The I/O table says "H=ON", which disagrees.
+    A tick watchdog (`0x08057DB0`) also clears PC3 if PA0 is high and
+    the main loop has not polled for 1000 ticks.
+  - OpenRTX drives PC3 high at start-up and takes the PA0 level read then
+    as the "on" level, so either polarity works. On power-off it saves the
+    settings, then clears PC3.
+- **Backlight**: PB0 is TIM3 channel 3 (AF2). Stock (`0x08062E40`) uses
+  PWM mode 1, prescaler 3, period 4095. Its 5 brightness levels (settings
+  byte `0x26`, table at `0x0814A90A`) are 2550, 2750, 2850, 2950 and 4095.
+  The backlight timeout writes 0. Duty setter: `0x0801A3B4`.
+- **Internal flash used by stock**:
+  - 0x0800A000, the last bootloader page: 16 bytes written by `0x080C500C`.
+    Never touch it.
+  - 0x081E4000-0x081EFFFF: data copied from the NAND (`0x08058614`).
+  - OpenRTX keeps settings and the VFO in 0x081FC000-0x081FFFFF, which
+    stock does not use (`nvmem_D890UV.c`). The linker script excludes it.
 - **Audio**:
   - PC12 is the LN4898 speaker amplifier, **high = on**. The I/O table's
     "SPK MUTE H=OFF" means the mute is off when high.
   - PD0-PD2 are audio routing switches; for RX use PD2=1, PD1=0, PD0=0.
     PE0 is mic mute (high), PA1 Bluetooth power, PE1 APC power.
-  - The amplifier input comes through switch U202 (RS2057), selected by
+  - The amplifier input comes through an RS2057 analog switch, selected by
     band B chip GPO1. Its two sources are **D-VOL**, from the digital board
     (SCT3288), and **TONE**, the PB9 PWM. Stock volume control very likely
     happens on the D-VOL path, not in the WX4818N.
+  - Full routing is in 3.1.
 - **DAC1**:
   - Channel 2 (PA5) is the **UHF front-end filter tuning voltage**.
     The I/O table calls it "RXVCA"; it is not the volume.
   - Channel 1 (PA4) is TX APC.
 - **RF**: two WX4818N transceivers (BK4819-like, no datasheet).
-  - Band A is U200, CS PB5; band B is U219, CS PD3. SCLK PB3 and SDIO PB4
+  - Band A CS is PB5; band B CS is PD3. SCLK PB3 and SDIO PB4
     are shared.
   - Frame: one byte `reg << 1 | R`, then 16 data bits, MSB first.
     Write/readback of register `0x57` with `0xA888` checks the bus.
@@ -94,6 +120,96 @@ AT32F435 board revision, is mostly valid. The display and keypad pins differ.
   - Address = page << 12 | column. Status bit 5 (0x20) is set on every
     page read; the data is still good (primary and backup copies match).
   - SPI2 (PB12-PB15) is the SCT3288 interface, not the flash.
+
+### 3.1 Audio and baseband routing
+
+Source: schematic excerpts in `materials/D890UV-M17 BASE.doc` (the
+manufacturer's proposal for M17), and the digital board schematic
+`materials/DIGI-CODEC.pdf`. Not yet bench-verified. The schematic labels
+the transceivers "QA4818P"; they are the WX4818N chips. All routing
+switches are RS2057 (SPDT: S low = B0, S high = B1).
+
+- **Speaker amplifier input, net AF-REP.** It is a summing node:
+  - band A AFOUT or FM-A (broadcast receiver audio), through a switch on
+    band B chip GPO2 (B1 = AFOUT);
+  - band B AFOUT, through a switch on PC7 (I/O table: "B AFOUT MUTE,
+    L = mute");
+  - AFIO (to and from the digital board) through 4.7 k;
+  - the switch on band B chip GPO1: B1 = **D-VOL** (digital board codec
+    output), B0 = **TONE** (PB9 PWM through a 2nd-order RC filter,
+    4.7 k / 2.2 nF then 33 k / 220 pF).
+- **PC0 ("TONE DET A/D")**: a switch on band B chip GPO0 selects band A
+  AFOUT (B0) or band B AFOUT (B1). The signal is AC-coupled to an op-amp
+  stage (gain about 3.7, 270 k / 100 k) and goes to PC0. BEEP/AF from the
+  digital board is summed at the same op-amp input.
+- **TX modulation path**: AF-REP (10 k) → switch on PD0 (B1, so PD0
+  high passes it) → switch on PD1 (B1; its B0 is the **VCTCXO** net) →
+  switch on PD2 (B0; B1 is MIC) → band A chip MICIN. The VCTCXO net may
+  allow modulating the reference too (two-point modulation); unverified.
+- **Microphone**: MIC goes to band B chip MICIN as well. In the proposal,
+  band B chip acts as the microphone preamplifier: MICIN → its AFOUT
+  (B-AFOUT) → PC0.
+- **Digital board**: SCT3258/3288 baseband plus a TLV320AIC3204 codec,
+  12.288 MHz clock. Its outputs to the main board are D-VOL and BEEP/AF;
+  AFIO and MICO/MICI go through the board connector.
+- **Band A chip GPIO** (I/O table, names cut off in the excerpt):
+  GPON "D/A OUT", GPIO0 "UHF RX P..", GPIO1 "DIGI AF_..", GPIO3 "TX CONT..",
+  GPIO4 "RX-B U/V..", GPIO5 "VHF RX ..", GPIO6 "VHF RX ..",
+  GPIO7 "RX-A U/V..".
+- **Band B chip GPIO**: GPIO0 "A/B TONE.." (PC0 source), GPIO1 "DIGI AF C.."
+  (speaker source), GPIO2 "A AFOUT.." (AFOUT or FM-A), GPIO3 "VIBRATE",
+  GPIO4 "AM/FM A..", GPIO5 "AM/FM PO..", GPIO6 "GPS POWER",
+  GPIO7 "AM/FM V..". GPIO7 also drives a transistor on the band B
+  RF output.
+- **Manufacturer's M17 proposal**: RX is band A AFOUT → PC0 ADC →
+  demodulation and Codec2 in the MCU → PB9 PWM → TONE → speaker. TX is
+  mic → band B chip → PC0 → 4FSK synthesis → PB9 PWM → TONE → AF-REP →
+  band A MICIN. The digital board is not used.
+
+### 3.2 USB and the debug monitor
+
+- PA11/PA12 go straight to the MCU OTG_FS controller. Stock runs a CDC
+  port in normal operation ("STM32 Virtual ComPort"); its setup:
+  - `0x08051058`: 48 MHz clock from HSI48, PA11/PA12 AF10 without pulls,
+    OTG clock on, `PWR->SVMCR` USV set, interrupt 73;
+  - `0x08120BD8`: CRS synced to the USB SOF, reload 47999, error limit 34,
+    trim 32;
+  - `0x0812A280`: full speed, embedded PHY, no VBUS sensing, no DMA.
+- OpenRTX uses tinyusb 0.20.0 (the old pinned revision had no STM32U5
+  support), `platform/drivers/USB/usb_D890UV.c`. A thread runs the stack
+  and feeds command lines to the debug monitor (`monitor.c`).
+- Monitor commands (hex numbers; each reply ends with `OK` or `ERR ...`):
+  `ping`, `rb addr len`, `rw addr [count]`, `wb addr val`, `ww addr val`,
+  `nr addr len` (NAND, addr = page << 12 | column), `xr a|b reg`,
+  `xw a|b reg val`, `xg a|b pin 0|1`, `update`. Memory accesses are not
+  checked. Host client: `re-tools/monitor.py` (command line or module).
+
+### 3.3 Bootloader and update hand-off
+
+Read from the radio with the monitor (`rb 08000000 C000`); Keil start-up,
+`main` at `0x08006B10`.
+
+- Update mode is decided by `0x08000640` alone: PA8 (top key) and PA10
+  (PTT) read low, twice each. No RAM, backup-register or flash flag.
+- Otherwise it jumps to 0x0800C000 through `0x08006A7C`, which only loads
+  the MSP and branches: clocks, RAM, VTOR and SysTick stay as the
+  bootloader set them.
+- `update` (monitor) writes a flag at 0x200BFFF8 (top of SRAM3, kept across
+  reset since `FLASH_OPTR` SRAM_RST = 1) and resets. The bootloader starts
+  OpenRTX; `early_boot_hook()` (`bootloader.c`), first thing in
+  `Reset_Handler`, sees the flag and branches to the update branch
+  `0x08006B32` with MSP 0x20003818. The bootloader code at 0x08006B28 is
+  checked first; another version is left alone.
+- 0x0800A000 (last bootloader page) holds a 16-byte ID record. The stock
+  application's serial commands `G` and `T` read and write it
+  (`0x080C48AC`).
+
+### 3.4 Stock data in the NAND
+
+- Settings block (RAM 0x200148E4, 0x160 bytes, ends with `0x55` at
+  +0x15C): NAND 0x3500000 or 0x3540000, chosen by `0x08023EA8`; loaded at
+  `0x080DDEE0`, which also loads other configuration blocks. Byte 0x26 is
+  the backlight level (0-4).
 
 ## 4. WX4818N registers
 
@@ -161,6 +277,8 @@ loaded to 0x200152D6. Values below are from the development radio.
 Tools are in `re-tools/` (Python, `capstone` and `unicorn`). The firmware
 image loads at **0x0800C000**.
 
+- `xref.py` finds code that loads a constant or address range (literal
+  pool or movw/movt), e.g. peripheral bases or RAM variables.
 - `findex.py` builds a function index (`funcs.pkl`), used by the other scripts.
 - `tdis.py` disassembles; `blcallers.py` lists call sites.
 - `fieldrefs.py` finds which functions use which fields of a RAM struct.
@@ -195,7 +313,7 @@ Pitfalls met so far:
      settings and copy it.
 2. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
-     speaker. The stock beep likely also switches U202/TONE.
+     speaker. The stock beep likely also switches the amplifier input switch to TONE.
    - The PB9 PWM path is also the future M17 speech output.
 3. **Volume** through the SCT3288 (D-VOL) path, as stock does.
 4. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
@@ -203,4 +321,5 @@ Pitfalls met so far:
 5. **PC0 demodulator check**: does the FM discriminator reach the ADC on
    PC0 ("TONE DET A/D")? This decides the M17 receive approach.
 6. **TX**: only into a dummy load. Stock TX entry is `0x0811B308`.
-7. Licensing: add `REUSE.toml` entries for the copied CMSIS files.
+7. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
+   and `scripts/clang_format.sh --check` pass for the port files.

@@ -21,7 +21,7 @@
  */
 
 #define KBD_COLUMNS 8
-#define KBD_ROWS    3
+#define KBD_ROWS 3
 
 /*
  * Keys indexed by [row][column], with the stock key code of each position,

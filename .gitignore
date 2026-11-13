@@ -49,7 +49,8 @@ subprojects/.wraplock
 *.map
 
 # Python byte-compiled
-*/__pycache__
+__pycache__/
+*.pyc
 
 # Python virtual environments
 .venv/
@@ -80,3 +81,9 @@ scripts/get_demod_log
 
 # OpenRTX Codeplugs
 *.rtxc
+
+# Reverse-engineering scratch files: function indexes, stock firmware images
+# and data read from radios (*.bin is ignored above). Keep them out of the tree.
+*.pkl
+*.CDD
+*.CDI

@@ -151,3 +151,12 @@ SPDX-FileCopyrightText = "Roger VK3KYY"
 path = "lib/QRCode/**/*"
 SPDX-License-Identifier = "MIT"
 SPDX-FileCopyrightText = "Richard Moore"
+
+[[annotations]]
+path = [
+    "platform/mcu/CMSIS/Device/ST/STM32U5xx/Include/**/*",
+    "platform/mcu/CMSIS/Device/ST/STM32U5xx/Source/system_stm32u5xx.c"
+]
+precedence = "aggregate"
+SPDX-License-Identifier = "Apache-2.0"
+SPDX-FileCopyrightText = "2021 STMicroelectronics"

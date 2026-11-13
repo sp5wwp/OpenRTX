@@ -51,7 +51,8 @@ ENTRY(_Z13Reset_Handlerv)
 MEMORY
 {
     /* Application area: the stock AnyTone bootloader occupies the first 48KB */
-    flash(rx) : ORIGIN = 0x0800C000, LENGTH = 2048K - 48K
+    /* The last 16KB hold the settings, see nvmem_D890UV.c */
+    flash(rx) : ORIGIN = 0x0800C000, LENGTH = 2048K - 48K - 16K
     ram(wx)   : ORIGIN = 0x20000200, LENGTH = 192K - 0x200
 }
 

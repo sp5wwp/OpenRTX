@@ -1,0 +1,2 @@
+option('mcu', type : 'combo', choices : ['stm32f405', 'stm32u575'],
+       value : 'stm32f405', description : 'Target MCU')

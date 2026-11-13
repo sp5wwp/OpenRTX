@@ -141,6 +141,15 @@ endif
 # XPowersLib, library for x-powers power management series
 xpowerslib_proj = subproject('XPowersLib')
 
+# TinyUSB, USB device stack. Only the AT-D890UV (STM32U575, Cortex-M4 build)
+# uses it at the moment.
+if meson.is_cross_build() and host_machine.cpu() == 'cortex-m4'
+  tinyusb_proj = subproject('tinyusb', default_options : ['mcu=stm32u575'])
+  tinyusb_dep  = tinyusb_proj.get_variable('tinyusb_dep')
+else
+  tinyusb_dep  = disabler()
+endif
+
 ##
 ## RTOS
 ##
@@ -666,15 +675,19 @@ rt4d_def += openrtx_def + at32f423_def
 
 d890uv_src = ['platform/targets/D890UV/platform.c',
               'platform/targets/D890UV/hwconfig.c',
+              'platform/targets/D890UV/monitor.c',
+              'platform/targets/D890UV/bootloader.c',
               'platform/drivers/display/ST7735S_D890UV.c',
               'platform/drivers/backlight/backlight_D890UV.c',
               'platform/drivers/audio/audio_D890UV.c',
               'platform/drivers/stubs/cps_io_stub.c',
               'platform/drivers/keyboard/keyboard_D890UV.c',
-              'platform/drivers/stubs/nvmem_stub.c',
+              'platform/drivers/NVM/nvmem_D890UV.c',
               'platform/drivers/baseband/WX4818N.c',
               'platform/drivers/baseband/radio_D890UV.c',
-              'platform/drivers/NVM/spiNand_D890UV.c']
+              'platform/drivers/NVM/spiNand_D890UV.c',
+              'platform/drivers/USB/usb_D890UV.c',
+              'platform/drivers/USB/usb_descriptors.c']
 d890uv_inc = ['platform/targets/D890UV']
 d890uv_def = {'PLATFORM_D890UV': '',
               'VECT_TAB_OFFSET': '0xC000U'}  # Stock bootloader in first 48KB
@@ -917,7 +930,7 @@ rt4d_opts = {
 d890uv_opts = {
   'sources'            : d890uv_src,
   'include_directories': d890uv_inc,
-  'dependencies'       : [codec2_dep],
+  'dependencies'       : [codec2_dep, tinyusb_dep],
   'c_args'             : d890uv_args,
   'cpp_args'           : d890uv_args,
   'link_args'          : ['-Wl,-T../platform/mcu/STM32U5xx/linker_script.ld',

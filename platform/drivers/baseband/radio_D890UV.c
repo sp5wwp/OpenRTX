@@ -25,10 +25,10 @@ static enum opstatus status = OFF;
  * by measuring the RSSI with each setting.
  */
 enum frontEndGpio {
-    GPIO_UHF_RX = 0,    ///< UHF receiver power, high on UHF
-    GPIO_RXB_UV = 4,    ///< "RX-B U/V", high on UHF for band A
-    GPIO_VHF_RX = 6,    ///< VHF receiver, high on VHF
-    GPIO_RXA_UV = 7,    ///< "RX-A U/V", low on UHF for band A
+    GPIO_UHF_RX = 0, ///< UHF receiver power, high on UHF
+    GPIO_RXB_UV = 4, ///< "RX-B U/V", high on UHF for band A
+    GPIO_VHF_RX = 6, ///< VHF receiver, high on VHF
+    GPIO_RXA_UV = 7, ///< "RX-A U/V", low on UHF for band A
 };
 
 /*
@@ -46,20 +46,20 @@ static const rtxStatus_t *config;
  * Factory calibration, stored in the external flash by the stock firmware
  * V1.05 (function at 0x0813A0F0): two 42-byte blocks, with a backup copy.
  */
-#define CAL_ADDR        0x4F00000
+#define CAL_ADDR 0x4F00000
 #define CAL_BACKUP_ADDR 0x4F40000
-#define CAL_BLOCK_B     0x100
-#define CAL_BLOCK_SIZE  42
+#define CAL_BLOCK_B 0x100
+#define CAL_BLOCK_SIZE 42
 
 /* Field offsets, in 16-bit words */
 enum calField {
-    CAL_A_XTAL  = 0x00 / 2, ///< Reference correction, 2000 = none
-    CAL_A_UHF0  = 0x18 / 2, ///< UHF filter tuning at 400MHz
-    CAL_A_UHF1  = 0x1A / 2, ///< UHF filter tuning at 460MHz
-    CAL_A_UHF2  = 0x1C / 2, ///< UHF filter tuning at 520MHz
-    CAL_B_VHF0  = 0x1E / 2, ///< VHF filter tuning at 136MHz
-    CAL_B_VHF1  = 0x20 / 2, ///< VHF filter tuning at 174MHz
-    CAL_B_VHF2  = 0x22 / 2, ///< VHF filter tuning at 180MHz
+    CAL_A_XTAL = 0x00 / 2, ///< Reference correction, 2000 = none
+    CAL_A_UHF0 = 0x18 / 2, ///< UHF filter tuning at 400MHz
+    CAL_A_UHF1 = 0x1A / 2, ///< UHF filter tuning at 460MHz
+    CAL_A_UHF2 = 0x1C / 2, ///< UHF filter tuning at 520MHz
+    CAL_B_VHF0 = 0x1E / 2, ///< VHF filter tuning at 136MHz
+    CAL_B_VHF1 = 0x20 / 2, ///< VHF filter tuning at 174MHz
+    CAL_B_VHF2 = 0x22 / 2, ///< VHF filter tuning at 180MHz
 };
 
 #define XTAL_CAL_NONE 2000
@@ -102,8 +102,8 @@ static void loadCalibration()
  * equivalent to the tables built by the stock firmware V1.05 (functions at
  * 0x08049FC4 and 0x0804A0A2).
  */
-static uint8_t interpolate(uint32_t freq, uint32_t f0, uint32_t f1,
-                           uint16_t v0, uint16_t v1)
+static uint8_t interpolate(uint32_t freq, uint32_t f0, uint32_t f1, uint16_t v0,
+                           uint16_t v1)
 {
     if (freq <= f0)
         return v0;
@@ -111,10 +111,10 @@ static uint8_t interpolate(uint32_t freq, uint32_t f0, uint32_t f1,
     if (freq >= f1)
         return v1;
 
-    int32_t value = (int32_t)v0
-                  + (((int32_t)v1 - (int32_t)v0)
-                     * (int32_t)((freq - f0) / 1000))
-                  / (int32_t)((f1 - f0) / 1000);
+    int32_t value =
+        (int32_t)v0
+        + (((int32_t)v1 - (int32_t)v0) * (int32_t)((freq - f0) / 1000))
+              / (int32_t)((f1 - f0) / 1000);
 
     if (value < 0)
         value = 0;
@@ -130,22 +130,22 @@ static void setFilterTuning(uint32_t freq)
         uint8_t value;
 
         if (freq < 460000000)
-            value = interpolate(freq, 400000000, 460000000,
-                                calA[CAL_A_UHF0], calA[CAL_A_UHF1]);
+            value = interpolate(freq, 400000000, 460000000, calA[CAL_A_UHF0],
+                                calA[CAL_A_UHF1]);
         else
-            value = interpolate(freq, 460000000, 520000000,
-                                calA[CAL_A_UHF1], calA[CAL_A_UHF2]);
+            value = interpolate(freq, 460000000, 520000000, calA[CAL_A_UHF1],
+                                calA[CAL_A_UHF2]);
 
         DAC1->DHR12R2 = (uint32_t)value << 4;
     } else {
         uint8_t value;
 
         if (freq < 174000000)
-            value = interpolate(freq, 136000000, 174000000,
-                                calB[CAL_B_VHF0], calB[CAL_B_VHF1]);
+            value = interpolate(freq, 136000000, 174000000, calB[CAL_B_VHF0],
+                                calB[CAL_B_VHF1]);
         else
-            value = interpolate(freq, 174000000, 180000000,
-                                calB[CAL_B_VHF1], calB[CAL_B_VHF2]);
+            value = interpolate(freq, 174000000, 180000000, calB[CAL_B_VHF1],
+                                calB[CAL_B_VHF2]);
 
         wx4818n_setDac(&wx4818nA, value);
     }
@@ -158,10 +158,10 @@ static void setFilterTuning(uint32_t freq)
  */
 static uint32_t correctFrequency(uint32_t freq)
 {
-    uint32_t f10  = freq / 10;
-    uint16_t cal  = calA[CAL_A_XTAL];
-    uint32_t diff = (cal >= XTAL_CAL_NONE) ? (cal - XTAL_CAL_NONE)
-                                          : (XTAL_CAL_NONE - cal);
+    uint32_t f10 = freq / 10;
+    uint16_t cal = calA[CAL_A_XTAL];
+    uint32_t diff = (cal >= XTAL_CAL_NONE) ? (cal - XTAL_CAL_NONE) :
+                                             (XTAL_CAL_NONE - cal);
     uint32_t offset = (uint32_t)(((uint64_t)diff * f10) / 46014476U);
 
     if (cal >= XTAL_CAL_NONE)
@@ -189,8 +189,8 @@ static void setFrontEnd(uint32_t freq)
  * level 0 to 0x7F, as in the stock firmware V1.05 (function at 0x080E4154).
  */
 #define AF_LEVEL_BASE 0x5F00
-#define AF_LEVEL_MIN  0x60  // Level where the output becomes audible
-#define AF_LEVEL_MAX  0x7F
+#define AF_LEVEL_MIN 0x60 // Level where the output becomes audible
+#define AF_LEVEL_MAX 0x7F
 
 static uint8_t afLevel = 0x77;
 
@@ -201,7 +201,8 @@ void radio_setVolume(uint8_t volume)
         afLevel = 0;
     else
         afLevel = AF_LEVEL_MIN
-                + (uint8_t)(((uint16_t)volume * (AF_LEVEL_MAX - AF_LEVEL_MIN)) / 255);
+                + (uint8_t)(((uint16_t)volume * (AF_LEVEL_MAX - AF_LEVEL_MIN))
+                            / 255);
     if (status == RX)
         wx4818n_writeReg(&wx4818nA, 0x30, AF_LEVEL_BASE | afLevel);
 }
@@ -329,8 +330,8 @@ void radio_updateConfiguration()
  * generator at 430MHz: 3.95 counts per dB, raw 310 at -60dBm.
  */
 #define RSSI_COUNTS_PER_DB 3.95f
-#define RSSI_REF_RAW       310.0f
-#define RSSI_REF_DBM       -60.0f
+#define RSSI_REF_RAW 310.0f
+#define RSSI_REF_DBM -60.0f
 rssi_t radio_getRssi()
 {
     if (status != RX)

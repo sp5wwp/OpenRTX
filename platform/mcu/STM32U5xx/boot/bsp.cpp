@@ -30,12 +30,12 @@ static constexpr uint32_t CLOCK_READY_TIMEOUT = 100000;
  * SYSCLK = 160MHz. The EPOD booster gets the PLL1 input clock undivided
  * (PLL1MBOOST = 1), within its 4-16MHz range.
  */
-static constexpr uint32_t PLL1SRC_HSI16  = 2;
-static constexpr uint32_t PLL1RGE_8_16   = 3;
-static constexpr uint32_t PLL1_N         = 20;
-static constexpr uint32_t PLL1_R         = 2;
-static constexpr uint32_t SW_PLL1        = 3;
-static constexpr uint32_t HPRE_DIV2      = 8;
+static constexpr uint32_t PLL1SRC_HSI16 = 2;
+static constexpr uint32_t PLL1RGE_8_16 = 3;
+static constexpr uint32_t PLL1_N = 20;
+static constexpr uint32_t PLL1_R = 2;
+static constexpr uint32_t SW_PLL1 = 3;
+static constexpr uint32_t HPRE_DIV2 = 8;
 
 static bool waitBits(volatile uint32_t *reg, uint32_t mask, uint32_t value)
 {
@@ -74,10 +74,12 @@ static bool pllInit()
         return false;
 
     FLASH->ACR = (FLASH->ACR & ~FLASH_ACR_LATENCY) | FLASH_ACR_LATENCY_4WS;
-    if (waitBits(&FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS) == false)
+    if (waitBits(&FLASH->ACR, FLASH_ACR_LATENCY, FLASH_ACR_LATENCY_4WS)
+        == false)
         return false;
 
-    RCC->CFGR2 = (RCC->CFGR2 & ~RCC_CFGR2_HPRE) | (HPRE_DIV2 << RCC_CFGR2_HPRE_Pos);
+    RCC->CFGR2 = (RCC->CFGR2 & ~RCC_CFGR2_HPRE)
+               | (HPRE_DIV2 << RCC_CFGR2_HPRE_Pos);
     RCC->CFGR1 = (RCC->CFGR1 & ~RCC_CFGR1_SW) | (SW_PLL1 << RCC_CFGR1_SW_Pos);
     bool ok = waitBits(&RCC->CFGR1, RCC_CFGR1_SWS,
                        SW_PLL1 << RCC_CFGR1_SWS_Pos);
