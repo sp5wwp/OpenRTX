@@ -254,12 +254,10 @@ codec, TX gain, limiter, CTCSS/DCS, two-point modulation (VCO + VCTCXO).
   `74 A9 01 00 01 00` in mode 0 (`74 A9 01 03 90 00` in mode 1), answered
   by ACK_MESSAGE 0 or 1; then CODEC_SELECT (field 0x2D) = 4. Stock opens in
   mode 1, then mode 0, after powering the board.
-- With the library open, neither the RX entry nor the FM part of the PTT
-  handler sends anything to the chip, even after running the library task
-  (`0x080E70EC`) and queue sender (`0x0802DFF8`). So the analog settings
-  probably live in the SCT3288's own flash (the update package ships
-  `SCT3288QD_UpdateFlash`), or are sent by library states not reached in
-  emulation (`0x080E6C64`, up to 64 states). To be checked on the chip.
+- Emulating single library functions sent nothing at RX entry or PTT; that
+  was an emulation artefact (empty library state). The whole-firmware
+  emulation (3.6) shows the host sends the full analog set-up and per-PTT
+  packets.
 - **On the radio** (hardware SPI2, `spi_stm32u5.c`; software SPI read the
   application one bit off and was ignored by it): boot status `17 0E`;
   interface word -> `17 01` (ready) after 2.75 s; CODEC_SELECT 4 -> `2D 00`;
@@ -275,8 +273,7 @@ codec, TX gain, limiter, CTCSS/DCS, two-point modulation (VCO + VCTCXO).
   application polling loop `0x080DFC0C` runs. Sent alone on the radio: reply
   `17 11`, then repeated `17 01` (chip restarting) and no TX audio.
 - Stock FM TX on the main band (0x2000F988 = settings 0x2C) uses PD2 = 0:
-  the audio does come from the digital board. No packet is sent at PTT, so
-  the board must already be in analog mode from the library state machine.
+  the audio does come from the digital board.
 - `0x080F40F8(cmd, arg0, arg1, buf, len)` is the library API of the Qixiang
   note (SCT_Module_Read/Write/Ioctrol), 19 commands. Setter map (field sent
   by each library function) is in `re-tools/sctemu.py` runs; analog ones:
@@ -285,15 +282,62 @@ codec, TX gain, limiter, CTCSS/DCS, two-point modulation (VCO + VCTCXO).
   (`0x080F0808`), 0x1A PROCESS_MODE (`0x080F8560`), 0x18 WORK_MODE
   (`0x081003D0`), codec bypass writes (`0x080F2540`, `0x080F2594`...).
 - The library state (0x2000F8E4 call state, 0x2001257C configuration) is
-  filled by the stock start-up from settings, channels and calibration;
-  emulating single library functions leaves it empty. Getting the real
-  analog sequence needs the stock start-up and main loop emulated with the
-  NAND served from dumps.
-- Next: emulate the library open and the analog setup with a fake SCT3288
-  answering on the byte layer, log the packets, and match them to the
-  documented fields (ANALOG_CONFIG 0x3C, CTC_PARAM, MOD_GAIN, CODEC_SELECT,
-  DC_OFFSET 0x39, ...). The calibration blocks +0x200..+0xB00 probably hold
-  the SCT3288 gains.
+  filled by the stock start-up from settings, channels and calibration.
+
+### 3.6 Whole-firmware emulation (`re-tools/fullemu.py`)
+
+Runs stock V1.05 from the scatter-load through `main` and the uC/OS-II
+tasks, with the NAND read live from the radio (cached), a fake SCT3288 and
+PTT simulated on PA10. Stock is **not bare metal**: `main` starts uC/OS-II
+(14 tasks, PendSV `0x0800C2C8`, OSTCBCur 0x2000A47C, OSTCBHighRdy
+0x2000A484, OSRdyGrp/Tbl 0x2000A470/71, critical sections on BASEPRI
+`0x0800C274`/`0x0800C280`). Things the emulation must provide:
+
+- RTC backup register 0 = 0x5050 (clock set; 0x6060 shows the set-clock
+  screen and stops start-up, anything else initialises the RTC).
+- The bootloader image and MCU unique ID: `0x080215C0` checks the record at
+  0x0800A000 against the ID and stops in a loop if they differ.
+- NAND ID `98 ED 51` (`0x080C9A48`).
+- An acknowledging bit-banged I2C on PB6 (SDA) / PB7 (SCL).
+- `0x0811EC64` delays through OSTimeDly (5 ms ticks) once uC/OS runs: it
+  must not be stubbed then, or tasks never block.
+- A battery sample at 0x20001D36 (ADC DMA buffer): at or below 6.00 V
+  (`0x08039024`) stock shows screen 0x0B and ignores PTT.
+- TIM5/TIM6/TIM7 update interrupts and SysTick.
+
+Key path: key scan `0x0811D9CC` (PTT = PA10 low) -> code 0x18/0x19 in
+0x20007CC0 -> queue 0x2001EFB4 -> UI task (prio 12) -> dispatcher
+`0x08068FC8` (screen state 0x20004B98) -> TX queue 0x2001EFC4 -> task prio 8
+-> PTT handler `0x0811B308`.
+
+Captured SCT3288 sequence (host packets; replies of the fake chip follow the
+real chip where known; `1A 80` gets `17 11` as on the radio):
+
+- Start-up, after boot status `17 0E` and interface word `74 A9 01 00 01 00`:
+  `2D 04`; codec (TYPE 0x40) `0B 02`, `0B 82`; TYPE 5 `79 41 40 42 44 08`;
+  read `33`; `10 04`, `10 10`; six EQUALIZER `70` packets (`21/22/23`,
+  `01/02/03` + 10 coefficient bytes); TYPE 5 `2F 08`, `1D FF`,
+  `41 00 2F 00 00 00`, `6C 00 00 00 3C 0E 10 0A 28 FF FF FF FF`, `1C 00 00`;
+  `69 1F 40`, `68 0B B8`; codec `08 00`, `09 00`, `11 00`, `08 00`, `0F 90`,
+  `10 1E`; TYPE 5 `7A 00 87 02 D0 02 D0 02 D0`; `06 FF FF FF FF FF FF FF`;
+  `6B 08 00 08 00 61 A8 80 00 40 00 00 00`; TYPE 5 `19 00`, `18 00 00 00`,
+  `1A 80`, `26 04 00`; `3D 03 84 02 58 01 01 02 01 07 06 80 D0 05 00 02 26 00
+  76 03 B3 50 00`; `39 08 00 08 00 08 00 01 F4 08 00 F2 30`;
+  `3C CF 46 50 05 78 00 00 00 00 00 BE`; then again `06 ...`, `6B ...`,
+  TYPE 5 `2C 0D AC`; `73 62 25 01 A8`; TYPE 5 `18 00 00 00`, `26 04 00`;
+  read `33`, read `32` (version) twice.
+- RX (entering the main screen): `39 ... F2 30`; TYPE 5 `18 01 00 00`; codec
+  `08 00`; TYPE 5 `19 02`; codec `08 1F`; TYPE 5 `19 00`, `18 00 00 00`,
+  `26 04 00`.
+- PTT press: codec `10 1E`; TYPE 5 `19 00`, `18 00 00 00`;
+  `39 08 00 08 00 08 00 01 F4 08 00 10 00` (last two bytes differ from RX);
+  TYPE 5 `18 00 00 00`, `26 04 00`; GPIOs PA1 = 0, PE0 = 1, PD2 = 0,
+  PD1 = 0, PD0 = 0, PE1 = 1, PA15 = 1; WX4818N TX set-up (as 4.1); then
+  TYPE 5 `26 00 00`, `18 02 00 00`, codec `10 1E`, TYPE 5 `78`.
+- PTT release: TYPE 5 `21`; PE0 = 1, PD2 = 1; then the RX sequence again.
+
+The full logs (with WX4818N writes) come from
+`fullemu.py <fw> --boot <bootloader> --uid <uid> --ptt 1000:1800 --quiet-wx`.
 
 ## 4. WX4818N registers
 
@@ -443,6 +487,12 @@ image loads at **0x0800C000**.
   it reads and reports the bytes that change its output: it finds the
   settings, channel fields and calibration a routine depends on.
 - `monitor.py` and `reflash.sh` talk to the radio (3.2, 3.3).
+- `fullemu.py` runs the whole stock firmware (3.6). Options: `--ptt`
+  (press window), `--watch` (log r0/r1 at addresses), `--watchmem` (log
+  writes), `--count` (count calls), `--trace start:end` with `--funcs`
+  (function or `all` block entries), `--peek`, `--batt`. About 15 s per
+  emulated second once the NAND cache is filled (the first run reads about
+  800 pages from the radio).
 - `trace.py` emulates a stock routine and logs WX4818N register writes and
   reads, GPIO writes, and GPIO configurations. Options (environment): load
   RAM images (`RAM`), poke bytes (`POKE`), stop inside a function (`STOP`,
@@ -473,10 +523,10 @@ Pitfalls met so far:
 
 ## 7. Open items, in priority order
 
-1. **FM TX audio through the SCT3288** as stock does (3.5). Keyed on air at
-   Low power: frequency, APC, supplies and routing as stock; with stock
-   routing no modulation since the digital board is off. Then check power
-   per level and deviation (narrow/wide, CTCSS).
+1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The full
+   stock packet sequence is captured: send it from the port (start-up, RX,
+   PTT press/release) and key on air at Low power. Then check power per
+   level and deviation (narrow/wide, CTCSS).
 2. **PC0 sampling and CTCSS decode**: timer-triggered ADC with DMA on the
    STM32U5 (GPDMA), feeding OpenRTX's CTCSS detector
    (`core/ctcssDetector.hpp`). The same path is the M17 receive input.
