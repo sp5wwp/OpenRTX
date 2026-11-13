@@ -14,8 +14,11 @@
 static enum opstatus status = OFF;
 
 /*
- * Radio driver for the AnyTone AT-D890UV, receive only for now: the
- * transmitter is kept powered down (TX_PWR_EN low) whatever is requested.
+ * Radio driver for the AnyTone AT-D890UV, FM mode.
+ *
+ * Transmission follows the stock firmware V1.05 but is built only with
+ * CONFIG_D890UV_TX defined (hwconfig.h): without it the transmitter stays
+ * powered down (TX_PWR_EN low) whatever is requested.
  */
 
 /*
@@ -54,6 +57,8 @@ static const rtxStatus_t *config;
 /* Field offsets, in 16-bit words */
 enum calField {
     CAL_A_XTAL = 0x00 / 2, ///< Reference correction, 2000 = none
+    CAL_MOD = 0x06 / 2,    ///< Modulation, register 0x31 (A: UHF, B: VHF)
+    CAL_A_TONE = 0x0C / 2, ///< Modulation, register 0x2E entry 6
     CAL_A_UHF0 = 0x18 / 2, ///< UHF filter tuning at 400MHz
     CAL_A_UHF1 = 0x1A / 2, ///< UHF filter tuning at 460MHz
     CAL_A_UHF2 = 0x1C / 2, ///< UHF filter tuning at 520MHz
@@ -67,7 +72,34 @@ enum calField {
 static uint16_t calA[CAL_BLOCK_SIZE / 2];
 static uint16_t calB[CAL_BLOCK_SIZE / 2];
 
+/*
+ * Transmitter power, from the same calibration (functions at 0x0803AAF8 and
+ * 0x0811A75C). Blocks A (UHF) and B (VHF) hold one APC value per power level
+ * in bytes 2 to 5. Further blocks hold, per level, a value for every MHz:
+ * 121 bytes from 400MHz (UHF, at +0xC00 + level * 0x100) and 45 bytes from
+ * 136MHz (VHF, at +0x1000 + level * 0x100). The APC value is
+ *
+ *     base[level] + table[level][MHz] - table[level][reference MHz]
+ *
+ * with reference 440MHz on UHF and 145MHz on VHF. The DAC gets it times 16.
+ */
+enum calPower {
+    CAL_PWR_BASE = 2,           ///< Byte offset of level 0 in blocks A and B
+    CAL_PWR_LEVELS = 4,         ///< Power levels
+    CAL_PWR_UHF_TABLE = 0xC00,  ///< Offset of the level 0 UHF table
+    CAL_PWR_UHF_LEN = 121,      ///< UHF table entries, 400 to 520MHz
+    CAL_PWR_UHF_REF = 40,       ///< UHF reference entry, 440MHz
+    CAL_PWR_VHF_TABLE = 0x1000, ///< Offset of the level 0 VHF table
+    CAL_PWR_VHF_LEN = 45,       ///< VHF table entries, 136 to 180MHz
+    CAL_PWR_VHF_REF = 9,        ///< VHF reference entry, 145MHz
+};
+
+static uint8_t pwrUhf[CAL_PWR_LEVELS][CAL_PWR_UHF_LEN];
+static uint8_t pwrVhf[CAL_PWR_LEVELS][CAL_PWR_VHF_LEN];
+
 /* Defaults if no calibration is found: mid-scale filter tuning */
+static bool calValid;
+
 static void setDefaultCalibration()
 {
     calA[CAL_A_XTAL] = XTAL_CAL_NONE;
@@ -81,19 +113,32 @@ static bool readCalibration(uint32_t addr)
     spiNand_read(addr + CAL_BLOCK_B, calB, CAL_BLOCK_SIZE);
 
     // Erased flash: no calibration at this address
-    return (calA[CAL_A_XTAL] != 0xFFFF) && (calB[CAL_B_VHF0] != 0xFFFF);
+    if ((calA[CAL_A_XTAL] == 0xFFFF) || (calB[CAL_B_VHF0] == 0xFFFF))
+        return false;
+
+    for (uint8_t i = 0; i < CAL_PWR_LEVELS; i++) {
+        spiNand_read(addr + CAL_PWR_UHF_TABLE + i * 0x100, pwrUhf[i],
+                     CAL_PWR_UHF_LEN);
+        spiNand_read(addr + CAL_PWR_VHF_TABLE + i * 0x100, pwrVhf[i],
+                     CAL_PWR_VHF_LEN);
+    }
+
+    return true;
 }
 
 static void loadCalibration()
 {
     spiNand_init();
 
+    calValid = true;
     if (readCalibration(CAL_ADDR))
         return;
 
     if (readCalibration(CAL_BACKUP_ADDR))
         return;
 
+    // Without calibration there is no safe transmitter power: no TX
+    calValid = false;
     setDefaultCalibration();
 }
 
@@ -216,13 +261,13 @@ void radio_init(const rtxStatus_t *rtxState)
     gpio_clearPin(AF_SW0);
     gpio_clearPin(AF_SW1);
     gpio_clearPin(AF_SW2);
-    gpio_setPin(MIC_MUTE);
+    gpio_setPin(MIC_SEL);
     gpio_clearPin(BT_PWR);
     gpio_clearPin(APC_PWR);
     gpio_setMode(AF_SW0, OUTPUT);
     gpio_setMode(AF_SW1, OUTPUT);
     gpio_setMode(AF_SW2, OUTPUT);
-    gpio_setMode(MIC_MUTE, OUTPUT);
+    gpio_setMode(MIC_SEL, OUTPUT);
     gpio_setMode(BT_PWR, OUTPUT);
     gpio_setMode(APC_PWR, OUTPUT);
 
@@ -236,7 +281,9 @@ void radio_init(const rtxStatus_t *rtxState)
 
 void radio_terminate()
 {
+    DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
+    gpio_clearPin(APC_PWR);
     status = OFF;
 }
 
@@ -292,10 +339,11 @@ void radio_enableRx()
      * RX audio routing and transmitter shutdown as in the stock firmware
      * V1.05, function at 0x08010C1C.
      */
+    DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
     gpio_clearPin(BT_PWR);
-    gpio_setPin(MIC_MUTE);
+    gpio_setPin(MIC_SEL);
     gpio_setPin(AF_SW2);
     gpio_clearPin(AF_SW1);
     gpio_clearPin(AF_SW0);
@@ -304,14 +352,161 @@ void radio_enableRx()
     status = RX;
 }
 
+/*
+ * Transmit frequency ranges of the stock firmware, from the AT-D890UV
+ * specifications: 136-174MHz and 400-480MHz.
+ */
+#define TX_VHF_MIN 136000000U
+#define TX_VHF_MAX 174000000U
+#define TX_UHF_MIN 400000000U
+#define TX_UHF_MAX 480000000U
+
+/*
+ * Power levels of the AT-D890UV, in mW: VHF 0.2/2.5/5/7W, UHF 0.2/2.5/5/6W
+ * (Low, Mid, High, Turbo). The requested power selects the nearest level:
+ * the thresholds are the midpoints between levels.
+ */
+static uint8_t powerLevel(uint32_t mW)
+{
+    if (mW < 1350)
+        return 0;
+    if (mW < 3750)
+        return 1;
+    if (mW < 6000)
+        return 2;
+
+    return 3;
+}
+
+static uint16_t apcValue(uint32_t freq, uint8_t level)
+{
+    const uint8_t *base;
+    const uint8_t *table;
+    int32_t index;
+    int32_t ref;
+    int32_t len;
+
+    if (freq >= UHF_MIN_FREQ) {
+        base = (const uint8_t *)calA;
+        table = pwrUhf[level];
+        index = ((int32_t)(freq / 1000000)) - 400;
+        ref = CAL_PWR_UHF_REF;
+        len = CAL_PWR_UHF_LEN;
+    } else {
+        base = (const uint8_t *)calB;
+        table = pwrVhf[level];
+        index = ((int32_t)(freq / 1000000)) - 136;
+        ref = CAL_PWR_VHF_REF;
+        len = CAL_PWR_VHF_LEN;
+    }
+
+    if (index < 0)
+        index = 0;
+    if (index >= len)
+        index = len - 1;
+
+    int32_t apc = (int32_t)base[CAL_PWR_BASE + level] + (int32_t)table[index]
+                - (int32_t)table[ref];
+    if (apc < 0)
+        apc = 0;
+    if (apc > 255)
+        apc = 255;
+
+    return (uint16_t)apc << 4;
+}
+
+static bool txAllowed(uint32_t freq)
+{
+    if (calValid == false)
+        return false;
+
+    return ((freq >= TX_VHF_MIN) && (freq <= TX_VHF_MAX))
+        || ((freq >= TX_UHF_MIN) && (freq <= TX_UHF_MAX));
+}
+
+/*
+ * Band A GPIO3 selects the transmit path, high from 300MHz (0x080E3D38,
+ * called at the end of the stock TX sequence).
+ */
+#define GPIO_TX_UHF 3
+
+/* Band A GPIO1, low in the stock TX and RX front-end setup (0x0810D490) */
+#define GPIO_1 1
+
 void radio_enableTx()
 {
-    /* Transmission not supported yet */
+#ifndef CONFIG_D890UV_TX
+    // Transmission not enabled in this build
     gpio_clearPin(TX_PWR_EN);
+    status = OFF;
+    return;
+#endif
+
+    uint32_t freq = config->txFrequency;
+
+    if ((config->txDisable == 1) || (txAllowed(freq) == false)) {
+        status = OFF;
+        return;
+    }
+
+    gpio_clearPin(SPK_EN);
+
+    /*
+     * Microphone straight to the band A chip MICIN: PE0 low selects the
+     * radio microphone, PD2 high connects it to MICIN. This differs from
+     * the stock routing (0x081140EC mode 0 with the TX flag set: PE0 high,
+     * PD2 low), where the microphone audio goes through the digital board,
+     * which this port does not power: with it there is no modulation.
+     * Checked on air.
+     */
+    gpio_clearPin(BT_PWR);
+    gpio_clearPin(MIC_SEL);
+    gpio_setPin(AF_SW2);
+    gpio_clearPin(AF_SW1);
+    gpio_clearPin(AF_SW0);
+
+    wx4818n_standby(&wx4818nB);
+
+    // Front end: band path for the TX frequency, receivers off (0x0810D490)
+    setFrontEnd(freq);
+    wx4818n_setGpio(&wx4818nA, GPIO_UHF_RX, false);
+    wx4818n_setGpio(&wx4818nA, GPIO_VHF_RX, false);
+    wx4818n_setGpio(&wx4818nA, GPIO_1, false);
+
+    bool uhf = (freq >= UHF_MIN_FREQ);
+    struct wx4818nTxConfig txCfg = {
+        .freq = correctFrequency(freq),
+        .wide = (config->bandwidth == BW_25),
+        .ctcss = config->txToneEn ? config->txTone : 0,
+        .modCal = (uhf ? calA[CAL_MOD] : calB[CAL_MOD]) & 0x0FFF,
+        .toneCal = calA[CAL_A_TONE],
+    };
+
+    wx4818n_startFmTx(&wx4818nA, &txCfg);
+    wx4818n_setGpio(&wx4818nA, GPIO_TX_UHF, uhf);
+
+    // Power stage, in the stock order: APC supply, PA supply, APC level
+    gpio_setPin(APC_PWR);
+    gpio_setPin(TX_PWR_EN);
+    DAC1->DHR12R1 = apcValue(freq, powerLevel(config->txPower));
+
+    tunedFrequency = 0;
+    status = TX;
+}
+
+static void stopTx()
+{
+    DAC1->DHR12R1 = 0;
+    gpio_clearPin(TX_PWR_EN);
+    gpio_clearPin(APC_PWR);
+    wx4818n_standby(&wx4818nA);
 }
 
 void radio_disableRtx()
 {
+    if (status == TX)
+        stopTx();
+
     gpio_clearPin(SPK_EN);
     status = OFF;
 }

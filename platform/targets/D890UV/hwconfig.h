@@ -30,6 +30,12 @@ extern const struct wx4818n wx4818nB;
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 
+/*
+ * FM transmission. Off until it has been checked into a dummy load: the
+ * transmitter stays powered down whatever is requested.
+ */
+// #define CONFIG_D890UV_TX
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2

@@ -55,13 +55,24 @@ void platform_init()
     // buffered, pin output. Mid-scale until the radio driver applies the
     // factory calibration. HFSEL 01 is required for an AHB clock between 80
     // and 160MHz.
+    // Channel 1 is the transmitter power control (APC), held at zero: the
+    // stock firmware drives it only while transmitting (0x0801694C).
     gpio_setMode(UHF_FILTER, ANALOG);
+    gpio_setMode(APC_DAC, ANALOG);
     RCC->AHB3ENR |= RCC_AHB3ENR_DAC1EN;
     __DSB();
-    DAC1->MCR = (DAC1->MCR & ~(DAC_MCR_HFSEL | DAC_MCR_MODE2))
+    DAC1->MCR = (DAC1->MCR & ~(DAC_MCR_HFSEL | DAC_MCR_MODE1 | DAC_MCR_MODE2))
               | DAC_MCR_HFSEL_0;
+    DAC1->DHR12R1 = 0;
     DAC1->DHR12R2 = 0x800;
-    DAC1->CR |= DAC_CR_EN2;
+    DAC1->CR |= DAC_CR_EN1 | DAC_CR_EN2;
+
+    gpio_clearPin(LED_DIGI_RX);
+    gpio_clearPin(LED_ANL_RX);
+    gpio_clearPin(LED_TX);
+    gpio_setMode(LED_DIGI_RX, OUTPUT);
+    gpio_setMode(LED_ANL_RX, OUTPUT);
+    gpio_setMode(LED_TX, OUTPUT);
 
     adcStm32_init(&adc1);
     nvm_init();
@@ -75,8 +86,11 @@ void platform_init()
 void platform_terminate()
 {
     usb_terminate();
+    DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(SPK_EN);
+    gpio_clearPin(LED_ANL_RX);
+    gpio_clearPin(LED_TX);
     backlight_terminate();
     adcStm32_terminate(&adc1);
 
@@ -161,12 +175,30 @@ bool platform_pwrButtonStatus()
 
 void platform_ledOn(led_t led)
 {
-    (void)led;
+    switch (led) {
+        case GREEN:
+            gpio_setPin(LED_ANL_RX);
+            break;
+        case RED:
+            gpio_setPin(LED_TX);
+            break;
+        default:
+            break;
+    }
 }
 
 void platform_ledOff(led_t led)
 {
-    (void)led;
+    switch (led) {
+        case GREEN:
+            gpio_clearPin(LED_ANL_RX);
+            break;
+        case RED:
+            gpio_clearPin(LED_TX);
+            break;
+        default:
+            break;
+    }
 }
 
 /*

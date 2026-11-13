@@ -43,13 +43,19 @@
 
 /* Audio section */
 #define UHF_FILTER GPIOA, 5 // DAC1 channel 2, UHF front-end filter tuning
+#define APC_DAC GPIOA, 4    // DAC1 channel 1, transmitter power control
 #define SPK_EN GPIOC, 12    // LN4898 speaker amplifier, high enables
 #define AF_SW0 GPIOD, 0     // Audio routing switch ("MOD REPEAT")
 #define AF_SW1 GPIOD, 1     // Audio routing switch ("MOD AF-RE...")
 #define AF_SW2 GPIOD, 2     // Audio routing switch ("MOD SEC H...")
-#define MIC_MUTE GPIOE, 0   // Microphone mute, high mutes
+#define MIC_SEL GPIOE, 0    // Mic source: low radio mic (MICI), high MICO
 #define BT_PWR GPIOA, 1     // Bluetooth module power
 #define APC_PWR GPIOE, 1    // Transmitter APC power
+
+/* LEDs, high on (stock: 0x081140EC callers and the PTT handler) */
+#define LED_DIGI_RX GPIOE, 3 // "DIGI-RX LED"
+#define LED_ANL_RX GPIOE, 4  // "ANL-RX LED", green
+#define LED_TX GPIOE, 5      // "TX LED", red
 
 /* Power */
 #define PWR_ON_DET GPIOA, 0 // Power switch status, polarity see platform.c
