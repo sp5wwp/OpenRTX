@@ -29,7 +29,9 @@ signal generator and spectrum analyser.
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
 | Volume | Provisional: knob drives the WX4818N AF level `0x30`, uneven curve |
 | Beeps | Disabled (see 7) |
-| Transmit | Disabled: `TX_PWR_EN` (PA15) is forced low everywhere |
+| FM transmit | Implemented from stock (power, bandwidth, CTCSS encode); keyed on air at Low: carrier, APC and supplies as stock. Mic goes straight to MICIN (not stock, deviation unverified) until the SCT3288 path works (3.5). Off unless `CONFIG_D890UV_TX` (`hwconfig.h`) |
+| CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
+| LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
 | M17 / digital | Not started |
 
 ## 2. Building and flashing
@@ -211,6 +213,59 @@ Read from the radio with the monitor (`rb 08000000 C000`); Keil start-up,
   `0x080DDEE0`, which also loads other configuration blocks. Byte 0x26 is
   the backlight level (0-4).
 
+### 3.5 Digital board (SCT3288) and the analog FM audio path
+
+Stock FM TX audio goes through the digital board: PE0 high selects MICO
+(the board's output) and PD2 low feeds MICIN from the switch chain. With the
+board unpowered this gives a carrier without modulation (checked on air);
+PE0 low + PD2 high (radio mic straight to MICIN) modulates but is not stock
+and its deviation is unverified. Sicomm's application note confirms the
+SCT3258/3288 handles analog FM: mic and modulation through the TLV320AIC3204
+codec, TX gain, limiter, CTCSS/DCS, two-point modulation (VCO + VCTCXO).
+
+- Power-up `0x080D6F5C`: PD8 = 0, PC6 = 1 (board power), SPI2 init
+  (`0x0806207C`: master, 8 bit, mode 0, software NSS), PB12 = 1 (chip
+  select), PD10 = 0, PD9 = 0, then PD8 (reset) 1, 0, 1 with 100 ms steps.
+  Power-off `0x080D7964`: PC6, PD8, PD9, PD10 low.
+- Byte layer: write `0x0810387C(byte)`, read `0x08103838()`, both
+  HAL SPI transmit-receive with a 5000 ms timeout. `0x0810A674(buf, len)`
+  waits for the chip (`0x0810A6DC`), lowers PB12, sends, raises PB12.
+  `0x0802E8F8(buf, len)` is the library's send hook.
+- Packets (Sicomm "Packet Interface" note): start bytes `84 A9 61`, 2-byte
+  length (MSB first, excluding the 6-byte header), TYPE (bit 7 vocoder
+  bypass, bit 6 codec bypass, bit 5 read, bit 4 far end, bits 3:0 type:
+  0 control, 3 DPMR, 4 program, 5 DMR), fields (1-byte identifier + data),
+  optional parity field `2F xx` (XOR of everything after the start bytes).
+  Stock builds headers in `0x0802DE50` and `0x0813AF78`.
+- The library queues commands and sends them from `0x0802DFF8`.
+  `0x0810C3B0(kind, timeout)` (61 call sites, kinds 3/4/5, timeouts 200 or
+  2000 ms) sends a prepared packet and waits; each caller is a field setter.
+  Library state at 0x20004620: zero until the library is opened, so
+  emulating a setter alone sends nothing.
+- Pins (stock GPIO setup `0x0806235C`, `0x08061770`, `0x080617C4`): SPI2 on
+  PB13/PB14/PB15 (AF5, no pull), chip select PB12, power PC6, reset PD8,
+  PD9/PD10 outputs held low, PD11 input = "data ready" (the library reads
+  bytes while it is high, `0x0810A6DC`), PD4-PD7 inputs. None is used by the
+  port.
+- Library open `0x080F403C(mode)`, emulated with `re-tools/sctemu.py` (fake
+  chip on the byte layer): reset (PD10, PD9, PD8 low, 50 ms, PD8 high,
+  100 ms); the chip must report ACK_MESSAGE (field 0x17) = 0x0E; the host
+  sends a raw interface word without packet header (`0x08100664`):
+  `74 A9 01 00 01 00` in mode 0 (`74 A9 01 03 90 00` in mode 1), answered
+  by ACK_MESSAGE 0 or 1; then CODEC_SELECT (field 0x2D) = 4. Stock opens in
+  mode 1, then mode 0, after powering the board.
+- With the library open, neither the RX entry nor the FM part of the PTT
+  handler sends anything to the chip, even after running the library task
+  (`0x080E70EC`) and queue sender (`0x0802DFF8`). So the analog settings
+  probably live in the SCT3288's own flash (the update package ships
+  `SCT3288QD_UpdateFlash`), or are sent by library states not reached in
+  emulation (`0x080E6C64`, up to 64 states). To be checked on the chip.
+- Next: emulate the library open and the analog setup with a fake SCT3288
+  answering on the byte layer, log the packets, and match them to the
+  documented fields (ANALOG_CONFIG 0x3C, CTC_PARAM, MOD_GAIN, CODEC_SELECT,
+  DC_OFFSET 0x39, ...). The calibration blocks +0x200..+0xB00 probably hold
+  the SCT3288 gains.
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -247,6 +302,57 @@ Read from the radio with the monitor (`rb 08000000 C000`); Keil start-up,
   including entering the menu. Retune only when the frequency changes,
   with the speaker amplifier off, or the speaker knocks.
 
+### 4.1 FM transmission (stock analog TX path)
+
+From the PTT handler `0x0811B308`, analog branch `0x0811BE8E-0x0811C0D0`,
+emulated with the settings and calibration of the development radio. Our
+sequence (`wx4818n_startFmTx()`) gives the same register writes as stock for
+UHF/VHF, narrow/wide, with and without CTCSS.
+
+- Audio routing: `0x081140EC(mode)` sets PA1, PE0, PD2, PD1, PD0. FM TX uses
+  mode 0, which with the TX flag set gives PE0 = 1, PD2 = 0 (`0x081141FC`):
+  the modulation comes from the digital board (3.5). The port uses PE0 = 0,
+  PD2 = 1 meanwhile (radio mic straight to MICIN). Modes 3/4 (mic → PD0/PD1 chain) are used only with
+  settings byte `0x143` set, probably the noise-reduction board.
+- Front end in TX (`0x0810D490`): band A GPIO0 = 0, GPIO6 = 0 (receivers
+  off), GPIO1 = 0. GPIO3 selects the transmit path: high from 300 MHz
+  (`0x080E3D38`). Stock leaves GPIO3 as it is in RX.
+- Mode setup `0x0811586C(digital, tx, chip)`: TX values are the same for
+  analog and digital. Digital RX (1, 0) zeroes the audio filters `0x1C-0x23`:
+  useful for M17 reception later.
+- Bandwidth: channel byte +8 bits 5:4 (non-zero = wide, `0x0804BCBC`).
+  It changes only the TX mic gain, register `0x48`: 0x082E narrow, 0x9826
+  wide (`0x08116480`). Stock RX does not depend on bandwidth.
+- Power: channel byte +8 bits 3:2 = level 0-3 (Low/Mid/High/Turbo: VHF
+  0.2/2.5/5/7 W, UHF 0.2/2.5/5/6 W). APC = base[level] + table[level][MHz] -
+  table[level][ref], from the calibration (5). DAC1 channel 1 (PA4) gets
+  APC * 16, applied once after PA15 goes high (`0x0811A75C`, setter
+  `0x0801694C`). No ramp.
+- Power-up order: PE1 (APC supply), PA15 (PA supply), then the APC level.
+  Power-down (RX entry `0x08010C1C`): PA15 = 0, PE1 = 0 first.
+- CTCSS encode (`0x080E3D98`): value = Hz * 20.97152 (2^21 / 100000). Register
+  `0x2E` is multiplexed by bits 15:13: entries 0 and 1 get the tone, entry 6
+  the modulation calibration. `0x2D` = 0x0215 up to value 0xACC, 0x3215
+  above; `0x2F` = 0x0A0F. Without a tone, `0x08127BE8` writes another set.
+  The 51 stock tones are the table at `0x0814A820` (0.1 Hz units).
+- DCS encode is `0x080E3ED0(code, inverted)`, not analysed yet.
+- Channel struct (pointer 0x2001AFBC, band A 0x2000C230, band B 0x2000C234):
+  byte +8 bits 1:0 mode (0 analog), 3:2 power, 5:4 bandwidth; +0x39 signed
+  TX frequency offset; +0x1A high nibble digital protocol type. Tone record
+  at 0x2001DFEC: +0x18 type (1 CTCSS, 2 DCS), +0x1A CTCSS index, +0x1C DCS.
+
+### 4.2 CTCSS decoding
+
+- Stock reads only RSSI (`0x02`), a chip ID (`0x01`) and the frequency
+  counter (`0x0B-0x0E`, `0x54/0x55`) from the chips: **it does not get a tone
+  detection from the WX4818N**.
+- ADC1 runs a 5-channel scan with DMA into 0x20001D34 (`0x0805C4AC`): PC0
+  (channel 1, demodulated audio), PC1 battery, PC2 volume, PA7 (channel 12,
+  VOX), one internal channel. A timer interrupt (`0x08120EEC` → `0x080D7D70`)
+  takes the PC0 sample, keeps 8 bits, and feeds groups of 4 to a software
+  decoder. So CTCSS is decoded in the MCU from PC0, the same input the M17
+  demodulator will use.
+
 ## 5. Factory calibration
 
 The stock firmware keeps it in the NAND at **0x4F00000**, with a backup
@@ -256,6 +362,11 @@ loaded to 0x200152D6. Values below are from the development radio.
 
 | Field | Value | Meaning |
 |---|---|---|
+| A+0x02..0x05 | 47/78/95/113 | UHF APC base, power levels 0-3 (4.1) |
+| B+0x02..0x05 | 46/75/96/115 | VHF APC base, power levels 0-3 |
+| A+0x06 | 0x046A | UHF modulation, register `0x31` in TX |
+| B+0x06 | 0x002D | VHF modulation, register `0x31` in TX |
+| A+0x0C | 0x02B7 | modulation, register `0x2E` entry 6 in TX (both bands) |
 | A+0x00 | 2023 | crystal correction: offset = abs(cal - 2000) x f / 46014476 (f in 10 Hz units), added if cal >= 2000 (`0x08047E10`) |
 | A+0x10 | 195 | squelch base raw RSSI, band A chip, UHF |
 | A+0x12 | 176 | squelch base, band B chip, UHF |
@@ -267,7 +378,21 @@ loaded to 0x200152D6. Values below are from the development radio.
 - Squelch threshold for `0x49` = base + step [0, 7, 13, 19, 23] (table
   at `0x0814AE05`, levels 1-5), corrected per frequency by flatness tables
   in RAM at 0x20001D02 (UHF, 5 MHz steps) and 0x20001D1B (VHF, 2 MHz
-  steps). Their flash source is not found yet (`0x080E373C`).
+  steps) (`0x080E373C`). They come from cal +0x1400/+0x1500 (below).
+- The full layout, from the loader `0x0813A0F0` (emulated with the NAND read
+  `0x08037E78` stubbed): blocks every 0x100 bytes, primary and backup
+  identical on the development radio.
+
+  | Offset | Size | RAM | Use |
+  |---|---|---|---|
+  | +0x000 | 42 | 0x200152AC | block A |
+  | +0x100 | 44 | 0x200152D6 | block B |
+  | +0x200 ... +0xB00 | 8-39 | various | not analysed |
+  | +0xC00/+0xD00/+0xE00/+0xF00 | 121 each | 0x2000C178/C02C/C0D2/BF86 | UHF APC per MHz from 400 MHz, levels 0-3 |
+  | +0x1000/+0x1100/+0x1200/+0x1300 | 45 each | 0x2000C1F1/C0A5/C14B/BFFF | VHF APC per MHz from 136 MHz, levels 0-3 |
+  | +0x1400/+0x1500 | 25 each | 0x20001D02/1D1B | squelch flatness UHF/VHF |
+  | +0x1600/+0x1700 | 25 each | 0x20003056/306F | probably the same for band B |
+  | +0x1800 | 28 | 0x20015302 | not analysed |
 - The driver reads both blocks at start-up and falls back to the backup
   copy, then to mid-scale defaults. It interpolates the filter tuning
   linearly between the points.
@@ -282,8 +407,19 @@ image loads at **0x0800C000**.
 - `findex.py` builds a function index (`funcs.pkl`), used by the other scripts.
 - `tdis.py` disassembles; `blcallers.py` lists call sites.
 - `fieldrefs.py` finds which functions use which fields of a RAM struct.
+- `wxmap.py` lists every stock WX4818N register write and read with the
+  functions doing it and the constant values: the starting point to find
+  which function handles a feature.
+- `sensitivity.py` runs a routine with `trace.py`, then flips each RAM byte
+  it reads and reports the bytes that change its output: it finds the
+  settings, channel fields and calibration a routine depends on.
+- `monitor.py` and `reflash.sh` talk to the radio (3.2, 3.3).
 - `trace.py` emulates a stock routine and logs WX4818N register writes and
-  reads, GPIO writes, and GPIO configurations. Stubs:
+  reads, GPIO writes, and GPIO configurations. Options (environment): load
+  RAM images (`RAM`), poke bytes (`POKE`), stop inside a function (`STOP`,
+  to emulate one block of a large function), stub functions and log their
+  arguments (`STUBS`), log RAM reads (`RTRACE`), log peripheral writes
+  (`PERIPH`), dump memory (`DUMP`). Stubs always in place:
   - write `0x080E2F64(reg, value, chip)`, read `0x080E2CAC(reg, chip)`;
   - GPIO write `0x0804FBD8(port, mask, level)`;
   - GPIO init `0x0804F7D0(port, init)`; delay `0x0811EC64`.
@@ -301,25 +437,32 @@ Pitfalls met so far:
 - **Some routines take the frequency as an argument**, not from RAM
   (`0x081155AC`).
 - `0x080D5BD4` looks like tuning but is the frequency counter.
+- **A sensitivity test with 0x01/0xFF can hide a field**: both values also
+  change the channel mode bits of channel byte +8, which masked the
+  bandwidth bits 5:4. Test single bits of a byte that holds several fields.
 - **Check every register guess on the bench before building on it.**
 
 ## 7. Open items, in priority order
 
-1. **Band B chip role on VHF.**
+1. **FM TX audio through the SCT3288** as stock does (3.5). Keyed on air at
+   Low power: frequency, APC, supplies and routing as stock; with stock
+   routing no modulation since the digital board is off. Then check power
+   per level and deviation (narrow/wide, CTCSS).
+2. **PC0 sampling and CTCSS decode**: timer-triggered ADC with DMA on the
+   STM32U5 (GPDMA), feeding OpenRTX's CTCSS detector
+   (`core/ctcssDetector.hpp`). The same path is the M17 receive input.
+3. **Band B chip role on VHF.**
    - Stock puts band B into mode 6 and sets its GPIO5 depending on
-     settings (`0x080C6DC0`, `0x080D659C`, `0x08111A6C`).
-   - Plan: find where the settings block 0x200148E4 is loaded from flash,
-     dump it from the radio, then emulate the channel-change path with real
-     settings and copy it.
-2. **Audio output.**
+     settings (`0x080C6DC0`, `0x080D659C`, `0x08111A6C`). The settings
+     block is now known (3.4) and can be planted in the emulator.
+4. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
      speaker. The stock beep likely also switches the amplifier input switch to TONE.
    - The PB9 PWM path is also the future M17 speech output.
-3. **Volume** through the SCT3288 (D-VOL) path, as stock does.
-4. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
-   `0x0E` flag) with stock thresholds, and find the flatness tables.
-5. **PC0 demodulator check**: does the FM discriminator reach the ADC on
-   PC0 ("TONE DET A/D")? This decides the M17 receive approach.
-6. **TX**: only into a dummy load. Stock TX entry is `0x0811B308`.
-7. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
+5. **Volume** through the SCT3288 (D-VOL) path, as stock does.
+6. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
+   `0x0E` flag) with stock thresholds; the flatness tables are found (5).
+7. **DCS** encode (`0x080E3ED0`) and decode.
+8. ~~PC0 demodulator check~~: stock samples PC0 for tone decoding (4.2).
+9. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
    and `scripts/clang_format.sh --check` pass for the port files.
