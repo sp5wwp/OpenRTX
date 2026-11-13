@@ -339,6 +339,36 @@ real chip where known; `1A 80` gets `17 11` as on the radio):
 The full logs (with WX4818N writes) come from
 `fullemu.py <fw> --boot <bootloader> --uid <uid> --ptt 1000:1800 --quiet-wx`.
 
+**On the radio** (sequence sent by a test build of the port, every reply
+logged):
+
+- The real chip accepts the whole sequence (code 0 to every packet,
+  including `1A 80` and the call start `78`), and reports nothing while
+  transmitting. Answers differing from the fake chip: read `33` returns
+  `33 00 00 21 00 06 78 05 00 00 00`; `10 04` may come with `17 01`
+  (ACK_MESSAGE 1, "response to system reset"); `19 02` in the RX entry
+  adds NEW_EVENT reports `30 1B 0C` (carrier detected) and `30 1B 10`.
+- With the speaker amplifier (PC12) on, the chip restarted while its codec
+  and vocoder started (silent afterwards, even to the interface word). Stock
+  keeps PC12 low during the set-up; with it low the set-up always passed.
+- WX4818N register `0x30`: its low byte (the AF level in the port) also
+  gates the TX audio input. With it 0 (volume at minimum) there is no
+  modulation at all; stock has `0x5F77`.
+- Stock TX with these packets, PE0 = 1, PD2 = 0 and `0x30 = 0x5F77`:
+  carrier with strong 24 kHz sidebands, no speech. With WORK_MODE codec
+  loop back (`18 02 01 00`) the microphone gets through (breath noise,
+  low level), so microphone -> codec -> board output -> MICIN works; the
+  SCT3288 analog processing does not pass speech yet. The 24 kHz component
+  is there in both modes.
+- WORK_MODE debug byte 1 (1 kHz sine on the modulation port) gave only a
+  faint tone with the internal microphone connected and none with the
+  K connector in: that port is not the board output used for FM.
+- In FM the microphone does not go through the MCU: ADC1 scans channels 1,
+  2, 3, 12 (PA7, microphone amplifier) and 19 into 0x20001D34 by circular
+  DMA (GPDMA1 channel 10), but no stock code reads the microphone slot.
+- The I2C bus on PB6/PB7 holds a charger (0x6A), an accelerometer
+  (0x19, WHO_AM_I 0x0F) and a third read-only device: no audio parts.
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -490,7 +520,9 @@ image loads at **0x0800C000**.
 - `fullemu.py` runs the whole stock firmware (3.6). Options: `--ptt`
   (press window), `--watch` (log r0/r1 at addresses), `--watchmem` (log
   writes), `--count` (count calls), `--trace start:end` with `--funcs`
-  (function or `all` block entries), `--peek`, `--batt`. About 15 s per
+  (function or `all` block entries), `--peek`, `--dump`, `--batt`,
+  `--watchread` (count reads), `--periphw` (log peripheral writes in a
+  window), `--mic` (sine in the microphone ADC slot). About 15 s per
   emulated second once the NAND cache is filled (the first run reads about
   800 pages from the radio).
 - `trace.py` emulates a stock routine and logs WX4818N register writes and
@@ -519,29 +551,38 @@ Pitfalls met so far:
 - **A sensitivity test with 0x01/0xFF can hide a field**: both values also
   change the channel mode bits of channel byte +8, which masked the
   bandwidth bits 5:4. Test single bits of a byte that holds several fields.
+- **Register values written from RAM shadows need the shadow planted**:
+  `0x08115DE8` writes WX4818N `0x19` from 0x2001AFC8 (0x0381 after
+  start-up); unplanted, the old TX trace gave `0x0000`.
 - **Check every register guess on the bench before building on it.**
 
 ## 7. Open items, in priority order
 
-1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The full
-   stock packet sequence is captured: send it from the port (start-up, RX,
-   PTT press/release) and key on air at Low power. Then check power per
-   level and deviation (narrow/wide, CTCSS).
-2. **PC0 sampling and CTCSS decode**: timer-triggered ADC with DMA on the
+1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The
+   captured sequence is accepted by the chip, the hardware path works in
+   codec loop back, but the chip's analog processing passes no speech and
+   the output carries 24 kHz. Next: make the fake chip answer like the real
+   one (reports, resets) and look for set-up stock sends on conditions not
+   reached yet. Also keep WX4818N `0x30` independent of the volume in TX.
+   Then check power per level and deviation (narrow/wide, CTCSS).
+2. **Receiver noise floor**: idle RSSI about -71 dBm (raw 267) with the
+   antenna, S4 without it, against raw 176 measured earlier; not changed
+   by powering the digital board or the speaker amplifier off.
+3. **PC0 sampling and CTCSS decode**: timer-triggered ADC with DMA on the
    STM32U5 (GPDMA), feeding OpenRTX's CTCSS detector
    (`core/ctcssDetector.hpp`). The same path is the M17 receive input.
-3. **Band B chip role on VHF.**
+4. **Band B chip role on VHF.**
    - Stock puts band B into mode 6 and sets its GPIO5 depending on
      settings (`0x080C6DC0`, `0x080D659C`, `0x08111A6C`). The settings
      block is now known (3.4) and can be planted in the emulator.
-4. **Audio output.**
+5. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
      speaker. The stock beep likely also switches the amplifier input switch to TONE.
    - The PB9 PWM path is also the future M17 speech output.
-5. **Volume** through the SCT3288 (D-VOL) path, as stock does.
-6. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
+6. **Volume** through the SCT3288 (D-VOL) path, as stock does.
+7. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
    `0x0E` flag) with stock thresholds; the flatness tables are found (5).
-7. **DCS** encode (`0x080E3ED0`) and decode.
-8. ~~PC0 demodulator check~~: stock samples PC0 for tone decoding (4.2).
-9. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
+8. **DCS** encode (`0x080E3ED0`) and decode.
+9. ~~PC0 demodulator check~~: stock samples PC0 for tone decoding (4.2).
+10. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
    and `scripts/clang_format.sh --check` pass for the port files.

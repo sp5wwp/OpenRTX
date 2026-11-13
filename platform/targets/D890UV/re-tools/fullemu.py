@@ -37,6 +37,10 @@ ap.add_argument('--peek', default='', help='hexaddr,... print bytes after init a
 ap.add_argument('--batt', type=int, default=10600,
                 help='battery ADC sample written every ms to 0x20001D36 (ADC DMA buffer); '
                      '10600 is about 7.5 V, at or below 6.0 V stock blocks TX (0x08039024)')
+ap.add_argument('--periphw', default='', help='start:end, ms window logging peripheral writes')
+ap.add_argument('--dump', default='', help='hexaddr:len,... print memory at the end')
+ap.add_argument('--watchread', default='', help='hexaddr,... log reads of these bytes (pc counted)')
+ap.add_argument('--mic', action='store_true', help='1 kHz sine in the mic ADC slot 0x20001D3A')
 ap.add_argument('--count', default='', help='hexaddr,... functions whose calls are counted')
 ap.add_argument('--ptt', default='', help='start:end, ms with PTT (PA10) pressed')
 ap.add_argument('--poke', default='', help='hexaddr:hexbytes,... after start-up init')
@@ -131,6 +135,11 @@ def sctHostByte(b):
             out(f'SCT> type={t:#04x} {body.hex(" ")}')
             if t & 0x40:                       # codec bypass
                 sctReply(0x40, b'\x17\x00')
+            elif body[:2] == b'\x10\x10':            # analog vocoder: the real
+                sctReply(0x20, b'\x17\x01')         # chip resets (17 01),
+                sctReply(0x00, b'\x10\x00')         # then accepts
+            elif body[:1] == b'\x33' and t & 0x20:  # status, as the real chip
+                sctReply(0x23, b'\x33\x00\x00\x21\x00\x06\x78\x05\x00\x00\x00')
             elif body[:1] == b'\x2d':
                 sctReply(0x00, b'\x2d\x00')
             elif body[:1] == b'\x1a':
@@ -149,6 +158,7 @@ wxRegs[(0, 0x57)] = wxRegs[(1, 0x57)] = 0xA888
 
 # --- hooks -------------------------------------------------------------------
 tick = [0]
+pinState = {}
 idrReads = collections.Counter()
 gpioReads = collections.Counter()
 gpioLast = {}
@@ -217,6 +227,8 @@ def hook(uc, addr, size, _):
         if port == GPIOD and mask & 0x100 and lvl:           # SCT3288 reset released
             sctReply(0x00, b'\x17\x0e')
         pins = [i for i in range(16) if mask >> i & 1]
+        for i in pins:
+            pinState[(port, i)] = lvl
         if any(p in LOGPINS.get(port, ()) for p in pins):
             out(f'GPIO {PORT.get(port, hex(port))}{pins}={lvl}  t={tick[0]}ms lr={lr:#x}')
         # keep IDR consistent with outputs written through the HAL
@@ -239,7 +251,7 @@ for x in (NAND_READ, NAND_WRITE, NAND_ERASE, NAND_TXBYTES, NAND_RXBYTES, WX_WRIT
     mu.hook_add(UC_HOOK_CODE, hook, begin=x, end=x)
 
 def watchHook(uc, addr, size, _):
-    out(f'WATCH {addr:#x} r0={uc.reg_read(UC_ARM_REG_R0):#x} r1={uc.reg_read(UC_ARM_REG_R1):#x} t={tick[0]}ms')
+    out(f'WATCH {addr:#x} r0={uc.reg_read(UC_ARM_REG_R0):#x} r1={uc.reg_read(UC_ARM_REG_R1):#x} r2={uc.reg_read(UC_ARM_REG_R2):#x} r3={uc.reg_read(UC_ARM_REG_R3):#x} lr={uc.reg_read(UC_ARM_REG_LR):#x} t={tick[0]}ms')
 for x in filter(None, a.watch.split(',')):
     mu.hook_add(UC_HOOK_CODE, watchHook, begin=int(x, 16), end=int(x, 16))
 def memWatch(uc, access, addr, size, value, _):
@@ -247,6 +259,11 @@ def memWatch(uc, access, addr, size, value, _):
         f'lr={uc.reg_read(UC_ARM_REG_LR):#x} t={tick[0]}ms')
 for x in filter(None, a.watchmem.split(',')):
     mu.hook_add(UC_HOOK_MEM_WRITE, memWatch, begin=int(x, 16), end=int(x, 16))
+readers = collections.Counter()
+def memReadWatch(uc, access, addr, size, value, _):
+    readers[(addr, uc.reg_read(UC_ARM_REG_PC), uc.reg_read(UC_ARM_REG_LR))] += 1
+for x in filter(None, a.watchread.split(',')):
+    mu.hook_add(UC_HOOK_MEM_READ, memReadWatch, begin=int(x, 16), end=int(x, 16) + 1)
 callCount = collections.Counter()
 def countHook(uc, addr, size, _):
     callCount[addr] += 1
@@ -468,6 +485,22 @@ while tick[0] < a.ms:
         pc = mu.reg_read(UC_ARM_REG_PC) | 1
     tick[0] += 1
     mu.mem_write(0x20001D36, struct.pack('<H', a.batt))
+    if a.mic:
+        import math
+        mu.mem_write(0x20001D3A, struct.pack('<H', int(8192 + 3000 * math.sin(2 * math.pi * tick[0] / 7.3))))
+    if a.periphw:
+        ps, pe = (int(x) for x in a.periphw.split(':'))
+        if tick[0] == ps:
+            QUIET = {0x40003820, 0x40003814, 0x40003818, 0x40003800}       # SPI2 data/status
+            def pw(uc, access, addr, size, value, _):
+                if addr in QUIET or (addr & 0xFFFFFF00) in (0x40000C00, 0x40001000, 0x40001400):
+                    return
+                if 0x42020000 <= addr < 0x42021400 and (addr & 0x3FF) in (0x18, 0x28):
+                    return                                                   # GPIO BSRR/BRR
+                out(f'PW [{addr:#x}]={value:#x} pc={uc.reg_read(UC_ARM_REG_PC):#x} t={tick[0]}ms')
+            pwH = mu.hook_add(UC_HOOK_MEM_WRITE, pw, begin=0x40000000, end=0x5FFFFFFF)
+        elif tick[0] == pe:
+            mu.hook_del(pwH)
     if a.trace:
         ts, te = (int(x) for x in a.trace.split(':'))
         if tick[0] == ts:
@@ -519,3 +552,14 @@ out(f'OSIntNesting={mu.mem_read(0x2000A3F0,1)[0]} OSLockNesting={mu.mem_read(0x2
     f'OSRdyGrp={mu.mem_read(0x2000A470,1)[0]:#04x} OSRdyTbl={bytes(mu.mem_read(0x2000A471, 8)).hex(" ")} '
     f'OSTCBCur={rd32(OS_TCBCUR):#x} switches={osState["switches"]}')
 peek('end')
+for port in (GPIOA, GPIOB, GPIOC, GPIOD, GPIOE):
+    moder = rd32(port)
+    st = ' '.join(f'{i}={pinState[(port, i)]}' for i in range(16) if (port, i) in pinState)
+    out(f'PINS {PORT[port]} MODER={moder:08x} written: {st}')
+for spec in filter(None, a.dump.split(',')):
+    ad, ln = (int(x, 16) for x in spec.split(':'))
+    for o in range(0, ln, 16):
+        out(f'DUMP {ad + o:#010x}: ' + ' '.join(f'{w:08x}' for w in struct.unpack('<4I', bytes(mu.mem_read(ad + o, 16)))))
+for (ad, pc, lr), n in sorted(readers.items(), key=lambda x: -x[1])[:20]:
+    out(f'READ [{ad:#x}] pc={pc:#x} lr={lr:#x} x{n}')
+out('WXREGS ' + ' '.join(f'{c}:{r:02X}={v:04X}' for (c, r), v in sorted(wxRegs.items()) if c == 0))
