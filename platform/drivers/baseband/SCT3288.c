@@ -159,3 +159,116 @@ size_t sct3288_read(const struct sct3288 *dev, void *buf, size_t maxLen)
 
     return len;
 }
+
+/* Packet header: start bytes, 2-byte length, type */
+static const uint8_t packetStart[] = { 0x84, 0xA9, 0x61 };
+#define SCT3288_HEADER_LEN 6
+#define SCT3288_MAX_FIELDS 32
+#define SCT3288_FIELD_ACK 0x17
+#define SCT3288_ACK_OK 0
+#define SCT3288_ACK_READY 1
+
+int sct3288_send(const struct sct3288 *dev, uint8_t type, const uint8_t *fields,
+                 size_t len)
+{
+    uint8_t buf[SCT3288_HEADER_LEN + SCT3288_MAX_FIELDS + 1];
+
+    if (len > SCT3288_MAX_FIELDS)
+        return -EINVAL;
+
+    memcpy(buf, packetStart, sizeof(packetStart));
+    buf[3] = (uint8_t)(len >> 8);
+    buf[4] = (uint8_t)len;
+    buf[5] = type;
+    memcpy(buf + SCT3288_HEADER_LEN, fields, len);
+
+    size_t total = SCT3288_HEADER_LEN + len;
+    if ((total % 2) != 0)
+        buf[total++] = 0;
+
+    sct3288_write(dev, buf, total);
+    return 0;
+}
+
+/*
+ * Read what the chip has and look for packets whose first field is `field`
+ * or ACK_MESSAGE. Stores the byte after the identifier and returns the
+ * identifier found, or -1.
+ */
+static int readAnswer(const struct sct3288 *dev, uint8_t field, uint8_t *value)
+{
+    uint8_t buf[64];
+    size_t n = sct3288_read(dev, buf, sizeof(buf));
+
+    // A read can hold several packets
+    size_t i = 0;
+    while ((i + SCT3288_HEADER_LEN + 2) <= n) {
+        if (memcmp(buf + i, packetStart, sizeof(packetStart)) != 0) {
+            i++;
+            continue;
+        }
+
+        size_t len = ((size_t)buf[i + 3] << 8) | buf[i + 4];
+        const uint8_t *f = buf + i + SCT3288_HEADER_LEN;
+        if ((len >= 2) && ((f[0] == field) || (f[0] == SCT3288_FIELD_ACK))) {
+            *value = f[1];
+            return f[0];
+        }
+
+        i += SCT3288_HEADER_LEN + len;
+    }
+
+    return -1;
+}
+
+int sct3288_command(const struct sct3288 *dev, uint8_t type,
+                    const uint8_t *fields, size_t len, uint32_t timeoutMs)
+{
+    sct3288_drain(dev);
+
+    int ret = sct3288_send(dev, type, fields, len);
+    if (ret < 0)
+        return ret;
+
+    /*
+     * Fields are answered with the same field and code 0; codec writes and
+     * errors come back as ACK_MESSAGE. ACK_MESSAGE 1 (ready after a reset)
+     * is not an answer: the chip sends it while switching vocoder.
+     */
+    for (uint32_t t = 0; t < timeoutMs; t++) {
+        uint8_t value;
+        int id = readAnswer(dev, fields[0], &value);
+
+        if ((id == SCT3288_FIELD_ACK) && (value == SCT3288_ACK_READY))
+            id = -1;
+
+        if (id >= 0)
+            return (value == SCT3288_ACK_OK) ? 0 : -EIO;
+
+        sleepFor(0, 1);
+    }
+
+    return -ETIMEDOUT;
+}
+
+int sct3288_waitAck(const struct sct3288 *dev, uint8_t code, uint32_t timeoutMs)
+{
+    for (uint32_t t = 0; t < timeoutMs; t++) {
+        uint8_t value;
+        if ((readAnswer(dev, SCT3288_FIELD_ACK, &value) >= 0)
+            && (value == code))
+            return 0;
+
+        sleepFor(0, 1);
+    }
+
+    return -ETIMEDOUT;
+}
+
+void sct3288_drain(const struct sct3288 *dev)
+{
+    uint8_t buf[64];
+
+    while (sct3288_read(dev, buf, sizeof(buf)) > 0)
+        ;
+}

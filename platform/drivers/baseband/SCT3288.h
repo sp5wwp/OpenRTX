@@ -66,6 +66,65 @@ void sct3288_write(const struct sct3288 *dev, const void *data, size_t len);
  */
 size_t sct3288_read(const struct sct3288 *dev, void *buf, size_t maxLen);
 
+/**
+ * Packet types (TYPE byte of the Sicomm packet interface): bits 3:0 select
+ * the protocol, bit 5 makes a read request, bit 6 bypasses to the codec.
+ */
+enum sct3288PacketType {
+    SCT3288_PKT_CONTROL = 0x00, ///< Control packet
+    SCT3288_PKT_DMR = 0x05,     ///< DMR packet, also used to start analog calls
+    SCT3288_PKT_READ = 0x20,    ///< Read request flag
+    SCT3288_PKT_CODEC = 0x40,   ///< Codec register write
+};
+
+/**
+ * Send one packet: start bytes, length, type and fields, padded to an even
+ * length as the chip expects.
+ *
+ * @param dev: device.
+ * @param type: packet type.
+ * @param fields: field identifier followed by its data.
+ * @param len: length of fields, at most 32 bytes.
+ * @return 0 on success, -EINVAL if the packet is too long.
+ */
+int sct3288_send(const struct sct3288 *dev, uint8_t type, const uint8_t *fields,
+                 size_t len);
+
+/**
+ * Send one packet and wait for the chip to answer it, either with the same
+ * field or with ACK_MESSAGE (field 0x17). Other packets arriving meanwhile
+ * are dropped.
+ *
+ * @param dev: device.
+ * @param type: packet type.
+ * @param fields: field identifier followed by its data.
+ * @param len: length of fields.
+ * @param timeoutMs: time to wait for the answer.
+ * @return 0 when the chip answered without error, -EIO when it reported an
+ * error, -ETIMEDOUT without answer.
+ */
+int sct3288_command(const struct sct3288 *dev, uint8_t type,
+                    const uint8_t *fields, size_t len, uint32_t timeoutMs);
+
+/**
+ * Wait for the chip to report ACK_MESSAGE with the given code.
+ *
+ * @param dev: device.
+ * @param code: expected code (1: ready after a reset).
+ * @param timeoutMs: time to wait.
+ * @return 0 when received, -ETIMEDOUT otherwise.
+ */
+int sct3288_waitAck(const struct sct3288 *dev, uint8_t code,
+                    uint32_t timeoutMs);
+
+/**
+ * Read and drop whatever the chip has to send. The chip must be read
+ * regularly: unread packets make it repeat them.
+ *
+ * @param dev: device.
+ */
+void sct3288_drain(const struct sct3288 *dev);
+
 #ifdef __cplusplus
 }
 #endif
