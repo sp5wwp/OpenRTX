@@ -9,6 +9,9 @@
 #include "drivers/baseband/WX4818N.h"
 #include "interfaces/delays.h"
 #include "drivers/NVM/spiNand_D890UV.h"
+#include "drivers/baseband/SCT3288.h"
+#include "drivers/SPI/spi_stm32.h"
+#include "core/utils.h"
 #include "hwconfig.h"
 
 static enum opstatus status = OFF;
@@ -237,6 +240,201 @@ static void setFrontEnd(uint32_t freq)
 #define AF_LEVEL_MIN 0x60 // Level where the output becomes audible
 #define AF_LEVEL_MAX 0x7F
 
+/*
+ * The low byte of register 0x30 also gates the transmitter audio input: at
+ * 0 (volume at minimum) there is no modulation. Stock has 0x5F77 there when
+ * it transmits; checked on air.
+ */
+#define AF_LEVEL_TX 0x77
+
+/*
+ * SCT3288 digital board, which carries the FM microphone audio to the
+ * modulator. Packets sent by the stock firmware V1.05, captured by running
+ * the whole firmware in an emulator (re-tools/fullemu.py, NOTES.md 3.6) and
+ * accepted by the chip on the radio. Fields are from the Sicomm "Packet
+ * Interface of SCT3258": 0x10 VOCODER_SEL (0x10 analog), 0x1A PROCESS_MODE
+ * (0x80 analog), 0x18 WORK_MODE, 0x19 CARRIER_READY, 0x26 ANALOG_SUBAUDIO,
+ * 0x2C MOD_GAIN, 0x39 DC_OFFSET, 0x3C ANALOG_CONFIG, 0x3D CTC_PARAM,
+ * 0x70 EQUALIZER, 0x78 call start, 0x21 CALL_STOP; codec packets write
+ * codec registers.
+ */
+struct sctPacket {
+    uint8_t type;
+    uint8_t len;
+    uint8_t fields[24];
+};
+
+#define SCT_PKT(t, ...)                            \
+    {                                              \
+        .type = (t),                               \
+        .len = sizeof((uint8_t[]){ __VA_ARGS__ }), \
+        .fields = { __VA_ARGS__ },                 \
+    }
+
+#define CTL SCT3288_PKT_CONTROL
+#define DMR SCT3288_PKT_DMR
+#define COD SCT3288_PKT_CODEC
+#define RD (SCT3288_PKT_READ | 0x03)
+
+/* Library open and analog set-up, after the interface word (0x080F403C) */
+static const struct sctPacket sctStartup[] = {
+    SCT_PKT(CTL, 0x2D, 0x04),
+    SCT_PKT(COD, 0x0B, 0x02),
+    SCT_PKT(COD, 0x0B, 0x82),
+    SCT_PKT(DMR, 0x79, 0x41, 0x40, 0x42, 0x44, 0x08),
+    SCT_PKT(RD, 0x33),
+    SCT_PKT(CTL, 0x10, 0x04),
+    SCT_PKT(CTL, 0x10, 0x10),
+    SCT_PKT(CTL, 0x70, 0x21, 0x83, 0xBC, 0x3C, 0xB1, 0x41, 0x01, 0x83, 0xC5,
+            0x3B, 0xB9),
+    SCT_PKT(CTL, 0x70, 0x22, 0xA6, 0xAD, 0x3E, 0x56, 0x40, 0x1A, 0xA6, 0xAD,
+            0x3E, 0x3C),
+    SCT_PKT(CTL, 0x70, 0x23, 0x84, 0x6B, 0x3C, 0xB1, 0x40, 0x35, 0x84, 0x6C,
+            0x3C, 0x7E),
+    SCT_PKT(CTL, 0x70, 0x01, 0x83, 0xBC, 0x3C, 0xB1, 0x41, 0x01, 0x83, 0xC5,
+            0x3B, 0xB9),
+    SCT_PKT(CTL, 0x70, 0x02, 0xA6, 0xAD, 0x3E, 0x56, 0x40, 0x1A, 0xA6, 0xAD,
+            0x3E, 0x3C),
+    SCT_PKT(CTL, 0x70, 0x03, 0x84, 0x6B, 0x3C, 0xB1, 0x40, 0x35, 0x84, 0x6C,
+            0x3C, 0x7E),
+    SCT_PKT(DMR, 0x2F, 0x08),
+    SCT_PKT(DMR, 0x1D, 0xFF),
+    SCT_PKT(DMR, 0x41, 0x00, 0x2F, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x6C, 0x00, 0x00, 0x00, 0x3C, 0x0E, 0x10, 0x0A, 0x28, 0xFF,
+            0xFF, 0xFF, 0xFF),
+    SCT_PKT(DMR, 0x1C, 0x00, 0x00),
+    SCT_PKT(CTL, 0x69, 0x1F, 0x40),
+    SCT_PKT(CTL, 0x68, 0x0B, 0xB8),
+    SCT_PKT(COD, 0x08, 0x00),
+    SCT_PKT(COD, 0x09, 0x00),
+    SCT_PKT(COD, 0x11, 0x00),
+    SCT_PKT(COD, 0x08, 0x00),
+    SCT_PKT(COD, 0x0F, 0x90),
+    SCT_PKT(COD, 0x10, 0x1E),
+    SCT_PKT(DMR, 0x7A, 0x00, 0x87, 0x02, 0xD0, 0x02, 0xD0, 0x02, 0xD0),
+    SCT_PKT(CTL, 0x06, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+    SCT_PKT(CTL, 0x6B, 0x08, 0x00, 0x08, 0x00, 0x61, 0xA8, 0x80, 0x00, 0x40,
+            0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x19, 0x00),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x1A, 0x80),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+    SCT_PKT(CTL, 0x3D, 0x03, 0x84, 0x02, 0x58, 0x01, 0x01, 0x02, 0x01, 0x07,
+            0x06, 0x80, 0xD0, 0x05, 0x00, 0x02, 0x26, 0x00, 0x76, 0x03, 0xB3,
+            0x50, 0x00),
+    SCT_PKT(CTL, 0x39, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x01, 0xF4, 0x08,
+            0x00, 0xF2, 0x30),
+    SCT_PKT(CTL, 0x3C, 0xCF, 0x46, 0x50, 0x05, 0x78, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0xBE),
+    SCT_PKT(CTL, 0x06, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+    SCT_PKT(CTL, 0x6B, 0x08, 0x00, 0x08, 0x00, 0x61, 0xA8, 0x80, 0x00, 0x40,
+            0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x2C, 0x0D, 0xAC),
+    SCT_PKT(CTL, 0x73, 0x62, 0x25, 0x01, 0xA8),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+};
+
+/* PTT press, before the transmitter set-up (0x0811B308, analog branch) */
+static const struct sctPacket sctTxPrepare[] = {
+    SCT_PKT(COD, 0x10, 0x1E),
+    SCT_PKT(DMR, 0x19, 0x00),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(CTL, 0x39, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x01, 0xF4, 0x08,
+            0x00, 0x10, 0x00),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+};
+
+/* PTT press, after the transmitter set-up */
+static const struct sctPacket sctTxStart[] = {
+    SCT_PKT(DMR, 0x26, 0x00, 0x00),
+    SCT_PKT(DMR, 0x18, 0x02, 0x00, 0x00),
+    SCT_PKT(COD, 0x10, 0x1E),
+    SCT_PKT(DMR, 0x78),
+};
+
+/* PTT release, back to reception */
+static const struct sctPacket sctTxStop[] = {
+    SCT_PKT(DMR, 0x21),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+    SCT_PKT(COD, 0x10, 0x1E),
+    SCT_PKT(DMR, 0x19, 0x00),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(CTL, 0x39, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x01, 0xF4, 0x08,
+            0x00, 0xF2, 0x30),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+};
+
+#undef CTL
+#undef DMR
+#undef COD
+#undef RD
+
+/* Answer times: vocoder switches take up to 3s (Packet Interface, 1.2.7) */
+#define SCT_ANSWER_MS 300
+#define SCT_VOCODER_MS 3000
+#define SCT_READY_MS 3500
+#define SCT_SPI_SPEED 5000000
+
+/* Raw interface word sent without packet header (0x08100664), mode 0 */
+static const uint8_t sctInterfaceWord[] = { 0x74, 0xA9, 0x01, 0x00, 0x01, 0x00 };
+
+static bool sctReady = false;
+
+static void sctSend(const struct sctPacket *pkt, size_t count)
+{
+    if (sctReady == false)
+        return;
+
+    for (size_t i = 0; i < count; i++) {
+        uint32_t timeout = (pkt[i].fields[0] == 0x10) ? SCT_VOCODER_MS :
+                                                        SCT_ANSWER_MS;
+        sct3288_command(&sct3288, pkt[i].type, pkt[i].fields, pkt[i].len,
+                        timeout);
+    }
+}
+
+/*
+ * Power the digital board and set it up for analog FM as the stock
+ * firmware does. The speaker amplifier stays off meanwhile, as in stock:
+ * with it on, the chip restarted while its codec and vocoder started.
+ */
+static void sctStart()
+{
+    gpio_clearPin(SPK_EN);
+
+    gpio_setMode(SCT_SCK, ALTERNATE | ALTERNATE_FUNC(5));
+    gpio_setMode(SCT_MISO, ALTERNATE | ALTERNATE_FUNC(5));
+    gpio_setMode(SCT_MOSI, ALTERNATE | ALTERNATE_FUNC(5));
+    gpio_setOutputSpeed(SCT_SCK, HIGH);
+    gpio_setOutputSpeed(SCT_MOSI, HIGH);
+    if (spiStm32_init(&sct_spi, SCT_SPI_SPEED, 0) < 0)
+        return;
+
+    /*
+     * Stock opens the chip, then powers it off and opens it again from the
+     * start (the vocoder switches can reset it, reported as ACK_MESSAGE 1).
+     */
+    for (int pass = 0; pass < 2; pass++) {
+        sctReady = false;
+        if (pass > 0)
+            sct3288_terminate(&sct3288);
+
+        if (sct3288_init(&sct3288) < 0)
+            return;
+
+        sct3288_write(&sct3288, sctInterfaceWord, sizeof(sctInterfaceWord));
+        if (sct3288_waitAck(&sct3288, 1, SCT_READY_MS) < 0)
+            return;
+
+        sctReady = true;
+        sctSend(sctStartup, ARRAY_SIZE(sctStartup));
+    }
+}
+
 static uint8_t afLevel = 0x77;
 
 void radio_setVolume(uint8_t volume)
@@ -277,6 +475,8 @@ void radio_init(const rtxStatus_t *rtxState)
     // The stock initialisation also sets all band B chip GPIOs as low outputs
     for (uint8_t pin = 0; pin < 8; pin++)
         wx4818n_setGpio(&wx4818nB, pin, false);
+
+    sctStart();
 }
 
 void radio_terminate()
@@ -284,6 +484,9 @@ void radio_terminate()
     DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
+    if (sctReady)
+        sct3288_terminate(&sct3288);
+    sctReady = false;
     status = OFF;
 }
 
@@ -452,18 +655,16 @@ void radio_enableTx()
     gpio_clearPin(SPK_EN);
 
     /*
-     * Microphone straight to the band A chip MICIN: PE0 low selects the
-     * radio microphone, PD2 high connects it to MICIN. This differs from
-     * the stock routing (0x081140EC mode 0 with the TX flag set: PE0 high,
-     * PD2 low), where the microphone audio goes through the digital board,
-     * which this port does not power: with it there is no modulation.
-     * Checked on air.
+     * Stock routing (0x081140EC mode 0 with the TX flag set): PE0 high
+     * selects the digital board output, PD2 low feeds it to MICIN.
      */
     gpio_clearPin(BT_PWR);
-    gpio_clearPin(MIC_SEL);
-    gpio_setPin(AF_SW2);
+    gpio_setPin(MIC_SEL);
+    gpio_clearPin(AF_SW2);
     gpio_clearPin(AF_SW1);
     gpio_clearPin(AF_SW0);
+
+    sctSend(sctTxPrepare, ARRAY_SIZE(sctTxPrepare));
 
     wx4818n_standby(&wx4818nB);
 
@@ -484,11 +685,14 @@ void radio_enableTx()
 
     wx4818n_startFmTx(&wx4818nA, &txCfg);
     wx4818n_setGpio(&wx4818nA, GPIO_TX_UHF, uhf);
+    wx4818n_writeReg(&wx4818nA, 0x30, AF_LEVEL_BASE | AF_LEVEL_TX);
 
     // Power stage, in the stock order: APC supply, PA supply, APC level
     gpio_setPin(APC_PWR);
     gpio_setPin(TX_PWR_EN);
     DAC1->DHR12R1 = apcValue(freq, powerLevel(config->txPower));
+
+    sctSend(sctTxStart, ARRAY_SIZE(sctTxStart));
 
     tunedFrequency = 0;
     status = TX;
@@ -500,6 +704,7 @@ static void stopTx()
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
     wx4818n_standby(&wx4818nA);
+    sctSend(sctTxStop, ARRAY_SIZE(sctTxStop));
 }
 
 void radio_disableRtx()
@@ -529,6 +734,10 @@ void radio_updateConfiguration()
 #define RSSI_REF_DBM -60.0f
 rssi_t radio_getRssi()
 {
+    // Called by the rtx thread at every iteration: keep the board read
+    if (sctReady)
+        sct3288_drain(&sct3288);
+
     if (status != RX)
         return -127.0f;
 
