@@ -360,9 +360,20 @@ logged):
   low level), so microphone -> codec -> board output -> MICIN works; the
   SCT3288 analog processing does not pass speech yet. The 24 kHz component
   is there in both modes.
-- WORK_MODE debug byte 1 (1 kHz sine on the modulation port) gave only a
-  faint tone with the internal microphone connected and none with the
-  K connector in: that port is not the board output used for FM.
+- WORK_MODE debug byte 1 (1 kHz sine on the modulation port) gives a
+  plain carrier once the set-up is right (the faint tone seen first leaked
+  into the internal microphone): that port is not wired to the modulator;
+  FM audio leaves through the codec (MICO -> MICIN).
+- Stock opens the chip twice: the whole sequence, a board power cycle
+  (PC6 low, power-up, reset), the whole sequence again. Seen in the
+  emulation once the fake chip answers the vocoder switch with `17 01` as
+  the real one can. With a single pass the codec output carries 24 kHz
+  sidebands and no audio; with two passes the 24 kHz is gone and the
+  microphone modulates (breath noise), in normal TX mode.
+- With two passes the port behaves like stock on air (stock V1.05 flashed
+  back for the comparison, VFO 435.000 MHz analog, same weak speech level),
+  so the remaining level question is the radio's microphone path, to be
+  inspected in the hardware.
 - In FM the microphone does not go through the MCU: ADC1 scans channels 1,
   2, 3, 12 (PA7, microphone amplifier) and 19 into 0x20001D34 by circular
   DMA (GPDMA1 channel 10), but no stock code reads the microphone slot.
@@ -559,12 +570,11 @@ Pitfalls met so far:
 ## 7. Open items, in priority order
 
 1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The
-   captured sequence is accepted by the chip, the hardware path works in
-   codec loop back, but the chip's analog processing passes no speech and
-   the output carries 24 kHz. Next: make the fake chip answer like the real
-   one (reports, resets) and look for set-up stock sends on conditions not
-   reached yet. Also keep WX4818N `0x30` independent of the volume in TX.
-   Then check power per level and deviation (narrow/wide, CTCSS).
+   port now matches stock on air (two open passes, stock packets, routing,
+   WX4818N registers); speech level is weak in stock too: inspect the
+   microphone path in the hardware. Code still to clean up: keep WX4818N
+   `0x30` independent of the volume in TX, remove the test logging. Then
+   check power per level and deviation (narrow/wide, CTCSS).
 2. **Receiver noise floor**: idle RSSI about -71 dBm (raw 267) with the
    antenna, S4 without it, against raw 176 measured earlier; not changed
    by powering the digital board or the speaker amplifier off.
