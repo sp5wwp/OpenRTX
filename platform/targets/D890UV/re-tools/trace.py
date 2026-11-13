@@ -11,6 +11,7 @@
 #       e.g. the settings block dumped from the radio at 0x200148E4
 #   PERIPH=1  also log direct peripheral writes (DAC, timers, ...), not GPIO
 #   MAXI=<n>  instruction limit (default 2e7)
+#   SCATTER=1  initialise .data/.bss with the stock start-up code first
 #   POKE=<hexaddr>:<hexbytes>,...  write bytes after loading RAM images
 #   STOP=<hexaddr>  stop when execution reaches this address, to emulate
 #       a block inside a function: the entry is then any instruction, run
@@ -39,6 +40,14 @@ mu.mem_map(0x20000000,0x100000); mu.mem_map(0x40000000,0x20000000); mu.mem_map(0
 import os
 FREQ=int(os.environ.get('FREQ','43500000'))
 for a in (0x2000432c,0x2000c240,0x2000c244,0x2001d780,0x2001d784): mu.mem_write(a,struct.pack('<I',FREQ))
+SCATTER_INIT=0x080101D0   # Keil __scatterload + library init, called by __main
+def scatterLoad(uc):
+    """Initialise .data/.bss as the stock start-up does (0x0800C238)."""
+    ret=0x20090000; uc.mem_write(ret,b'\x00\xbf\xfe\xe7')
+    uc.reg_write(UC_ARM_REG_SP,0x20025FA0); uc.reg_write(UC_ARM_REG_LR,ret|1)
+    uc.emu_start(SCATTER_INIT|1,ret,count=int(5e7))
+if os.environ.get('SCATTER'):
+    scatterLoad(mu)
 for spec in filter(None,os.environ.get('RAM','').split(',')):
     addr,rest=spec.split(':',1)
     if '@' in rest:

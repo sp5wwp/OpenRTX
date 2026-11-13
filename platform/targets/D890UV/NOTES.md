@@ -260,6 +260,35 @@ codec, TX gain, limiter, CTCSS/DCS, two-point modulation (VCO + VCTCXO).
   probably live in the SCT3288's own flash (the update package ships
   `SCT3288QD_UpdateFlash`), or are sent by library states not reached in
   emulation (`0x080E6C64`, up to 64 states). To be checked on the chip.
+- **On the radio** (hardware SPI2, `spi_stm32u5.c`; software SPI read the
+  application one bit off and was ignored by it): boot status `17 0E`;
+  interface word -> `17 01` (ready) after 2.75 s; CODEC_SELECT 4 -> `2D 00`;
+  codec writes `0B 02`, `0B 82` (TYPE 0x40, codec bypass) -> `17 00`;
+  `79 41 40 42 44 08` -> `79 00`; Q_SW_VER -> "V3.01.01A3". The chip must
+  be read continuously (frame line PD7 + byte ready PD11, `0x0810A6DC`), as
+  the stock main loop does, or it repeats `17 01` and the audio taps at about
+  5 Hz. Power-off must leave the control lines floating, or it does not
+  boot again.
+- Field 0x1A PROCESS_MODE = 0x80 is analog mode (Sicomm note). Stock sends it
+  from `0x080F36F0` (with codec `08 00` and field `6F 01`), called from the
+  library report handling (`0x080F40F8` command 0 -> `0x080FBC44`), which the
+  application polling loop `0x080DFC0C` runs. Sent alone on the radio: reply
+  `17 11`, then repeated `17 01` (chip restarting) and no TX audio.
+- Stock FM TX on the main band (0x2000F988 = settings 0x2C) uses PD2 = 0:
+  the audio does come from the digital board. No packet is sent at PTT, so
+  the board must already be in analog mode from the library state machine.
+- `0x080F40F8(cmd, arg0, arg1, buf, len)` is the library API of the Qixiang
+  note (SCT_Module_Read/Write/Ioctrol), 19 commands. Setter map (field sent
+  by each library function) is in `re-tools/sctemu.py` runs; analog ones:
+  0x3C ANALOG_CONFIG (`0x080E5E98`), 0x3D CTC_PARAM (`0x080E7EA4`), 0x39
+  DC_OFFSET (`0x080E88F4`), 0x6B MISC_GAIN (`0x080F369C`), 0x70 EQUALIZER
+  (`0x080F0808`), 0x1A PROCESS_MODE (`0x080F8560`), 0x18 WORK_MODE
+  (`0x081003D0`), codec bypass writes (`0x080F2540`, `0x080F2594`...).
+- The library state (0x2000F8E4 call state, 0x2001257C configuration) is
+  filled by the stock start-up from settings, channels and calibration;
+  emulating single library functions leaves it empty. Getting the real
+  analog sequence needs the stock start-up and main loop emulated with the
+  NAND served from dumps.
 - Next: emulate the library open and the analog setup with a fake SCT3288
   answering on the byte layer, log the packets, and match them to the
   documented fields (ANALOG_CONFIG 0x3C, CTC_PARAM, MOD_GAIN, CODEC_SELECT,
