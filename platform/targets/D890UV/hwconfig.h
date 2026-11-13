@@ -10,6 +10,7 @@
 #include <stm32u5xx.h>
 #include "pinmap.h"
 #include "drivers/baseband/WX4818N.h"
+#include "drivers/baseband/SCT3288.h"
 
 enum adcChannel {
     ADC_VBAT_CH = 2, // PC1, ADC1_IN2
@@ -19,6 +20,9 @@ enum adcChannel {
 extern const struct Adc adc1;
 extern const struct wx4818n wx4818nA;
 extern const struct wx4818n wx4818nB;
+struct spiDevice;
+extern const struct spiDevice sct_spi;
+extern const struct sct3288 sct3288;
 
 /* Screen dimensions */
 #define CONFIG_SCREEN_WIDTH 160

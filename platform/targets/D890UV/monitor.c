@@ -15,6 +15,7 @@
 #include <string.h>
 #include "monitor.h"
 #include "bootloader.h"
+#include "drivers/SPI/spi_stm32.h"
 
 /*
  * Debug monitor on the USB serial port. One command per line, numbers in
@@ -31,6 +32,12 @@
  *   xw <a|b> <reg> <value>    write a WX4818N register
  *   xg <a|b> <pin> <0|1>      set a WX4818N GPIO
  *   update                    restart into the bootloader update mode
+ *   si                        power up and reset the SCT3288, wait for boot
+ *   sw <hexbytes>             send bytes to the SCT3288 (no spaces)
+ *   sr                        read the bytes the SCT3288 has ready
+ *   so                        power the SCT3288 down
+ *   sa <0|1>                  read SCT3288 frames automatically, as stock
+ *   sl                        print the automatically read frames
  *
  * Memory accesses are not checked: an unmapped address faults the MCU.
  */
@@ -226,6 +233,140 @@ static const char *cmdUpdate(char **arg)
     return NULL;
 }
 
+/* SCT3288 link speed for the bring-up, well below the stock SPI2 setting */
+#define SCT_SPI_SPEED 5000000
+
+static const char *cmdSctInit(char **arg)
+{
+    static bool spiReady = false;
+    (void)arg;
+
+    if (spiReady == false) {
+        gpio_setMode(SCT_SCK, ALTERNATE | ALTERNATE_FUNC(5));
+        gpio_setMode(SCT_MISO, ALTERNATE | ALTERNATE_FUNC(5));
+        gpio_setMode(SCT_MOSI, ALTERNATE | ALTERNATE_FUNC(5));
+        gpio_setOutputSpeed(SCT_SCK, HIGH);
+        gpio_setOutputSpeed(SCT_MOSI, HIGH);
+        if (spiStm32_init(&sct_spi, SCT_SPI_SPEED, 0) < 0)
+            return "SPI init failed";
+        spiReady = true;
+    }
+
+    // SPI2 state, for the bring-up
+    out("SPI2 CR1=%08lX CFG1=%08lX CFG2=%08lX SR=%08lX\n",
+        (unsigned long)SPI2->CR1, (unsigned long)SPI2->CFG1,
+        (unsigned long)SPI2->CFG2, (unsigned long)SPI2->SR);
+
+    if (sct3288_init(&sct3288) < 0)
+        return "no boot status";
+
+    return NULL;
+}
+
+static const char *cmdSctWrite(char **arg)
+{
+    uint8_t buf[64];
+    size_t len = 0;
+    const char *hex = arg[0];
+
+    if ((hex == NULL) || ((strlen(hex) % 2) != 0)
+        || (strlen(hex) / 2 > sizeof(buf)))
+        return "usage: sw <hexbytes>";
+
+    for (; hex[0] != '\0'; hex += 2) {
+        char byte[3] = { hex[0], hex[1], '\0' };
+        char *end;
+        buf[len++] = strtoul(byte, &end, 16);
+        if (*end != '\0')
+            return "bad hex";
+    }
+
+    sct3288_write(&sct3288, buf, len);
+    return NULL;
+}
+
+static const char *cmdSctRead(char **arg)
+{
+    uint8_t buf[256];
+    (void)arg;
+
+    size_t len = sct3288_read(&sct3288, buf, sizeof(buf));
+    hexLines(0, buf, len);
+    out("%u bytes\n", (unsigned)len);
+    return NULL;
+}
+
+static const char *cmdSctOff(char **arg)
+{
+    (void)arg;
+    sct3288_terminate(&sct3288);
+    return NULL;
+}
+
+/*
+ * Automatic reading of the SCT3288 frames, like the stock main loop
+ * (0x0810A6DC). Frames are kept with a timestamp in a small log.
+ */
+#define SCT_LOG_SIZE 32
+#define SCT_FRAME_MAX 32
+
+struct sctFrame {
+    uint32_t time;
+    uint8_t len;
+    uint8_t data[SCT_FRAME_MAX];
+};
+
+static struct sctFrame sctLog[SCT_LOG_SIZE];
+static size_t sctLogCount;
+static bool sctAuto;
+
+void monitor_poll()
+{
+    if (sctAuto == false)
+        return;
+
+    uint8_t buf[SCT_FRAME_MAX];
+    size_t len = sct3288_read(&sct3288, buf, sizeof(buf));
+    if (len == 0)
+        return;
+
+    struct sctFrame *f = &sctLog[sctLogCount % SCT_LOG_SIZE];
+    f->time = getTick();
+    f->len = len;
+    memcpy(f->data, buf, len);
+    sctLogCount++;
+}
+
+static const char *cmdSctAuto(char **arg)
+{
+    uint32_t on;
+    if (!parseHex(arg[0], &on))
+        return "usage: sa <0|1>";
+
+    sctAuto = (on != 0);
+    return NULL;
+}
+
+static const char *cmdSctLog(char **arg)
+{
+    (void)arg;
+
+    size_t first = (sctLogCount > SCT_LOG_SIZE) ? sctLogCount - SCT_LOG_SIZE :
+                                                  0;
+    for (size_t i = first; i < sctLogCount; i++) {
+        const struct sctFrame *f = &sctLog[i % SCT_LOG_SIZE];
+        char line[16 + 2 * SCT_FRAME_MAX];
+        int n = snprintf(line, sizeof(line), "%8lu ", (unsigned long)f->time);
+        for (uint8_t j = 0; j < f->len; j++)
+            n += snprintf(line + n, sizeof(line) - n, "%02X", f->data[j]);
+        line[n++] = '\n';
+        usb_write(line, n);
+    }
+
+    sctLogCount = 0;
+    return NULL;
+}
+
 static const char *cmdPing(char **arg)
 {
     (void)arg;
@@ -242,7 +383,9 @@ static const struct command commands[] = {
     { "ping", cmdPing },     { "rb", cmdReadBytes }, { "rw", cmdReadWords },
     { "wb", cmdWriteByte },  { "ww", cmdWriteWord }, { "nr", cmdNandRead },
     { "xr", cmdWxRead },     { "xw", cmdWxWrite },   { "xg", cmdWxGpio },
-    { "update", cmdUpdate },
+    { "update", cmdUpdate }, { "si", cmdSctInit },   { "sw", cmdSctWrite },
+    { "sr", cmdSctRead },    { "so", cmdSctOff },    { "sa", cmdSctAuto },
+    { "sl", cmdSctLog },
 };
 
 void monitor_exec(char *line)

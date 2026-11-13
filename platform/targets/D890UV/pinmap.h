@@ -57,6 +57,21 @@
 #define LED_ANL_RX GPIOE, 4  // "ANL-RX LED", green
 #define LED_TX GPIOE, 5      // "TX LED", red
 
+/*
+ * Digital board, SCT3288 baseband (stock GPIO setup 0x0806235C, 0x08061770,
+ * 0x080617C4). SPI2 on PB13-PB15, alternate function 5.
+ */
+#define SCT_SCK GPIOB, 13
+#define SCT_MISO GPIOB, 14
+#define SCT_MOSI GPIOB, 15
+#define SCT_CS &GpioB, 12   // Chip select, active low
+#define SCT_PWR &GpioC, 6   // Board power, high on
+#define SCT_RST &GpioD, 8   // Reset, active low
+#define SCT_CTL1 &GpioD, 9  // Held low by stock
+#define SCT_CTL2 &GpioD, 10 // Held low by stock
+#define SCT_RDY &GpioD, 11  // High when the chip has data
+#define SCT_FRAME &GpioD, 7 // High during a frame from the chip
+
 /* Power */
 #define PWR_ON_DET GPIOA, 0 // Power switch status, polarity see platform.c
 #define PWR_HOLD GPIOC, 3   // ORed with the power switch, high holds on

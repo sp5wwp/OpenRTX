@@ -685,6 +685,8 @@ d890uv_src = ['platform/targets/D890UV/platform.c',
               'platform/drivers/NVM/nvmem_D890UV.c',
               'platform/drivers/baseband/WX4818N.c',
               'platform/drivers/baseband/radio_D890UV.c',
+              'platform/drivers/baseband/SCT3288.c',
+              'platform/drivers/SPI/spi_stm32u5.c',
               'platform/drivers/NVM/spiNand_D890UV.c',
               'platform/drivers/USB/usb_D890UV.c',
               'platform/drivers/USB/usb_descriptors.c']

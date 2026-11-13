@@ -91,6 +91,7 @@ static void *usbThreadFunc(void *arg)
             }
         }
 
+        monitor_poll();
         sleepFor(0, 1);
     }
 

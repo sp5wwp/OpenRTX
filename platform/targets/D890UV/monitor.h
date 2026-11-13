@@ -19,6 +19,11 @@ extern "C" {
  */
 void monitor_exec(char *line);
 
+/**
+ * Background work of the monitor, called often by the USB thread.
+ */
+void monitor_poll();
+
 #ifdef __cplusplus
 }
 #endif
