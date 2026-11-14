@@ -527,6 +527,28 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     the eye.
 - The monitor stopped answering once while the radio sat idle (USB still
   enumerated); a reboot cleared it. Not reproduced.
+- **Band B microphone route** (AnyTone's proposal), tested with debug code
+  since removed (the radio applied a band B set-up at each FM key-up,
+  routing radio mic -> band B MICIN, band B AFOUT -> PC7 -> AF-REP -> band
+  A MICIN with PD0 = PD1 = 1, PD2 = 0; heard on an SDR):
+  - band B's chip was never initialised by the port; stock initialises
+    both chips (0x0801C8F4). Uninitialised, its AFOUT is silent. Now done
+    in `radio_init()`;
+  - initialised and receiving, band B's AFOUT carries receiver hiss on PC0
+    (RMS 1519 counts) and, with PC7 high, on the speaker and into the
+    modulator: both routes work. PC7 (`B_AF_EN`) high connects band B's
+    AFOUT to AF-REP;
+  - no microphone in any set-up tried: standby (nothing), RX on an empty
+    channel (hiss), RX on the TX frequency (quieted by our carrier,
+    silence), TX mode on 438 MHz (a steady 2176 Hz sine at about +-2 kHz,
+    nothing else; no carrier on 438 MHz left the radio), and RX with each
+    of the 16 values of `0x47` bits 11:8 (stock 0x27FE), quieted and
+    unquieted. A speaker-based sweep suggested blowing in the first values;
+    it did not reproduce on air;
+  - the band B set-up that makes its chip pass MICIN to AFOUT is not known;
+    asked from AnyTone (their note says "QX will provide RF parameter
+    settings"). Next: an automated acoustic search (the radio plays a tone
+    on its speaker and looks for it on PC0 and PA7 for each set-up).
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
@@ -595,7 +617,8 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   sync points at the half and the end, as `Cx000_dac.cpp`. The PWM idles at
   mid-scale from start-up so that key-up does not pull the carrier (3.10).
   `audio_init()` is now called by `platform_init()`.
-- **Microphone** (`mic_D890UV.c`): PA7 (ADC1 channel 12) sampled at
+- **Microphone** (`mic_D890UV.c`): PA7 (ADC1 channel 12, the input that
+  needs no set-up; AnyTone's route is band B's chip to PC0, 3.8) sampled at
   8 kHz with injected conversions started from a TIM6 interrupt, so the
   regular battery and volume conversions on ADC1 are only paused
   (`adc_stm32u5.c` now adds its channel to PCSEL instead of replacing it).

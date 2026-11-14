@@ -20,9 +20,9 @@
  * - the MCU drives PB9 (PWM, pwm_D890UV.c), RC filtered to the TONE net. It
  *   reaches the speaker through the AF-REP summing node (band B chip GPO1
  *   low) and, in TX, band A's modulator (switches set by the radio driver);
- * - the microphone source samples PA7 (mic_D890UV.c), the only microphone
- *   signal wired to the MCU; no speech was seen there on the development
- *   radio (NOTES.md 3.8);
+ * - the microphone source samples PA7 (mic_D890UV.c), which needs no set-up;
+ *   AnyTone's M17 proposal uses band B's chip and PC0 instead (NOTES.md
+ *   3.8);
  * - the receive baseband (PC0) has no driver yet: it also delivers paced
  *   silence, as a stream that fails at once would make the M17 receiver
  *   loop without blocking and starve the other threads.

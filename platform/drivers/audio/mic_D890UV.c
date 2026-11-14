@@ -12,8 +12,10 @@
 
 /*
  * Microphone input of the AnyTone AT-D890UV on PA7 ("A/D DET FOR VOX", ADC1
- * channel 12), the only microphone signal wired to the MCU. On the
- * development radio no speech was seen there (NOTES.md 3.8).
+ * channel 12), the microphone signal that needs no set-up. AnyTone's M17
+ * proposal routes the microphone through band B's chip to PC0 instead, which
+ * needs a band B set-up not known yet. On the development radio nothing was
+ * seen on either (NOTES.md 3.8).
  *
  * ADC1 is shared with the battery and volume readings, which use software
  * started regular conversions: the microphone uses an injected conversion,
