@@ -465,6 +465,20 @@ void wx4818n_startFmTx(const struct wx4818n *dev,
     else
         writeSequence(dev, lowerBandTx, ARRAY_SIZE(lowerBandTx));
 
+    /*
+     * Flat modulator for a digital baseband, from the stock firmware's DMR TX
+     * set-up (emulated key-up on a DMR channel): no voice filter and level
+     * control, response flat down to a few Hz (NOTES.md 3.10). 0x48 takes
+     * the wide value, twice the gain of stock's digital one; the deviation is
+     * then set by 0x31 (modCal).
+     */
+    if (cfg->baseband) {
+        wx4818n_writeReg(dev, 0x2B, 0xF08D);
+        wx4818n_writeReg(dev, 0x10, 0xA3E0);
+        wx4818n_writeReg(dev, 0x48, WX4818N_BW_WIDE);
+        wx4818n_writeReg(dev, WX4818N_REG_TONE, WX4818N_TONE_IDX(6));
+    }
+
     wx4818n_writeReg(dev, WX4818N_REG_LATCH, WX4818N_MODE_TX);
 }
 

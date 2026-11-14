@@ -105,6 +105,7 @@ struct wx4818nTxConfig {
     uint16_t ctcss;   ///< CTCSS tone in 0.1Hz, 0 for none
     uint16_t modCal;  ///< Modulation calibration, register 0x31 bits 11:0
     uint16_t toneCal; ///< Modulation calibration, register 0x2E entry 6
+    bool baseband;    ///< Flat modulator for a digital baseband (4FSK)
 };
 
 /**
