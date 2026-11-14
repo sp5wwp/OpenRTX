@@ -40,6 +40,12 @@ extern const struct sct3288 sct3288;
  */
 // #define CONFIG_D890UV_TX
 
+/*
+ * Splash screen time: the radio driver opens the digital board twice at
+ * power-on, as the stock firmware does, which takes about 8.5s.
+ */
+#define CONFIG_SPLASH_TIME_MS 9500u
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
