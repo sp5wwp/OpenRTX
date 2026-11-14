@@ -26,6 +26,14 @@
 #include "pmu.h"
 #endif
 
+/*
+ * Time the splash screen stays on at power-on. Targets whose radio takes
+ * longer to start define a longer time in their hwconfig.h.
+ */
+#ifndef CONFIG_SPLASH_TIME_MS
+#define CONFIG_SPLASH_TIME_MS 1000u
+#endif
+
 /* Mutex for concurrent access to RTX state variable */
 pthread_mutex_t rtx_mutex;
 
@@ -45,8 +53,8 @@ void *ui_threadFunc(void *arg)
     ui_saveState();
     ui_updateGUI();
 
-    // Keep the splash screen for one second  before rendering the new UI screen
-    sleepFor(1u, 0u);
+    // Keep the splash screen for a while before rendering the new UI screen
+    sleepFor(CONFIG_SPLASH_TIME_MS / 1000u, CONFIG_SPLASH_TIME_MS % 1000u);
     gfx_render();
 
     while(state.devStatus != SHUTDOWN)
