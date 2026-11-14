@@ -39,10 +39,10 @@ extern const struct i2cDevice i2c_bus;
 #define CONFIG_SCREEN_BRIGHTNESS
 
 /*
- * FM transmission. Off until it has been checked into a dummy load: the
- * transmitter stays powered down whatever is requested.
+ * FM transmission. Without it the transmitter stays powered down whatever is
+ * requested. Checked on air at Low power.
  */
-// #define CONFIG_D890UV_TX
+#define CONFIG_D890UV_TX
 
 /*
  * Transmit power levels of the stock firmware (Low, Mid, High, Turbo), from
