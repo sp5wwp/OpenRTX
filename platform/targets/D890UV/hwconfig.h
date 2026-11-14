@@ -23,6 +23,8 @@ extern const struct wx4818n wx4818nB;
 struct spiDevice;
 extern const struct spiDevice sct_spi;
 extern const struct sct3288 sct3288;
+struct i2cDevice;
+extern const struct i2cDevice i2c_bus;
 
 /* Screen dimensions */
 #define CONFIG_SCREEN_WIDTH 160

@@ -72,6 +72,13 @@
 #define SCT_RDY &GpioD, 11  // High when the chip has data
 #define SCT_FRAME &GpioD, 7 // High during a frame from the chip
 
+/*
+ * Bit-banged I2C bus (stock 0x080584D4): audio volume device, charger and
+ * accelerometer. SDA and SCL are swapped against the I2C1 pins.
+ */
+#define I2C_SDA &GpioB, 6
+#define I2C_SCL &GpioB, 7
+
 /* Power */
 #define PWR_ON_DET GPIOA, 0 // Power switch status, polarity see platform.c
 #define PWR_HOLD GPIOC, 3   // ORed with the power switch, high holds on

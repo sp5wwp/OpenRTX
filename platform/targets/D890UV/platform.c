@@ -11,6 +11,7 @@
 #include <peripherals/gpio.h>
 #include "drivers/backlight/backlight.h"
 #include "drivers/USB/usb.h"
+#include "drivers/I2C/i2c_bitbang.h"
 
 void radio_setVolume(uint8_t volume);
 
@@ -76,6 +77,7 @@ void platform_init()
 
     adcStm32_init(&adc1);
     nvm_init();
+    i2cBitbang_init(&i2c_bus);
 
     pwrOnLevel = gpio_readPin(PWR_ON_DET);
     pwrOffCount = 0;
