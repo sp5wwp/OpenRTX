@@ -272,3 +272,49 @@ void sct3288_drain(const struct sct3288 *dev)
     while (sct3288_read(dev, buf, sizeof(buf)) > 0)
         ;
 }
+
+/* Q_SW_VER: read request for field 0x32, answered with a length byte and the
+ * version text (Packet Interface of SCT3258, 1.3) */
+#define SCT3288_FIELD_SW_VER 0x32
+#define SCT3288_VERSION_TIMEOUT_MS 300
+
+static char fwVersion[16];
+
+int sct3288_readFwVersion(const struct sct3288 *dev)
+{
+    const uint8_t field = SCT3288_FIELD_SW_VER;
+
+    sct3288_drain(dev);
+    sct3288_send(dev, SCT3288_PKT_READ | SCT3288_PKT_DPMR, &field, 1);
+
+    for (uint32_t t = 0; t < SCT3288_VERSION_TIMEOUT_MS; t++) {
+        uint8_t buf[64];
+        size_t n = sct3288_read(dev, buf, sizeof(buf));
+
+        for (size_t i = 0; (i + SCT3288_HEADER_LEN + 2) <= n; i++) {
+            const uint8_t *f = buf + i + SCT3288_HEADER_LEN;
+            if ((memcmp(buf + i, packetStart, sizeof(packetStart)) != 0)
+                || (f[0] != SCT3288_FIELD_SW_VER))
+                continue;
+
+            size_t len = f[1];
+            if (len >= sizeof(fwVersion))
+                len = sizeof(fwVersion) - 1;
+            if ((i + SCT3288_HEADER_LEN + 2 + len) > n)
+                len = n - (i + SCT3288_HEADER_LEN + 2);
+
+            memcpy(fwVersion, f + 2, len);
+            fwVersion[len] = '\0';
+            return 0;
+        }
+
+        sleepFor(0, 1);
+    }
+
+    return -ETIMEDOUT;
+}
+
+const char *sct3288_getFwVersion()
+{
+    return fwVersion;
+}

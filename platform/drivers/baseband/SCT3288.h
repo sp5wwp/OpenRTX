@@ -72,6 +72,7 @@ size_t sct3288_read(const struct sct3288 *dev, void *buf, size_t maxLen);
  */
 enum sct3288PacketType {
     SCT3288_PKT_CONTROL = 0x00, ///< Control packet
+    SCT3288_PKT_DPMR = 0x03,    ///< DPMR packet, also used by stock for reads
     SCT3288_PKT_DMR = 0x05,     ///< DMR packet, also used to start analog calls
     SCT3288_PKT_READ = 0x20,    ///< Read request flag
     SCT3288_PKT_CODEC = 0x40,   ///< Codec register write
@@ -116,6 +117,22 @@ int sct3288_command(const struct sct3288 *dev, uint8_t type,
  */
 int sct3288_waitAck(const struct sct3288 *dev, uint8_t code,
                     uint32_t timeoutMs);
+
+/**
+ * Read the chip's firmware version (Q_SW_VER, field 0x32) and keep it for
+ * sct3288_getFwVersion().
+ *
+ * @param dev: device.
+ * @return 0 on success, -ETIMEDOUT without answer.
+ */
+int sct3288_readFwVersion(const struct sct3288 *dev);
+
+/**
+ * Firmware version read by sct3288_readFwVersion(), e.g. "V3.01.01A6".
+ *
+ * @return the version, or an empty string if it was not read.
+ */
+const char *sct3288_getFwVersion();
 
 /**
  * Read and drop whatever the chip has to send. The chip must be read
