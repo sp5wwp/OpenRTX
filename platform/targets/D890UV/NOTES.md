@@ -374,6 +374,13 @@ logged):
   the real one can. With a single pass the codec output carries 24 kHz
   sidebands and no audio; with two passes the 24 kHz is gone and the
   microphone modulates (breath noise), in normal TX mode.
+- Full key-up comparison with chip A and B snapshots taken by a test build
+  (after the `0x19` and `0x30` fixes): SCT3288 packets, routing GPIOs and
+  chip A registers match stock (apart from readback bits, `2E` and the
+  frequency). Stock also sets chip B up at key-up, tuned to the TX
+  frequency with microphone gain `48 = 9826` (from `0x080E2453` on);
+  replaying those writes changed nothing on air, so chip B is not in the
+  TX audio path.
 - With two passes the port behaves like stock on air (stock V1.05 flashed
   back for the comparison, VFO 435.000 MHz analog, same weak speech level),
   so the remaining level question is the radio's microphone path, to be
@@ -614,9 +621,10 @@ Pitfalls met so far:
 
 1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The
    port matches stock on air (two open passes, stock packets, routing,
-   WX4818N registers); speech was weak in stock too with the chip on A3.
-   Retest now that it runs A6 (3.7); if still weak, inspect the
-   microphone path in the hardware. Then check power per level and
+   WX4818N registers, chip B checked too); speech is weak in stock too,
+   and still with the chip on A6 (3.7): only breath noise modulates, as
+   low-deviation FM. Next: inspect the microphone path in the hardware
+   (element, amplifier and its supply, the K-connector switch). Then check power per level and
    deviation (narrow/wide, CTCSS).
 2. **Receiver noise floor**: idle RSSI about -71 dBm (raw 267) with the
    antenna, S4 without it, against raw 176 measured earlier; not changed

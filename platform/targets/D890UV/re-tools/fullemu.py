@@ -562,4 +562,4 @@ for spec in filter(None, a.dump.split(',')):
         out(f'DUMP {ad + o:#010x}: ' + ' '.join(f'{w:08x}' for w in struct.unpack('<4I', bytes(mu.mem_read(ad + o, 16)))))
 for (ad, pc, lr), n in sorted(readers.items(), key=lambda x: -x[1])[:20]:
     out(f'READ [{ad:#x}] pc={pc:#x} lr={lr:#x} x{n}')
-out('WXREGS ' + ' '.join(f'{c}:{r:02X}={v:04X}' for (c, r), v in sorted(wxRegs.items()) if c == 0))
+out('WXREGS ' + ' '.join(f'{c}:{r:02X}={v:04X}' for (c, r), v in sorted(wxRegs.items())))
