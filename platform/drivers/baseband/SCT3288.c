@@ -318,3 +318,53 @@ const char *sct3288_getFwVersion()
 {
     return fwVersion;
 }
+
+/*
+ * ANALOG_TONE (Packet Interface of SCT3258, 1.2.21): a repeating pattern of
+ * two tones, each made of two frequencies with their amplitudes, and the
+ * length of each tone. A continuous tone repeats the same single frequency.
+ */
+enum sct3288ToneField {
+    SCT3288_FIELD_ANALOG_TONE = 0x1F,
+    SCT3288_TONE_REPEAT_STOP = 0,      ///< TONE_CTRL repeat count: stop
+    SCT3288_TONE_REPEAT_FOREVER = 127, ///< TONE_CTRL repeat count: endless
+    SCT3288_TONE_AMPLITUDE = 0x40,     ///< 1.0, 8 bit with 6 fractional bits
+    SCT3288_TONE_LENGTH_MS = 1000,
+};
+
+#define SCT3288_TONE_TIMEOUT_MS 300
+
+int sct3288_setTone(const struct sct3288 *dev, enum sct3288ToneOutput out,
+                    uint16_t freq)
+{
+    uint8_t repeat = (freq != 0) ? SCT3288_TONE_REPEAT_FOREVER :
+                                   SCT3288_TONE_REPEAT_STOP;
+    uint8_t amp = (freq != 0) ? SCT3288_TONE_AMPLITUDE : 0;
+    uint8_t fields[] = {
+        SCT3288_FIELD_ANALOG_TONE,
+        (uint8_t)out | repeat,
+        // Tone 1: frequency 1, frequency 2
+        (uint8_t)(freq >> 8),
+        (uint8_t)freq,
+        0,
+        0,
+        // Tone 2: the same
+        (uint8_t)(freq >> 8),
+        (uint8_t)freq,
+        0,
+        0,
+        // Amplitudes: tone 1, tone 2
+        amp,
+        0,
+        amp,
+        0,
+        // Lengths of tone 1 and tone 2
+        (uint8_t)(SCT3288_TONE_LENGTH_MS >> 8),
+        (uint8_t)SCT3288_TONE_LENGTH_MS,
+        (uint8_t)(SCT3288_TONE_LENGTH_MS >> 8),
+        (uint8_t)SCT3288_TONE_LENGTH_MS,
+    };
+
+    return sct3288_command(dev, SCT3288_PKT_CONTROL, fields, sizeof(fields),
+                           SCT3288_TONE_TIMEOUT_MS);
+}

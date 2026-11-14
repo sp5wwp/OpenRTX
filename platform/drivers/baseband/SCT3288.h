@@ -119,6 +119,25 @@ int sct3288_waitAck(const struct sct3288 *dev, uint8_t code,
                     uint32_t timeoutMs);
 
 /**
+ * Outputs of the tone generator (ANALOG_TONE, TONE_CTRL bit 7).
+ */
+enum sct3288ToneOutput {
+    SCT3288_TONE_LINE_OUT = 0x00, ///< Line out, to the speaker path
+    SCT3288_TONE_MOD = 0x80,      ///< Modulation port: sent over the air
+};
+
+/**
+ * Start or stop a continuous tone (ANALOG_TONE, field 0x1F).
+ *
+ * @param dev: device.
+ * @param out: output of the tone.
+ * @param freq: tone frequency in Hz, 0 stops the tone.
+ * @return 0 on success, a negative error code otherwise.
+ */
+int sct3288_setTone(const struct sct3288 *dev, enum sct3288ToneOutput out,
+                    uint16_t freq);
+
+/**
  * Read the chip's firmware version (Q_SW_VER, field 0x32) and keep it for
  * sct3288_getFwVersion().
  *
