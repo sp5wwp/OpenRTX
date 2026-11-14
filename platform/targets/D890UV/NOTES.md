@@ -33,7 +33,7 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Silent microphone (no mic path to the MCU yet) |
+| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Microphone from PA7 (`mic_D890UV.c`); on the development radio it carries no speech |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Speaker output from the MCU | PB9 PWM audio driver (`pwm_D890UV.c`), path checked with a tone (3.10); beeps and voice prompts not checked yet |
 
@@ -595,8 +595,14 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   sync points at the half and the end, as `Cx000_dac.cpp`. The PWM idles at
   mid-scale from start-up so that key-up does not pull the carrier (3.10).
   `audio_init()` is now called by `platform_init()`.
-- **Sources without hardware yet** (`audio_D890UV.c`): the microphone and the
-  receive baseband deliver silence paced by the system tick. A receive
+- **Microphone** (`mic_D890UV.c`): PA7 (ADC1 channel 12) sampled at
+  8 kHz with injected conversions started from a TIM6 interrupt, so the
+  regular battery and volume conversions on ADC1 are only paused
+  (`adc_stm32u5.c` now adds its channel to PCSEL instead of replacing it).
+  On air the decoder plays quiet noise, also when blowing into the mic: on
+  the development radio nothing reaches PA7 (3.8).
+- **Receive baseband without a driver yet** (`audio_D890UV.c`): it delivers
+  silence paced by the system tick. A receive
   stream that fails at once made the M17 receiver loop without blocking and
   froze the radio (USB included) as soon as M17 was selected.
 - **Path compatibility**: two paths can run together if they share neither
