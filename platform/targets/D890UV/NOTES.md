@@ -179,6 +179,11 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
     and the port write only when the value changes.
   - WX4818N register `0x48` (stock `0x082E` narrow, `0x9826` wide) does not
     change the speaker level, even at `0x0000`.
+  - The device spans about 42 dB (value 1 is -42 dB from full), so the first
+    knob step is a fixed jump from silence, as in stock. No finer control
+    was found below it: `0x48 = 0x0000` with a receiver restart and the
+    low bits of `0x30` (`0x5F70`) change nothing; `0x5F60` was perhaps
+    quieter, but stock never uses it and its bits are unknown.
   - A 1 kHz SCT3288 line-out tone (`ANALOG_TONE`, output 0) is not heard
     on the speaker, so AFIO does not carry it there.
   - The port sets GPO2 in RX and clears it for TX, maps the knob with a
@@ -657,9 +662,14 @@ Pitfalls met so far:
    low-deviation FM. Next: inspect the microphone path in the hardware
    (element, amplifier and its supply, the K-connector switch). Then check power per level and
    deviation (narrow/wide, CTCSS).
-2. **Receiver noise floor**: idle RSSI about -71 dBm (raw 267) with the
-   antenna, S4 without it, against raw 176 measured earlier; not changed
-   by powering the digital board or the speaker amplifier off.
+2. ~~Receiver noise floor~~: external. With the antenna the raw RSSI at
+   435 MHz was about 250 (S8), flat over +-500 kHz, against about 130 in a
+   quiet period. Detuning the UHF input filter (DAC1 channel 2 to 4095)
+   brings it down to about 120, so the noise comes in through the antenna;
+   the receiver registers, chip B and its GPIOs make no difference. It
+   follows the laptop: S8 next to it with the USB cable unplugged, S5 a
+   short distance away. A sweep of 425-445 MHz also shows a weak comb every
+   400 kHz, mostly below 434 MHz.
 3. **PC0 sampling and CTCSS decode**: timer-triggered ADC with DMA on the
    STM32U5 (GPDMA), feeding OpenRTX's CTCSS detector
    (`core/ctcssDetector.hpp`). The same path is the M17 receive input.
