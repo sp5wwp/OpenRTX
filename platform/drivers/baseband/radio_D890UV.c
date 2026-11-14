@@ -639,6 +639,24 @@ static bool txAllowed(uint32_t freq)
 /* Band A GPIO1, low in the stock TX and RX front-end setup (0x0810D490) */
 #define GPIO_1 1
 
+/* Tone burst for repeater access, sent while '#' is held during TX */
+#define TONE_BURST_HZ 1750
+
+static bool toneOn = false;
+
+/*
+ * The tone comes from the digital board's tone generator on its modulation
+ * port, which drives the modulator (checked on air).
+ */
+static void setToneBurst(bool on)
+{
+    if ((on == toneOn) || (sctReady == false))
+        return;
+
+    sct3288_setTone(&sct3288, SCT3288_TONE_MOD, on ? TONE_BURST_HZ : 0);
+    toneOn = on;
+}
+
 void radio_enableTx()
 {
 #ifndef CONFIG_D890UV_TX
@@ -696,6 +714,7 @@ void radio_enableTx()
     DAC1->DHR12R1 = apcValue(freq, powerLevel(config->txPower));
 
     sctSend(sctTxStart, ARRAY_SIZE(sctTxStart));
+    setToneBurst(config->toneEn);
 
     tunedFrequency = 0;
     status = TX;
@@ -703,6 +722,7 @@ void radio_enableTx()
 
 static void stopTx()
 {
+    setToneBurst(false);
     DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
@@ -725,6 +745,9 @@ void radio_updateConfiguration()
     // the radio settings
     if ((status == RX) && (config->rxFrequency != tunedFrequency))
         tune();
+
+    if (status == TX)
+        setToneBurst(config->toneEn);
 }
 
 /*
