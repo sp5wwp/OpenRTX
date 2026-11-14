@@ -11,6 +11,16 @@
 #include <stdbool.h>
 #include "core/datatypes.h"
 #include "rtx/rtx.h"
+#include "hwconfig.h"
+
+/**
+ * Transmit power levels offered by the user interface, in mW, lowest first.
+ * The first one is the power of the default channel. A platform can define
+ * its own list in hwconfig.h.
+ */
+#ifndef CONFIG_TX_POWER_LEVELS
+#define CONFIG_TX_POWER_LEVELS 1000, 2500, 5000
+#endif
 
 // Magic number to identify the binary file
 #define CPS_MAGIC 0x43585452

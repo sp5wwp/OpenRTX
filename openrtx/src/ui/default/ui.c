@@ -1008,20 +1008,23 @@ static void _ui_fsm_menuMacro(kbd_msg_t msg, bool *sync_rtx)
             vp_announceRadioMode(state.channel.mode, queueFlags);
             break;
         case 6:
+        {
+            // Next power level, back to the first after the last one or
+            // from a value not in the list
+            static const uint32_t levels[] = { CONFIG_TX_POWER_LEVELS };
+            size_t next = 0;
 
-            switch(state.channel.power)
+            for(size_t i = 0; i < (sizeof(levels) / sizeof(levels[0])); i++)
             {
-                case 1000:
-                    state.channel.power = 2500;
+                if(state.channel.power == levels[i])
+                {
+                    next = (i + 1) % (sizeof(levels) / sizeof(levels[0]));
                     break;
-
-                case 2500:
-                    state.channel.power = 5000;
-                    break;
-
-                default:
-                    state.channel.power = 1000;
+                }
             }
+
+            state.channel.power = levels[next];
+        }
 
             *sync_rtx = true;
             vp_announcePower(state.channel.power, queueFlags);

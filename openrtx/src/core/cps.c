@@ -15,6 +15,8 @@ const uint16_t ctcss_tone[CTCSS_FREQ_NUM] =
     1966, 1995, 2035, 2065, 2107, 2181, 2257, 2291, 2336, 2418, 2503, 2541
 };
 
+static const uint32_t txPowerLevels[] = { CONFIG_TX_POWER_LEVELS };
+
 channel_t cps_getDefaultChannel()
 {
     channel_t channel;
@@ -25,7 +27,7 @@ channel_t cps_getDefaultChannel()
     channel.mode      = OPMODE_FM;
     #endif
     channel.bandwidth = BW_25;
-    channel.power     = 1000;   // 1W
+    channel.power     = txPowerLevels[0];
     channel.rx_only   = false;  // Enable tx by default
 
     // Set initial frequency based on supported bands
