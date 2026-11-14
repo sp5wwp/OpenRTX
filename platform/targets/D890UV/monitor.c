@@ -47,7 +47,8 @@
  *                             PC0 (received audio or band B output) and PA7
  *                             (microphone amplifier) at 8kHz, then print the
  *                             buffer address (read it with rb)
- *   tg <shape> [hz] [amp]     test signal on PB9 (TIM4 PWM, 48kHz samples):
+ *   tg <shape> [hz] [amp]     test signal on PB9 (TIM4 PWM, 48kHz samples
+ *                             from TIM15):
  *                             0 off, 1 sine, 2 square, 3 PN9 4FSK (M17
  *                             mapping and RRC filter, 4800 symbols/s,
  *                             hz ignored); amp 0-127 (default 64)
@@ -448,8 +449,10 @@ static const char *cmdAudioRecord(char **arg)
 
 /*
  * Test signal generator on PB9: TIM4 channel 4 runs an 8-bit PWM (625kHz
- * carrier, as stock: ARR 0xFF), TIM7 interrupts at 48kHz and writes the next
- * sample. The board's RC filter on the TONE net removes the carrier.
+ * carrier, as stock: ARR 0xFF), set up by the audio driver (pwm_D890UV.c);
+ * TIM15 interrupts at 48kHz and writes the next sample. The board's RC
+ * filter on the TONE net removes the carrier. Not to be used while an audio
+ * stream plays.
  */
 #define TG_RATE_HZ 48000
 #define TG_TABLE 256
@@ -554,9 +557,9 @@ static uint8_t tgTable[TG_TABLE];
 static volatile uint32_t tgPhase;
 static volatile uint32_t tgStep;
 
-void _Z15TIM7_IRQHandlerv()
+void _Z16TIM15_IRQHandlerv()
 {
-    TIM7->SR = 0;
+    TIM15->SR = 0;
     if (tgShape == TG_PN9) {
         TIM4->CCR4 = tgPn9Sample();
         return;
@@ -567,11 +570,10 @@ void _Z15TIM7_IRQHandlerv()
 
 static void tgStop()
 {
-    NVIC_DisableIRQ(TIM7_IRQn);
-    TIM7->CR1 = 0;
-    TIM4->CR1 = 0;
-    gpio_setMode(AUDIO_PWM, INPUT);
-    RCC->APB1ENR1 &= ~(RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN);
+    NVIC_DisableIRQ(TIM15_IRQn);
+    TIM15->CR1 = 0;
+    RCC->APB2ENR &= ~RCC_APB2ENR_TIM15EN;
+    TIM4->CCR4 = 0x80;
 }
 
 static const char *cmdTestSignal(char **arg)
@@ -614,28 +616,18 @@ static const char *cmdTestSignal(char **arg)
     tgPhase = 0;
     tgStep = (uint32_t)(((uint64_t)hz << 32) / TG_RATE_HZ);
 
-    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN;
+    RCC->APB2ENR |= RCC_APB2ENR_TIM15EN;
     __DSB();
 
-    TIM4->CR1 = 0;
-    TIM4->PSC = 0;
-    TIM4->ARR = 0xFF;
-    TIM4->CCR4 = 128;
-    TIM4->CCMR2 = (6 << TIM_CCMR2_OC4M_Pos) | TIM_CCMR2_OC4PE;
-    TIM4->CCER = TIM_CCER_CC4E;
-    TIM4->EGR = TIM_EGR_UG;
-    TIM4->CR1 = TIM_CR1_CEN;
-    gpio_setMode(AUDIO_PWM, ALTERNATE | ALTERNATE_FUNC(2));
-
-    TIM7->CR1 = 0;
-    TIM7->PSC = 0;
-    TIM7->ARR = (SystemCoreClock / TG_RATE_HZ) - 1;
-    TIM7->DIER = TIM_DIER_UIE;
-    TIM7->EGR = TIM_EGR_UG;
-    TIM7->SR = 0;
-    NVIC_SetPriority(TIM7_IRQn, 10);
-    NVIC_EnableIRQ(TIM7_IRQn);
-    TIM7->CR1 = TIM_CR1_CEN;
+    TIM15->CR1 = 0;
+    TIM15->PSC = 0;
+    TIM15->ARR = (SystemCoreClock / TG_RATE_HZ) - 1;
+    TIM15->DIER = TIM_DIER_UIE;
+    TIM15->EGR = TIM_EGR_UG;
+    TIM15->SR = 0;
+    NVIC_SetPriority(TIM15_IRQn, 10);
+    NVIC_EnableIRQ(TIM15_IRQn);
+    TIM15->CR1 = TIM_CR1_CEN;
 
     return NULL;
 }
