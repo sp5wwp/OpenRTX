@@ -16,6 +16,7 @@
 #include "hwconfig.h"
 
 static enum opstatus status = OFF;
+static enum opmode opMode = OPMODE_FM;
 
 /*
  * Radio driver for the AnyTone AT-D890UV, FM mode.
@@ -260,6 +261,23 @@ static void setFrontEnd(uint32_t freq)
  * bit 2 of the audio routing function at 0x08118DF8.
  */
 #define GPIO_B_AF_A 2
+
+/*
+ * Band B chip GPIO selecting the second input of the AF-REP node: low TONE
+ * (PB9, MCU audio), high D-VOL ("DIGI AF" in the I/O table). Stock bit 0 of
+ * the routing function at 0x08118DF8.
+ */
+#define GPIO_B_TONE 1
+
+/*
+ * Modulation gain for the M17 baseband, register 0x31 bits 11:0: logarithmic,
+ * about x2 per 0x100 (NOTES.md 3.10). With OpenRTX's M17 modulator, 0x700
+ * gave about +-2.95kHz for the outer symbols; M17 wants +-2.4kHz.
+ */
+#define M17_MOD_GAIN 0x6B0
+
+/* Transmitting M17 (no digital board TX packets to stop) */
+static bool txM17;
 
 /* Last value written to the volume device, -1 before the first write */
 static int16_t volumeValue = -1;
@@ -558,7 +576,7 @@ void radio_terminate()
 
 void radio_setOpmode(const enum opmode mode)
 {
-    (void)mode;
+    opMode = mode;
 }
 
 bool radio_checkRxDigitalSquelch()
@@ -748,16 +766,25 @@ void radio_enableTx()
     wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, false);
 
     /*
-     * Stock routing (0x081140EC mode 0 with the TX flag set): PE0 high
-     * selects the digital board output, PD2 low feeds it to MICIN.
+     * FM: stock routing (0x081140EC mode 0 with the TX flag set), PE0 high
+     * selects the digital board output, PD0-PD2 low feed it to MICIN.
+     * M17: the MCU baseband on PB9 (TONE net, selected onto AF-REP by band B
+     * chip GPO1 low) reaches MICIN with PD0 and PD1 high and PD2 low, as in
+     * AnyTone's M17 proposal; checked on air (NOTES.md 3.10).
      */
+    bool m17 = (opMode == OPMODE_M17);
     gpio_clearPin(BT_PWR);
     gpio_setPin(MIC_SEL);
     gpio_clearPin(AF_SW2);
-    gpio_clearPin(AF_SW1);
-    gpio_clearPin(AF_SW0);
-
-    sctSend(sctTxPrepare, ARRAY_SIZE(sctTxPrepare));
+    if (m17) {
+        wx4818n_setGpio(&wx4818nB, GPIO_B_TONE, false);
+        gpio_setPin(AF_SW1);
+        gpio_setPin(AF_SW0);
+    } else {
+        gpio_clearPin(AF_SW1);
+        gpio_clearPin(AF_SW0);
+        sctSend(sctTxPrepare, ARRAY_SIZE(sctTxPrepare));
+    }
 
     wx4818n_standby(&wx4818nB);
 
@@ -771,9 +798,11 @@ void radio_enableTx()
     struct wx4818nTxConfig txCfg = {
         .freq = correctFrequency(freq),
         .wide = (config->bandwidth == BW_25),
-        .ctcss = config->txToneEn ? config->txTone : 0,
-        .modCal = (uhf ? calA[CAL_MOD] : calB[CAL_MOD]) & 0x0FFF,
+        .ctcss = (config->txToneEn && !m17) ? config->txTone : 0,
+        .modCal = m17 ? M17_MOD_GAIN :
+                        (uhf ? calA[CAL_MOD] : calB[CAL_MOD]) & 0x0FFF,
         .toneCal = calA[CAL_A_TONE],
+        .baseband = m17,
     };
 
     wx4818n_startFmTx(&wx4818nA, &txCfg);
@@ -785,9 +814,12 @@ void radio_enableTx()
     gpio_setPin(TX_PWR_EN);
     DAC1->DHR12R1 = apcValue(freq, powerLevel(config->txPower));
 
-    sctSend(sctTxStart, ARRAY_SIZE(sctTxStart));
-    setToneBurst(config->toneEn);
+    if (!m17) {
+        sctSend(sctTxStart, ARRAY_SIZE(sctTxStart));
+        setToneBurst(config->toneEn);
+    }
 
+    txM17 = m17;
     tunedFrequency = 0;
     status = TX;
 }
@@ -799,7 +831,8 @@ static void stopTx()
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
     wx4818n_standby(&wx4818nA);
-    sctSend(sctTxStop, ARRAY_SIZE(sctTxStop));
+    if (!txM17)
+        sctSend(sctTxStop, ARRAY_SIZE(sctTxStop));
 }
 
 void radio_disableRtx()
