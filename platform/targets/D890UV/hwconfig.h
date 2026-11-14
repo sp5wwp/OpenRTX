@@ -58,4 +58,12 @@ extern const struct i2cDevice i2c_bus;
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
 
+/*
+ * Keys found by the last keypad scan of the input thread. Lets other threads
+ * watch the keys without scanning the keypad, whose columns are the display
+ * data lines (keyboard_D890UV.c).
+ */
+#include "interfaces/keyboard.h"
+keyboard_t kbd_lastKeys();
+
 #endif // HWCONFIG_H

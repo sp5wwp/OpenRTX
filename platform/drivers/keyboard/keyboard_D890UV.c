@@ -99,6 +99,14 @@ void kbd_terminate()
 {
 }
 
+/* Result of the last scan, for kbd_lastKeys() */
+static volatile keyboard_t lastKeys;
+
+keyboard_t kbd_lastKeys()
+{
+    return lastKeys;
+}
+
 keyboard_t kbd_getKeys()
 {
     keyboard_t keys = 0;
@@ -135,5 +143,6 @@ keyboard_t kbd_getKeys()
         knobPrev = knob;
     }
 
+    lastKeys = keys;
     return keys;
 }
