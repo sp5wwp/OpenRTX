@@ -365,9 +365,15 @@ logged):
   SCT3288 analog processing does not pass speech yet. The 24 kHz component
   is there in both modes.
 - WORK_MODE debug byte 1 (1 kHz sine on the modulation port) gives a
-  plain carrier once the set-up is right (the faint tone seen first leaked
-  into the internal microphone): that port is not wired to the modulator;
-  FM audio leaves through the codec (MICO -> MICIN).
+  plain carrier in analog mode (the faint tone seen first leaked into the
+  internal microphone). The MOD port is wired to the modulator, though:
+  ANALOG_TONE (field `0x1F`) with TONE_CTRL bit 7 set (remote, MOD port)
+  is heard on air; with bit 7 clear (line out) it is not. The port sends
+  the 1750 Hz tone burst this way (`sct3288_setTone()`).
+- ANALOG_TONE: TONE_CTRL (bit 7 MOD port, bits 6:0 repeat count, 0 stops,
+  127 endless), then four frequencies in Hz (two per tone), four
+  amplitudes (8 bit, 6 fractional), two lengths in ms; control packet,
+  answered `1F 00`.
 - Stock opens the chip twice: the whole sequence, a board power cycle
   (PC6 low, power-up, reset), the whole sequence again. Seen in the
   emulation once the fake chip answers the vocoder switch with `17 01` as
@@ -437,8 +443,8 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
 | `0x0E` | bit 14: carrier flag (RSSI above `0x49`) | `0x080CF3F4`; not used yet |
 | `0x10/0x11` | squelch-related, stock `0xA380 \| table`, `0x041A` | `0x08115C34`; writing it does not mute audio |
 | `0x12/0x13` | `0x20D8`/`0x00EE` at stock init, likely AGC/LNA gain | stock init; lowers RSSI by about 29 dB, kept as stock |
-| `0x14`, `0x16` | tone generator: Hz x 10.485, `0x8000` enable | stock beep; does not produce a tone alone (7) |
-| `0x30` | `0x5F00 \| level` AF level; stock fixed `0x74`/`0x77` | `0x080E4154` |
+| `0x14`, `0x15`, `0x16` | tone generator: Hz x 10.485 (`0x14` tone 1, `0x15` tone 2), `0x16` bit 15/bit 7 enable | stock beeps and DTMF side tones (`0x081162B8`, `0x08116378`, table `0x0814A93E`); not heard on air while transmitting |
+| `0x30` | `0x5F00 \| bits`: the low byte enables parts of the audio chain, not a level. `0x77` RX and TX with the microphone, `0x64` while the tone generator plays (`0x0811C83C`), `0x00` mutes everything including TX audio | `0x080E4154`, `0x0811C83C`; checked on air |
 | `0x49` | squelch threshold for the `0x0E` flag | `0x080E36F4` |
 | `0x52` | GPIO: `pin << 12 \| 0x40 \| level` | `0x08010B2C` |
 | `0x53` | indexed gain table; entries 4 and 2 are `0x463D`/`0x2637` from 300 MHz, `0x467F`/`0x263A` below | `0x081155AC` |
@@ -640,7 +646,9 @@ Pitfalls met so far:
    - Beeps: the tone register writes alone send received noise to the
      speaker. The stock beep likely also switches the amplifier input switch to TONE.
    - The PB9 PWM path is also the future M17 speech output.
-6. **Volume** through the SCT3288 (D-VOL) path, as stock does.
+6. **Volume** through the SCT3288 (D-VOL) path, as stock does. The port
+   now maps the volume onto the low byte of WX4818N `0x30`, which is a
+   set of enable bits (4), not a level.
 7. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
    `0x0E` flag) with stock thresholds; the flatness tables are found (5).
 8. **DCS** encode (`0x080E3ED0`) and decode.
