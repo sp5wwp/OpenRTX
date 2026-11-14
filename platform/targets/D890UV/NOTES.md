@@ -33,7 +33,8 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 / digital | Not started |
+| M17 / digital | Paths checked (3.10): PC0 receive flat with stock's DMR RX set-up, PB9 PWM into the modulator flat with clean 4FSK. Not implemented yet |
+| Speaker output from the MCU | PB9 PWM -> TONE -> speaker works (3.10); no driver yet |
 
 ## 2. Building and flashing
 
@@ -222,7 +223,11 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
   the `*` key, then records `count` sample pairs of PC0 and PA7 at 8 kHz
   into SRAM3 (0x20040000, up to 32000 pairs = 4 s, DIGI-RX LED on), and
   prints the buffer address for `rb`; `materials/work/micrec.py` drives it
-  and writes WAV files.
+  and writes WAV files. `tg shape [hz] [amp]` plays a test signal on PB9
+  (TIM4 channel 4 PWM, TIM7 interrupt at 48 kHz): 1 sine, 2 square, 3 PN9
+  4FSK with M17 mapping and RRC shaping, 0 off. Scripts using it:
+  `materials/work/tgtest*.py`; SDR baseband recordings are demodulated with
+  `materials/work/fmdemod.py`.
   Memory accesses are not checked. Command lines may be 3 KB long. Host
   client: `re-tools/monitor.py` (command line or module).
 
@@ -544,6 +549,42 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   +0x28/+0x2A): the squelch reference. When that reaches the NAND was not
   traced, so the mode was left without measuring. `re-tools`-style client:
   `materials/work/stockfactory.py`.
+
+### 3.10 MCU baseband into the modulator (M17 TX path)
+
+Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
+(demodulated without audio filters by `fmdemod.py`).
+
+- **PB9 to the speaker works**: with band B GPO1 low (TONE selected onto
+  AF-REP) and the amplifier on, a 1 kHz PWM tone is heard at any volume
+  knob position. The I2C volume device acts only on band A's audio.
+- **Routing into band A's MICIN**: stepping PD0/PD1/PD2 during TX with a
+  1 kHz tone, the tone modulates with PD2 = 0 and PD0 or PD1 high (PD0 = PD1
+  = 1 used); not with all three low (stock's FM/DMR routing) nor with PD2
+  high (the microphone routes). The radio's key-up resets the switches, so
+  they must be set after it.
+- **Stock's DMR TX set-up** (emulated key-up on a DMR channel) differs from
+  FM TX in: `0x2B` 708D -> F08D, `0x48` 9826 -> 09EE, `0x10` A3A3 -> A3E0,
+  `0x31` 146A -> 150F, `0x2E` entry 6 C2B7 -> C000, no `0x27` A300 and no
+  CTCSS writes. Routing is the same as FM (PE0 high, PD0-PD2 low).
+- **Response**: with the FM TX set-up a 100 Hz square comes out as ringing
+  harmonics and 20 Hz not at all (voice filter), and a 1 kHz tone ramps up
+  over about 1.7 s (level control). With the DMR TX set-up 20 Hz and 100 Hz
+  squares keep flat tops, and 1 kHz and 2.4 kHz have the same level. The
+  path has a coupling corner far below 1 Hz: starting the PWM pulls the
+  carrier by about +2.2 kHz, recovering over about 4 s.
+- **Deviation**: `0x2E` entry 6 and `0x40` have no effect; `0x48` 9826
+  doubles it against 09EE; `0x31` sets it on a logarithmic scale (bit 12
+  set, low 12 bits): about x2 per +0x100. With `0x48` = 9826 and PN9 4FSK at
+  PWM drive 88 of 127: 0x50F gives +-760 Hz outer, 0x700 +-2880 Hz, 0x900
+  +-11.5 kHz; 0xD00 and 0xFFF give no modulation.
+- **PN9 4FSK** (`tg 3`, 4800 symbols/s, M17 dibit mapping, RRC alpha 0.5):
+  after an RRC receive filter the four levels sit at a 3.03 outer/inner
+  ratio, eye (smallest gap / spread) about 3.9 at every deviation, so the
+  spread comes from shaping (generator, 8-bit PWM, RC filter), not noise.
+- **M17 TX recipe**: PD0 = PD1 = 1, PD2 = 0, band B GPO1 low, stock's DMR
+  TX set-up with `0x48` = 9826 and `0x31` = 0x1700, PWM drive about 73 for
+  +-2.4 kHz outer symbols; keep the PWM at mid-scale before key-up.
 
 ## 4. WX4818N registers
 
