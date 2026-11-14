@@ -84,8 +84,9 @@ void wx4818n_setDac(const struct wx4818n *dev, uint8_t value);
  *
  * @param dev: device.
  * @param freq: frequency, in Hz.
+ * @param wide: 25kHz channel (12.5kHz otherwise).
  */
-void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq);
+void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq, bool wide);
 
 /**
  * Tune the synthesizer.

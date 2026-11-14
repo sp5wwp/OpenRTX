@@ -519,9 +519,12 @@ UHF/VHF, narrow/wide, with and without CTCSS.
 - Mode setup `0x0811586C(digital, tx, chip)`: TX values are the same for
   analog and digital. Digital RX (1, 0) zeroes the audio filters `0x1C-0x23`:
   useful for M17 reception later.
-- Bandwidth: channel byte +8 bits 5:4 (non-zero = wide, `0x0804BCBC`).
-  It changes only the TX mic gain, register `0x48`: 0x082E narrow, 0x9826
-  wide (`0x08116480`). Stock RX does not depend on bandwidth.
+- Bandwidth: channel byte +8 bits 5:4 (non-zero = wide, `0x0804BCBC`;
+  digital modes count as narrow). Its only register is `0x48`: 0x082E
+  narrow, 0x9826 wide (`0x08116480`), written on RX entry (`0x08010C1C`),
+  for band B and on TX. In RX the wide value raises the idle RSSI by about
+  15 counts (4 dB), consistent with a wider receive filter. It also drives
+  a W/N icon (`0x08103728`).
 - Power: channel byte +8 bits 3:2 = level 0-3 (Low/Mid/High/Turbo: VHF
   0.2/2.5/5/7 W, UHF 0.2/2.5/5/6 W). APC = base[level] + table[level][MHz] -
   table[level][ref], from the calibration (5). DAC1 channel 1 (PA4) gets

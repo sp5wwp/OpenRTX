@@ -299,12 +299,19 @@ static const struct regValue fmRxToneSequence[] = {
     { 0x2C, 0x3850 }, { 0x2D, 0x2215 }, { 0x2E, 0xE9D9 },
 };
 
+/*
+ * Register 0x48 by channel bandwidth, written by the stock firmware V1.05 on
+ * entering reception and when transmitting (0x0804BCBC, 0x08116480). In
+ * reception the wide value raises the noise level read as RSSI by about 4dB.
+ */
+#define WX4818N_BW_NARROW 0x082E
+#define WX4818N_BW_WIDE 0x9826
+
 static const struct regValue fmRxSequence2[] = {
-    { 0x48, 0x082E }, { 0x1A, 0x64C1 }, { 0x1B, 0x1258 }, { 0x18, 0x0068 },
-    { 0x53, 0x773F }, { 0x53, 0x673F }, { 0x53, 0x567F }, { 0x53, 0x467F },
-    { 0x53, 0x363A }, { 0x53, 0x263A }, { 0x53, 0x1634 }, { 0x53, 0x00F0 },
-    { 0x42, 0x46A1 }, { 0x43, 0x1F4F }, { 0x49, 0x706A }, { 0x49, 0x0000 },
-    { 0x58, 0xF1F0 },
+    { 0x1A, 0x64C1 }, { 0x1B, 0x1258 }, { 0x18, 0x0068 }, { 0x53, 0x773F },
+    { 0x53, 0x673F }, { 0x53, 0x567F }, { 0x53, 0x467F }, { 0x53, 0x363A },
+    { 0x53, 0x263A }, { 0x53, 0x1634 }, { 0x53, 0x00F0 }, { 0x42, 0x46A1 },
+    { 0x43, 0x1F4F }, { 0x49, 0x706A }, { 0x49, 0x0000 }, { 0x58, 0xF1F0 },
 };
 
 /*
@@ -322,7 +329,7 @@ static const struct regValue uhfGainTable[] = {
 #define WX4818N_MODE_STANDBY 0x0000
 #define WX4818N_MODE_RX 0x0001
 
-void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq)
+void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq, bool wide)
 {
     writeSequence(dev, fmRxSequence, ARRAY_SIZE(fmRxSequence));
 
@@ -330,6 +337,7 @@ void wx4818n_startFmRx(const struct wx4818n *dev, uint32_t freq)
     wx4818n_writeReg(dev, WX4818N_REG_FREQ_LO, freq & 0xFFFF);
 
     writeSequence(dev, fmRxToneSequence, ARRAY_SIZE(fmRxToneSequence));
+    wx4818n_writeReg(dev, 0x48, wide ? WX4818N_BW_WIDE : WX4818N_BW_NARROW);
     writeSequence(dev, fmRxSequence2, ARRAY_SIZE(fmRxSequence2));
     if (freq >= WX4818N_UHF_GAIN_EDGE)
         writeSequence(dev, uhfGainTable, ARRAY_SIZE(uhfGainTable));
@@ -391,10 +399,6 @@ static const struct regValue fmTxSequence3[] = {
     { 0x1B, 0x1258 },
 };
 
-/* Mic gain, register 0x48, by channel bandwidth (0x0804BCBC, 0x08116480) */
-#define WX4818N_MIC_GAIN_NARROW 0x082E
-#define WX4818N_MIC_GAIN_WIDE 0x9826
-
 /*
  * Register 0x2E holds several values, selected by bits 15:13. Entries 0 and
  * 1 take the CTCSS tone, entry 6 the modulation calibration.
@@ -430,8 +434,8 @@ void wx4818n_startFmTx(const struct wx4818n *dev,
     wx4818n_writeReg(dev, WX4818N_REG_FREQ_LO, cfg->freq & 0xFFFF);
 
     writeSequence(dev, fmTxSequence, ARRAY_SIZE(fmTxSequence));
-    wx4818n_writeReg(
-        dev, 0x48, cfg->wide ? WX4818N_MIC_GAIN_WIDE : WX4818N_MIC_GAIN_NARROW);
+    wx4818n_writeReg(dev, 0x48,
+                     cfg->wide ? WX4818N_BW_WIDE : WX4818N_BW_NARROW);
     writeSequence(dev, fmTxSequence2, ARRAY_SIZE(fmTxSequence2));
 
     if (cfg->ctcss != 0) {

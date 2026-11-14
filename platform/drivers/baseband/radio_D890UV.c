@@ -583,6 +583,7 @@ void radio_disableAfOutput()
 #define TUNE_SETTLE_MS 30
 
 static uint32_t tunedFrequency;
+static uint8_t tunedBandwidth;
 
 /*
  * Tune band A to the configured frequency with the stock receive sequence,
@@ -595,10 +596,12 @@ static void tune()
     gpio_clearPin(SPK_EN);
 
     setFrontEnd(config->rxFrequency);
-    wx4818n_startFmRx(&wx4818nA, correctFrequency(config->rxFrequency));
+    wx4818n_startFmRx(&wx4818nA, correctFrequency(config->rxFrequency),
+                      config->bandwidth == BW_25);
     setFilterTuning(config->rxFrequency);
     wx4818n_writeReg(&wx4818nA, 0x30, AF_ENABLE_BASE | AF_ENABLE_AUDIO);
     tunedFrequency = config->rxFrequency;
+    tunedBandwidth = config->bandwidth;
 
     sleepFor(0, TUNE_SETTLE_MS);
     if (spkOn)
@@ -811,9 +814,11 @@ void radio_disableRtx()
 
 void radio_updateConfiguration()
 {
-    // Retune only on a frequency change: this is called after any change of
-    // the radio settings
-    if ((status == RX) && (config->rxFrequency != tunedFrequency))
+    // Retune only on a frequency or bandwidth change: this is called after
+    // any change of the radio settings
+    if ((status == RX)
+        && ((config->rxFrequency != tunedFrequency)
+            || (config->bandwidth != tunedBandwidth)))
         tune();
 
     if (status == TX)
