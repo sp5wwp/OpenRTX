@@ -17,7 +17,7 @@ signal generator and spectrum analyser.
 
 | Area | State |
 |---|---|
-| Boot, 160 MHz clock, display, keypad, side keys, knob | Working |
+| Boot, 160 MHz clock (12 MHz crystal), display, keypad, side keys, knob | Working |
 | Backlight brightness (TIM3 PWM, stock levels) | Working |
 | Settings and VFO persistence (internal flash) | Working |
 | Power-off with save (PC3 hold, PA0 detect) | Working |
@@ -33,8 +33,9 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 / digital | Paths checked (3.10): PC0 receive flat with stock's DMR RX set-up, PB9 PWM into the modulator flat with clean 4FSK. Not implemented yet |
-| Speaker output from the MCU | PB9 PWM -> TONE -> speaker works (3.10); no driver yet |
+| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Silent microphone (no mic path to the MCU yet) |
+| M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
+| Speaker output from the MCU | PB9 PWM audio driver (`pwm_D890UV.c`), path checked with a tone (3.10); beeps and voice prompts not checked yet |
 
 ## 2. Building and flashing
 
@@ -57,7 +58,7 @@ signal generator and spectrum analyser.
 ## 3. Hardware
 
 MCU **STM32U575VIT6** (Cortex-M33). It runs the Miosix `cortexM4F` port with
-`-mcpu=cortex-m4` flags, at 160 MHz from PLL1 fed by HSI16 (`bsp.cpp`).
+`-mcpu=cortex-m4` flags, at 160 MHz from PLL1 fed by the 12 MHz crystal (`bsp.cpp`, 3.11).
 The pin assignments are in `pinmap.h`. The AnyTone I/O table, made for an
 AT32F435 board revision, is mostly valid. The display and keypad pins differ.
 
@@ -586,6 +587,44 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   TX set-up with `0x48` = 9826 and `0x31` = 0x1700, PWM drive about 73 for
   +-2.4 kHz outer symbols; keep the PWM at mid-scale before key-up.
 
+### 3.11 M17 transmission
+
+- **Audio output driver** (`pwm_D890UV.c`): TIM4 channel 4 PWM on PB9
+  (8-bit, 625 kHz), TIM7 interrupt at the stream sample rate writing one
+  sample (16-bit signed >> 8, mid-scale 0x80); circular double buffer with
+  sync points at the half and the end, as `Cx000_dac.cpp`. The PWM idles at
+  mid-scale from start-up so that key-up does not pull the carrier (3.10).
+  `audio_init()` is now called by `platform_init()`.
+- **Sources without hardware yet** (`audio_D890UV.c`): the microphone and the
+  receive baseband deliver silence paced by the system tick. A receive
+  stream that fails at once made the M17 receiver loop without blocking and
+  froze the radio (USB included) as soon as M17 was selected.
+- **Path compatibility**: two paths can run together if they share neither
+  source nor sink.
+- **Key-up in M17** (`radio_D890UV.c`): PD0 = PD1 = 1, PD2 = 0, band B GPO1
+  low; band A's chip gets the FM TX sequence without CTCSS, then the flat
+  baseband set-up (`wx4818nTxConfig.baseband`: `0x2B` F08D, `0x10` A3E0,
+  `0x48` 9826, `0x2E` entry 6 = 0) and `0x31` = 0x1000 | 0x6B0; no SCT3288
+  TX packets.
+- **Clock**: the M17 symbol rate first came out 0.36% fast with the core on
+  HSI16. Stock runs PLL1 from the crystal (RCC_PLL1CFGR = 0x0004001F, x20 /
+  2) and its SystemCoreClockUpdate (`0x08120C78`) and peripheral clock code
+  use HSE = 12 MHz: the crystal is 12 MHz and stock runs at 120 MHz. The
+  port now runs PLL1 from it at 160 MHz (M = 3, N = 80, R = 2;
+  `HSE_VALUE` 12000000), falling back to HSI16 if it does not start. A
+  first try assuming 16 MHz ran the core at 120 MHz while computing timers
+  for 160 MHz: the preamble came out at 1800 Hz instead of 2400 Hz.
+- **On air** (0.2 W, SDR baseband recording, `fmdemod.py`): preamble a
+  steady 2400 Hz tone for 160 ms (four frames), then frames every 1920
+  samples at 48 kHz; an SDR M17 decoder decodes it. With `0x31` = 0x700 the
+  outer symbols were about +-2.95 kHz, hence 0x6B0 (to be measured with a
+  timing-recovering slicer; the windowed one in `materials/work/m17sym.py`
+  is not reliable over long recordings).
+- **Leftover samples**: about 35 ms of the previous transmission's last
+  frame was sent before the preamble, as OpenRTX's modulator writes only the
+  idle half before the first sync; `Modulator::start()` now clears the
+  buffer (shared code).
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -812,11 +851,10 @@ Pitfalls met so far:
 5. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
      speaker. The stock beep likely also switches the amplifier input switch to TONE.
-   - Voice prompts must be off (Settings, level 0): the port has no MCU
-     audio output yet, a prompt never ends and, at a higher priority than
-     RX, keeps the receive audio muted.
-   - The PB9 PWM path (3.1) is the output for beeps, prompts and the
-     future M17 speech.
+   - Voice prompts: before the PB9 driver (3.11) a prompt never ended and
+     kept the receive audio muted; with the driver they should play. Not
+     checked yet.
+   - M17 receive: a PC0 ADC input driver (3.8) and the M17 speech output.
 6. ~~Volume~~: done, stock routing and I2C volume device (3.1).
 7. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
    `0x0E` flag) with stock thresholds; the flatness tables are found (5).
