@@ -241,7 +241,12 @@ uint16_t adcStm32_sample(const struct Adc *adc, const uint32_t channel)
 
     ADC_TypeDef *pAdc = (ADC_TypeDef *)adc->priv;
 
-    pAdc->PCSEL = 1u << channel;
+    /*
+     * Add the channel to the preselection rather than replacing it: an
+     * injected conversion (D890UV microphone, mic_D890UV.c) may be using
+     * another channel at the same time.
+     */
+    pAdc->PCSEL |= 1u << channel;
     pAdc->SQR1 = channel << ADC_SQR1_SQ1_Pos;
     pAdc->CR |= ADC_CR_ADSTART;
 
