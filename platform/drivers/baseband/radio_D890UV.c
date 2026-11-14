@@ -12,6 +12,7 @@
 #include "drivers/baseband/SCT3288.h"
 #include "drivers/SPI/spi_stm32.h"
 #include "core/utils.h"
+#include "peripherals/i2c.h"
 #include "hwconfig.h"
 
 static enum opstatus status = OFF;
@@ -233,19 +234,38 @@ static void setFrontEnd(uint32_t freq)
 }
 
 /*
- * Audio output level of the WX4818N, register 0x30 = 0x5F00 | level with
- * level 0 to 0x7F, as in the stock firmware V1.05 (function at 0x080E4154).
+ * WX4818N register 0x30: the low byte enables parts of the audio chain, it
+ * is not a level (0x00 also mutes the transmitter audio). Stock keeps 0x77
+ * in reception and when transmitting with the microphone (0x080E4154).
  */
-#define AF_LEVEL_BASE 0x5F00
-#define AF_LEVEL_MIN 0x60 // Level where the output becomes audible
-#define AF_LEVEL_MAX 0x7F
+#define AF_ENABLE_BASE 0x5F00
+#define AF_ENABLE_AUDIO 0x77
 
 /*
- * The low byte of register 0x30 also gates the transmitter audio input: at
- * 0 (volume at minimum) there is no modulation. Stock has 0x5F77 there when
- * it transmits; checked on air.
+ * Receive volume, as stock sets it (0x080DAF3C, 0x0804BC50, 0x081137C0,
+ * 0x0806536C): the volume knob gives a level 0-15, mapped through a table to
+ * a 7-bit value written over I2C to the device at 0x2E (register 0), which
+ * sets the speaker level. Stock retries the address up to 300 times.
  */
-#define AF_LEVEL_TX 0x77
+#define VOLUME_I2C_ADDR 0x2E
+#define VOLUME_I2C_REG 0x00
+#define VOLUME_I2C_TRIES 300
+
+#define VOLUME_MAX 127
+#define VOLUME_MUTE_LEVEL 3
+
+/*
+ * Band B chip GPIO connecting the band A receiver audio to the speaker
+ * amplifier ("A AFOUT" in the I/O table). Stock firmware V1.05 sets it with
+ * bit 2 of the audio routing function at 0x08118DF8.
+ */
+#define GPIO_B_AF_A 2
+
+/* Last value written to the volume device, -1 before the first write */
+static int16_t volumeValue = -1;
+
+/* Speaker output requested by the upper layers */
+static bool afOutput;
 
 /*
  * SCT3288 digital board, which carries the FM microphone audio to the
@@ -368,6 +388,19 @@ static const struct sctPacket sctTxStop[] = {
     SCT_PKT(DMR, 0x26, 0x04, 0x00),
 };
 
+/* Entering reception (stock main screen, after start-up and after TX) */
+static const struct sctPacket sctRxEntry[] = {
+    SCT_PKT(CTL, 0x39, 0x08, 0x00, 0x08, 0x00, 0x08, 0x00, 0x01, 0xF4, 0x08,
+            0x00, 0xF2, 0x30),
+    SCT_PKT(DMR, 0x18, 0x01, 0x00, 0x00),
+    SCT_PKT(COD, 0x08, 0x00),
+    SCT_PKT(DMR, 0x19, 0x02),
+    SCT_PKT(COD, 0x08, 0x1F),
+    SCT_PKT(DMR, 0x19, 0x00),
+    SCT_PKT(DMR, 0x18, 0x00, 0x00, 0x00),
+    SCT_PKT(DMR, 0x26, 0x04, 0x00),
+};
+
 #undef CTL
 #undef DMR
 #undef COD
@@ -438,19 +471,49 @@ static void sctStart()
     sct3288_readFwVersion(&sct3288);
 }
 
-static uint8_t afLevel = 0x77;
-
 void radio_setVolume(uint8_t volume)
 {
-    // The level setting is not linear: the audible range is in its top part
-    if (volume == 0)
-        afLevel = 0;
-    else
-        afLevel = AF_LEVEL_MIN
-                + (uint8_t)(((uint16_t)volume * (AF_LEVEL_MAX - AF_LEVEL_MIN))
-                            / 255);
+    /*
+     * Square law curve over the full range of the volume device, for a finer
+     * control at low levels than the 16 steps of the stock firmware. Write
+     * only on a change: every write moves the wiper.
+     */
+    uint32_t value =
+        (((uint32_t)volume * volume * VOLUME_MAX) + (255 * 255 / 2))
+        / (255 * 255);
+
+    // Mute only at the bottom of the knob, start from the lowest level above
+    if (volume < VOLUME_MUTE_LEVEL)
+        value = 0;
+    else if (value == 0)
+        value = 1;
+
+    if ((int16_t)value == volumeValue)
+        return;
+
+    /*
+     * The device does not reach silence: at zero, cut the receiver audio and
+     * keep the speaker amplifier off
+     */
     if (status == RX)
-        wx4818n_writeReg(&wx4818nA, 0x30, AF_LEVEL_BASE | afLevel);
+        wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, value != 0);
+    if (afOutput) {
+        if (value != 0)
+            gpio_setPin(SPK_EN);
+        else
+            gpio_clearPin(SPK_EN);
+    }
+
+    uint8_t cmd[] = { VOLUME_I2C_REG, (uint8_t)value };
+
+    i2c_acquire(&i2c_bus);
+    for (int i = 0; i < VOLUME_I2C_TRIES; i++) {
+        if (i2c_write(&i2c_bus, VOLUME_I2C_ADDR, cmd, sizeof(cmd), true) == 0) {
+            volumeValue = value;
+            break;
+        }
+    }
+    i2c_release(&i2c_bus);
 }
 
 void radio_init(const rtxStatus_t *rtxState)
@@ -505,11 +568,14 @@ bool radio_checkRxDigitalSquelch()
 
 void radio_enableAfOutput()
 {
-    gpio_setPin(SPK_EN);
+    afOutput = true;
+    if (volumeValue != 0)
+        gpio_setPin(SPK_EN);
 }
 
 void radio_disableAfOutput()
 {
+    afOutput = false;
     gpio_clearPin(SPK_EN);
 }
 
@@ -531,7 +597,7 @@ static void tune()
     setFrontEnd(config->rxFrequency);
     wx4818n_startFmRx(&wx4818nA, correctFrequency(config->rxFrequency));
     setFilterTuning(config->rxFrequency);
-    wx4818n_writeReg(&wx4818nA, 0x30, AF_LEVEL_BASE | afLevel);
+    wx4818n_writeReg(&wx4818nA, 0x30, AF_ENABLE_BASE | AF_ENABLE_AUDIO);
     tunedFrequency = config->rxFrequency;
 
     sleepFor(0, TUNE_SETTLE_MS);
@@ -555,6 +621,8 @@ void radio_enableRx()
     gpio_clearPin(AF_SW0);
 
     tune();
+    sctSend(sctRxEntry, ARRAY_SIZE(sctRxEntry));
+    wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, volumeValue != 0);
     status = RX;
 }
 
@@ -674,6 +742,7 @@ void radio_enableTx()
     }
 
     gpio_clearPin(SPK_EN);
+    wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, false);
 
     /*
      * Stock routing (0x081140EC mode 0 with the TX flag set): PE0 high
@@ -706,7 +775,7 @@ void radio_enableTx()
 
     wx4818n_startFmTx(&wx4818nA, &txCfg);
     wx4818n_setGpio(&wx4818nA, GPIO_TX_UHF, uhf);
-    wx4818n_writeReg(&wx4818nA, 0x30, AF_LEVEL_BASE | AF_LEVEL_TX);
+    wx4818n_writeReg(&wx4818nA, 0x30, AF_ENABLE_BASE | AF_ENABLE_AUDIO);
 
     // Power stage, in the stock order: APC supply, PA supply, APC level
     gpio_setPin(APC_PWR);
@@ -736,6 +805,7 @@ void radio_disableRtx()
         stopTx();
 
     gpio_clearPin(SPK_EN);
+    wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, false);
     status = OFF;
 }
 
