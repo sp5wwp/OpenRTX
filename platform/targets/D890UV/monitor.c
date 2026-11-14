@@ -16,6 +16,7 @@
 #include "monitor.h"
 #include "bootloader.h"
 #include "drivers/SPI/spi_stm32.h"
+#include "peripherals/i2c.h"
 
 /*
  * Debug monitor on the USB serial port. One command per line, numbers in
@@ -344,6 +345,33 @@ static const char *cmdSctExchange(char **arg)
     return NULL;
 }
 
+/* Write bytes to an I2C device on the bit-banged bus: iw <addr7> <hexbytes> */
+static const char *cmdI2cWrite(char **arg)
+{
+    uint8_t buf[32];
+    uint32_t addr;
+    size_t len = 0;
+    const char *hex = arg[1];
+
+    if (!parseHex(arg[0], &addr) || (hex == NULL) || ((strlen(hex) % 2) != 0)
+        || ((strlen(hex) / 2) > sizeof(buf)))
+        return "usage: iw <addr> <hexbytes>";
+
+    for (; hex[0] != '\0'; hex += 2) {
+        char byte[3] = { hex[0], hex[1], '\0' };
+        char *end;
+        buf[len++] = strtoul(byte, &end, 16);
+        if (*end != '\0')
+            return "bad hex";
+    }
+
+    i2c_acquire(&i2c_bus);
+    int ret = i2c_write(&i2c_bus, addr, buf, len, true);
+    i2c_release(&i2c_bus);
+
+    return (ret == 0) ? NULL : "no acknowledge";
+}
+
 static const char *cmdSctRead(char **arg)
 {
     uint8_t buf[256];
@@ -444,7 +472,7 @@ static const struct command commands[] = {
     { "xr", cmdWxRead },     { "xw", cmdWxWrite },     { "xg", cmdWxGpio },
     { "update", cmdUpdate }, { "si", cmdSctInit },     { "sw", cmdSctWrite },
     { "sr", cmdSctRead },    { "so", cmdSctOff },      { "sa", cmdSctAuto },
-    { "sl", cmdSctLog },     { "sx", cmdSctExchange },
+    { "sl", cmdSctLog },     { "sx", cmdSctExchange }, { "iw", cmdI2cWrite },
 };
 
 void monitor_exec(char *line)
