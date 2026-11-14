@@ -69,6 +69,11 @@ bool Modulator::start()
     if(outPath < 0)
         return false;
 
+    // The half of the buffer played first is not written before the first
+    // sync: clear the samples left over from the previous transmission.
+    memset(baseband_buffer.get(), 0x00,
+           2 * FRAME_SAMPLES * sizeof(stream_sample_t));
+
     outStream = audioStream_start(outPath, baseband_buffer.get(),
                                   2*FRAME_SAMPLES, TX_SAMPLE_RATE,
                                   STREAM_OUTPUT | BUF_CIRC_DOUBLE);
