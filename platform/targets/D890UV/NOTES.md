@@ -27,7 +27,7 @@ signal generator and spectrum analyser.
 | Battery voltage (ADC) | Working, calibrated |
 | FM receive, UHF and VHF | Working, factory calibration applied |
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
-| Volume | Provisional: knob drives the WX4818N AF level `0x30`, uneven curve |
+| Volume | Working: band A audio routed as stock, knob drives the I2C volume device (3.1), 128 steps, silent at the bottom |
 | Beeps | Disabled (see 7) |
 | FM transmit | Implemented from stock (power, bandwidth, CTCSS encode); keyed on air at Low: carrier, APC and supplies as stock. Mic goes straight to MICIN (not stock, deviation unverified) until the SCT3288 path works (3.5). Off unless `CONFIG_D890UV_TX` (`hwconfig.h`) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
@@ -99,10 +99,9 @@ AT32F435 board revision, is mostly valid. The display and keypad pins differ.
     "SPK MUTE H=OFF" means the mute is off when high.
   - PD0-PD2 are audio routing switches; for RX use PD2=1, PD1=0, PD0=0.
     PE0 is mic mute (high), PA1 Bluetooth power, PE1 APC power.
-  - The amplifier input comes through an RS2057 analog switch, selected by
-    band B chip GPO1. Its two sources are **D-VOL**, from the digital board
-    (SCT3288), and **TONE**, the PB9 PWM. Stock volume control very likely
-    happens on the D-VOL path, not in the WX4818N.
+  - Band A receive audio reaches the amplifier only with band B chip GPO2
+    high; the level is set by a volume device on a bit-banged I2C bus
+    (PB6 SDA, PB7 SCL). See 3.1.
   - Full routing is in 3.1.
 - **DAC1**:
   - Channel 2 (PA5) is the **UHF front-end filter tuning voltage**.
@@ -163,6 +162,32 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
   GPIO4 "AM/FM A..", GPIO5 "AM/FM PO..", GPIO6 "GPS POWER",
   GPIO7 "AM/FM V..". GPIO7 also drives a transistor on the band B
   RF output.
+- **Receive audio in stock (V1.05)**, checked by ear on the radio:
+  - The routing function `0x08118DF8` takes a set of bits: bit 0 drives
+    band B chip GPO1 (D-VOL or TONE), bit 2 band B chip GPO2 (band A
+    AFOUT to AF-REP), bit 3 PC7 (band B AFOUT). The GPIOs go through
+    `0x08019AB4`, which writes WX4818N register `0x52`.
+  - With GPO2 low the band A audio only leaks to the speaker, far below
+    stock even at full volume. With it high the level matches stock.
+  - The level is set by a device at 7-bit I2C address `0x2E`: two bytes,
+    register `0x00` and a value 0-127 (`0x0806536C`; the address is
+    retried up to 300 times). It is linear: value 1 is still clearly
+    audible, value 0 leaves a faint leak. Stock reads the knob in 16 steps
+    and maps them through a table at `0x0815153E` (16 rows, row chosen by
+    a setting); its first step also jumps from 0 to 1.
+  - Writing the device knocks in the speaker if done continuously; stock
+    and the port write only when the value changes.
+  - WX4818N register `0x48` (stock `0x082E` narrow, `0x9826` wide) does not
+    change the speaker level, even at `0x0000`.
+  - A 1 kHz SCT3288 line-out tone (`ANALOG_TONE`, output 0) is not heard
+    on the speaker, so AFIO does not carry it there.
+  - The port sets GPO2 in RX and clears it for TX, maps the knob with a
+    square law onto 0-127, and below knob level 3 clears GPO2 and keeps
+    the amplifier off for true silence.
+- **PB9 PWM (TONE)**: TIM4 channel 4, 8-bit PWM. The TIM5 interrupt
+  (`0x08120E70`) updates it from a sample buffer (`0x200087BC`) or a sine
+  table (`0x081505C0`): beeps, tones and voice prompts, not the receive
+  audio.
 - **Manufacturer's M17 proposal**: RX is band A AFOUT → PC0 ADC →
   demodulation and Codec2 in the MCU → PB9 PWM → TONE → speaker. TX is
   mic → band B chip → PC0 → 4FSK synthesis → PB9 PWM → TONE → AF-REP →
@@ -645,10 +670,12 @@ Pitfalls met so far:
 5. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
      speaker. The stock beep likely also switches the amplifier input switch to TONE.
-   - The PB9 PWM path is also the future M17 speech output.
-6. **Volume** through the SCT3288 (D-VOL) path, as stock does. The port
-   now maps the volume onto the low byte of WX4818N `0x30`, which is a
-   set of enable bits (4), not a level.
+   - Voice prompts must be off (Settings, level 0): the port has no MCU
+     audio output yet, a prompt never ends and, at a higher priority than
+     RX, keeps the receive audio muted.
+   - The PB9 PWM path (3.1) is the output for beeps, prompts and the
+     future M17 speech.
+6. ~~Volume~~: done, stock routing and I2C volume device (3.1).
 7. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
    `0x0E` flag) with stock thresholds; the flatness tables are found (5).
 8. **DCS** encode (`0x080E3ED0`) and decode.
