@@ -25,15 +25,36 @@ static constexpr uint32_t VOS_READY_TIMEOUT = 10000;
 // Iterations to wait for the booster, the PLL and the clock switch
 static constexpr uint32_t CLOCK_READY_TIMEOUT = 100000;
 
+// Iterations to wait for the HSE crystal oscillator to start
+static constexpr uint32_t HSE_READY_TIMEOUT = 200000;
+
 /*
- * PLL1: HSI16 input, 8-16MHz range, M = 1, N = 20 (VCO 320MHz), R = 2,
- * SYSCLK = 160MHz. The EPOD booster gets the PLL1 input clock undivided
- * (PLL1MBOOST = 1), within its 4-16MHz range.
+ * PLL1 for SYSCLK = 160MHz (VCO 320MHz, R = 2):
+ * - HSE crystal (HSE_VALUE, 12MHz on the AT-D890UV: the stock firmware's
+ *   SystemCoreClockUpdate at 0x08120C78 uses 12000000; stock runs this PLL
+ *   at x20 / 2 = 120MHz): M = 3, 4MHz input (4-8MHz range), N = 80;
+ * - HSI16 if the crystal does not start: M = 1, 16MHz input (8-16MHz
+ *   range), N = 20.
+ * The EPOD booster gets the PLL1 input clock undivided (PLL1MBOOST = 1),
+ * within its 4-16MHz range.
  */
+struct pllConfig {
+    uint32_t source;
+    uint32_t range;
+    uint32_t m;
+    uint32_t n;
+};
+
 static constexpr uint32_t PLL1SRC_HSI16 = 2;
+static constexpr uint32_t PLL1SRC_HSE = 3;
+static constexpr uint32_t PLL1RGE_4_8 = 0;
 static constexpr uint32_t PLL1RGE_8_16 = 3;
-static constexpr uint32_t PLL1_N = 20;
 static constexpr uint32_t PLL1_R = 2;
+
+static_assert(HSE_VALUE == 12000000, "PLL1 settings assume a 12MHz HSE");
+static constexpr pllConfig PLL_HSE = { PLL1SRC_HSE, PLL1RGE_4_8, 3, 80 };
+static constexpr pllConfig PLL_HSI16 = { PLL1SRC_HSI16, PLL1RGE_8_16, 1, 20 };
+
 static constexpr uint32_t SW_PLL1 = 3;
 static constexpr uint32_t HPRE_DIV2 = 8;
 
@@ -53,12 +74,14 @@ static bool waitBits(volatile uint32_t *reg, uint32_t mask, uint32_t value)
  * booster, start the PLL, raise the flash latency, then switch SYSCLK with a
  * temporary AHB divide-by-two step.
  *
+ * @param cfg: PLL1 input and multiplier, PLL_HSE or PLL_HSI16.
  * @return true on success; on failure the core keeps running from HSI16.
  */
-static bool pllInit()
+static bool pllInit(const pllConfig &cfg)
 {
-    RCC->PLL1CFGR = (PLL1SRC_HSI16 << RCC_PLL1CFGR_PLL1SRC_Pos)
-                  | (PLL1RGE_8_16 << RCC_PLL1CFGR_PLL1RGE_Pos)
+    RCC->PLL1CFGR = (cfg.source << RCC_PLL1CFGR_PLL1SRC_Pos)
+                  | (cfg.range << RCC_PLL1CFGR_PLL1RGE_Pos)
+                  | ((cfg.m - 1) << RCC_PLL1CFGR_PLL1M_Pos)
                   | RCC_PLL1CFGR_PLL1REN;
 
     PWR->VOSR |= PWR_VOSR_BOOSTEN;
@@ -66,7 +89,7 @@ static bool pllInit()
         return false;
 
     RCC->PLL1DIVR = (RCC->PLL1DIVR & ~(RCC_PLL1DIVR_PLL1N | RCC_PLL1DIVR_PLL1R))
-                  | ((PLL1_N - 1) << RCC_PLL1DIVR_PLL1N_Pos)
+                  | ((cfg.n - 1) << RCC_PLL1DIVR_PLL1N_Pos)
                   | ((PLL1_R - 1) << RCC_PLL1DIVR_PLL1R_Pos);
 
     RCC->CR |= RCC_CR_PLL1ON;
@@ -125,7 +148,24 @@ static void clockInit()
     while ((RCC->CFGR1 & RCC_CFGR1_SWS) != RCC_CFGR1_SWS_0)
         ;
 
-    pllInit();
+    /*
+     * The HSI16 RC oscillator is not accurate enough for timing derived from
+     * the core clock (the M17 symbol rate came out 0.36% fast): use the
+     * crystal when it starts.
+     */
+    RCC->CR |= RCC_CR_HSEON;
+    bool hse = false;
+    for (uint32_t i = 0; i < HSE_READY_TIMEOUT; i++) {
+        if ((RCC->CR & RCC_CR_HSERDY) != 0) {
+            hse = true;
+            break;
+        }
+    }
+
+    if (hse == false)
+        RCC->CR &= ~RCC_CR_HSEON;
+
+    pllInit(hse ? PLL_HSE : PLL_HSI16);
     SystemCoreClockUpdate();
 }
 

@@ -692,7 +692,7 @@ d890uv_src = ['platform/targets/D890UV/platform.c',
               'platform/drivers/USB/usb_D890UV.c',
               'platform/drivers/USB/usb_descriptors.c']
 d890uv_inc = ['platform/targets/D890UV']
-d890uv_def = {'PLATFORM_D890UV': '',
+d890uv_def = {'PLATFORM_D890UV': '', 'HSE_VALUE': '12000000',
               'VECT_TAB_OFFSET': '0xC000U'}  # Stock bootloader in first 48KB
 
 d890uv_src += openrtx_src + stm32u575_src + ui_src_default
