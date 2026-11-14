@@ -21,6 +21,9 @@
 #ifdef PLATFORM_TTWRPLUS
 #include "drivers/baseband/SA8x8.h"
 #endif
+#ifdef PLATFORM_D890UV
+#include "drivers/baseband/SCT3288.h"
+#endif
 
 /* UI main screen helper functions, their implementation is in "ui_main.c" */
 extern void _ui_drawMainBottom();
@@ -588,6 +591,11 @@ int _ui_getInfoValueName(char *buf, uint8_t max_len, uint8_t index)
             sscanf(fwVer, "sa8x8-fw/v%hhu.%hhu.%hhu.r%hhu", &major, &minor, &patch, &release);
             sniprintf(buf, max_len,"v%hhu.%hhu.%hhu.r%hhu", major, minor, patch, release);
         }
+            break;
+        #endif
+        #ifdef PLATFORM_D890UV
+        case 9: // Digital board baseband firmware version
+            sniprintf(buf, max_len, "%s", sct3288_getFwVersion());
             break;
         #endif
     }

@@ -208,6 +208,9 @@ const char *info_items[] =
     "Radio",
     "Radio FW",
 #endif
+#ifdef PLATFORM_D890UV
+    "SCT FW",
+#endif
 };
 
 const char *authors[] =
