@@ -43,6 +43,12 @@ extern const struct i2cDevice i2c_bus;
 // #define CONFIG_D890UV_TX
 
 /*
+ * Transmit power levels of the stock firmware (Low, Mid, High, Turbo), from
+ * the AT-D890UV specifications. Turbo is 7W on VHF and 6W on UHF.
+ */
+#define CONFIG_TX_POWER_LEVELS 200, 2500, 5000, 7000
+
+/*
  * Splash screen time: the radio driver opens the digital board twice at
  * power-on, as the stock firmware does, which takes about 8.5s.
  */
