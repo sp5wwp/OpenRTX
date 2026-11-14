@@ -183,8 +183,12 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
 - Monitor commands (hex numbers; each reply ends with `OK` or `ERR ...`):
   `ping`, `rb addr len`, `rw addr [count]`, `wb addr val`, `ww addr val`,
   `nr addr len` (NAND, addr = page << 12 | column), `xr a|b reg`,
-  `xw a|b reg val`, `xg a|b pin 0|1`, `update`. Memory accesses are not
-  checked. Host client: `re-tools/monitor.py` (command line or module).
+  `xw a|b reg val`, `xg a|b pin 0|1`, `update`. SCT3288: `si` (power-up
+  and boot status), `so` (power off), `sw hex` (send), `sr` (read),
+  `sa 0|1` and `sl` (background read and frame log), `sx hex [timeout]`
+  (send a packet of up to 1536 bytes and print the answer, `RX ...`).
+  Memory accesses are not checked. Command lines may be 3 KB long. Host
+  client: `re-tools/monitor.py` (command line or module).
 
 ### 3.3 Bootloader and update hand-off
 
@@ -380,6 +384,44 @@ logged):
 - The I2C bus on PB6/PB7 holds a charger (0x6A), an accelerometer
   (0x19, WHO_AM_I 0x0F) and a third read-only device: no audio parts.
 
+### 3.7 SCT3288 firmware update (`re-tools/sctflash.py`)
+
+The chip came with firmware V3.01.01A3; AnyTone's change logs for V1.03
+to V1.05 list V3_01_01A6 (`SCT3288QD_UpdateFlash_V3_01_01A6_20250610.hex`
+in the V1.05 package). It was updated to A6 from Linux with `sctflash.py`,
+a reimplementation of the "Flash Update" of Sicomm's SCT_PORT tool
+(decompiled: `SCT_Device.dll`, `SCT3252::DownLoadCustomApplicationHexFileToFlash`),
+going through OpenRTX's own SPI link instead of AnyTone's bridge.
+
+- AnyTone's procedure: power on stock holding PF3 + # (code 0x0C, PA8 low,
+  checked late in start-up: hold for a few seconds) -> "BOOT MODE FOR SCT".
+  Stock (`0x0801F800`, bridge `0x0801A83C`) opens the chip in mode 1 and
+  passes USB data to it. Read-only queries through that bridge got no
+  answer here; the update was done without it.
+- Programming mode: interface word `74 A9 01 03 90 00` (mode 1), answered
+  `17 01`. The chip then runs its loader (Q_SW_VER `V3.01.01P2`,
+  Q_PRODID `SCT3288QD`, Q_FID `20 03 80 E3 00`).
+- Packets as usual (`84 A9 61`, length, type, fields). PARITY_ENABLE
+  (`16 01`) adds field `2F xx` to every packet both ways, xx = XOR of the
+  bytes from the length MSB to the `2F`.
+- `InitFlash(start, region)`: `16 01`, 50 ms, control packet `93 xx`,
+  xx = start | region << 1, answer `93 00` (5 s). `WritFlash`: type 3,
+  `94 A2 A1 A0 L data`, L = length capped at 255, answer `94 00`. Two
+  attempts, resend on ACK_MESSAGE 3 or 6. End: `93 00`, then `16 00`.
+- The HEX file: sections separated by empty type-4 records whose address
+  field is the 64 KB page; data are written contiguously from the address
+  of the record that triggers a region. Regions for "SCT3288" (version
+  type 2, region code): User 0x100 (1), Vocoder 1 0x22000 (5), Vocoder 3
+  0x63000 (3), Vocoder 4 0x35000 (10), Vocoder 5 0x77000 (15), Vocoder 6
+  0x53000 (12), Vocoder 7 0x56000 (13); System 0x39000 (2) is not in the
+  A6 file, so the loader is not rewritten.
+- Usage (OpenRTX with `sx` on the radio; the script disables the radio
+  driver's use of the chip, power-cycle the radio afterwards):
+  `sctflash.py <hex> --dry-run` (print the packet stream), `--rehearse`
+  (programming mode and parity, stops before the first erase), `--run`.
+  The A6 update took 24 s: 7 erases, 272 writes, no retries.
+- The firmware version read at start-up is shown in Info -> "SCT FW".
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -528,6 +570,7 @@ image loads at **0x0800C000**.
   it reads and reports the bytes that change its output: it finds the
   settings, channel fields and calibration a routine depends on.
 - `monitor.py` and `reflash.sh` talk to the radio (3.2, 3.3).
+- `sctflash.py` updates the SCT3288 firmware (3.7).
 - `fullemu.py` runs the whole stock firmware (3.6). Options: `--ptt`
   (press window), `--watch` (log r0/r1 at addresses), `--watchmem` (log
   writes), `--count` (count calls), `--trace start:end` with `--funcs`
@@ -570,11 +613,11 @@ Pitfalls met so far:
 ## 7. Open items, in priority order
 
 1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The
-   port now matches stock on air (two open passes, stock packets, routing,
-   WX4818N registers); speech level is weak in stock too: inspect the
-   microphone path in the hardware. Code still to clean up: keep WX4818N
-   `0x30` independent of the volume in TX, remove the test logging. Then
-   check power per level and deviation (narrow/wide, CTCSS).
+   port matches stock on air (two open passes, stock packets, routing,
+   WX4818N registers); speech was weak in stock too with the chip on A3.
+   Retest now that it runs A6 (3.7); if still weak, inspect the
+   microphone path in the hardware. Then check power per level and
+   deviation (narrow/wide, CTCSS).
 2. **Receiver noise floor**: idle RSSI about -71 dBm (raw 267) with the
    antenna, S4 without it, against raw 176 measured earlier; not changed
    by powering the digital board or the speaker amplifier off.
