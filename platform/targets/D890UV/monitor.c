@@ -18,6 +18,7 @@
 #include "drivers/SPI/spi_stm32.h"
 #include "peripherals/i2c.h"
 #include "peripherals/adc.h"
+#include <math.h>
 
 /*
  * Debug monitor on the USB serial port. One command per line, numbers in
@@ -46,6 +47,10 @@
  *                             PC0 (received audio or band B output) and PA7
  *                             (microphone amplifier) at 8kHz, then print the
  *                             buffer address (read it with rb)
+ *   tg <shape> [hz] [amp]     test signal on PB9 (TIM4 PWM, 48kHz samples):
+ *                             0 off, 1 sine, 2 square, 3 PN9 4FSK (M17
+ *                             mapping and RRC filter, 4800 symbols/s,
+ *                             hz ignored); amp 0-127 (default 64)
  *
  * Memory accesses are not checked: an unmapped address faults the MCU.
  */
@@ -441,6 +446,200 @@ static const char *cmdAudioRecord(char **arg)
     return NULL;
 }
 
+/*
+ * Test signal generator on PB9: TIM4 channel 4 runs an 8-bit PWM (625kHz
+ * carrier, as stock: ARR 0xFF), TIM7 interrupts at 48kHz and writes the next
+ * sample. The board's RC filter on the TONE net removes the carrier.
+ */
+#define TG_RATE_HZ 48000
+#define TG_TABLE 256
+
+enum tgShape {
+    TG_OFF = 0,
+    TG_SINE = 1,
+    TG_SQUARE = 2,
+    TG_PN9 = 3,
+};
+
+/*
+ * PN9 4FSK: x^9 + x^5 + 1 bits taken in pairs, M17 mapping (01 +3, 00 +1,
+ * 10 -1, 11 -3), shaped by a root raised cosine (alpha 0.5, 8 symbols span)
+ * at 10 samples per symbol.
+ */
+#define TG_SPS 10
+#define TG_SPAN 8
+#define TG_TAPS (TG_SPS * TG_SPAN + 1)
+
+static int16_t tgRrc[TG_TAPS];
+static int8_t tgSym[TG_SPAN + 1];
+static uint16_t tgLfsr;
+static uint8_t tgSub;
+static int32_t tgAmp;
+static volatile uint8_t tgShape;
+
+static int8_t tgNextSymbol()
+{
+    uint8_t bits = 0;
+    for (int i = 0; i < 2; i++) {
+        uint8_t b = ((tgLfsr >> 8) ^ (tgLfsr >> 4)) & 1;
+        tgLfsr = ((tgLfsr << 1) | b) & 0x1FF;
+        bits = (bits << 1) | b;
+    }
+
+    static const int8_t map[4] = { 1, 3, -1, -3 };
+    return map[bits];
+}
+
+static void tgRrcInit()
+{
+    const float a = 0.5f;
+    float peak = 0.0f;
+    float h[TG_TAPS];
+
+    for (int i = 0; i < TG_TAPS; i++) {
+        float t = (float)(i - (TG_TAPS / 2)) / TG_SPS;
+        float v;
+        if (fabsf(t) < 1e-6f)
+            v = 1.0f - a + (4.0f * a / 3.14159265f);
+        else if (fabsf(fabsf(t) - (1.0f / (4.0f * a))) < 1e-4f)
+            v = (a / sqrtf(2.0f))
+              * ((1.0f + 2.0f / 3.14159265f) * sinf(3.14159265f / (4.0f * a))
+                 + (1.0f - 2.0f / 3.14159265f)
+                       * cosf(3.14159265f / (4.0f * a)));
+        else
+            v = (sinf(3.14159265f * t * (1.0f - a))
+                 + 4.0f * a * t * cosf(3.14159265f * t * (1.0f + a)))
+              / (3.14159265f * t * (1.0f - (4.0f * a * t) * (4.0f * a * t)));
+        h[i] = v;
+        if (fabsf(v) > peak)
+            peak = fabsf(v);
+    }
+
+    /* Scale so that a +3 symbol train peaks near 3 * 4096 */
+    float sum = 0.0f;
+    for (int i = 0; i < TG_TAPS; i += TG_SPS)
+        sum += h[i];
+    for (int i = 0; i < TG_TAPS; i++)
+        tgRrc[i] = (int16_t)(h[i] * 4096.0f / sum);
+    (void)peak;
+}
+
+static uint8_t tgPn9Sample()
+{
+    if (tgSub == 0) {
+        for (int i = TG_SPAN; i > 0; i--)
+            tgSym[i] = tgSym[i - 1];
+        tgSym[0] = tgNextSymbol();
+    }
+
+    int32_t acc = 0;
+    for (int i = 0; i <= TG_SPAN; i++) {
+        int k = tgSub + (i * TG_SPS);
+        if (k < TG_TAPS)
+            acc += tgSym[i] * tgRrc[k];
+    }
+
+    tgSub = (tgSub + 1) % TG_SPS;
+
+    /* acc: +-3 symbols -> about +-3 * 4096; map +-3 to +-amp */
+    int32_t v = 128 + ((acc * tgAmp) / (3 * 4096));
+    if (v < 0)
+        v = 0;
+    if (v > 255)
+        v = 255;
+    return (uint8_t)v;
+}
+
+static uint8_t tgTable[TG_TABLE];
+static volatile uint32_t tgPhase;
+static volatile uint32_t tgStep;
+
+void _Z15TIM7_IRQHandlerv()
+{
+    TIM7->SR = 0;
+    if (tgShape == TG_PN9) {
+        TIM4->CCR4 = tgPn9Sample();
+        return;
+    }
+    tgPhase += tgStep;
+    TIM4->CCR4 = tgTable[tgPhase >> 24];
+}
+
+static void tgStop()
+{
+    NVIC_DisableIRQ(TIM7_IRQn);
+    TIM7->CR1 = 0;
+    TIM4->CR1 = 0;
+    gpio_setMode(AUDIO_PWM, INPUT);
+    RCC->APB1ENR1 &= ~(RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN);
+}
+
+static const char *cmdTestSignal(char **arg)
+{
+    uint32_t shape;
+    uint32_t hz = 1000;
+    uint32_t amp = 64;
+
+    if (!parseHex(arg[0], &shape))
+        return "usage: tg <0|1|2> [hz] [amp]";
+    if ((arg[1] != NULL) && !parseHex(arg[1], &hz))
+        return "bad hz";
+    if ((arg[2] != NULL) && !parseHex(arg[2], &amp))
+        return "bad amp";
+    if (amp > 127)
+        amp = 127;
+
+    tgStop();
+    if (shape == TG_OFF)
+        return NULL;
+
+    for (int i = 0; i < TG_TABLE; i++) {
+        float v;
+        if (shape == TG_SINE)
+            v = sinf(2.0f * 3.14159265f * i / TG_TABLE);
+        else
+            v = (i < (TG_TABLE / 2)) ? 1.0f : -1.0f;
+        tgTable[i] = (uint8_t)(128 + (int)(v * amp));
+    }
+    tgShape = shape;
+    if (shape == TG_PN9) {
+        tgRrcInit();
+        tgLfsr = 0x1FF;
+        tgSub = 0;
+        tgAmp = amp;
+        for (int i = 0; i <= TG_SPAN; i++)
+            tgSym[i] = 0;
+    }
+
+    tgPhase = 0;
+    tgStep = (uint32_t)(((uint64_t)hz << 32) / TG_RATE_HZ);
+
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN;
+    __DSB();
+
+    TIM4->CR1 = 0;
+    TIM4->PSC = 0;
+    TIM4->ARR = 0xFF;
+    TIM4->CCR4 = 128;
+    TIM4->CCMR2 = (6 << TIM_CCMR2_OC4M_Pos) | TIM_CCMR2_OC4PE;
+    TIM4->CCER = TIM_CCER_CC4E;
+    TIM4->EGR = TIM_EGR_UG;
+    TIM4->CR1 = TIM_CR1_CEN;
+    gpio_setMode(AUDIO_PWM, ALTERNATE | ALTERNATE_FUNC(2));
+
+    TIM7->CR1 = 0;
+    TIM7->PSC = 0;
+    TIM7->ARR = (SystemCoreClock / TG_RATE_HZ) - 1;
+    TIM7->DIER = TIM_DIER_UIE;
+    TIM7->EGR = TIM_EGR_UG;
+    TIM7->SR = 0;
+    NVIC_SetPriority(TIM7_IRQn, 10);
+    NVIC_EnableIRQ(TIM7_IRQn);
+    TIM7->CR1 = TIM_CR1_CEN;
+
+    return NULL;
+}
+
 static const char *cmdSctRead(char **arg)
 {
     uint8_t buf[256];
@@ -542,7 +741,7 @@ static const struct command commands[] = {
     { "update", cmdUpdate },  { "si", cmdSctInit },     { "sw", cmdSctWrite },
     { "sr", cmdSctRead },     { "so", cmdSctOff },      { "sa", cmdSctAuto },
     { "sl", cmdSctLog },      { "sx", cmdSctExchange }, { "iw", cmdI2cWrite },
-    { "ar", cmdAudioRecord },
+    { "ar", cmdAudioRecord }, { "tg", cmdTestSignal },
 };
 
 void monitor_exec(char *line)

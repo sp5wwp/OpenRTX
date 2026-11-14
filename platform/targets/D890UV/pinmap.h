@@ -37,6 +37,9 @@
 #define AIN_AF GPIOC, 0     // "TONE DET A/D": band A or band B audio output
 #define AIN_MIC GPIOA, 7    // "A/D DET FOR VOX": microphone amplifier
 
+/* Audio output: TIM4 channel 4 PWM, RC filtered to the TONE net (stock) */
+#define AUDIO_PWM GPIOB, 9
+
 /* External SPI NAND flash, bit-banged by the stock firmware */
 #define NAND_CS GPIOC, 5
 #define NAND_CLK GPIOE, 15
