@@ -506,9 +506,19 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     300-500 Hz peak; setting bits 10:8 of `0x2B` (0x708D -> 0x778D, the
     BK4819 RX filter disables) changes little. The high end falls faster
     than raw discriminator noise, so some low-pass or de-emphasis remains;
-  - noise is a poor probe of the response (FM noise rises 6 dB/octave).
-    Next: record a real M17 transmission and look at the eye, with the FM
-    set-up and with the filters zeroed.
+  - stock's receive set-up for a DMR channel (emulated with the channel
+    record in NAND page 0x1000, byte +8 bits 1:0 = 1) differs from FM on
+    band A's chip in: `0x10` A3A3 -> A3E0, `0x11` 041A -> 0000,
+    `0x1C`-`0x23` -> 0000, `0x27` 199C -> 6080, `0x2A` 1081 -> 108C,
+    `0x30` 5F77 -> 5F75, `0x32` 22A2 -> 0622, `0x48` -> 016E (`0x2B`
+    unchanged). The SCT3288 gets `10 0C` (DMR) and process mode `1A 02`.
+    Applied live (then `0x56` 0 -> 1), the PC0 noise is nearly flat: within
+    about 2 dB of 1 kHz from 500 Hz to 4 kHz (-18 dB at 3.5-4 kHz before),
+    -7 to -12 dB below 250 Hz, clipping 7%. This is the manufacturer's
+    4FSK-ready output and the set-up to start M17 reception from;
+  - noise is a poor probe of the low end (FM noise rises 6 dB/octave).
+    Next: record a real M17 transmission with the DMR set-up and look at
+    the eye.
 - The monitor stopped answering once while the radio sat idle (USB still
   enumerated); a reboot cleared it. Not reproduced.
 - The development radio is an early AnyTone sample. Weak speech on air with
