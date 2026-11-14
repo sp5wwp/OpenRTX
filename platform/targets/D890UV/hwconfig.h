@@ -44,6 +44,9 @@ extern const struct i2cDevice i2c_bus;
  */
 #define CONFIG_D890UV_TX
 
+/* M17 mode */
+#define CONFIG_M17
+
 /*
  * Transmit power levels of the stock firmware (Low, Mid, High, Turbo), from
  * the AT-D890UV specifications. Turbo is 7W on VHF and 6W on UHF.
