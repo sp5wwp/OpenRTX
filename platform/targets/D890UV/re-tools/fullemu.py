@@ -41,6 +41,7 @@ ap.add_argument('--periphw', default='', help='start:end, ms window logging peri
 ap.add_argument('--dump', default='', help='hexaddr:len,... print memory at the end')
 ap.add_argument('--watchread', default='', help='hexaddr,... log reads of these bytes (pc counted)')
 ap.add_argument('--mic', action='store_true', help='1 kHz sine in the mic ADC slot 0x20001D3A')
+ap.add_argument('--adc', default='', help='hexaddr:value,... ADC DMA buffer halfwords written every ms')
 ap.add_argument('--count', default='', help='hexaddr,... functions whose calls are counted')
 ap.add_argument('--ptt', default='', help='start:end, ms with PTT (PA10) pressed')
 ap.add_argument('--poke', default='', help='hexaddr:hexbytes,... after start-up init')
@@ -135,6 +136,10 @@ def sctHostByte(b):
             out(f'SCT> type={t:#04x} {body.hex(" ")}')
             if t & 0x40:                       # codec bypass
                 sctReply(0x40, b'\x17\x00')
+            elif body[:2] == b'\x19\x02' and t == 0x05:  # as the real chip: carrier
+                sctReply(t, b'\x19\x00')                     # detected reports
+                sctReply(0x30, b'\x1b\x0c')
+                sctReply(0x30, b'\x1b\x10')
             elif body[:2] == b'\x10\x10':            # analog vocoder: the real
                 sctReply(0x20, b'\x17\x01')         # chip resets (17 01),
                 sctReply(0x00, b'\x10\x00')         # then accepts
@@ -485,6 +490,9 @@ while tick[0] < a.ms:
         pc = mu.reg_read(UC_ARM_REG_PC) | 1
     tick[0] += 1
     mu.mem_write(0x20001D36, struct.pack('<H', a.batt))
+    for spec in filter(None, a.adc.split(',')):
+        ad, val = spec.split(':')
+        mu.mem_write(int(ad, 16), struct.pack('<H', int(val, 0)))
     if a.mic:
         import math
         mu.mem_write(0x20001D3A, struct.pack('<H', int(8192 + 3000 * math.sin(2 * math.pi * tick[0] / 7.3))))
