@@ -550,11 +550,17 @@ void radio_init(const rtxStatus_t *rtxState)
     gpio_setMode(AF_SW1, OUTPUT);
     gpio_setMode(AF_SW2, OUTPUT);
     gpio_setMode(MIC_SEL, OUTPUT);
+    gpio_clearPin(B_AF_EN);
+    gpio_setMode(B_AF_EN, OUTPUT);
     gpio_setMode(BT_PWR, OUTPUT);
     gpio_setMode(APC_PWR, OUTPUT);
 
     loadCalibration();
     wx4818n_init(&wx4818nA);
+
+    // Stock initialises both chips with the same sequence (0x0801C8F4).
+    // Without it band B's chip gives no audio output (NOTES.md 3.8).
+    wx4818n_init(&wx4818nB);
 
     // The stock initialisation also sets all band B chip GPIOs as low outputs
     for (uint8_t pin = 0; pin < 8; pin++)

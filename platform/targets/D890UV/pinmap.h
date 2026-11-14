@@ -54,6 +54,7 @@
 #define AF_SW1 GPIOD, 1     // Audio routing switch ("MOD AF-RE...")
 #define AF_SW2 GPIOD, 2     // Audio routing switch ("MOD SEC H...")
 #define MIC_SEL GPIOE, 0    // Mic source: low radio mic (MICI), high MICO
+#define B_AF_EN GPIOC, 7    // Band B AFOUT to AF-REP ("B AFOUT MUTE", L mute)
 #define BT_PWR GPIOA, 1     // Bluetooth module power
 #define APC_PWR GPIOE, 1    // Transmitter APC power
 
