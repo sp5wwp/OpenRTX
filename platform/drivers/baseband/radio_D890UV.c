@@ -274,7 +274,7 @@ struct sctPacket {
 #define CTL SCT3288_PKT_CONTROL
 #define DMR SCT3288_PKT_DMR
 #define COD SCT3288_PKT_CODEC
-#define RD (SCT3288_PKT_READ | 0x03)
+#define RD (SCT3288_PKT_READ | SCT3288_PKT_DPMR)
 
 /* Library open and analog set-up, after the interface word (0x080F403C) */
 static const struct sctPacket sctStartup[] = {
@@ -433,6 +433,9 @@ static void sctStart()
         sctReady = true;
         sctSend(sctStartup, ARRAY_SIZE(sctStartup));
     }
+
+    // Shown in the Info menu
+    sct3288_readFwVersion(&sct3288);
 }
 
 static uint8_t afLevel = 0x77;
