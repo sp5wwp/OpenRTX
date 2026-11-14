@@ -33,7 +33,7 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Microphone from PA7 (`mic_D890UV.c`); on the development radio it carries no speech |
+| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Microphone through band B's chip to PC0 (3.8): route proven, level not usable yet |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Speaker output from the MCU | PB9 PWM audio driver (`pwm_D890UV.c`), path checked with a tone (3.10); beeps and voice prompts not checked yet |
 
@@ -228,7 +228,10 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
   (TIM4 channel 4 PWM, TIM7 interrupt at 48 kHz): 1 sine, 2 square, 3 PN9
   4FSK with M17 mapping and RRC shaping, 0 off. Scripts using it:
   `materials/work/tgtest*.py`; SDR baseband recordings are demodulated with
-  `materials/work/fmdemod.py`.
+  `materials/work/fmdemod.py`. Microphone tests (3.8): `ms`, `mx`, `mg`,
+  `mo` run a series after a delay and keep their results in SRAM3 (they
+  survive a reset), `mr` prints them; `gz hz` measures one tone on PC0 and
+  PA7; `bx 0|1` puts band B's chip in its microphone TX set-up.
   Memory accesses are not checked. Command lines may be 3 KB long. Host
   client: `re-tools/monitor.py` (command line or module).
 
@@ -545,10 +548,38 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     of the 16 values of `0x47` bits 11:8 (stock 0x27FE), quieted and
     unquieted. A speaker-based sweep suggested blowing in the first values;
     it did not reproduce on air;
-  - the band B set-up that makes its chip pass MICIN to AFOUT is not known;
-    asked from AnyTone (their note says "QX will provide RF parameter
-    settings"). Next: an automated acoustic search (the radio plays a tone
-    on its speaker and looks for it on PC0 and PA7 for each set-up).
+  - asked from AnyTone (their note says "QX will provide RF parameter
+    settings").
+- **Acoustic tests** (monitor `ms`, `mx`, `mg`, `mo`, run with the K
+  connector unplugged; `materials/work/micsearch.py`): the radio plays 1 kHz
+  on its speaker (PB9 -> TONE, band B GPO1 low) and measures it on PC0 (band
+  B's AFOUT, GPO0 high), Goertzel against 900/950/1050/1100 Hz:
+  - band B in RX: nothing, whatever `0x30` and `0x47`. Band B in TX mode
+    (FM TX set-up, 438 MHz): the tone shows at +12 to +27 dB, independent of
+    `0x47`;
+  - it needs both the speaker and the radio mic: +20.9 dB with both, +3.5 dB
+    with the amplifier off, +2.1 dB with PE0 high. **Band B's chip passes
+    its microphone to AFOUT in TX mode**: AnyTone's route works;
+  - the level is low: PC0 RMS about 80-220 counts with the speaker a few cm
+    from the mic. `0x48` (082E/9826/09EE/0FFF) and `0x7D` (E95F) do not
+    change it.
+- **2176 Hz**: with band B in this TX mode and the mic line connected, band
+  A's signal carried a 2176 Hz sine (+-2 kHz in FM with its level control,
+  +-8 kHz in M17's flat set-up, ruining the M17 signal). Key-up variants
+  (T0-T5): gone with PE0 high, with band B's `0x30` low byte 0x00 and with
+  band B in standby; still there with band B on 145 MHz and with its tone
+  registers (`0x70`, `0x2E` entries) zeroed. A sweep of single `0x30` bits:
+  every value with **bit 6** set (77, 76, 75, 73, 67, 57; 7F even wider) is
+  malformed, 37 and 00 give correct M17. So with bit 6 band B's mic stage
+  oscillates at 2176 Hz on the shared mic line, which leaks into band A's
+  modulator through the switch chain. With bit 6 cleared (37) the speaker
+  tone is barely measurable on PC0 (RMS at the ADC noise, about 12). The
+  port uses 0x37 for now (`MIC_ROUTE_AF_ENABLE`): M17 is correct, the mic
+  level is not usable. In the first on-air test (FM) the tone calibration
+  value in band B's `0x2E` entry 6 also gave 2176 Hz on AFOUT; it is 0 now.
+- Next: keep bit 6 set and lower band B's mic chain gain until the
+  oscillation stops (`mo`: 1 kHz pass and 2176 Hz oscillation per candidate
+  register change).
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
@@ -617,9 +648,9 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   sync points at the half and the end, as `Cx000_dac.cpp`. The PWM idles at
   mid-scale from start-up so that key-up does not pull the carrier (3.10).
   `audio_init()` is now called by `platform_init()`.
-- **Microphone** (`mic_D890UV.c`): PA7 (ADC1 channel 12, the input that
-  needs no set-up; AnyTone's route is band B's chip to PC0, 3.8) sampled at
-  8 kHz with injected conversions started from a TIM6 interrupt, so the
+- **Microphone** (`mic_D890UV.c`): first PA7 (ADC1 channel 12), now PC0
+  with band B's chip in TX mode during M17 transmissions (3.8), x16 gain,
+  sampled at 8 kHz with injected conversions started from a TIM6 interrupt, so the
   regular battery and volume conversions on ADC1 are only paused
   (`adc_stm32u5.c` now adds its channel to PCSEL instead of replacing it).
   On air the decoder plays quiet noise, also when blowing into the mic: on
