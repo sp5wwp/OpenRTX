@@ -285,6 +285,65 @@ static const char *cmdSctWrite(char **arg)
     return NULL;
 }
 
+/*
+ * Send one packet to the SCT3288 and wait for its answer: used to program
+ * the chip's flash (re-tools, NOTES.md). Prints "RX <hex>" with every frame
+ * received within 20ms of the first one, or "RX -" on timeout.
+ */
+#define SCT_EXCHANGE_MAX 1536
+#define SCT_EXCHANGE_TAIL_MS 20
+
+static const char *cmdSctExchange(char **arg)
+{
+    static uint8_t tx[SCT_EXCHANGE_MAX];
+    static uint8_t rx[256];
+    static char line[8 + 2 * sizeof(rx)];
+    const char *hex = arg[0];
+    uint32_t timeout = 1000;
+    size_t len = 0;
+
+    if ((hex == NULL) || ((strlen(hex) % 2) != 0)
+        || ((strlen(hex) / 2) > sizeof(tx)))
+        return "usage: sx <hexbytes> [timeout ms, hex]";
+
+    if ((arg[1] != NULL) && !parseHex(arg[1], &timeout))
+        return "bad timeout";
+
+    for (; hex[0] != '\0'; hex += 2) {
+        char byte[3] = { hex[0], hex[1], '\0' };
+        char *end;
+        tx[len++] = strtoul(byte, &end, 16);
+        if (*end != '\0')
+            return "bad hex";
+    }
+
+    sct3288_drain(&sct3288);
+    sct3288_write(&sct3288, tx, len);
+
+    size_t n = 0;
+    uint32_t idle = 0;
+    for (uint32_t t = 0; t < timeout; t++) {
+        size_t got = sct3288_read(&sct3288, rx + n, sizeof(rx) - n);
+        n += got;
+        if (got > 0)
+            idle = 0;
+        else if ((n > 0) && (++idle > SCT_EXCHANGE_TAIL_MS))
+            break;
+        if (n == sizeof(rx))
+            break;
+        sleepFor(0, 1);
+    }
+
+    int pos = snprintf(line, sizeof(line), "RX ");
+    if (n == 0)
+        pos += snprintf(line + pos, sizeof(line) - pos, "-");
+    for (size_t i = 0; i < n; i++)
+        pos += snprintf(line + pos, sizeof(line) - pos, "%02X", rx[i]);
+    line[pos++] = '\n';
+    usb_write(line, pos);
+    return NULL;
+}
+
 static const char *cmdSctRead(char **arg)
 {
     uint8_t buf[256];
@@ -380,12 +439,12 @@ struct command {
 };
 
 static const struct command commands[] = {
-    { "ping", cmdPing },     { "rb", cmdReadBytes }, { "rw", cmdReadWords },
-    { "wb", cmdWriteByte },  { "ww", cmdWriteWord }, { "nr", cmdNandRead },
-    { "xr", cmdWxRead },     { "xw", cmdWxWrite },   { "xg", cmdWxGpio },
-    { "update", cmdUpdate }, { "si", cmdSctInit },   { "sw", cmdSctWrite },
-    { "sr", cmdSctRead },    { "so", cmdSctOff },    { "sa", cmdSctAuto },
-    { "sl", cmdSctLog },
+    { "ping", cmdPing },     { "rb", cmdReadBytes },   { "rw", cmdReadWords },
+    { "wb", cmdWriteByte },  { "ww", cmdWriteWord },   { "nr", cmdNandRead },
+    { "xr", cmdWxRead },     { "xw", cmdWxWrite },     { "xg", cmdWxGpio },
+    { "update", cmdUpdate }, { "si", cmdSctInit },     { "sw", cmdSctWrite },
+    { "sr", cmdSctRead },    { "so", cmdSctOff },      { "sa", cmdSctAuto },
+    { "sl", cmdSctLog },     { "sx", cmdSctExchange },
 };
 
 void monitor_exec(char *line)

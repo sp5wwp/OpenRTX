@@ -67,7 +67,9 @@ static void *usbThreadFunc(void *arg)
 {
     (void)arg;
 
-    char line[128];
+    // Long enough for an SCT3288 programming packet in hex (monitor "sx");
+    // static: the thread stack is small
+    static char line[3072];
     size_t pos = 0;
 
     while (running) {
