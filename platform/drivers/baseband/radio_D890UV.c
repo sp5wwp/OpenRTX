@@ -270,6 +270,54 @@ static void setFrontEnd(uint32_t freq)
 #define GPIO_B_TONE 1
 
 /*
+ * Band B chip GPIO selecting the source of PC0: low band A's AFOUT, high band
+ * B's AFOUT ("A/B TONE" in the I/O table).
+ */
+#define GPIO_B_PC0 0
+
+/*
+ * Microphone route of AnyTone's M17 proposal: radio mic (PE0 low) into band
+ * B's MICIN, band B's AFOUT to PC0 (GPO0 high). Band B's chip passes its
+ * microphone to AFOUT only in TX mode (NOTES.md 3.8); it runs the FM TX
+ * set-up at 438MHz without tone calibration (with it, AFOUT carries a 2176Hz
+ * tone). Its RF output did not leave the radio in the tests.
+ */
+#define MIC_ROUTE_FREQ 438000000U
+
+/*
+ * Band B's audio enables (0x30 low byte) on the microphone route. With bit 6
+ * set (0x77, as for band A) the microphone passes clearly, but band B's chip
+ * oscillates at 2176Hz on its microphone line, which leaks into band A's
+ * modulator and ruins the M17 signal; without it (0x37) M17 is correct but
+ * the microphone level is near the ADC noise (NOTES.md 3.8).
+ */
+#define MIC_ROUTE_AF_ENABLE 0x37
+
+static void micRouteStart()
+{
+    struct wx4818nTxConfig cfg = {
+        .freq = correctFrequency(MIC_ROUTE_FREQ),
+        .wide = false,
+        .ctcss = 0,
+        .modCal = calA[CAL_MOD] & 0x0FFF,
+        .toneCal = 0,
+        .baseband = false,
+    };
+
+    gpio_clearPin(MIC_SEL);
+    wx4818n_setGpio(&wx4818nB, GPIO_B_PC0, true);
+    wx4818n_startFmTx(&wx4818nB, &cfg);
+    wx4818n_writeReg(&wx4818nB, 0x30, AF_ENABLE_BASE | MIC_ROUTE_AF_ENABLE);
+}
+
+static void micRouteStop()
+{
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, GPIO_B_PC0, false);
+    gpio_setPin(MIC_SEL);
+}
+
+/*
  * Modulation gain for the M17 baseband, register 0x31 bits 11:0: logarithmic,
  * about x2 per 0x100 (NOTES.md 3.10). With OpenRTX's M17 modulator, 0x700
  * gave about +-2.95kHz for the outer symbols; M17 wants +-2.4kHz.
@@ -825,6 +873,9 @@ void radio_enableTx()
         setToneBurst(config->toneEn);
     }
 
+    if (m17)
+        micRouteStart();
+
     txM17 = m17;
     tunedFrequency = 0;
     status = TX;
@@ -837,7 +888,9 @@ static void stopTx()
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
     wx4818n_standby(&wx4818nA);
-    if (!txM17)
+    if (txM17)
+        micRouteStop();
+    else
         sctSend(sctTxStop, ARRAY_SIZE(sctTxStop));
 }
 

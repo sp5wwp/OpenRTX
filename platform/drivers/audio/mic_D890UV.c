@@ -11,11 +11,11 @@
 #include "mic_D890UV.h"
 
 /*
- * Microphone input of the AnyTone AT-D890UV on PA7 ("A/D DET FOR VOX", ADC1
- * channel 12), the microphone signal that needs no set-up. AnyTone's M17
- * proposal routes the microphone through band B's chip to PC0 instead, which
- * needs a band B set-up not known yet. On the development radio nothing was
- * seen on either (NOTES.md 3.8).
+ * Microphone input of the AnyTone AT-D890UV on PC0 (ADC1 channel 1), the
+ * route of AnyTone's M17 proposal: the radio driver puts band B's chip in TX
+ * mode with the radio mic on its MICIN and its AFOUT on PC0 while an M17
+ * transmission runs (radio_D890UV.c, NOTES.md 3.8). The level is low (about
+ * -37dBFS with the speaker playing a tone into the mic), hence a x16 gain.
  *
  * ADC1 is shared with the battery and volume readings, which use software
  * started regular conversions: the microphone uses an injected conversion,
@@ -49,7 +49,12 @@ void _Z15TIM6_IRQHandlerv()
     // Store the conversion started at the previous interrupt
     if (firstSample == false) {
         int32_t raw = (int32_t)(ADC1->JDR1 & 0x3FFF);
-        stream->buffer[writePos] = (stream_sample_t)((raw - 8192) * 4);
+        int32_t v = (raw - 8192) * 16;
+        if (v > 32767)
+            v = 32767;
+        if (v < -32768)
+            v = -32768;
+        stream->buffer[writePos] = (stream_sample_t)v;
 
         size_t prev = writePos;
         writePos += 1;
@@ -99,8 +104,8 @@ static int micD890UV_start(const uint8_t instance, const void *config,
     // by software (JEXTEN = 0). JSQR may only be written with JADSTART = 0.
     while ((ADC1->CR & ADC_CR_JADSTART) != 0)
         ;
-    ADC1->PCSEL |= 1u << ADC_MIC_CH;
-    ADC1->JSQR = ADC_MIC_CH << ADC_JSQR_JSQ1_Pos;
+    ADC1->PCSEL |= 1u << ADC_AF_CH;
+    ADC1->JSQR = ADC_AF_CH << ADC_JSQR_JSQ1_Pos;
 
     ctx->running = 1;
     stream = ctx;
