@@ -34,6 +34,8 @@
 /* Analog inputs */
 #define AIN_VBAT GPIOC, 1   // Battery voltage divider
 #define AIN_VOLUME GPIOC, 2 // Volume potentiometer
+#define AIN_AF GPIOC, 0     // "TONE DET A/D": band A or band B audio output
+#define AIN_MIC GPIOA, 7    // "A/D DET FOR VOX": microphone amplifier
 
 /* External SPI NAND flash, bit-banged by the stock firmware */
 #define NAND_CS GPIOC, 5

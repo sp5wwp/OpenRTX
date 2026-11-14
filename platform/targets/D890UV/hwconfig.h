@@ -15,6 +15,8 @@
 enum adcChannel {
     ADC_VBAT_CH = 2, // PC1, ADC1_IN2
     ADC_VOL_CH = 3,  // PC2, ADC1_IN3
+    ADC_AF_CH = 1,   // PC0, ADC1_IN1
+    ADC_MIC_CH = 12, // PA7, ADC1_IN12
 };
 
 extern const struct Adc adc1;

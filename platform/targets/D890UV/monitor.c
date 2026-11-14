@@ -17,6 +17,7 @@
 #include "bootloader.h"
 #include "drivers/SPI/spi_stm32.h"
 #include "peripherals/i2c.h"
+#include "peripherals/adc.h"
 
 /*
  * Debug monitor on the USB serial port. One command per line, numbers in
@@ -39,6 +40,12 @@
  *   so                        power the SCT3288 down
  *   sa <0|1>                  read SCT3288 frames automatically, as stock
  *   sl                        print the automatically read frames
+ *   sx <hex> [timeout]        exchange a packet with the SCT3288
+ *   iw <addr> <hexbytes>      write bytes to an I2C device
+ *   ar <count>                on the * key, record <count> sample pairs of
+ *                             PC0 (received audio or band B output) and PA7
+ *                             (microphone amplifier) at 8kHz, then print the
+ *                             buffer address (read it with rb)
  *
  * Memory accesses are not checked: an unmapped address faults the MCU.
  */
@@ -372,6 +379,68 @@ static const char *cmdI2cWrite(char **arg)
     return (ret == 0) ? NULL : "no acknowledge";
 }
 
+/*
+ * Audio recorder: PC0 and PA7 sampled alternately at 8kHz, timed by TIM6.
+ * Blocking: meant to run with the USB cable unplugged. The DIGI-RX LED is
+ * on while recording.
+ */
+#define REC_RATE_HZ 8000
+#define REC_MAX 32000
+#define REC_WAIT_MS 60000
+
+/* In SRAM3, which the linker script leaves unused (it maps SRAM1 only) */
+#define REC_BUF ((uint16_t(*)[2])0x20040000)
+
+static const char *cmdAudioRecord(char **arg)
+{
+    uint32_t count;
+
+    if (!parseHex(arg[0], &count) || (count > REC_MAX))
+        return "usage: ar <count>";
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+
+    /* Start on the * key, within a minute */
+    uint32_t waited = 0;
+    while ((kbd_lastKeys() & KEY_STAR) == 0) {
+        if (waited >= REC_WAIT_MS)
+            return "no * key";
+        sleepFor(0, 10);
+        waited += 10;
+    }
+
+    gpio_setPin(LED_DIGI_RX);
+
+    /* TIM6, unused elsewhere, overflows at the sample rate (APB1 = HCLK) */
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN;
+    __DSB();
+    TIM6->CR1 = 0;
+    TIM6->PSC = 0;
+    TIM6->ARR = (SystemCoreClock / REC_RATE_HZ) - 1;
+    TIM6->EGR = TIM_EGR_UG;
+    TIM6->SR = 0;
+    TIM6->CR1 = TIM_CR1_CEN;
+
+    for (uint32_t i = 0; i < count; i++) {
+        while ((TIM6->SR & TIM_SR_UIF) == 0)
+            ;
+        TIM6->SR = 0;
+        REC_BUF[i][0] = adc_getRawSample(&adc1, ADC_AF_CH);
+        REC_BUF[i][1] = adc_getRawSample(&adc1, ADC_MIC_CH);
+    }
+
+    TIM6->CR1 = 0;
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+
+    out("buf %08lX %lu\n", (uint32_t)REC_BUF, count);
+    return NULL;
+}
+
 static const char *cmdSctRead(char **arg)
 {
     uint8_t buf[256];
@@ -467,12 +536,13 @@ struct command {
 };
 
 static const struct command commands[] = {
-    { "ping", cmdPing },     { "rb", cmdReadBytes },   { "rw", cmdReadWords },
-    { "wb", cmdWriteByte },  { "ww", cmdWriteWord },   { "nr", cmdNandRead },
-    { "xr", cmdWxRead },     { "xw", cmdWxWrite },     { "xg", cmdWxGpio },
-    { "update", cmdUpdate }, { "si", cmdSctInit },     { "sw", cmdSctWrite },
-    { "sr", cmdSctRead },    { "so", cmdSctOff },      { "sa", cmdSctAuto },
-    { "sl", cmdSctLog },     { "sx", cmdSctExchange }, { "iw", cmdI2cWrite },
+    { "ping", cmdPing },      { "rb", cmdReadBytes },   { "rw", cmdReadWords },
+    { "wb", cmdWriteByte },   { "ww", cmdWriteWord },   { "nr", cmdNandRead },
+    { "xr", cmdWxRead },      { "xw", cmdWxWrite },     { "xg", cmdWxGpio },
+    { "update", cmdUpdate },  { "si", cmdSctInit },     { "sw", cmdSctWrite },
+    { "sr", cmdSctRead },     { "so", cmdSctOff },      { "sa", cmdSctAuto },
+    { "sl", cmdSctLog },      { "sx", cmdSctExchange }, { "iw", cmdI2cWrite },
+    { "ar", cmdAudioRecord },
 };
 
 void monitor_exec(char *line)
