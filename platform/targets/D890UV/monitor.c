@@ -47,6 +47,28 @@
  *                             PC0 (received audio or band B output) and PA7
  *                             (microphone amplifier) at 8kHz, then print the
  *                             buffer address (read it with rb)
+ *   ms <delay_s>              acoustic search of a band B set-up passing the
+ *                             microphone: 1kHz tone on the speaker, PC0 and
+ *                             PA7 measured for each set-up (run with the USB
+ *                             cable unplugged); mr prints the results
+ *   mx <delay_s>              band B in TX mode (0x30 = 0x5F77): tone on
+ *                             PC0 with A amp+tone+radio mic, B amp off,
+ *                             C mic select high, D tone off; 5 runs each;
+ *                             mr prints the results (mode 10-13 = A-D)
+ *   bx <0|1>                  band B's chip in the FM TX set-up of the
+ *                             microphone tests (438MHz, 0x30 = 0x5F77) or
+ *                             back to standby
+ *   mg <delay_s>              band B in the TX set-up of bx: 1kHz tone on the
+ *                             speaker measured on PC0 for 0x30 low byte 77,
+ *                             37, 35, 36, 33, and 37 with the speaker off;
+ *                             3 runs each; mr prints (mode 20-25)
+ *   mo <delay_s>              band B in TX mode with 0x30 = 0x5F77, radio mic
+ *                             on its MICIN, 1kHz tone on the speaker: for
+ *                             each candidate register change, PC0 tone at
+ *                             1kHz (mic) and 2176Hz (oscillation); mr prints
+ *                             (mode 40+, pc0 = 1kHz, pa7 = 2176Hz)
+ *   gz <hz>                   PC0 and PA7 at 8kHz, 2048 samples: power at
+ *                             <hz> over its neighbours (0.1dB) and RMS
  *   tg <shape> [hz] [amp]     test signal on PB9 (TIM4 PWM, 48kHz samples
  *                             from TIM15):
  *                             0 off, 1 sine, 2 square, 3 PN9 4FSK (M17
@@ -632,6 +654,477 @@ static const char *cmdTestSignal(char **arg)
     return NULL;
 }
 
+/*
+ * Acoustic search for a band B set-up that passes its microphone input to
+ * its audio output (AnyTone's M17 microphone route, NOTES.md 3.8). The radio
+ * plays a 1kHz tone on its speaker (PB9 -> TONE -> AF-REP, band B GPO1 low)
+ * and, for each band B set-up, samples PC0 (band B's AFOUT, GPO0 high) and
+ * PA7 at 8kHz. The tone power is compared with the power at 900, 950, 1050
+ * and 1100Hz (Goertzel, 2048 samples).
+ */
+#define MS_N 2048
+#define MS_MODES 2
+#define MS_R30 10
+#define MS_V47 16
+#define MS_RUNS (MS_MODES * MS_R30 * MS_V47 + 1)
+
+struct msResult {
+    uint8_t mode; // 0 RX, 1 TX, 2 reference (tone off)
+    uint8_t r30;  // low byte of register 0x30
+    uint8_t v47;  // register 0x47 bits 11:8
+    int16_t pc0;  // tone over neighbours on PC0, 0.1dB
+    int16_t pa7;  // tone over neighbours on PA7, 0.1dB
+    uint16_t pc0Rms;
+};
+
+/*
+ * Results and a progress counter at the end of SRAM3, past the recorder
+ * buffer: start-up does not clear SRAM3, so they survive a reset during a
+ * run. msCount is the number of results, msStep the last step started.
+ */
+#define MS_STORE 0x20078000
+#define msCount (*(volatile uint32_t *)(MS_STORE))
+#define msStep (*(volatile uint32_t *)(MS_STORE + 4))
+#define msResults ((struct msResult *)(MS_STORE + 8))
+
+static const uint8_t msR30[MS_R30] = { 0x77, 0x76, 0x75, 0x73, 0x7F,
+                                       0x67, 0x57, 0x37, 0xFF, 0x00 };
+
+/* Frequency measured by msMeasure, neighbours at -100, -50, +50, +100Hz */
+static float msTone = 1000.0f;
+
+static float goertzel(const uint16_t (*buf)[2], int ch, float mean, float hz)
+{
+    float w = 2.0f * 3.14159265f * hz / 8000.0f;
+    float c = 2.0f * cosf(w);
+    float s1 = 0.0f, s2 = 0.0f;
+
+    for (int i = 0; i < MS_N; i++) {
+        float s0 = ((float)buf[i][ch] - mean) + c * s1 - s2;
+        s2 = s1;
+        s1 = s0;
+    }
+
+    return s1 * s1 + s2 * s2 - c * s1 * s2;
+}
+
+static void msMeasure(struct msResult *r)
+{
+    // 8kHz sampling paced by TIM6, as the ar command
+    RCC->APB1ENR1 |= RCC_APB1ENR1_TIM6EN;
+    __DSB();
+    TIM6->CR1 = 0;
+    TIM6->PSC = 0;
+    TIM6->ARR = (SystemCoreClock / 8000) - 1;
+    TIM6->EGR = TIM_EGR_UG;
+    TIM6->SR = 0;
+    TIM6->CR1 = TIM_CR1_CEN;
+
+    for (int i = 0; i < MS_N; i++) {
+        while ((TIM6->SR & TIM_SR_UIF) == 0)
+            ;
+        TIM6->SR = 0;
+        REC_BUF[i][0] = adc_getRawSample(&adc1, ADC_AF_CH);
+        REC_BUF[i][1] = adc_getRawSample(&adc1, ADC_MIC_CH);
+    }
+
+    TIM6->CR1 = 0;
+
+    for (int ch = 0; ch < 2; ch++) {
+        float mean = 0.0f, var = 0.0f;
+        for (int i = 0; i < MS_N; i++)
+            mean += REC_BUF[i][ch];
+        mean /= MS_N;
+        for (int i = 0; i < MS_N; i++) {
+            float d = REC_BUF[i][ch] - mean;
+            var += d * d;
+        }
+
+        float tone = goertzel(REC_BUF, ch, mean, msTone);
+        float side = (goertzel(REC_BUF, ch, mean, msTone - 100.0f)
+                      + goertzel(REC_BUF, ch, mean, msTone - 50.0f)
+                      + goertzel(REC_BUF, ch, mean, msTone + 50.0f)
+                      + goertzel(REC_BUF, ch, mean, msTone + 100.0f))
+                   / 4.0f;
+        int16_t db = (int16_t)(100.0f * log10f((tone + 1.0f) / (side + 1.0f)));
+
+        if (ch == 0) {
+            r->pc0 = db;
+            r->pc0Rms = (uint16_t)sqrtf(var / MS_N);
+        } else {
+            r->pa7 = db;
+        }
+    }
+}
+
+static const char *cmdMicSearch(char **arg)
+{
+    uint32_t delay = 0;
+    if ((arg[0] != NULL) && !parseHex(arg[0], &delay))
+        return "usage: ms [delay_s]";
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+
+    sleepFor(delay, 0);
+
+    // Loop: tone -> speaker; radio mic -> band B -> PC0
+    uint16_t orig47 = wx4818n_readReg(&wx4818nB, 0x47);
+    wx4818n_setGpio(&wx4818nB, 2, false);
+    wx4818n_setGpio(&wx4818nB, 1, false);
+    wx4818n_setGpio(&wx4818nB, 0, true);
+    gpio_clearPin(B_AF_EN);
+    gpio_clearPin(MIC_SEL);
+    gpio_setPin(SPK_EN);
+
+    msCount = 0;
+    gpio_setPin(LED_DIGI_RX);
+
+    for (uint8_t mode = 0; mode < MS_MODES; mode++) {
+        if (mode == 0) {
+            wx4818n_startFmRx(&wx4818nB, 43800000, false);
+        } else {
+            struct wx4818nTxConfig cfg = {
+                .freq = 43800000,
+                .wide = false,
+                .ctcss = 0,
+                .modCal = 0x46A,
+                .toneCal = 0,
+                .baseband = false,
+            };
+            wx4818n_startFmTx(&wx4818nB, &cfg);
+        }
+
+        for (int a = 0; a < MS_R30; a++) {
+            wx4818n_writeReg(&wx4818nB, 0x30, 0x5F00 | msR30[a]);
+            for (uint8_t v = 0; v < MS_V47; v++) {
+                wx4818n_writeReg(&wx4818nB, 0x47,
+                                 (orig47 & ~0x0F00) | (v << 8));
+
+                char *on[] = { "1", "3e8", "40", NULL };
+                cmdTestSignal(on);
+                sleepFor(0, 150);
+
+                struct msResult *r = &msResults[msCount++];
+                r->mode = mode;
+                r->r30 = msR30[a];
+                r->v47 = v;
+                msMeasure(r);
+            }
+        }
+    }
+
+    // Reference: tone off, last set-up
+    char *off[] = { "0", NULL, NULL };
+    cmdTestSignal(off);
+    sleepFor(0, 150);
+    struct msResult *r = &msResults[msCount++];
+    r->mode = 2;
+    r->r30 = 0;
+    r->v47 = 0;
+    msMeasure(r);
+
+    // Restore
+    wx4818n_writeReg(&wx4818nB, 0x47, orig47);
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, 0, false);
+    gpio_clearPin(SPK_EN);
+    gpio_setPin(MIC_SEL);
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+
+    out("done %lu\n", msCount);
+    return NULL;
+}
+
+static const char *cmdMicCheck(char **arg)
+{
+    uint32_t delay = 0;
+    if ((arg[0] != NULL) && !parseHex(arg[0], &delay))
+        return "usage: mx [delay_s]";
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+
+    sleepFor(delay, 0);
+
+    wx4818n_setGpio(&wx4818nB, 2, false);
+    wx4818n_setGpio(&wx4818nB, 1, false);
+    wx4818n_setGpio(&wx4818nB, 0, true);
+    gpio_clearPin(B_AF_EN);
+
+    msCount = 0;
+    msStep = 0;
+
+    struct wx4818nTxConfig cfg = {
+        .freq = 43800000,
+        .wide = false,
+        .ctcss = 0,
+        .modCal = 0x46A,
+        .toneCal = 0,
+        .baseband = false,
+    };
+    wx4818n_startFmTx(&wx4818nB, &cfg);
+    wx4818n_writeReg(&wx4818nB, 0x30, 0x5F77);
+
+    gpio_setPin(LED_DIGI_RX);
+
+    msStep = 1;
+    for (int rep = 0; rep < 5; rep++) {
+        for (uint8_t c = 0; c < 4; c++) {
+            if (c == 1)
+                gpio_clearPin(SPK_EN);
+            else
+                gpio_setPin(SPK_EN);
+            if (c == 2)
+                gpio_setPin(MIC_SEL);
+            else
+                gpio_clearPin(MIC_SEL);
+
+            msStep = 100 + (rep * 4) + c;
+
+            char *on[] = { "1", "3e8", "40", NULL };
+            char *off[] = { "0", NULL, NULL };
+            cmdTestSignal((c == 3) ? off : on);
+            sleepFor(0, 200);
+
+            struct msResult *r = &msResults[msCount++];
+            r->mode = 10 + c;
+            r->r30 = 0x77;
+            r->v47 = rep;
+            msMeasure(r);
+        }
+    }
+
+    char *off[] = { "0", NULL, NULL };
+    cmdTestSignal(off);
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, 0, false);
+    gpio_clearPin(SPK_EN);
+    gpio_setPin(MIC_SEL);
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+
+    msStep = 999;
+    out("done %lu\n", msCount);
+    return NULL;
+}
+
+static void bandBTx()
+{
+    struct wx4818nTxConfig cfg = {
+        .freq = 43800000,
+        .wide = false,
+        .ctcss = 0,
+        .modCal = 0x46A,
+        .toneCal = 0,
+        .baseband = false,
+    };
+    wx4818n_startFmTx(&wx4818nB, &cfg);
+    wx4818n_writeReg(&wx4818nB, 0x30, 0x5F77);
+}
+
+static const char *cmdBandBTx(char **arg)
+{
+    uint32_t on;
+    if (!parseHex(arg[0], &on))
+        return "usage: bx <0|1>";
+
+    if (on)
+        bandBTx();
+    else
+        wx4818n_standby(&wx4818nB);
+
+    return NULL;
+}
+
+static const char *cmdGoertzel(char **arg)
+{
+    uint32_t hz;
+    if (!parseHex(arg[0], &hz) || (hz == 0) || (hz >= 4000))
+        return "usage: gz <hz>";
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+
+    struct msResult r;
+    msTone = (float)hz;
+    msMeasure(&r);
+    msTone = 1000.0f;
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+
+    out("%d %d %u\n", r.pc0, r.pa7, r.pc0Rms);
+    return NULL;
+}
+
+static const char *cmdMicGain(char **arg)
+{
+    uint32_t delay = 0;
+    if ((arg[0] != NULL) && !parseHex(arg[0], &delay))
+        return "usage: mg [delay_s]";
+
+    static const uint8_t r30[] = { 0x77, 0x37, 0x35, 0x36, 0x33, 0x37 };
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+    msCount = 0;
+    msStep = 0;
+
+    sleepFor(delay, 0);
+
+    wx4818n_setGpio(&wx4818nB, 2, false);
+    wx4818n_setGpio(&wx4818nB, 1, false);
+    wx4818n_setGpio(&wx4818nB, 0, true);
+    gpio_clearPin(B_AF_EN);
+    gpio_clearPin(MIC_SEL);
+    gpio_setPin(LED_DIGI_RX);
+
+    char *on[] = { "1", "3e8", "40", NULL };
+    cmdTestSignal(on);
+
+    for (int rep = 0; rep < 3; rep++) {
+        for (uint8_t c = 0; c < 6; c++) {
+            msStep = 200 + (rep * 6) + c;
+            bandBTx();
+            wx4818n_writeReg(&wx4818nB, 0x30, 0x5F00 | r30[c]);
+            if (c == 5)
+                gpio_clearPin(SPK_EN);
+            else
+                gpio_setPin(SPK_EN);
+            sleepFor(0, 200);
+
+            struct msResult *r = &msResults[msCount++];
+            r->mode = 20 + c;
+            r->r30 = r30[c];
+            r->v47 = rep;
+            msMeasure(r);
+        }
+    }
+
+    char *off[] = { "0", NULL, NULL };
+    cmdTestSignal(off);
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, 0, false);
+    gpio_clearPin(SPK_EN);
+    gpio_setPin(MIC_SEL);
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+    msStep = 999;
+
+    out("done %lu\n", msCount);
+    return NULL;
+}
+
+struct regChange {
+    uint8_t reg; // 0: none, 0xFF: 0x1C-0x23 zeroed
+    uint16_t value;
+};
+
+static const struct regChange moCand[] = {
+    { 0x00, 0 },      { 0x48, 0x9826 }, { 0x48, 0x09EE }, { 0x48, 0x016E },
+    { 0x48, 0x0AB6 }, { 0x48, 0x0000 }, { 0x19, 0x0380 }, { 0x19, 0x0281 },
+    { 0x19, 0x0181 }, { 0x19, 0x0081 }, { 0x19, 0x0001 }, { 0x2B, 0xF08D },
+    { 0x2B, 0x7085 }, { 0x2B, 0x708C }, { 0x2B, 0x0000 }, { 0xFF, 0 },
+    { 0x7D, 0xE940 }, { 0x7D, 0xE95F }, { 0x31, 0x1200 }, { 0x31, 0x1700 },
+    { 0x00, 0 },
+};
+
+static const char *cmdMicOsc(char **arg)
+{
+    uint32_t delay = 0;
+    if ((arg[0] != NULL) && !parseHex(arg[0], &delay))
+        return "usage: mo [delay_s]";
+
+    const uint32_t nc = sizeof(moCand) / sizeof(moCand[0]);
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+    msCount = 0;
+    msStep = 0;
+
+    sleepFor(delay, 0);
+
+    wx4818n_setGpio(&wx4818nB, 2, false);
+    wx4818n_setGpio(&wx4818nB, 1, false);
+    wx4818n_setGpio(&wx4818nB, 0, true);
+    gpio_clearPin(B_AF_EN);
+    gpio_clearPin(MIC_SEL);
+    gpio_setPin(SPK_EN);
+    gpio_setPin(LED_DIGI_RX);
+
+    char *on[] = { "1", "3e8", "40", NULL };
+    cmdTestSignal(on);
+
+    for (int rep = 0; rep < 2; rep++) {
+        for (uint32_t c = 0; c < nc; c++) {
+            msStep = 400 + (rep * nc) + c;
+            bandBTx();
+            if (moCand[c].reg == 0xFF) {
+                for (uint8_t reg = 0x1C; reg <= 0x23; reg++)
+                    wx4818n_writeReg(&wx4818nB, reg, 0);
+            } else if (moCand[c].reg != 0) {
+                wx4818n_writeReg(&wx4818nB, moCand[c].reg, moCand[c].value);
+            }
+            sleepFor(0, 250);
+
+            struct msResult osc;
+            struct msResult *r = &msResults[msCount++];
+            msTone = 1000.0f;
+            msMeasure(r);
+            msTone = 2176.0f;
+            msMeasure(&osc);
+            msTone = 1000.0f;
+
+            r->mode = 40 + c;
+            r->r30 = moCand[c].reg;
+            r->v47 = rep;
+            r->pa7 = osc.pc0;
+        }
+    }
+
+    char *off[] = { "0", NULL, NULL };
+    cmdTestSignal(off);
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, 0, false);
+    gpio_clearPin(SPK_EN);
+    gpio_setPin(MIC_SEL);
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+    msStep = 999;
+
+    out("done %lu\n", msCount);
+    return NULL;
+}
+
+static const char *cmdMicResults(char **arg)
+{
+    (void)arg;
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    out("step %lu count %lu csr %08lX\n", msStep, msCount, RCC->CSR);
+    if (msCount > MS_RUNS)
+        return "no results";
+
+    for (uint32_t i = 0; i < msCount; i++) {
+        const struct msResult *r = &msResults[i];
+        out("%u %02X %u %d %d %u\n", r->mode, r->r30, r->v47, r->pc0, r->pa7,
+            r->pc0Rms);
+    }
+
+    return NULL;
+}
+
 static const char *cmdSctRead(char **arg)
 {
     uint8_t buf[256];
@@ -733,7 +1226,9 @@ static const struct command commands[] = {
     { "update", cmdUpdate },  { "si", cmdSctInit },     { "sw", cmdSctWrite },
     { "sr", cmdSctRead },     { "so", cmdSctOff },      { "sa", cmdSctAuto },
     { "sl", cmdSctLog },      { "sx", cmdSctExchange }, { "iw", cmdI2cWrite },
-    { "ar", cmdAudioRecord }, { "tg", cmdTestSignal },
+    { "ar", cmdAudioRecord }, { "tg", cmdTestSignal },  { "ms", cmdMicSearch },
+    { "mr", cmdMicResults },  { "mx", cmdMicCheck },    { "bx", cmdBandBTx },
+    { "gz", cmdGoertzel },    { "mg", cmdMicGain },     { "mo", cmdMicOsc },
 };
 
 void monitor_exec(char *line)
