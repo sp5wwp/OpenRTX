@@ -495,6 +495,22 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   7, for an AMBE3000-style chip). If it carries speech samples, the MCU
   could exchange mic and speaker audio with the board's codec, an audio
   path for M17. Not tried.
+- **PC0 as the M17 receive input** (band B GPO0 low: band A AFOUT; squelch
+  open on noise, 435 MHz, `ar` recordings `disc1`-`disc3`):
+  - the signal is strong: noise RMS about 4000-4900 counts, clipping 16%
+    of the samples in the FM set-up (4-6% with the changes below). A real
+    M17 signal is smaller than full discriminator noise; to be checked;
+  - noise spectrum relative to 1 kHz in the FM set-up: -10 dB below
+    250 Hz, +5 dB at 250-500 Hz, -10 dB at 2-2.5 kHz, -18 dB at 3.5-4 kHz.
+    Zeroing `0x1C`-`0x23` (as stock's digital RX does) removes the
+    300-500 Hz peak; setting bits 10:8 of `0x2B` (0x708D -> 0x778D, the
+    BK4819 RX filter disables) changes little. The high end falls faster
+    than raw discriminator noise, so some low-pass or de-emphasis remains;
+  - noise is a poor probe of the response (FM noise rises 6 dB/octave).
+    Next: record a real M17 transmission and look at the eye, with the FM
+    set-up and with the filters zeroed.
+- The monitor stopped answering once while the radio sat idle (USB still
+  enumerated); a reboot cleared it. Not reproduced.
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
