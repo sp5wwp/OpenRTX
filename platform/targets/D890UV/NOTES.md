@@ -29,7 +29,8 @@ signal generator and spectrum analyser.
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
 | Volume | Working: band A audio routed as stock, knob drives the I2C volume device (3.1), 128 steps, silent at the bottom |
 | Beeps | Disabled (see 7) |
-| FM transmit | Implemented from stock (power, bandwidth, CTCSS encode); keyed on air at Low: carrier, APC and supplies as stock. Mic goes straight to MICIN (not stock, deviation unverified) until the SCT3288 path works (3.5). Off unless `CONFIG_D890UV_TX` (`hwconfig.h`) |
+| FM transmit | Working as stock on air at Low: power levels (4.1), bandwidth, CTCSS encode, 1750 Hz burst, mic through the SCT3288 as stock (3.5). Speech is weak on the development radio, in stock too (3.8). On by default (`CONFIG_D890UV_TX`, `hwconfig.h`) |
+| Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
 | M17 / digital | Not started |
@@ -217,6 +218,11 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
   and boot status), `so` (power off), `sw hex` (send), `sr` (read),
   `sa 0|1` and `sl` (background read and frame log), `sx hex [timeout]`
   (send a packet of up to 1536 bytes and print the answer, `RX ...`).
+  `iw addr hex` writes bytes to an I2C device (3.1). `ar count` waits for
+  the `*` key, then records `count` sample pairs of PC0 and PA7 at 8 kHz
+  into SRAM3 (0x20040000, up to 32000 pairs = 4 s, DIGI-RX LED on), and
+  prints the buffer address for `rb`; `materials/work/micrec.py` drives it
+  and writes WAV files.
   Memory accesses are not checked. Command lines may be 3 KB long. Host
   client: `re-tools/monitor.py` (command line or module).
 
@@ -465,6 +471,54 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   The A6 update took 24 s: 7 erases, 272 writes, no retries.
 - The firmware version read at start-up is shown in Info -> "SCT FW".
 
+### 3.8 Microphone signal and the MCU
+
+- Stock never routes the microphone to the MCU. In FM and in its digital
+  modes the speech goes through the SCT3288 board and its codec.
+- PA7 ("A/D DET FOR VOX", ADC1 channel 12) is in stock's ADC scan, but no
+  stock code reads its slot (`0x20001D3A`); the only reads of the scan
+  buffer are PC0, battery, volume and the internal temperature channel.
+  Stock's VOX does not read a level from the WX4818N chips either: the only
+  registers it reads are `0x01`, `0x02`, `0x0B`-`0x0E` and `0x54`/`0x55`.
+  So VOX most likely runs on the digital board (not traced through the
+  menus).
+- Recordings with `ar` on the development radio (PE0 low for the radio mic,
+  band B GPO0 high for band B's output on PC0), speech then blowing:
+  - receive: PC0 flat noise (RMS 6 counts) with a faint 1.77 kHz tone; PA7
+    flat (RMS 7) with a slow drift of about 200 counts over 4 s;
+  - TX at 0.2 W into a dummy load: the same, PA7 noise RMS 14; no speech or
+    blow on either input.
+- AnyTone's M17 proposal routes the mic through band B's chip to PC0 (3.1);
+  it needs band B's chip set up as a microphone preamplifier, with values
+  AnyTone did not supply. Not tried.
+- The SCT3258/3288 protocol documents an external vocoder bypass (TYPE bit
+  7, for an AMBE3000-style chip). If it carries speech samples, the MCU
+  could exchange mic and speaker audio with the board's codec, an audio
+  path for M17. Not tried.
+- The development radio is an early AnyTone sample. Weak speech on air with
+  both firmwares and no mic signal at PA7 may be a fault of this unit; a
+  retail radio would tell.
+
+### 3.9 Other stock firmware facts
+
+- **Experimental "NX DMR" V1.05** (from AnyTone's US distributor): a rebuild
+  of the official V1.05, 136 bytes larger. Its only functional changes: a
+  new key function toggling settings byte `+0x152` (0x200148E4 base, "NX
+  mode"), which the official build forces off at start-up (`0x080DDEE0`),
+  and two list limits removed. NXDN itself is in the official firmware:
+  hundreds of places read `+0x152`. With it set and a digital channel,
+  `0x08116480` writes `0x0AB6` (or the narrow digital `0x09EE`/`0x016E`) to
+  register `0x48`; the rest goes through the SCT3288 as DMR does.
+- **Factory mode over USB**: stock's serial parser (`0x080D3B34`) takes
+  `FACTORY` (answer `QX 06`, mode `0x2001C71B` = 2) and `END` (answer `06`),
+  besides `PROGRAM`, then one-letter commands dispatched by `0x0812D058`.
+  The mode works on test channels (`0x20004211`, 0-94); on channels 60/61
+  the measure command `a` (`0x080C47A8` -> `0x08122974`) reads the raw RSSI
+  of band A/B and stores it in the calibration block in RAM (block B
+  +0x28/+0x2A): the squelch reference. When that reaches the NAND was not
+  traced, so the mode was left without measuring. `re-tools`-style client:
+  `materials/work/stockfactory.py`.
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -530,6 +584,15 @@ UHF/VHF, narrow/wide, with and without CTCSS.
   table[level][ref], from the calibration (5). DAC1 channel 1 (PA4) gets
   APC * 16, applied once after PA15 goes high (`0x0811A75C`, setter
   `0x0801694C`). No ramp.
+- Checked against stock (`0x0803AAF8`): level from the channel (`0x2000430D`),
+  index = TX MHz - 400 (UHF, reference entry 40) or - 136 (VHF, reference
+  9; 220 MHz uses entries 39-44), no clamp. Stock also lowers the level for
+  a Turbo-disable setting and an automatic reduction tied to the received
+  signal, and forces Low on 200-300 MHz; not ported. The port's value for
+  435.525 MHz Turbo (112) equals an emulated stock key-up. On the
+  development radio the VHF tables of levels 0 and 1 are all zero, so the
+  base value is used. OpenRTX offers 0.2/2.5/5/7 W
+  (`CONFIG_TX_POWER_LEVELS`); Turbo is 6 W on UHF.
 - Power-up order: PE1 (APC supply), PA15 (PA supply), then the APC level.
   Power-down (RX entry `0x08010C1C`): PA15 = 0, PE1 = 0 first.
 - CTCSS encode (`0x080E3D98`): value = Hz * 20.97152 (2^21 / 100000). Register
@@ -658,13 +721,11 @@ Pitfalls met so far:
 
 ## 7. Open items, in priority order
 
-1. **FM TX audio through the SCT3288** as stock does (3.5, 3.6). The
-   port matches stock on air (two open passes, stock packets, routing,
-   WX4818N registers, chip B checked too); speech is weak in stock too,
-   and still with the chip on A6 (3.7): only breath noise modulates, as
-   low-deviation FM. Next: inspect the microphone path in the hardware
-   (element, amplifier and its supply, the K-connector switch). Then check power per level and
-   deviation (narrow/wide, CTCSS).
+1. **Weak FM speech.** The port matches stock on air (3.5, 3.6); speech
+   is weak in stock too, also with the chip on A6 (3.7): only breath noise
+   modulates. No mic signal reaches PA7 (3.8). Next: compare with a retail
+   radio, or inspect the microphone path (needs a T8 screwdriver). Then
+   check deviation (narrow/wide, CTCSS).
 2. ~~Receiver noise floor~~: external. With the antenna the raw RSSI at
    435 MHz was about 250 (S8), flat over +-500 kHz, against about 130 in a
    quiet period. Detuning the UHF input filter (DAC1 channel 2 to 4095)
@@ -677,8 +738,9 @@ Pitfalls met so far:
    STM32U5 (GPDMA), feeding OpenRTX's CTCSS detector
    (`core/ctcssDetector.hpp`). The same path is the M17 receive input.
 4. **Band B chip role on VHF.**
-   - Stock puts band B into mode 6 and sets its GPIO5 depending on
-     settings (`0x080C6DC0`, `0x080D659C`, `0x08111A6C`). The settings
+   - Stock's band B handling depends on a firmware state (value 6 returned
+     by `0x080C6DC0`; not a chip mode) and sets its GPIO5 depending on
+     settings (`0x080D659C`, `0x08111A6C`). The settings
      block is now known (3.4) and can be planted in the emulator.
 5. **Audio output.**
    - Beeps: the tone register writes alone send received noise to the
