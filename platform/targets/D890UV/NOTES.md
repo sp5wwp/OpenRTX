@@ -577,9 +577,23 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   port uses 0x37 for now (`MIC_ROUTE_AF_ENABLE`): M17 is correct, the mic
   level is not usable. In the first on-air test (FM) the tone calibration
   value in band B's `0x2E` entry 6 also gave 2176 Hz on AFOUT; it is 0 now.
-- Next: keep bit 6 set and lower band B's mic chain gain until the
-  oscillation stops (`mo`: 1 kHz pass and 2176 Hz oscillation per candidate
-  register change).
+- **Looking for a set-up without the oscillation** (bit 6 on):
+  - `mo` (acoustic, per candidate register change): the 2176 Hz is not
+    visible on PC0 in any case, so only band A's transmission shows it. The
+    1 kHz score scatters by up to 10 dB between runs; all candidates still
+    pass it except `0x2B` = F08D and 0000, which silence band B's output
+    (PC0 RMS about 10). PC0 RMS rises from about 50 to 200 during the first
+    candidates, cause unknown;
+  - on air, one M17 key-up per candidate (K connector unplugged): reference,
+    `0x48` = 0000 and 016E, `0x19` = 0001 and 0081, `0x7D` = E940,
+    `0x1C`-`0x23` zeroed, `0x2B` = 7085, `0x31` = 1200: all malformed.
+  - Reading (assumption, BK4819 hobby-firmware layout of `0x30`: bits 7:4
+    PLL/VCO enables, 3 PA gain, 2 mic ADC, 1 TX DSP, 0 RX DSP): band B's
+    chip needs its oscillator running (bit 6) to process the microphone,
+    and with the electret on the line it oscillates, probably RF feedback
+    through the microphone (only with the real mic attached, also with band
+    B on 145 MHz).
+  - Paused until AnyTone answers. The port keeps bit 6 off.
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
