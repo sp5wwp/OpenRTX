@@ -41,6 +41,14 @@ static volatile int32_t gain = 256; // Sample gain, 256 = unity
  * louder.
  */
 #define MULT_FULL 1
+
+/*
+ * Modulator streams: OpenRTX's M17 baseband peaks (root raised cosine
+ * overshoot of the +-3 symbols) went past the 8-bit PWM range and were
+ * clipped, doubling the spread of the outer symbols; 85% keeps them inside.
+ * The deviation is then set by the radio driver (M17_MOD_GAIN).
+ */
+#define MODULATOR_GAIN 218
 #define MULT_SPEECH 24
 #define SOFT_KNEE 64
 static volatile int32_t streamMult = MULT_FULL;
@@ -228,7 +236,7 @@ static int pwmD890UV_start(const uint8_t instance, const void *config,
     beepOn = false;
     const struct pwmD890UVcfg *cfg = config;
     if ((cfg == NULL) || (cfg->speaker == false)) {
-        gain = 256;
+        gain = MODULATOR_GAIN;
         streamMult = MULT_FULL;
     } else {
         streamMult = MULT_SPEECH;
