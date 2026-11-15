@@ -32,7 +32,7 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. No microphone yet: the band B route is proven but off (3.8) |
+| M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). No microphone yet: the band B route is proven but off (3.8) |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
 
@@ -726,6 +726,27 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   frame was sent before the preamble, as OpenRTX's modulator writes only the
   idle half before the first sync; `Modulator::start()` now clears the
   buffer (shared code).
+- **Known limitation: carrier drift after FM.** The first M17 transmission
+  after an FM one starts high (+14 to +18.8 kHz in four recordings) and
+  settles exponentially (time constant about 0.8 s, within a few hundred Hz
+  after about 4 s). The symbols are fine meanwhile. M17 after M17 starts
+  clean, even minutes apart. Cause: band A's MICIN keeps a DC state that
+  only settles while the chip transmits, and the two modes feed it from
+  sources at different DC levels: FM (and stock's DMR) from the digital
+  board's output (PD0 low), M17 from AF-REP (PD0, PD1 high). Stock never
+  switches between them. Experiments:
+  - M17 routing (PD0, PD1 high, PD2 low, band B GPO1 low) kept in M17
+    receive: no change, so the state does not settle in receive.
+  - Band A's registers after FM TX and after M17 TX differ only in `0x31`
+    (rewritten at key-up) and `0x72`, which the chip changes by itself;
+    writing the post-M17 `0x72` value did not help. Re-running the chip
+    initialisation did not help either: the state is not in a register.
+  - Band A in its M17 TX set-up for 3 s with the PA and APC supplies off,
+    on M17 receive entry after FM: the start dropped to +513 Hz (3.75 time
+    constants), nothing visible on the SDR meanwhile. Proves the cause, but
+    the receiver is deaf for 3 s, so not used.
+  - The real fix is sending M17 through the digital board's output, as
+    FM does (open item 11).
 
 ### 3.12 Beeps and voice prompts
 
@@ -991,3 +1012,8 @@ Pitfalls met so far:
 9. ~~PC0 demodulator check~~: stock samples PC0 for tone decoding (4.2).
 10. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
    and `scripts/clang_format.sh --check` pass for the port files.
+11. **M17 through the digital board's output**: feed the MCU baseband into
+    the board (AFIO or another codec input) and have its TLV320AIC3204 pass
+    it to MICO, so that M17 uses FM's source and the carrier drift after FM
+    goes away (3.11). Needs the codec routing and the board's SCT3288
+    commands that keep the codec on without its own modulation.
