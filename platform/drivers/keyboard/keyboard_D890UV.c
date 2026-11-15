@@ -25,15 +25,15 @@
 
 /*
  * Keys indexed by [row][column], with the stock key code of each position,
- * checked on the radio except for P1 and P2 (stock codes 19 and 20).
+ * checked on the radio (P1 and P2 too, row 3).
  */
 static const keyboard_t keyMap[KBD_ROWS][KBD_COLUMNS] = {
     /* KBD_ROW1, stock codes 2 3 4 5 6 7 1 11 */
     { KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_0, KEY_STAR },
     /* KBD_ROW2, stock codes 13 15 16 8 9 10 12 14 */
     { KEY_ENTER, KEY_UP, KEY_DOWN, KEY_7, KEY_8, KEY_9, KEY_HASH, KEY_ESC },
-    /* KBD_ROW3, stock codes 19 20: P1 and P2 */
-    { KEY_F4, KEY_F5, 0, 0, 0, 0, 0, 0 },
+    /* KBD_ROW3, stock codes 19 20: P1 and P2, used as left and right */
+    { KEY_LEFT, KEY_RIGHT, 0, 0, 0, 0, 0, 0 },
 };
 
 /* Knob direction for each (previous << 2 | current) Gray code transition */
