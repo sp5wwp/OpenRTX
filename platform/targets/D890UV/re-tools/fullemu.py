@@ -41,6 +41,14 @@ ap.add_argument('--periphw', default='', help='start:end, ms window logging peri
 ap.add_argument('--dump', default='', help='hexaddr:len,... print memory at the end')
 ap.add_argument('--watchread', default='', help='hexaddr,... log reads of these bytes (pc counted)')
 ap.add_argument('--mic', action='store_true', help='1 kHz sine in the mic ADC slot 0x20001D3A')
+ap.add_argument('--fast', type=int, default=0,
+                help='end a 1 ms slice early after this many identical peripheral '
+                     'reads in a row (same pc and register): waiting loops then '
+                     'cost little; 0 = off')
+ap.add_argument('--idle', default='',
+                help='hexaddr,... heads of polling loops: end the 1 ms slice once '
+                     'one of them has run --idle-count times in it')
+ap.add_argument('--idle-count', type=int, default=20)
 ap.add_argument('--adc', default='', help='hexaddr:value,... ADC DMA buffer halfwords written every ms')
 ap.add_argument('--count', default='', help='hexaddr,... functions whose calls are counted')
 ap.add_argument('--ptt', default='', help='start:end, ms with PTT (PA10) pressed')
@@ -270,6 +278,14 @@ def memReadWatch(uc, access, addr, size, value, _):
 for x in filter(None, a.watchread.split(',')):
     mu.hook_add(UC_HOOK_MEM_READ, memReadWatch, begin=int(x, 16), end=int(x, 16) + 1)
 callCount = collections.Counter()
+idleHits = [0]
+def idleHook(uc, addr, size, _):
+    idleHits[0] += 1
+    if idleHits[0] >= a.idle_count:
+        idleHits[0] = 0
+        uc.emu_stop()           # polling loop with nothing to do: next tick
+for x in filter(None, a.idle.split(',')):
+    mu.hook_add(UC_HOOK_CODE, idleHook, begin=int(x, 16), end=int(x, 16))
 def countHook(uc, addr, size, _):
     callCount[addr] += 1
 for x in filter(None, a.count.split(',')):
@@ -277,8 +293,20 @@ for x in filter(None, a.count.split(',')):
 
 # --- peripheral status model -------------------------------------------------
 lastPeriphReads = collections.deque(maxlen=400)
+pollState = [None, 0]           # (pc, register) of the last read, repeat count
 def periphRead(uc, access, addr, size, value, _):
     lastPeriphReads.append(addr)
+    if a.fast:
+        # A waiting loop reads the same value; bit-banging sees it change
+        key = (uc.reg_read(UC_ARM_REG_PC), addr, bytes(uc.mem_read(addr, size)))
+        if key == pollState[0]:
+            pollState[1] += 1
+            if pollState[1] >= a.fast:
+                pollState[1] = 0
+                uc.emu_stop()   # waiting: go on with the next tick
+        else:
+            pollState[0] = key
+            pollState[1] = 0
     if (addr & ~0x1C00) == 0x42020010:
         idrReads[(addr, uc.reg_read(UC_ARM_REG_PC))] += 1
     v = struct.unpack('<I', uc.mem_read(addr & ~3, 4))[0]
@@ -449,6 +477,7 @@ TIMERS = ((0x40000C00, 0x08120E70), (0x40001000, 0x08120EC0), (0x40001400, 0x081
 timAcc = {}
 masked = 0
 while tick[0] < a.ms:
+    idleHits[0] = 0
     try:
         mu.emu_start(pc, RET, count=a.slice)
     except UcError as e:
