@@ -651,7 +651,7 @@ void radio_init(const rtxStatus_t *rtxState)
     gpio_clearPin(AF_SW1);
     gpio_clearPin(AF_SW2);
     gpio_setPin(MIC_SEL);
-    gpio_clearPin(BT_PWR);
+    gpio_clearPin(BT_MIC_EN);
     gpio_clearPin(APC_PWR);
     gpio_setMode(AF_SW0, OUTPUT);
     gpio_setMode(AF_SW1, OUTPUT);
@@ -659,7 +659,7 @@ void radio_init(const rtxStatus_t *rtxState)
     gpio_setMode(MIC_SEL, OUTPUT);
     gpio_clearPin(B_AF_EN);
     gpio_setMode(B_AF_EN, OUTPUT);
-    gpio_setMode(BT_PWR, OUTPUT);
+    gpio_setMode(BT_MIC_EN, OUTPUT);
     gpio_setMode(APC_PWR, OUTPUT);
 
     loadCalibration();
@@ -767,7 +767,7 @@ void radio_enableRx()
     DAC1->DHR12R1 = 0;
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
-    gpio_clearPin(BT_PWR);
+    gpio_clearPin(BT_MIC_EN);
     gpio_setPin(MIC_SEL);
     gpio_setPin(AF_SW2);
     gpio_clearPin(AF_SW1);
@@ -906,7 +906,7 @@ void radio_enableTx()
      * AnyTone's M17 proposal; checked on air (NOTES.md 3.10).
      */
     bool m17 = (opMode == OPMODE_M17);
-    gpio_clearPin(BT_PWR);
+    gpio_clearPin(BT_MIC_EN);
     gpio_setPin(MIC_SEL);
     gpio_clearPin(AF_SW2);
     if (m17) {

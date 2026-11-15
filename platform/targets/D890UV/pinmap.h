@@ -55,7 +55,8 @@
 #define AF_SW2 GPIOD, 2     // Audio routing switch ("MOD SEC H...")
 #define MIC_SEL GPIOE, 0    // Mic source: low radio mic (MICI), high MICO
 #define B_AF_EN GPIOC, 7    // Band B AFOUT to AF-REP ("B AFOUT MUTE", L mute)
-#define BT_PWR GPIOA, 1     // Bluetooth module power
+// Bluetooth headset mic into the TX audio (stock 0x081140EC mode 1)
+#define BT_MIC_EN GPIOA, 1
 
 /* GNSS receiver, USART2 (stock 0x08063498), 9600 baud */
 #define GPS_TXD GPIOA, 2
