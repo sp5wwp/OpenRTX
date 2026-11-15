@@ -537,6 +537,51 @@ static void sctStart()
     sct3288_readFwVersion(&sct3288);
 }
 
+/*
+ * Receive audio muted unless the receive audio path is connected (FM with the
+ * squelch open, audio_D890UV.c). Band A's audio reaches the speaker node
+ * whenever the volume is above zero, so with the amplifier on for beeps,
+ * voice prompts or M17 speech its noise would play.
+ */
+static bool rxMuted = true;
+
+static void writeVolume(uint8_t value)
+{
+    uint8_t cmd[] = { VOLUME_I2C_REG, value };
+
+    i2c_acquire(&i2c_bus);
+    for (int i = 0; i < VOLUME_I2C_TRIES; i++) {
+        if (i2c_write(&i2c_bus, VOLUME_I2C_ADDR, cmd, sizeof(cmd), true) == 0)
+            break;
+    }
+    i2c_release(&i2c_bus);
+}
+
+/*
+ * Mute band A's receive audio with the volume device while the receive path
+ * is closed or suspended by a voice prompt (audio_D890UV.c), restore the
+ * knob's level when it is connected. The device only acts on band A's audio,
+ * not on the TONE path of the MCU.
+ */
+void radio_muteRxAudio(bool mute)
+{
+    if (mute == rxMuted)
+        return;
+
+    rxMuted = mute;
+
+    // The device alone leaves a faint leak: also open band A's route to the
+    // speaker node (band B GPO2)
+    if (mute) {
+        wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, false);
+        writeVolume(0);
+    } else if (volumeValue > 0) {
+        writeVolume((uint8_t)volumeValue);
+        if (status == RX)
+            wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, true);
+    }
+}
+
 void radio_setVolume(uint8_t volume)
 {
     /*
@@ -561,7 +606,7 @@ void radio_setVolume(uint8_t volume)
      * The device does not reach silence: at zero, cut the receiver audio and
      * keep the speaker amplifier off
      */
-    if (status == RX)
+    if ((status == RX) && (rxMuted == false))
         wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, value != 0);
     if (afOutput) {
         if (value != 0)
@@ -570,16 +615,10 @@ void radio_setVolume(uint8_t volume)
             gpio_clearPin(SPK_EN);
     }
 
-    uint8_t cmd[] = { VOLUME_I2C_REG, (uint8_t)value };
-
-    i2c_acquire(&i2c_bus);
-    for (int i = 0; i < VOLUME_I2C_TRIES; i++) {
-        if (i2c_write(&i2c_bus, VOLUME_I2C_ADDR, cmd, sizeof(cmd), true) == 0) {
-            volumeValue = value;
-            break;
-        }
-    }
-    i2c_release(&i2c_bus);
+    // While muted, the new level applies when the receive audio comes back
+    volumeValue = value;
+    if (rxMuted == false)
+        writeVolume((uint8_t)value);
 }
 
 void radio_init(const rtxStatus_t *rtxState)
@@ -615,6 +654,9 @@ void radio_init(const rtxStatus_t *rtxState)
         wx4818n_setGpio(&wx4818nB, pin, false);
 
     sctStart();
+
+    // Receive audio starts muted, until the receive path is connected
+    writeVolume(0);
 }
 
 void radio_terminate()
@@ -643,6 +685,12 @@ void radio_enableAfOutput()
     afOutput = true;
     if (volumeValue != 0)
         gpio_setPin(SPK_EN);
+}
+
+/* Receive audio wants the speaker amplifier (audio_D890UV.c) */
+bool radio_afActive()
+{
+    return afOutput && (volumeValue != 0);
 }
 
 void radio_disableAfOutput()
@@ -697,7 +745,8 @@ void radio_enableRx()
 
     tune();
     sctSend(sctRxEntry, ARRAY_SIZE(sctRxEntry));
-    wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A, volumeValue != 0);
+    wx4818n_setGpio(&wx4818nB, GPIO_B_AF_A,
+                    (volumeValue != 0) && (rxMuted == false));
     status = RX;
 }
 
