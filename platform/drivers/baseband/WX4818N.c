@@ -406,9 +406,11 @@ static const struct regValue fmTxSequence3[] = {
 #define WX4818N_REG_TONE 0x2E
 #define WX4818N_TONE_IDX(n) ((uint16_t)(n) << 13)
 
-/* Tone register value: Hz * 2^21 / 100000, tone in 0.1Hz (0x080E3D98) */
-#define WX4818N_TONE_VALUE(t) \
-    ((uint16_t)(((uint32_t)(t) * 2097152U) / 1000000U))
+/*
+ * Tone register value: Hz * 2^21 / 100000, tone in 0.1Hz (0x080E3D98).
+ * 2^21 / 10^6 = 2^17 / 62500 keeps the product in 32 bits up to 3276.7Hz.
+ */
+#define WX4818N_TONE_VALUE(t) ((uint16_t)(((uint32_t)(t) * 131072U) / 62500U))
 
 /* Band settings for transmission (0x080E3C68): 0x5F is left alone */
 static const struct regValue upperBandTx[] = {
