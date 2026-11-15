@@ -35,6 +35,7 @@ signal generator and spectrum analyser.
 | M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). No microphone yet: the band B route is proven but off (3.8) |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
+| GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either |
 
 ## 2. Building and flashing
 
@@ -106,7 +107,8 @@ AT32F435 board revision, is mostly valid. The display and keypad pins differ.
   - PC12 is the LN4898 speaker amplifier, **high = on**. The I/O table's
     "SPK MUTE H=OFF" means the mute is off when high.
   - PD0-PD2 are audio routing switches; for RX use PD2=1, PD1=0, PD0=0.
-    PE0 is mic mute (high), PA1 Bluetooth power, PE1 APC power.
+    PE0 is mic mute (high), PE1 APC power. PA1 switches the Bluetooth
+    headset mic into the TX audio (3.13); it is not the module's power.
   - Band A receive audio reaches the amplifier only with band B chip GPO2
     high; the level is set by a volume device on a bit-banged I2C bus
     (PB6 SDA, PB7 SCL). See 3.1.
@@ -808,6 +810,58 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   unless that path is connected: no FM noise under beeps, prompts or in M17.
 - **Keys**: P1 and P2 (stock codes 19, 20, keypad row 3) checked on the
   radio; used as left and right.
+
+### 3.13 Other peripherals of the stock firmware (survey of V1.05)
+
+From the disassembly, not checked on the radio unless stated.
+
+- **UARTs** (all interrupt receive, byte by byte; callback `0x08057590`):
+
+  | UART | Pins | Baud | Init | Use |
+  |---|---|---|---|---|
+  | USART1 | PA9/PA10, AF7 | 115200 | `0x08063358` | programming over the K cable (started only at power-up with PA10 low, `0x08023BA6`; USB is then off) |
+  | USART2 | PA2/PA3, AF7, pull-down | 9600 | `0x08063498` | GNSS receiver |
+  | UART4 | PC10/PC11, AF8, pull-up | 115200 | `0x080635C8` | Bluetooth module |
+
+- **GNSS**:
+  - Power: band B chip GPIO6 high (`0x0805D1BC` -> `0x080E35A0` ->
+    `0x08019AB4`, register `0x52` of chip B), when the GPS setting (settings
+    byte +0x28) is on or a GPS screen is open; off at power-down and sleep.
+  - Two receiver types (`0x08113164`, detection `0x080C9B74`): CASIC
+    (`$PCAS02,1000`, `$PCAS03` with GGA and RMC only or GSV only on the
+    satellite screen, `$PCAS04,n` for the constellations) and one using
+    `$CFGSYS`/`$CFGMSG`. Parsed: RMC, GGA, GSV, VTG; GPTXT for detection.
+    The time sets the RTC (`0x0804C190`); the position feeds APRS.
+  - Port: `gps_stm32u5.c` on USART2, receive only, receiver left in its
+    default configuration (OpenRTX takes the fix type from GSA, which a
+    CASIC receiver sends by default), power through
+    `radio_setGpsPower()`. On the development radio PA3 stays low and no
+    byte arrives with GPIO6 high or low, and stock's GPS screen reports the
+    GPS as not on: most likely no receiver is fitted. Untested.
+- **Bluetooth**: module on UART4, no power or reset pin found (47 GPIO
+  set-ups and 476 GPIO writes scanned). AT commands (`AT+` ... CR LF,
+  queue `0x080D75D0`): queries `AGHF? CONN? LENAME? PIN? VER?`; headset
+  `HFDISCOVER`, `AGHF`, `SCAN`, `CONN=<MAC>`, `DISC=<MAC>`; low-energy PTT
+  accessory `LESCAN=2`, `LEDISC`, `ADATA`; audio `AUDIO`, `MICEN`, `SPKEN`,
+  `MICGAIN`, `SPKGAIN`, `NSSUPPRESS`, `NSAGGRESS`; `LENAME`, `DNAME`,
+  `PIN`. Replies (`0x080C630C`): OK, +ERR, +CONN, +SCAN, +AUDIO, +DISC,
+  +PTTKEY, +PIN, +VER, +LENAME, +PTTBATT, +HFREQ, +READY, +ADATA, +DATA,
+  +AGHF; accessory data `+PTT=P`/`+PTT=R`, `+KEY=`, `+BT MIC`. The headset
+  mic is analog: in TX with Bluetooth audio the routing function
+  `0x081140EC` uses mode 1, which only adds PA1 = 1.
+- **Routing modes** of `0x081140EC` (PA1, PE0, PD2, PD1, PD0): 0 = 0, 1,
+  (0 in TX, else 1), 0, 0; 1 = as 0 with PA1 = 1; 2 = 0, 1, 0, 1, 0;
+  3 = 0, 0, 0, 1, 1; 4 = 0, 0, 0, 0, 1; 5 = 0, 1, 1, 0, 0 (RX with
+  Bluetooth audio).
+- **APRS**: analog AFSK made by the MCU on PB9 (TIM4 channel 4 fed by DMA,
+  `0x080195A0`, sine generator `0x0810E6C8`), routing `0x08118DF8(2, 1)`:
+  the same TONE path as the port's M17 TX. AX.25 frames `0x08059B64`.
+- **Satellites**: an orbit table (`0x0814A627`-`0x0814B404`: AO-91,
+  AO-27, IO-86, ISS, PO-101, SO-50, LilacSat), "Satellite/PACsat" menu.
+- **Other menus**: local recording (no file system or mass storage code;
+  probably the NAND), FM broadcast and AM air band reception (band B
+  GPIO4/5/7 "AM/FM ..."), NOAA, SSTV, 2/5-tone, DTMF, roaming, VOX. PC13
+  is an output driven from the settings (`0x0810E010`), purpose unknown.
 
 ## 4. WX4818N registers
 
