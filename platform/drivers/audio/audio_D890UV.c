@@ -110,10 +110,13 @@ static const struct audioDriver silence_audio_driver = {
 };
 #pragma GCC diagnostic pop
 
+static const struct pwmD890UVcfg pwmModulator = { .speaker = false };
+static const struct pwmD890UVcfg pwmSpeaker = { .speaker = true };
+
 const struct audioDevice outputDevices[] = {
     { NULL, 0, 0, SINK_MCU },
-    { &pwmD890UV_audio_driver, 0, 0, SINK_RTX },
-    { &pwmD890UV_audio_driver, 0, 0, SINK_SPK },
+    { &pwmD890UV_audio_driver, &pwmModulator, 0, SINK_RTX },
+    { &pwmD890UV_audio_driver, &pwmSpeaker, 0, SINK_SPK },
 };
 
 const struct audioDevice inputDevices[] = {
@@ -135,18 +138,92 @@ void audio_terminate()
     pwmD890UV_terminate();
 }
 
+void platform_updateMcuAudioGain();
+bool radio_afActive();
+void radio_muteRxAudio(bool mute);
+
+/*
+ * Speaker amplifier for MCU audio. It needs time to wake up: short key beeps
+ * started together with it were lost (only its switch-on pop was heard). A
+ * beep therefore waits until the amplifier has been on for AMP_WAKEUP_MS, and
+ * the amplifier stays on AMP_HANG_MS after MCU audio ends, so that a series
+ * of beeps does not pop each time.
+ */
+#define AMP_WAKEUP_MS 100
+#define AMP_HANG_MS 2000
+
+static long long ampOnTick;
+static long long mcuOffTick;
+static bool mcuSpk;
+static bool rxSpk; // Receive path connected (FM with the squelch open)
+static bool hangPending;
+
+static void ampOn()
+{
+    if (gpio_readPin(SPK_EN) == 0) {
+        gpio_setPin(SPK_EN);
+        ampOnTick = getTick();
+    }
+}
+
+uint16_t audio_ampWakeupDelay()
+{
+    long long elapsed = getTick() - ampOnTick;
+    if ((gpio_readPin(SPK_EN) == 0) || (elapsed < 0))
+        return AMP_WAKEUP_MS;
+    if (elapsed >= AMP_WAKEUP_MS)
+        return 0;
+
+    return AMP_WAKEUP_MS - elapsed;
+}
+
+void audio_poll()
+{
+    if ((hangPending == false) || mcuSpk || pwmD890UV_beepActive())
+        return;
+
+    if ((getTick() - mcuOffTick) < AMP_HANG_MS)
+        return;
+
+    hangPending = false;
+    if ((rxSpk == false) && (radio_afActive() == false))
+        gpio_clearPin(SPK_EN);
+}
+
 void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
-    if ((sink == SINK_SPK)
-        && ((source == SOURCE_RTX) || (source == SOURCE_MCU)))
-        gpio_setPin(SPK_EN);
+    if (sink != SINK_SPK)
+        return;
+
+    if (source == SOURCE_MCU) {
+        platform_updateMcuAudioGain();
+        mcuSpk = true;
+        hangPending = false;
+        ampOn();
+    } else if (source == SOURCE_RTX) {
+        rxSpk = true;
+        radio_muteRxAudio(false);
+        ampOn();
+    }
 }
 
 void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
-    if ((sink == SINK_SPK)
-        && ((source == SOURCE_RTX) || (source == SOURCE_MCU)))
-        gpio_clearPin(SPK_EN);
+    if (sink != SINK_SPK)
+        return;
+
+    if (source == SOURCE_MCU) {
+        // Switched off later by audio_poll()
+        mcuSpk = false;
+        mcuOffTick = getTick();
+        hangPending = true;
+    } else if (source == SOURCE_RTX) {
+        // Suspended by a voice prompt or closed: no receive audio under it
+        rxSpk = false;
+        radio_muteRxAudio(true);
+        if ((mcuSpk == false) && (hangPending == false))
+            gpio_clearPin(SPK_EN);
+    }
 }
 
 bool audio_checkPathCompatibility(const enum AudioSource p1Source,

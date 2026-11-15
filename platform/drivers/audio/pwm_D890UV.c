@@ -5,6 +5,7 @@
  */
 
 #include <errno.h>
+#include <math.h>
 #include <hwconfig.h>
 #include "interfaces/delays.h"
 #include "peripherals/gpio.h"
@@ -17,6 +18,10 @@
  * and writes the next sample. The PWM idles at mid-scale between streams:
  * the TX path is DC coupled down to well below 1Hz, so a level step would
  * pull the carrier for seconds.
+ *
+ * Beeps use the same timer: a sine from a table at 48kHz, while no stream
+ * runs. Streams to the speaker and beeps are scaled by a gain set with the
+ * volume knob, as the TONE path does not go through the volume device.
  */
 
 #define PWM_TOP 0xFFu
@@ -26,6 +31,30 @@ static struct streamCtx *stream;
 static volatile size_t readPos;
 static volatile bool syncPoint;
 static volatile bool stopReq;
+static volatile int32_t gain = 256; // Sample gain, 256 = unity
+
+/*
+ * Extra factor for 16-bit stream samples: 1 maps full scale to the full PWM
+ * range (modulator). Speaker streams (voice prompts, Codec2 speech) use 24
+ * and a soft limiter, y = 127 x / (|x| + 64): speech has a high peak to
+ * average ratio, and linear gain only clipped its peaks without making it
+ * louder.
+ */
+#define MULT_FULL 1
+#define MULT_SPEECH 24
+#define SOFT_KNEE 64
+static volatile int32_t streamMult = MULT_FULL;
+
+#define BEEP_RATE_HZ 48000
+#define BEEP_TABLE 256
+
+static int8_t sineTable[BEEP_TABLE];
+static volatile bool beepOn;
+static volatile uint32_t beepPhase;
+static volatile uint32_t beepStep;
+static volatile uint32_t beepCount; // Samples since the beep start
+static volatile uint32_t beepDelay; // Silent samples before the tone
+static volatile uint32_t beepEnd;   // Sample at which to stop, 0 = playing
 
 static inline void setIdle()
 {
@@ -44,11 +73,37 @@ void _Z15TIM7_IRQHandlerv()
 {
     TIM7->SR = 0;
 
+    if (beepOn) {
+        beepCount += 1;
+        if ((beepEnd != 0) && (beepCount >= beepEnd)) {
+            beepOn = false;
+            TIM7->CR1 = 0;
+            TIM7->DIER = 0;
+            setIdle();
+            return;
+        }
+
+        if (beepCount <= beepDelay) {
+            setIdle();
+            return;
+        }
+
+        beepPhase += beepStep;
+        TIM4->CCR4 = (int32_t)PWM_MID
+                   + ((sineTable[beepPhase >> 24] * gain) >> 8);
+        return;
+    }
+
     if (stream == NULL)
         return;
 
-    /* 16-bit signed sample to the 8-bit PWM range */
-    int32_t v = (int32_t)PWM_MID + (stream->buffer[readPos] >> 8);
+    /* 16-bit signed sample to the 8-bit PWM range, times the gain */
+    int32_t x = (stream->buffer[readPos] * gain * streamMult) >> 16;
+    if (streamMult != MULT_FULL) {
+        int32_t ax = (x < 0) ? -x : x;
+        x = (127 * x) / (ax + SOFT_KNEE);
+    }
+    int32_t v = (int32_t)PWM_MID + x;
     if (v < 0)
         v = 0;
     if (v > (int32_t)PWM_TOP)
@@ -81,6 +136,10 @@ void _Z15TIM7_IRQHandlerv()
 
 void pwmD890UV_init()
 {
+    for (int i = 0; i < BEEP_TABLE; i++)
+        sineTable[i] =
+            (int8_t)(127.0f * sinf(2.0f * 3.14159265f * i / BEEP_TABLE));
+
     RCC->APB1ENR1 |= RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN;
     __DSB();
 
@@ -110,17 +169,70 @@ void pwmD890UV_terminate()
     RCC->APB1ENR1 &= ~(RCC_APB1ENR1_TIM4EN | RCC_APB1ENR1_TIM7EN);
 }
 
+void pwmD890UV_setGain(const uint16_t newGain)
+{
+    gain = newGain;
+}
+
+void pwmD890UV_beepStart(const uint16_t freq, const uint16_t delayMs)
+{
+    if ((stream != NULL) && (stream->running != 0))
+        return;
+
+    TIM7->DIER = 0;
+    beepStep = (uint32_t)(((uint64_t)freq << 32) / BEEP_RATE_HZ);
+    beepPhase = 0;
+    beepCount = 0;
+    beepDelay = ((uint32_t)delayMs * BEEP_RATE_HZ) / 1000;
+    beepEnd = 0;
+    beepOn = true;
+
+    TIM7->CR1 = 0;
+    TIM7->ARR = (SystemCoreClock / BEEP_RATE_HZ) - 1;
+    TIM7->EGR = TIM_EGR_UG;
+    TIM7->SR = 0;
+    TIM7->DIER = TIM_DIER_UIE;
+    TIM7->CR1 = TIM_CR1_CEN;
+}
+
+void pwmD890UV_beepStop()
+{
+    if ((beepOn == false) || (beepEnd != 0))
+        return;
+
+    // Play the tone for as long as requested, after the start delay
+    uint32_t end = beepCount + beepDelay;
+    if (end == 0)
+        end = 1;
+    beepEnd = end;
+}
+
+bool pwmD890UV_beepActive()
+{
+    return beepOn;
+}
+
 static int pwmD890UV_start(const uint8_t instance, const void *config,
                            struct streamCtx *ctx)
 {
     (void)instance;
-    (void)config;
 
     if ((ctx == NULL) || (ctx->running != 0) || (ctx->sampleRate == 0))
         return -EINVAL;
 
     if ((stream != NULL) && (stream->running != 0))
         return -EBUSY;
+
+    // A stream takes over a beep. Speaker streams follow the volume gain,
+    // the others (modulator) are unscaled.
+    beepOn = false;
+    const struct pwmD890UVcfg *cfg = config;
+    if ((cfg == NULL) || (cfg->speaker == false)) {
+        gain = 256;
+        streamMult = MULT_FULL;
+    } else {
+        streamMult = MULT_SPEECH;
+    }
 
     ctx->running = 1;
     stream = ctx;

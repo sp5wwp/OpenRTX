@@ -13,6 +13,11 @@
 #include "drivers/USB/usb.h"
 #include "drivers/I2C/i2c_bitbang.h"
 #include "interfaces/audio.h"
+#include "drivers/audio/pwm_D890UV.h"
+
+/* Speaker amplifier timing for MCU audio, audio_D890UV.c */
+uint16_t audio_ampWakeupDelay();
+void audio_poll();
 
 void radio_setVolume(uint8_t volume);
 
@@ -137,6 +142,26 @@ uint8_t platform_getMicLevel()
     return 0;
 }
 
+/*
+ * Gain of MCU audio on the speaker (beeps, voice prompts) from the volume
+ * knob: square law between 1/4 and 3/4 of full scale (at the minimum, about
+ * the level of a +-64 PWM step tone, clearly audible).
+ */
+#define MCU_AUDIO_GAIN_MIN 64
+#define MCU_AUDIO_GAIN_MAX 192
+
+void platform_updateMcuAudioGain()
+{
+    uint32_t level = adc_getVoltage(&adc1, ADC_VOL_CH) * 255 / 3300000;
+    if (level > 255)
+        level = 255;
+
+    uint32_t gain = MCU_AUDIO_GAIN_MIN
+                  + ((level * level * (MCU_AUDIO_GAIN_MAX - MCU_AUDIO_GAIN_MIN))
+                     / (255 * 255));
+    pwmD890UV_setGain(gain);
+}
+
 uint8_t platform_getVolumeLevel()
 {
     // Potentiometer between ground and 3.3V
@@ -144,6 +169,9 @@ uint8_t platform_getVolumeLevel()
     uint32_t level = (pin * 255) / 3300000;
     if (level > 255)
         level = 255;
+
+    // Speaker amplifier hang time after beeps and prompts (audio_D890UV.c)
+    audio_poll();
 
     // Update the audio level only when the knob moves, ignoring ADC noise
     static uint32_t lastLevel = 0xFFFF;
@@ -217,13 +245,20 @@ void platform_ledOff(led_t led)
  * firmware alone (0x14 frequency, 0x16 = 0x8000 enable, 0x30 level) send the
  * received noise to the speaker instead of a tone, so the speaker stays muted.
  */
+/*
+ * Beeps on PB9 (pwm_D890UV.c). The TONE path does not go through the volume
+ * device, so the level follows the knob in software, never below a minimum
+ * so that beeps stay audible with the receive audio turned down.
+ */
 void platform_beepStart(uint16_t freq)
 {
-    (void)freq;
+    platform_updateMcuAudioGain();
+    pwmD890UV_beepStart(freq, audio_ampWakeupDelay());
 }
 
 void platform_beepStop()
 {
+    pwmD890UV_beepStop();
 }
 
 const hwInfo_t *platform_getHwInfo()
