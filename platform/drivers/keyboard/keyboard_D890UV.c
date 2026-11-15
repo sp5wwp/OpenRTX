@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include "peripherals/gpio.h"
 #include "interfaces/delays.h"
@@ -41,12 +42,54 @@ static const int8_t knobStep[16] = {
     0, 1, -1, 0, -1, 0, 0, 1, 1, 0, 0, -1, 0, -1, 1, 0,
 };
 
-static uint8_t knobPrev;
+/*
+ * The knob is decoded in EXTI interrupts on both edges of both lines: polled
+ * at the 40Hz keypad scan, a quick turn skipped states and lost steps.
+ * knobCount holds the signed number of transitions, knobUsed the part already
+ * reported as steps.
+ */
+#define KNOB_TRANSITIONS_PER_STEP 2
+#define KNOB_MAX_BACKLOG 8
+
+static volatile uint8_t knobPrev;
+volatile int32_t kbd_knobCount;
+static int32_t knobUsed;
+static bool knobGap;
 
 static uint8_t readKnob()
 {
     return (gpio_readPin(KNOB_B) << 1) | gpio_readPin(KNOB_A);
 }
+
+static void knobIrq()
+{
+    EXTI->RPR1 = (1u << 8) | (1u << 9);
+    EXTI->FPR1 = (1u << 8) | (1u << 9);
+
+    uint8_t knob = readKnob();
+    kbd_knobCount += knobStep[(knobPrev << 2) | knob];
+    knobPrev = knob;
+}
+
+void _Z16EXTI8_IRQHandlerv()
+{
+    knobIrq();
+}
+
+void _Z16EXTI9_IRQHandlerv()
+{
+    knobIrq();
+}
+
+/*
+ * Release debounce: a key counts as released after KEY_RELEASE_SCANS scans
+ * without contact. A contact bounce seen by one scan made a single press
+ * count twice.
+ */
+#define KEY_RELEASE_SCANS 2
+
+static keyboard_t heldKeys;
+static uint8_t releaseScans[32];
 
 static inline GPIO_TypeDef *portOf(const void *port, const uint8_t pin)
 {
@@ -93,10 +136,26 @@ void kbd_init()
     gpio_setMode(KNOB_A, INPUT);
     gpio_setMode(KNOB_B, INPUT);
     knobPrev = readKnob();
+
+    /* PC8 and PC9 on EXTI lines 8 and 9, both edges */
+    RCC->APB3ENR |= RCC_APB3ENR_SYSCFGEN;
+    EXTI->EXTICR[2] = (EXTI->EXTICR[2] & ~0xFFFFu) | 0x0202u;
+    EXTI->RTSR1 |= (1u << 8) | (1u << 9);
+    EXTI->FTSR1 |= (1u << 8) | (1u << 9);
+    EXTI->RPR1 = (1u << 8) | (1u << 9);
+    EXTI->FPR1 = (1u << 8) | (1u << 9);
+    EXTI->IMR1 |= (1u << 8) | (1u << 9);
+    NVIC_SetPriority(EXTI8_IRQn, 12);
+    NVIC_SetPriority(EXTI9_IRQn, 12);
+    NVIC_EnableIRQ(EXTI8_IRQn);
+    NVIC_EnableIRQ(EXTI9_IRQn);
 }
 
 void kbd_terminate()
 {
+    NVIC_DisableIRQ(EXTI8_IRQn);
+    NVIC_DisableIRQ(EXTI9_IRQn);
+    EXTI->IMR1 &= ~((1u << 8) | (1u << 9));
 }
 
 /* Result of the last scan, for kbd_lastKeys() */
@@ -132,15 +191,45 @@ keyboard_t kbd_getKeys()
     if (gpio_readPin(ALARM_KEY) == 0)
         keys |= KEY_F3;
 
-    uint8_t knob = readKnob();
-    if (knob != knobPrev) {
-        int8_t dir = knobStep[(knobPrev << 2) | knob];
-        if (dir > 0)
-            keys |= KNOB_RIGHT;
-        else if (dir < 0)
-            keys |= KNOB_LEFT;
+    /* Debounce the key releases */
+    for (uint8_t k = 0; k < 32; k++) {
+        keyboard_t mask = (keyboard_t)1 << k;
+        if (keys & mask) {
+            heldKeys |= mask;
+            releaseScans[k] = 0;
+        } else if (heldKeys & mask) {
+            releaseScans[k] += 1;
+            if (releaseScans[k] >= KEY_RELEASE_SCANS)
+                heldKeys &= ~mask;
+        }
+    }
+    keys = heldKeys;
 
-        knobPrev = knob;
+    /*
+     * One knob step per scan, and a scan without knob bits after each: input
+     * events are sent on changes only, so steps in a row would merge.
+     */
+    if (knobGap) {
+        knobGap = false;
+    } else {
+        int32_t steps = (kbd_knobCount - knobUsed) / KNOB_TRANSITIONS_PER_STEP;
+        // Drop the excess of a fast spin rather than step on for seconds
+        if (steps > KNOB_MAX_BACKLOG) {
+            knobUsed += (steps - KNOB_MAX_BACKLOG) * KNOB_TRANSITIONS_PER_STEP;
+            steps = KNOB_MAX_BACKLOG;
+        } else if (steps < -KNOB_MAX_BACKLOG) {
+            knobUsed += (steps + KNOB_MAX_BACKLOG) * KNOB_TRANSITIONS_PER_STEP;
+            steps = -KNOB_MAX_BACKLOG;
+        }
+        if (steps > 0) {
+            keys |= KNOB_RIGHT;
+            knobUsed += KNOB_TRANSITIONS_PER_STEP;
+            knobGap = true;
+        } else if (steps < 0) {
+            keys |= KNOB_LEFT;
+            knobUsed -= KNOB_TRANSITIONS_PER_STEP;
+            knobGap = true;
+        }
     }
 
     lastKeys = keys;
