@@ -285,6 +285,15 @@ static void setFrontEnd(uint32_t freq)
 #define MIC_ROUTE_FREQ 438000000U
 
 /*
+ * The microphone route is off: with band B's chip in TX mode, band A's own
+ * baseband came back into its modulator as an echo two symbols late (0.42ms,
+ * about 7%), raising the M17 EVM from 6.5% to 7.5%, on top of the unusable
+ * microphone level (NOTES.md 3.8). With it off, the microphone driver samples
+ * PC0 with band B in standby, i.e. silence.
+ */
+#define MIC_ROUTE_ENABLED 0
+
+/*
  * Band B's audio enables (0x30 low byte) on the microphone route. With bit 6
  * set (0x77, as for band A) the microphone passes clearly, but band B's chip
  * oscillates at 2176Hz on its microphone line, which leaks into band A's
@@ -319,10 +328,12 @@ static void micRouteStop()
 
 /*
  * Modulation gain for the M17 baseband, register 0x31 bits 11:0: logarithmic,
- * about x2 per 0x100 (NOTES.md 3.10). With OpenRTX's M17 modulator, 0x700
- * gave about +-2.95kHz for the outer symbols; M17 wants +-2.4kHz.
+ * about x2 per 0x100 (NOTES.md 3.10). With OpenRTX's M17 modulator at full
+ * PWM scale, 0x6B0 gave +-2435Hz for the outer symbols (M17: +-2.4kHz) with
+ * clipped peaks; with the modulator stream at 85% (pwm_D890UV.c) 0x6EC gave
+ * +-2303Hz, hence 0x6FB. Measured with re-timed symbols (NOTES.md 3.11).
  */
-#define M17_MOD_GAIN 0x6B0
+#define M17_MOD_GAIN 0x6FB
 
 /* Transmitting M17 (no digital board TX packets to stop) */
 static bool txM17;
@@ -922,7 +933,7 @@ void radio_enableTx()
         setToneBurst(config->toneEn);
     }
 
-    if (m17)
+    if (m17 && MIC_ROUTE_ENABLED)
         micRouteStart();
 
     txM17 = m17;
@@ -937,10 +948,12 @@ static void stopTx()
     gpio_clearPin(TX_PWR_EN);
     gpio_clearPin(APC_PWR);
     wx4818n_standby(&wx4818nA);
-    if (txM17)
-        micRouteStop();
-    else
+    if (txM17) {
+        if (MIC_ROUTE_ENABLED)
+            micRouteStop();
+    } else {
         sctSend(sctTxStop, ARRAY_SIZE(sctTxStop));
+    }
 }
 
 void radio_disableRtx()
