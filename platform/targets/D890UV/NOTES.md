@@ -414,6 +414,24 @@ logged):
   low level), so microphone -> codec -> board output -> MICIN works; the
   SCT3288 analog processing does not pass speech yet. The 24 kHz component
   is there in both modes.
+- **Codec access from the MCU** (tested on air with the `ANALOG_TONE`
+  1 kHz MOD tone as a reference, 2026-11-15):
+  - The board's FM modulation leaves on the VCTCXO net, driven by the
+    codec's LOR (1 k, 10 nF, 10 k, DC coupled); MICIN gets it through PD1's
+    B0 input. AF_IN (from AF-REP through 4.7 k, AC coupled) is the codec's
+    IN2_R; HPL drives D-VOL (AC coupled). Schematic: `DIGI-CODEC.pdf`.
+  - Codec bypass packets (TYPE 0x40) take one register/value pair per
+    packet, as stock sends them (`0x080F2540`); several pairs in one
+    packet (as in Sicomm's FAQ) apply only the first. Every packet is
+    answered `17 00`, so the answer proves nothing.
+  - A codec software reset (P0 R1 = 1) kills the MOD tone. Page selects,
+    DAC power and mute (P0 R63, R64), output driver power (P1 R9) and LOR
+    routing (P1 R15) have no effect, also as raw I2C writes
+    (`I2C_OPERATION`, field 0x6A, address 0x18: always answered `6A 00`,
+    even for absent addresses). I2C reads are refused (`17 06`). Most
+    likely the SCT3288 keeps the codec configured itself. Stock's codec
+    values (`0B 82`, `0F 90`, `10 1E`, `08 1F`) do not fit the AIC3204 map
+    on page 0 or 1 either, so the SCT3288 may translate them.
 - WORK_MODE debug byte 1 (1 kHz sine on the modulation port) gives a
   plain carrier in analog mode (the faint tone seen first leaked into the
   internal microphone). The MOD port is wired to the modulator, though:
@@ -745,8 +763,26 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
     on M17 receive entry after FM: the start dropped to +513 Hz (3.75 time
     constants), nothing visible on the SDR meanwhile. Proves the cause, but
     the receiver is deaf for 3 s, so not used.
-  - The real fix is sending M17 through the digital board's output, as
-    FM does (open item 11).
+  - In FM the step is not seen: switching MICIN between the two sources
+    in the middle of an FM transmission moves the carrier by a few Hz. The
+    FM set-up's voice high-pass removes it; M17's flat set-up (`0x2B` =
+    0xF08D) passes it. Of the set bits of `0x2B`, only bit 15 matters:
+    0x708D removes the drift at once, but it is the whole FM voice chain.
+    Swept with PWM tones on the M17 route: flat set-up flat from 20 Hz to
+    6 kHz; 0x708D more than 30 dB down below 200 Hz, about +6 dB/octave
+    pre-emphasis, a steep low-pass near 3.3 kHz. M17 does not survive it
+    and an MCU pre-compensation cannot restore what is removed.
+  - FM through the M17 path: the board's second output, D-VOL (codec HPL,
+    band B GPO1 high onto AF-REP, PD0 and PD1 high, PD2 low), carries
+    nothing during FM TX (1 kHz `ANALOG_TONE` gone on air, back on the
+    stock route).
+  - M17 through the board: not possible for now (3.5, codec bypass).
+  - Conclusion: one source for both modes needs the FM audio made by the
+    MCU (microphone -> MCU -> PB9 -> AF-REP, as M17), i.e. a usable
+    microphone route (3.8, open item 1). Until then the first M17
+    transmission after FM drifts. A stop-gap would be the pre-charge
+    above at the first M17 key-up after FM (about 3 s TX delay, receiver
+    never deaf); not implemented.
 
 ### 3.12 Beeps and voice prompts
 
@@ -979,6 +1015,20 @@ Pitfalls met so far:
   start-up); unplanted, the old TX trace gave `0x0000`.
 - **Check every register guess on the bench before building on it.**
 
+### 6.1 Automated RF tests
+
+- The monitor's `pt <ms>` keys the radio by software (at most 30 s, `pt 0`
+  releases), with the current channel settings: only with an operator at
+  the radio, Low power, dummy load.
+- `materials/work/rtlcap.py` captures with an RTL-SDR dongle through
+  librtlsdr (ctypes) and saves the FM-demodulated signal at 48 kHz, as
+  `fmdemod.py` does for SDR++ recordings. The Python reader loses samples
+  while a script is busy: identify test tones by their spectrum, not by
+  wall-clock time. M17 symbol measurements through it are noisier (EVM
+  about 12% for a signal measured at 5-6% with SDR++).
+- `codecctl.py`, `m17bits.py`, `sweep.py` (same folder): the codec,
+  `0x2B` and response tests of 3.5 and 3.11.
+
 ## 7. Open items, in priority order
 
 1. **Weak FM speech.** The port matches stock on air (3.5, 3.6); speech
@@ -1012,8 +1062,7 @@ Pitfalls met so far:
 9. ~~PC0 demodulator check~~: stock samples PC0 for tone decoding (4.2).
 10. ~~Licensing~~: done. `REUSE.toml` covers the STM32U5 CMSIS files; `reuse lint`
    and `scripts/clang_format.sh --check` pass for the port files.
-11. **M17 through the digital board's output**: feed the MCU baseband into
-    the board (AFIO or another codec input) and have its TLV320AIC3204 pass
-    it to MICO, so that M17 uses FM's source and the carrier drift after FM
-    goes away (3.11). Needs the codec routing and the board's SCT3288
-    commands that keep the codec on without its own modulation.
+11. **One modulation source for FM and M17** (carrier drift after FM,
+    3.11): through the board it fails (codec not controllable, 3.5); the
+    way left is FM audio made by the MCU on the M17 path, which needs the
+    microphone route (item 1, AnyTone's answer).
