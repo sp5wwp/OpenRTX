@@ -28,7 +28,7 @@ signal generator and spectrum analyser.
 | FM receive, UHF and VHF | Working, factory calibration applied |
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
 | Volume | Working: band A audio routed as stock, knob drives the I2C volume device (3.1), 128 steps, silent at the bottom |
-| FM transmit | Working as stock on air at Low: power levels (4.1), bandwidth, CTCSS encode, 1750 Hz burst, mic through the SCT3288 as stock (3.5). Speech is weak on the development radio, in stock too (3.8). On by default (`CONFIG_D890UV_TX`, `hwconfig.h`) |
+| FM transmit | Working as stock on air at Low: power levels (4.1), bandwidth, CTCSS encode (measured, 4.1), 1750 Hz burst, mic through the SCT3288 as stock (3.5). Speech is weak on the development radio, in stock too (3.8). On by default (`CONFIG_D890UV_TX`, `hwconfig.h`) |
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
@@ -70,7 +70,13 @@ AT32F435 board revision, is mostly valid. The display and keypad pins differ.
 - **Keys**:
   - Upper side key PE2 = `KEY_MONI`; lower side key PA14 = `KEY_F1`;
     top key PA8 = `KEY_F3`. All active low.
-  - PTT is PA10. The knob is a quadrature encoder on PC8/PC9.
+  - PTT is PA10. The knob is a quadrature encoder on PC8/PC9, two
+    transitions per click (counted on the radio: 20 for 10 clicks). Polled
+    at the 40 Hz key scan it lost clicks, so the port decodes it in EXTI
+    interrupts (lines 8 and 9, both edges) and hands the UI one step per
+    scan, with an empty scan between steps: input events are sent on
+    changes only, so steps in consecutive scans merged. Key releases are
+    debounced over two scans.
 - **ADC1**:
   - Battery on PC1 (IN2): 251770 uV at the pin per battery volt, plus a
     20 mV offset.
@@ -827,6 +833,12 @@ UHF/VHF, narrow/wide, with and without CTCSS.
   the modulation calibration. `0x2D` = 0x0215 up to value 0xACC, 0x3215
   above; `0x2F` = 0x0A0F. Without a tone, `0x08127BE8` writes another set.
   The 51 stock tones are the table at `0x0814A820` (0.1 Hz units).
+- CTCSS on air (SDR, 0.2 W): 127.3 Hz came out at 127.26-127.27 Hz with
+  397 Hz deviation narrow and 794 Hz wide, 250.3 Hz at 250.30 Hz with 390 Hz
+  narrow. Harmonics are 61 dB or more down, the level is steady, and there's
+  nothing in the voice band. The port first computed the value in 32 bits
+  (tone * 2^21 overflowed above 204.8 Hz: 250.3 Hz went out at 45.5 Hz);
+  it now uses 2^17 / 62500.
 - DCS encode is `0x080E3ED0(code, inverted)`, not analysed yet.
 - Channel struct (pointer 0x2001AFBC, band A 0x2000C230, band B 0x2000C234):
   byte +8 bits 1:0 mode (0 analog), 3:2 power, 5:4 bandwidth; +0x39 signed
