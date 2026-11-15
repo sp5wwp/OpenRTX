@@ -32,7 +32,7 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Microphone through band B's chip to PC0 (3.8): route proven, level not usable yet |
+| M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. No microphone yet: the band B route is proven but off (3.8) |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
 
@@ -593,6 +593,11 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     through the microphone (only with the real mic attached, also with band
     B on 145 MHz).
   - Paused until AnyTone answers. The port keeps bit 6 off.
+- **The route also echoes**: with band B's chip in TX mode (bit 6 off), the
+  M17 symbols carried an echo of the symbol two periods earlier (0.42 ms,
+  about 7%, inter-symbol interference 133 Hz RMS; 3.11). With band B left
+  in standby it is gone. The port now leaves the route off
+  (`MIC_ROUTE_ENABLED` 0): M17 sends silence.
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
@@ -693,6 +698,24 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   outer symbols were about +-2.95 kHz, hence 0x6B0 (to be measured with a
   timing-recovering slicer; the windowed one in `materials/work/m17sym.py`
   is not reliable over long recordings).
+- **Deviation calibration** (`materials/work/m17meas.py`: RRC matched
+  filter, every frame re-timed on its sync word with sub-sample precision,
+  four-level clustering, symbol error regressed on the neighbouring symbols;
+  EVM against levels centred on the measured frequency offset):
+
+  | Set-up | Outer / inner (Hz) | Scatter (Hz) | ISI | EVM |
+  |---|---|---|---|---|
+  | full scale, 0x6B0 | 2435 / 808 | 140-318 | 36 Hz | 10.4% |
+  | 85%, 0x6FB, mic route on | 2374 / 794 | 174-183 | 133 Hz | 7.5% |
+  | 85%, 0x6FB, route off, K plugged | 2385 / 795 | 153-156 | 38 Hz | 6.5% |
+  | 85%, 0x6FB, route off, K unplugged | 2395 / 799 | 110-118 | 34 Hz | 4.8% |
+
+  At full scale the modulator's RRC peaks went past the 8-bit PWM range:
+  the outer symbols scattered twice as much and a 4800 Hz harmonic showed.
+  The modulator stream is now at 85% (`pwm_D890UV.c`) and `0x31` = 0x16FB.
+  The mic route echo is described in 3.8. With the USB cable plugged in the
+  random part is a quarter larger. The radio's offset against the SDR
+  drifted from +12 to +222 Hz between recordings (0.5 ppm, warm-up).
 - **Leftover samples**: about 35 ms of the previous transmission's last
   frame was sent before the preamble, as OpenRTX's modulator writes only the
   idle half before the first sync; `Modulator::start()` now clears the
