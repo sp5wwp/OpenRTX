@@ -63,7 +63,7 @@ static const rtxStatus_t *config;
 enum calField {
     CAL_A_XTAL = 0x00 / 2, ///< Reference correction, 2000 = none
     CAL_MOD = 0x06 / 2,    ///< Modulation, register 0x31 (A: UHF, B: VHF)
-    CAL_A_TONE = 0x0C / 2, ///< Modulation, register 0x2E entry 6
+    CAL_A_MIC = 0x0C / 2,  ///< Mic gain "A-MIC", register 0x2E entry 6
     CAL_A_UHF0 = 0x18 / 2, ///< UHF filter tuning at 400MHz
     CAL_A_UHF1 = 0x1A / 2, ///< UHF filter tuning at 460MHz
     CAL_A_UHF2 = 0x1C / 2, ///< UHF filter tuning at 520MHz
@@ -934,7 +934,7 @@ void radio_enableTx()
         .ctcss = (config->txToneEn && !m17) ? config->txTone : 0,
         .modCal = m17 ? M17_MOD_GAIN :
                         (uhf ? calA[CAL_MOD] : calB[CAL_MOD]) & 0x0FFF,
-        .toneCal = calA[CAL_A_TONE],
+        .toneCal = calA[CAL_A_MIC],
         .baseband = m17,
     };
 
