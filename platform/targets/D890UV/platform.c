@@ -6,6 +6,7 @@
 
 #include <drivers/ADC/adc_stm32.h>
 #include <hwconfig.h>
+#include <interfaces/delays.h>
 #include <interfaces/nvmem.h>
 #include <interfaces/platform.h>
 #include <peripherals/gpio.h>
@@ -188,9 +189,20 @@ int8_t platform_getChSelector()
     return 0;
 }
 
+/*
+ * Software PTT for the monitor ("pt" command): keyed until this tick, for
+ * scripted tests with an operator at the radio.
+ */
+static volatile long long softPttUntil;
+
+void platform_setSoftPtt(uint32_t ms)
+{
+    softPttUntil = (ms == 0) ? 0 : getTick() + ms;
+}
+
 bool platform_getPttStatus()
 {
-    return gpio_readPin(PTT_SW) == 0;
+    return (gpio_readPin(PTT_SW) == 0) || (getTick() < softPttUntil);
 }
 
 bool platform_pwrButtonStatus()

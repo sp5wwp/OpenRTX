@@ -1214,6 +1214,28 @@ static const char *cmdPing(char **arg)
     return NULL;
 }
 
+void platform_setSoftPtt(uint32_t ms);
+
+/*
+ * Software PTT: "pt <ms, hex>" keys the radio for that time, at most 30s,
+ * "pt 0" releases it. Transmits with the current channel settings.
+ */
+#define SOFT_PTT_MAX_MS 30000
+
+static const char *cmdSoftPtt(char **arg)
+{
+    uint32_t ms;
+
+    if ((arg[0] == NULL) || !parseHex(arg[0], &ms))
+        return "usage: pt <ms, hex>";
+
+    if (ms > SOFT_PTT_MAX_MS)
+        ms = SOFT_PTT_MAX_MS;
+
+    platform_setSoftPtt(ms);
+    return NULL;
+}
+
 struct command {
     const char *name;
     const char *(*func)(char **arg);
@@ -1229,6 +1251,7 @@ static const struct command commands[] = {
     { "ar", cmdAudioRecord }, { "tg", cmdTestSignal },  { "ms", cmdMicSearch },
     { "mr", cmdMicResults },  { "mx", cmdMicCheck },    { "bx", cmdBandBTx },
     { "gz", cmdGoertzel },    { "mg", cmdMicGain },     { "mo", cmdMicOsc },
+    { "pt", cmdSoftPtt },
 };
 
 void monitor_exec(char *line)
