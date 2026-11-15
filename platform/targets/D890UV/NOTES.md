@@ -416,6 +416,30 @@ logged):
   low level), so microphone -> codec -> board output -> MICIN works; the
   SCT3288 analog processing does not pass speech yet. The 24 kHz component
   is there in both modes.
+- **FM microphone gain** (traced in the emulator, 2026-11-15):
+  - Codec gain at PTT (codec packet `10 xx`): `table[0x0814B380]` = 20,
+    25, 30, 35, 40, indexed by the analog mic level 1-5 (settings byte
+    `+0x0F`, front panel "AnaMic Level"; `0x081064D4`). The development
+    radio is at level 3 (30, stock's `10 1E`). NX mode uses settings
+    `+0x153`; with the noise-reduction board, calibration A+0x1E.
+    Reception uses `table[0x0814B37A]` with settings `+0x113`.
+  - SCT3288 field `0x68` is DIGI_MIC_GAIN, digital modes only (`0x08117E50`:
+    500 with the noise-reduction board, 2500 with settings `+0x57`, else the
+    stored value at 0x200151FC, 3000 here).
+  - The analog gains are in ANALOG_CONFIG (`0x3C`, Sicomm 1.2.43): mode
+    byte, TX gain before the limiter (Q16.11, stock 0x4650 = x8.8), TX gain
+    after the limiter (Q16.12, stock 0x0578 = x0.34), CTCSS and DCS gains
+    (0), RX volume (Q16.11, 0x00BE).
+  - WX4818N mic gain (`0x2E` entry 6): the A-MIC calibration (5).
+  - On air (SDR, 0.2 W): with stock's values speech was not measurable
+    (2 Hz RMS, blowing about 150 Hz peaks). Codec level 5 (40): speech peaks
+    about 230-280 Hz, still about 18 dB short of normal FM speech.
+    MOD_GAIN (`0x2C`) 0x0DAC -> 0x1B58 made it quieter. Still to try:
+    ANALOG_CONFIG's gain after the limiter (one step per key-up, sent
+    before the call start `78`, a phone playing 1 kHz at a fixed distance).
+  - Pitfalls: ANALOG_CONFIG sent during a call, or the speaker amplifier
+    (PC12) on during TX, left FM without any audio (the board restarts or
+    mutes; see above for PC12).
 - **Codec access from the MCU** (tested on air with the `ANALOG_TONE`
   1 kHz MOD tone as a reference, 2026-11-15):
   - The board's FM modulation leaves on the VCTCXO net, driven by the
@@ -619,6 +643,17 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     through the microphone (only with the real mic attached, also with band
     B on 145 MHz).
   - Paused until AnyTone answers. The port keeps bit 6 off.
+- **Baseband leak** (measured during M17 TX with the software PTT and
+  the microphone stream buffer, K cable in): the microphone samples carry a
+  3100 RMS copy of our own M17 baseband, 300-3000 Hz (band B's voice
+  chain). It disappears with the PWM frozen (264), with band B in standby
+  (259) and with PE0 high (224): PE0 low joins the radio microphone to the
+  switch chain that carries the baseband to band A (stock calls it "mic ->
+  PD0/PD1 chain", routing modes 3/4). PE0 high also removes the microphone
+  (no speech or blowing in the decoded Codec2 audio). Band B's `0x2E`
+  entry 6 (it was 0 in the route; the A-MIC value is the stock analog
+  equivalent) changed neither. A software echo canceller (the MCU knows the
+  baseband it sends) or another routing is needed.
 - **The route also echoes**: with band B's chip in TX mode (bit 6 off), the
   M17 symbols carried an echo of the symbol two periods earlier (0.42 ms,
   about 7%, inter-symbol interference 133 Hz RMS; 3.11). With band B left
@@ -981,7 +1016,10 @@ loaded to 0x200152D6. Values below are from the development radio.
 | B+0x02..0x05 | 46/75/96/115 | VHF APC base, power levels 0-3 |
 | A+0x06 | 0x046A | UHF modulation, register `0x31` in TX |
 | B+0x06 | 0x002D | VHF modulation, register `0x31` in TX |
-| A+0x0C | 0x02B7 | modulation, register `0x2E` entry 6 in TX (both bands) |
+| A+0x08 | 1295 | "Sct Mod" (names from the factory list, string table `0x0818E110`) |
+| A+0x0A | 53 | "MODV2" |
+| A+0x0C | 0x02B7 | "A-MIC": microphone gain, register `0x2E` entry 6 in analog TX (both bands; `0x080D6188`) |
+| A+0x0E | 595 | "D-MIC": the same on digital channels |
 | A+0x00 | 2023 | crystal correction: offset = abs(cal - 2000) x f / 46014476 (f in 10 Hz units), added if cal >= 2000 (`0x08047E10`) |
 | A+0x10 | 195 | squelch base raw RSSI, band A chip, UHF |
 | A+0x12 | 176 | squelch base, band B chip, UHF |
@@ -1070,6 +1108,17 @@ Pitfalls met so far:
 - **Check every register guess on the bench before building on it.**
 
 ### 6.1 Automated RF tests
+
+- `fullemu.py` needs `--boot` and `--uid` (`materials/work/fw/boot.bin`,
+  `uid.bin`, read from the radio): without them stock stops at its ID check
+  (`0x080215C0`) and only blinks the LEDs. `--fast 50 --idle 812d63c` end a
+  1 ms slice in stock's waiting and polling loops: start-up to the SCT3288
+  set-up (2.4 s) in seconds instead of minutes.
+- `materials/work/m17dec.py` decodes M17 stream frames from a recording down
+  to the Codec2 payload (check: zero Viterbi errors, rising frame numbers);
+  `c2dec 3200` makes audio. Codec2 3200 encodes digital silence as
+  `010009439ce42108`. gr-m17's decoder, fed this way, flags the frames as
+  undecodable and outputs that silence frame.
 
 - The monitor's `pt <ms>` keys the radio by software (at most 30 s, `pt 0`
   releases), with the current channel settings: only with an operator at
