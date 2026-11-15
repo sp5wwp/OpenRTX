@@ -59,6 +59,11 @@ extern const struct i2cDevice i2c_bus;
  */
 #define CONFIG_SPLASH_TIME_MS 9500u
 
+/* GNSS receiver on USART2 (platform_initGps()) */
+#define CONFIG_GPS
+#define CONFIG_GPS_STM32U5_USART2
+#define CONFIG_NMEA_RBUF_SIZE 256
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2

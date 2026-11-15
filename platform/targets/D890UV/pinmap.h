@@ -56,7 +56,11 @@
 #define MIC_SEL GPIOE, 0    // Mic source: low radio mic (MICI), high MICO
 #define B_AF_EN GPIOC, 7    // Band B AFOUT to AF-REP ("B AFOUT MUTE", L mute)
 #define BT_PWR GPIOA, 1     // Bluetooth module power
-#define APC_PWR GPIOE, 1    // Transmitter APC power
+
+/* GNSS receiver, USART2 (stock 0x08063498), 9600 baud */
+#define GPS_TXD GPIOA, 2
+#define GPS_RXD GPIOA, 3
+#define APC_PWR GPIOE, 1 // Transmitter APC power
 
 /* LEDs, high on (stock: 0x081140EC callers and the PTT handler) */
 #define LED_DIGI_RX GPIOE, 3 // "DIGI-RX LED"

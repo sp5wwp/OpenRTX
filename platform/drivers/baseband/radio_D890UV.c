@@ -276,6 +276,15 @@ static void setFrontEnd(uint32_t freq)
 #define GPIO_B_PC0 0
 
 /*
+ * GNSS receiver power: band B chip GPIO6 ("GPS POWER" in the board's I/O
+ * table), high = on (stock 0x0805D1BC). Requested by the platform's GPS
+ * device, possibly before radio_init(), which applies it.
+ */
+#define GPIO_B_GPS_POWER 6
+static bool gpsPower;
+static bool bandBReady;
+
+/*
  * Microphone route of AnyTone's M17 proposal: radio mic (PE0 low) into band
  * B's MICIN, band B's AFOUT to PC0 (GPO0 high). Band B's chip passes its
  * microphone to AFOUT only in TX mode (NOTES.md 3.8); it runs the FM TX
@@ -664,6 +673,9 @@ void radio_init(const rtxStatus_t *rtxState)
     for (uint8_t pin = 0; pin < 8; pin++)
         wx4818n_setGpio(&wx4818nB, pin, false);
 
+    bandBReady = true;
+    wx4818n_setGpio(&wx4818nB, GPIO_B_GPS_POWER, gpsPower);
+
     sctStart();
 
     // Receive audio starts muted, until the receive path is connected
@@ -679,6 +691,13 @@ void radio_terminate()
         sct3288_terminate(&sct3288);
     sctReady = false;
     status = OFF;
+}
+
+void radio_setGpsPower(bool on)
+{
+    gpsPower = on;
+    if (bandBReady)
+        wx4818n_setGpio(&wx4818nB, GPIO_B_GPS_POWER, on);
 }
 
 void radio_setOpmode(const enum opmode mode)

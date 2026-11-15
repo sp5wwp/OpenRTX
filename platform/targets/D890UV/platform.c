@@ -15,6 +15,8 @@
 #include "drivers/I2C/i2c_bitbang.h"
 #include "interfaces/audio.h"
 #include "drivers/audio/pwm_D890UV.h"
+#include "drivers/GPS/gps_stm32u5.h"
+#include "core/gps.h"
 
 /* Speaker amplifier timing for MCU audio, audio_D890UV.c */
 uint16_t audio_ampWakeupDelay();
@@ -187,6 +189,39 @@ uint8_t platform_getVolumeLevel()
 int8_t platform_getChSelector()
 {
     return 0;
+}
+
+void radio_setGpsPower(bool on);
+
+/*
+ * GNSS receiver: powered by the radio driver (band B chip GPIO6), NMEA on
+ * USART2 at 9600 baud, as stock (0x08063498, 0x0805D1BC). The receiver is
+ * left in its default configuration.
+ */
+static void gpsEnable(void *priv)
+{
+    radio_setGpsPower(true);
+    gpsStm32u5_enable(priv);
+}
+
+static void gpsDisable(void *priv)
+{
+    gpsStm32u5_disable(priv);
+    radio_setGpsPower(false);
+}
+
+static const struct gpsDevice gpsDev = {
+    .priv = NULL,
+    .enable = gpsEnable,
+    .disable = gpsDisable,
+    .getSentence = gpsStm32u5_getNmeaSentence,
+};
+
+const struct gpsDevice *platform_initGps()
+{
+    gpio_setMode(GPS_RXD, ALTERNATE | ALTERNATE_FUNC(7));
+    gpsStm32u5_init(9600);
+    return &gpsDev;
 }
 
 /*
