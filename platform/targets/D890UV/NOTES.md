@@ -28,14 +28,13 @@ signal generator and spectrum analyser.
 | FM receive, UHF and VHF | Working, factory calibration applied |
 | RSSI / S-meter, squelch | Working, calibrated with a generator |
 | Volume | Working: band A audio routed as stock, knob drives the I2C volume device (3.1), 128 steps, silent at the bottom |
-| Beeps | Disabled (see 7) |
 | FM transmit | Working as stock on air at Low: power levels (4.1), bandwidth, CTCSS encode, 1750 Hz burst, mic through the SCT3288 as stock (3.5). Speech is weak on the development radio, in stock too (3.8). On by default (`CONFIG_D890UV_TX`, `hwconfig.h`) |
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
 | M17 TX | Working (3.11): OpenRTX's modulator on PB9, decoded by an SDR M17 decoder. Microphone through band B's chip to PC0 (3.8): route proven, level not usable yet |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
-| Speaker output from the MCU | PB9 PWM audio driver (`pwm_D890UV.c`), path checked with a tone (3.10); beeps and voice prompts not checked yet |
+| Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
 
 ## 2. Building and flashing
 
@@ -699,6 +698,31 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   idle half before the first sync; `Modulator::start()` now clears the
   buffer (shared code).
 
+### 3.12 Beeps and voice prompts
+
+- **Beeps**: `platform_beepStart()` plays a sine on PB9 from a table (TIM7 at
+  48 kHz, `pwm_D890UV.c`) while no stream runs. Voice prompts are Codec2
+  speech streamed at 8 kHz to the same driver (speaker device).
+- **Level**: the TONE route does not go through the volume device, so beeps
+  and prompts are scaled in software from the knob: square law between 1/4
+  and 3/4 of full scale (`platform_updateMcuAudioGain()`). At 1/16 a beep
+  was only +-8 PWM steps, inaudible. Speech gets x24 and a soft limiter
+  y = 127 x / (|x| + 64): it peaks near full scale while its average stays
+  low, so linear gain (x8, x12) only clipped the peaks.
+- **Amplifier timing**: a beep started together with the amplifier was lost
+  (only its switch-on pop was heard; OpenRTX key beeps last about 40 ms). A
+  beep now waits until the amplifier has been on for 100 ms and then plays
+  its full length; the amplifier stays on 2 s after MCU audio
+  (`audio_poll()`, called with the volume reading).
+- **Receive audio**: OpenRTX's FM mode opens the receiver -> speaker path
+  while the squelch is open (it does not call `radio_enableAfOutput()`), and
+  a voice prompt suspends it. Band A's audio reaches the speaker node
+  whenever the volume is above zero, so the radio driver now mutes it (band
+  B GPO2 low and volume device 0; the device alone leaves a faint leak)
+  unless that path is connected: no FM noise under beeps, prompts or in M17.
+- **Keys**: P1 and P2 (stock codes 19, 20, keypad row 3) checked on the
+  radio; used as left and right.
+
 ## 4. WX4818N registers
 
 | Reg | Use | Source / check |
@@ -923,11 +947,7 @@ Pitfalls met so far:
      settings (`0x080D659C`, `0x08111A6C`). The settings
      block is now known (3.4) and can be planted in the emulator.
 5. **Audio output.**
-   - Beeps: the tone register writes alone send received noise to the
-     speaker. The stock beep likely also switches the amplifier input switch to TONE.
-   - Voice prompts: before the PB9 driver (3.11) a prompt never ended and
-     kept the receive audio muted; with the driver they should play. Not
-     checked yet.
+   - ~~Beeps and voice prompts~~: done on PB9 (3.12).
    - M17 receive: a PC0 ADC input driver (3.8) and the M17 speech output.
 6. ~~Volume~~: done, stock routing and I2C volume device (3.1).
 7. **RSSI**: decide whether to use the chip squelch (`0x49` threshold and
