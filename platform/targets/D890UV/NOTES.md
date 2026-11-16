@@ -643,6 +643,29 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     through the microphone (only with the real mic attached, also with band
     B on 145 MHz).
   - Paused until AnyTone answers. The port keeps bit 6 off.
+- **AnyTone's answer** (2026-11-16), asked how band B's chip can pass the
+  microphone as a bypass: "There is an analog switch inside the IC, use
+  the firmware to control it." No register given; asked again for the
+  register and value or the chip's documentation.
+- **Single-bit sweep** (monitor `bs`, started with the `*` key, K connector
+  unplugged; acoustic loop as `mo`: 1 kHz on the speaker, radio mic, band
+  B's AFOUT on PC0): for band B in standby, RX and TX (FM TX set-up,
+  `0x30` = 0x5F37, mic gain `0x2E` entry 6 = A-MIC), each of 20 registers
+  (`0x10`, `0x11`, `0x19`, `0x28`, `0x29`, `0x2B`, `0x2D`, `0x2F`, `0x30`,
+  `0x31`, `0x36`, `0x37`, `0x3D`, `0x40`, `0x43`, `0x46`, `0x47`, `0x48`,
+  `0x7D`, `0x7E`) with each bit flipped alone (1020 measurements, results
+  in `materials/work/survey/bs_results.txt`):
+  - the 1 kHz score (tone over neighbours) scatters by 10-20 dB at the ADC
+    noise; the usable criterion is PC0's RMS, which rises when the mic
+    gets through;
+  - standby and TX: PC0 stays at the ADC noise (RMS 7-16) for every change
+    except `0x30` bit 6 in TX (RMS 71, the known oscillating mic path);
+  - RX: the receiver's hiss dominates PC0 (RMS about 5000); `0x2B` bits 12
+    and 15 and `0x29` bit 7 mute it (RMS 10-17), `0x30` bits 4-6 lower it;
+  - so the switch is not a single bit of these registers in these states.
+    Next: all registers `0x00`-`0x7F` (without `0x52` GPIO, `0x38`/`0x39`
+    frequency, `0x56` mode), standby and TX, with a shorter RMS-only
+    measurement.
 - **Baseband leak** (measured during M17 TX with the software PTT and
   the microphone stream buffer, K cable in): the microphone samples carry a
   3100 RMS copy of our own M17 baseband, 300-3000 Hz (band B's voice
