@@ -1106,6 +1106,109 @@ static const char *cmdMicOsc(char **arg)
     return NULL;
 }
 
+/*
+ * Band B bit sweep ("bs"), looking for the chip's internal analog switch from
+ * MICIN to AFOUT (AnyTone: "an analog switch inside the IC, controlled by
+ * the firmware"). Acoustic loop as "mo": 1kHz on the speaker, radio mic,
+ * band B's AFOUT on PC0. Starts on the * key (K connector unplugged). For
+ * each band B state (10 standby, 11 RX, 12 TX with 0x30 = 0x5F37) and each
+ * register: a baseline (bit 16), then each bit flipped alone and restored.
+ * Results as "mr": mode = state, r30 = register, v47 = bit.
+ */
+static const uint8_t bsRegs[] = {
+    0x10, 0x11, 0x19, 0x28, 0x29, 0x2B, 0x2D, 0x2F, 0x30, 0x31,
+    0x36, 0x37, 0x3D, 0x40, 0x43, 0x46, 0x47, 0x48, 0x7D, 0x7E,
+};
+
+static void bsState(uint8_t state)
+{
+    if (state == 0) {
+        wx4818n_standby(&wx4818nB);
+    } else if (state == 1) {
+        wx4818n_startFmRx(&wx4818nB, 43800000, false);
+    } else {
+        struct wx4818nTxConfig cfg = {
+            .freq = 43800000,
+            .wide = false,
+            .ctcss = 0,
+            .modCal = 0x46A,
+            .toneCal = 0x2B7,
+            .baseband = false,
+        };
+        wx4818n_startFmTx(&wx4818nB, &cfg);
+        wx4818n_writeReg(&wx4818nB, 0x30, 0x5F37);
+    }
+}
+
+static const char *cmdBitSweep(char **arg)
+{
+    (void)arg;
+
+    RCC->AHB2ENR1 |= RCC_AHB2ENR1_SRAM3EN;
+    __DSB();
+    gpio_setMode(AIN_AF, ANALOG);
+    gpio_setMode(AIN_MIC, ANALOG);
+    msCount = 0;
+    msStep = 0;
+
+    uint32_t waited = 0;
+    while ((kbd_lastKeys() & KEY_STAR) == 0) {
+        if (waited >= REC_WAIT_MS)
+            return "no * key";
+        sleepFor(0, 10);
+        waited += 10;
+    }
+
+    wx4818n_setGpio(&wx4818nB, 2, false);
+    wx4818n_setGpio(&wx4818nB, 1, false);
+    wx4818n_setGpio(&wx4818nB, 0, true);
+    gpio_clearPin(B_AF_EN);
+    gpio_clearPin(MIC_SEL);
+    gpio_setPin(SPK_EN);
+    gpio_setPin(LED_DIGI_RX);
+
+    char *on[] = { "1", "3e8", "40", NULL };
+    cmdTestSignal(on);
+    msTone = 1000.0f;
+
+    for (uint8_t state = 0; state < 3; state++) {
+        for (uint32_t k = 0; k < sizeof(bsRegs); k++) {
+            uint8_t reg = bsRegs[k];
+            bsState(state);
+            uint16_t orig = wx4818n_readReg(&wx4818nB, reg);
+
+            for (uint8_t bit = 0; bit <= 16; bit++) {
+                msStep = (state << 16) | (reg << 8) | bit;
+                if (bit < 16)
+                    wx4818n_writeReg(&wx4818nB, reg, orig ^ (1u << bit));
+                sleepFor(0, 100);
+
+                struct msResult *r = &msResults[msCount++];
+                msMeasure(r);
+                r->mode = 10 + state;
+                r->r30 = reg;
+                r->v47 = bit;
+
+                if (bit < 16)
+                    wx4818n_writeReg(&wx4818nB, reg, orig);
+            }
+        }
+    }
+
+    char *off[] = { "0", NULL, NULL };
+    cmdTestSignal(off);
+    wx4818n_standby(&wx4818nB);
+    wx4818n_setGpio(&wx4818nB, 0, false);
+    gpio_clearPin(SPK_EN);
+    gpio_setPin(MIC_SEL);
+    RCC->APB1ENR1 &= ~RCC_APB1ENR1_TIM6EN;
+    gpio_clearPin(LED_DIGI_RX);
+    msStep = 0xFFFFFF;
+
+    out("done %lu\n", msCount);
+    return NULL;
+}
+
 static const char *cmdMicResults(char **arg)
 {
     (void)arg;
@@ -1251,7 +1354,7 @@ static const struct command commands[] = {
     { "ar", cmdAudioRecord }, { "tg", cmdTestSignal },  { "ms", cmdMicSearch },
     { "mr", cmdMicResults },  { "mx", cmdMicCheck },    { "bx", cmdBandBTx },
     { "gz", cmdGoertzel },    { "mg", cmdMicGain },     { "mo", cmdMicOsc },
-    { "pt", cmdSoftPtt },
+    { "pt", cmdSoftPtt },     { "bs", cmdBitSweep },
 };
 
 void monitor_exec(char *line)
