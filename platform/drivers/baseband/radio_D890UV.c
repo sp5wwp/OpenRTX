@@ -294,20 +294,21 @@ static bool bandBReady;
 #define MIC_ROUTE_FREQ 438000000U
 
 /*
- * The microphone route is off: with band B's chip in TX mode, band A's own
- * baseband came back into its modulator as an echo two symbols late (0.42ms,
- * about 7%), raising the M17 EVM from 6.5% to 7.5%, on top of the unusable
- * microphone level (NOTES.md 3.8). With it off, the microphone driver samples
- * PC0 with band B in standby, i.e. silence.
+ * The microphone route: band B's chip in TX mode passes the radio microphone
+ * (PE0 low) to its AFOUT, sampled on PC0. It was off while M17 TX used PD0
+ * high, which joined the microphone line to the switch chain: the baseband
+ * leaked into the microphone and came back into band A's modulator as an
+ * echo two symbols late. With PD0 low (AnyTone's routing) both are gone and
+ * speech reaches the M17 stream, weak (NOTES.md 3.8).
  */
-#define MIC_ROUTE_ENABLED 0
+#define MIC_ROUTE_ENABLED 1
 
 /*
  * Band B's audio enables (0x30 low byte) on the microphone route. With bit 6
- * set (0x77, as for band A) the microphone passes clearly, but band B's chip
- * oscillates at 2176Hz on its microphone line, which leaks into band A's
- * modulator and ruins the M17 signal; without it (0x37) M17 is correct but
- * the microphone level is near the ADC noise (NOTES.md 3.8).
+ * set (0x77, as for band A) band B's chip oscillates: a 2176Hz sine on band
+ * A's modulation with PD0 high, broadband noise above 4kHz (+20dB, EVM up
+ * by half) with PD0 low. Without it (0x37) the microphone still passes
+ * (NOTES.md 3.8).
  */
 #define MIC_ROUTE_AF_ENABLE 0x37
 
