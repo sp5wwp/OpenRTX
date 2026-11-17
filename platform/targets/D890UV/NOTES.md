@@ -711,6 +711,21 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   audio carries the voice and the blowing (background RMS 120-150, speech
   400-535, blowing 1300-2400; no silence frames); the operator confirmed
   hearing both. Speech is weak. The route is on (`MIC_ROUTE_ENABLED` 1).
+- **Live test with SDR++** (2026-11-17, 435 MHz, Low, dummy load, K
+  connector unplugged; NFM key-up with speech, then two M17 key-ups;
+  `sdr_recordings/dev29.npy`):
+  - NFM (stock's board path, unchanged): no measurable speech, 15-22 Hz
+    RMS deviation in 300-3000 Hz, the receiver's noise (open item 1);
+  - first M17 key-up after FM: the known drift (+15 kHz at key-up, settled
+    after about 6 s, 3.11);
+  - second M17 key-up: +-2401/800 Hz, EVM 5.5%, no echo (k-2 tap gone),
+    91 of 91 frames with zero Viterbi errors. The operator hears their
+    voice in the decoded audio (background RMS 120-200, speech up to about
+    1900). Remaining issues: the background noise and the low level.
+  - The microphone driver (`mic_D890UV.c`) takes one 14-bit conversion per
+    8 kHz sample with a fixed x16 gain; whether the noise comes from the
+    ADC, the op-amp stage before PC0 or band B's chip is not measured
+    yet.
   Band B's internal MICIN-to-AFOUT switch (AnyTone's "analog switch") is
   still unknown and may give a cleaner, stronger path.
 - The development radio is an early AnyTone sample. Weak speech on air with
@@ -1170,7 +1185,10 @@ Pitfalls met so far:
   set-up (2.4 s) in seconds instead of minutes.
 - `materials/work/m17dec.py` decodes M17 stream frames from a recording down
   to the Codec2 payload (check: zero Viterbi errors, rising frame numbers;
-  the strongest sync peaks are taken first). With `rtlcap.py` recordings
+  the strongest sync peaks are taken first, and frames missing between
+  decoded ones are searched for at the interpolated position: a payload
+  pattern close to the sync word can shadow the next frames). With
+  `rtlcap.py` recordings
   most frames fail from the reader's sample drops, so record with SDR++
   for listening tests;
   `c2dec 3200` makes audio. Codec2 3200 encodes digital silence as
@@ -1226,6 +1244,9 @@ Pitfalls met so far:
     3.11): through the board it fails (codec not controllable, 3.5); the
     way left is FM audio made by the MCU on the M17 path, which needs the
     microphone route: it works now, weak (3.8).
-12. **Band B's internal mic switch**: waiting for AnyTone's register (asked
+12. **M17 microphone noise and level** (3.8): find where the noise enters
+    (ADC, op-amp stage, band B's chip), then raise the gain ahead of it or
+    reduce it (ADC oversampling, band B's gain registers).
+13. **Band B's internal mic switch**: waiting for AnyTone's register (asked
     again 2026-11-17); otherwise the full register sweep (`0x00`-`0x7F`,
     3.8).
