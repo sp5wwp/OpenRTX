@@ -23,17 +23,17 @@ static const struct BK4829 *rxChip; // Chip currently receiving, or NULL
 
 static const struct BK4829 *getChip(const enum Band band)
 {
-    return (band == BND_VHF) ? &rt950_bk4829_vhf : &rt950_bk4829_uhf;
+    return (band == BND_VHF) ? &rt950_bk4829_vhf : &rt950_bk4829_uhf_hf;
 }
 
 /**
- * Deassert the receive RF path switches, they are idle high.
+ * Switch off the receive RF paths, the switches are active high.
  */
 static void rfPathIdle()
 {
-    gpioPin_set(&rt950_rf_v3r);
-    gpioPin_set(&rt950_rf_u3r);
-    gpioPin_set(&rt950_rf_u6r);
+    gpioPin_clear(&rt950_rf_v3r);
+    gpioPin_clear(&rt950_rf_u3r);
+    gpioPin_clear(&rt950_rf_u6r);
 }
 
 /**
@@ -67,14 +67,14 @@ void radio_init(const rtxStatus_t *rtxState)
 
     rfPathIdle();
 
-    gpioPin_setMode(&rt950_rf_u6r, OUTPUT); // VHF RX switch
+    gpioPin_setMode(&rt950_rf_u6r, OUTPUT); // HF RX switch
     gpioPin_setMode(&rt950_rf_u3r, OUTPUT); // UHF RX switch
-    gpioPin_setMode(&rt950_rf_v3r, OUTPUT); // Enable LNA
+    gpioPin_setMode(&rt950_rf_v3r, OUTPUT); // VHF RX switch
 
     bk4829_rtx_off(&rt950_bk4829_vhf);
-    bk4829_rtx_off(&rt950_bk4829_uhf);
+    bk4829_rtx_off(&rt950_bk4829_uhf_hf);
     bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);
-    bk4829_set_af(&rt950_bk4829_uhf, BK4829_AF_TYPE_MUTE);
+    bk4829_set_af(&rt950_bk4829_uhf_hf, BK4829_AF_TYPE_MUTE);
 }
 
 void radio_terminate()
@@ -140,7 +140,7 @@ void radio_enableRx()
 
     const struct BK4829 *chip = getChip(band);
     const struct BK4829 *other = (chip == &rt950_bk4829_vhf) ?
-                                   &rt950_bk4829_uhf :
+                                   &rt950_bk4829_uhf_hf :
                                    &rt950_bk4829_vhf;
 
     bk4829_rtx_off(other);
@@ -167,9 +167,9 @@ void radio_enableTx()
 void radio_disableRtx()
 {
     bk4829_rtx_off(&rt950_bk4829_vhf);
-    bk4829_rtx_off(&rt950_bk4829_uhf);
+    bk4829_rtx_off(&rt950_bk4829_uhf_hf);
     bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);
-    bk4829_set_af(&rt950_bk4829_uhf, BK4829_AF_TYPE_MUTE);
+    bk4829_set_af(&rt950_bk4829_uhf_hf, BK4829_AF_TYPE_MUTE);
     rfPathIdle();
 
     rxChip = NULL;

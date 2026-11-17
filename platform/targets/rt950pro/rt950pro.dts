@@ -136,18 +136,18 @@
 				   <&gpioe 15 GPIO_ACTIVE_LOW>;
 
 		/*
-		 * RF path switches, all idle high (deasserted) as in the vendor
-		 * firmware. Names are the PCB net names found by reverse
+		 * RF path switches, active high and idle low. Names are the
+		 * PCB net names found by reverse
 		 * engineering: U6R/U3R are RX path enables, V3R selects the
 		 * VHF RX frontend, U3T/V3T/SW3T are the TX path and PA gate.
 		 * PC4 (antenna band relay) is not handled.
 		 */
-		rf-u6r-gpios = <&gpioe 13 GPIO_ACTIVE_LOW>;
-		rf-u3r-gpios = <&gpioe 12 GPIO_ACTIVE_LOW>;
-		rf-v3r-gpios = <&gpiob 0 GPIO_ACTIVE_LOW>;
-		rf-u3t-gpios = <&gpioe 7 GPIO_ACTIVE_LOW>;
-		rf-v3t-gpios = <&gpiob 1 GPIO_ACTIVE_LOW>;
-		rf-sw3t-gpios = <&gpioe 14 GPIO_ACTIVE_LOW>;
+		rf-u6r-gpios = <&gpioe 13 GPIO_ACTIVE_HIGH>;
+		rf-u3r-gpios = <&gpioe 12 GPIO_ACTIVE_HIGH>;
+		rf-v3r-gpios = <&gpiob 0 GPIO_ACTIVE_HIGH>;
+		rf-u3t-gpios = <&gpioe 7 GPIO_ACTIVE_HIGH>;
+		rf-v3t-gpios = <&gpiob 1 GPIO_ACTIVE_HIGH>;
+		rf-sw3t-gpios = <&gpioe 14 GPIO_ACTIVE_HIGH>;
 
 		/*
 		 * Audio path, found by reverse engineering. PE1 mutes the

@@ -129,7 +129,7 @@ const struct BK4829 rt950_bk4829_vhf = {
     .scn = GPIO_PIN(GpioE, USER_NODE, bk4829_scn_gpios, 0),
 };
 
-const struct BK4829 rt950_bk4829_uhf = {
+const struct BK4829 rt950_bk4829_uhf_hf = {
     .bus = &rt950_bk4829_bus,
     .scn = GPIO_PIN(GpioE, USER_NODE, bk4829_scn_gpios, 1),
 };

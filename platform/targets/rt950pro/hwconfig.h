@@ -74,8 +74,8 @@ extern const struct gpioPin rt950_bt_sw;
 extern const struct gpioPin rt950_bt_pwr;
 
 /*
- * RF path switches. They are driven by the physical level: high is
- * deasserted, as in the vendor firmware.
+ * RF path switches. They are driven by the physical level: high enables the
+ * path, low is idle.
  */
 extern const struct gpioPin rt950_rf_u6r;
 extern const struct gpioPin rt950_rf_u3r;
@@ -89,7 +89,7 @@ extern const struct gpioPin rt950_rf_sw3t;
  * VHF LNA and PA, and the UHF one, wired to the UHF LNA and PA.
  */
 extern const struct BK4829 rt950_bk4829_vhf;
-extern const struct BK4829 rt950_bk4829_uhf;
+extern const struct BK4829 rt950_bk4829_uhf_hf;
 extern const struct spiDevice rt950_bk4829_bus;
 
 /* SI4732 broadcast receiver, on a bit-banged I2C bus */

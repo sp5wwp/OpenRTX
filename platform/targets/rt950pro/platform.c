@@ -217,7 +217,7 @@ void platform_init()
         LOG_ERR("BK4829 SPI bus initialization failed (%d)", rfRet);
     } else {
         bk4829_init(&rt950_bk4829_vhf);
-        bk4829_init(&rt950_bk4829_uhf);
+        bk4829_init(&rt950_bk4829_uhf_hf);
     }
 
     configureGpio(&rt950_vbat, ANALOG);
