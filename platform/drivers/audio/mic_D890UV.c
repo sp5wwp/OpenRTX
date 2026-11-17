@@ -15,7 +15,8 @@
  * route of AnyTone's M17 proposal: the radio driver puts band B's chip in TX
  * mode with the radio mic on its MICIN and its AFOUT on PC0 while an M17
  * transmission runs (radio_D890UV.c, NOTES.md 3.8). The level is low (about
- * -37dBFS with the speaker playing a tone into the mic), hence a x16 gain.
+ * -37dBFS with the speaker playing a tone into the mic), hence a gain of
+ * MIC_GAIN.
  *
  * ADC1 is shared with the battery and volume readings, which use software
  * started regular conversions: the microphone uses an injected conversion,
@@ -29,10 +30,18 @@
  * period at 8kHz), right shifted back to 14 bits. Regular conversions are
  * not oversampled (ROVSE stays clear). Measured during M17 TX with the
  * microphone cut: noise floor 209 -> 83 RMS (-8dB, -9dB expected for white
- * noise), so the floor was the ADC's own noise.
+ * noise), so the floor was the ADC's own noise. 16 or 32 conversions at
+ * 68.5 cycles were noisier than 8 at 391.5 (NOTES.md 3.8).
  */
 #define MIC_OVERSAMPLE 8
 #define MIC_OVERSAMPLE_SHIFT 3
+
+/*
+ * Gain from 14-bit ADC counts to the 16-bit stream, saturating: x16 left
+ * speech about 15dB below full scale in the decoded M17 audio (peaks about
+ * 6000), hence x64.
+ */
+#define MIC_GAIN 64
 
 static struct streamCtx *stream;
 static volatile size_t writePos;
@@ -59,7 +68,7 @@ void _Z15TIM6_IRQHandlerv()
     // Store the conversion started at the previous interrupt
     if (firstSample == false) {
         int32_t raw = (int32_t)(ADC1->JDR1 & 0x3FFF);
-        int32_t v = (raw - 8192) * 16;
+        int32_t v = (raw - 8192) * MIC_GAIN;
         if (v > 32767)
             v = 32767;
         if (v < -32768)
