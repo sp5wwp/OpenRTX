@@ -32,7 +32,7 @@ signal generator and spectrum analyser.
 | Channel bandwidth 12.5/25 kHz | Working: register `0x48` in RX and TX, as stock (4.1) |
 | CTCSS decode | Not done: stock decodes in software from PC0 (4.2) |
 | LEDs | Working: PE4 analog RX (green), PE5 TX (red) |
-| M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). No microphone yet: the band B route is proven but off (3.8) |
+| M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). Microphone through band B's chip (3.8): speech and blowing heard in the decoded audio, weak |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
 | GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either |
@@ -157,6 +157,9 @@ switches are RS2057 (SPDT: S low = B0, S high = B1).
   high passes it) → switch on PD1 (B1; its B0 is the **VCTCXO** net) →
   switch on PD2 (B0; B1 is MIC) → band A chip MICIN. The VCTCXO net may
   allow modulating the reference too (two-point modulation); unverified.
+  Measured (3.8): PD1 high alone carries AF-REP to MICIN; PD0 high also
+  joins the microphone line to the chain. AnyTone names PD0 `MIC_REP_SEL`
+  and PD1 `VCTCXO_REP_SEL`.
 - **Microphone**: MIC goes to band B chip MICIN as well. In the proposal,
   band B chip acts as the microphone preamplifier: MICIN → its AFOUT
   (B-AFOUT) → PC0.
@@ -680,8 +683,36 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
 - **The route also echoes**: with band B's chip in TX mode (bit 6 off), the
   M17 symbols carried an echo of the symbol two periods earlier (0.42 ms,
   about 7%, inter-symbol interference 133 Hz RMS; 3.11). With band B left
-  in standby it is gone. The port now leaves the route off
-  (`MIC_ROUTE_ENABLED` 0): M17 sends silence.
+  in standby it is gone. The route was then left off until PD0 low fixed
+  both (below).
+- **AnyTone's M17 TX routing** (2026-11-17): "PA1=0 PE0=1 PD2=0 PD1=1
+  PD0=0", names `MICI_BTO_SEL`, `MIC_SEL`, `MOD_D_A_SEL`,
+  `VCTCXO_REP_SEL`, `MIC_REP_SEL`, the signal from PB9. That is stock's
+  routing mode 2 (3.13). It describes the TX side only, not band B's
+  internal switch; asked again for the register.
+- **PD0 low** (one M17 key-up in 3 s segments, route on, switches changed
+  by the monitor, RTL-SDR; `materials/work/pd0test.py`, `pd0ab.py`):
+
+  | band B `0x30` low byte, PD0 | EVM | k-2 echo tap | noise 5.5-12 kHz | decoded audio RMS (no speech) |
+  |---|---|---|---|---|
+  | 0x00, 1 | 12.6% | -1.6 Hz | 81 dB | 740 |
+  | 0x37, 1 (the old route) | 13.2% | +34.8 Hz | 85 dB | 2792 (the leak) |
+  | 0x37, 0 | 12.9% | -7.0 Hz | 83 dB | 177 |
+  | 0x77 (bit 6), 0 | 19.3% | -7.3 Hz | 104 dB | 183 |
+
+  (EVM through `rtlcap.py`, about 12% for a signal at 5-6% with SDR++,
+  6.1.) PD0 low removes the leak and the echo; the baseband still reaches
+  band A through PD1 (+-2368/780 Hz, same EVM as PD0 high with the route
+  off). With bit 6 the 2176 Hz sine is gone, but band B's oscillation still
+  reaches band A as broadband noise above 4 kHz, probably over the shared
+  `MIC` line while PE0 is low. The port uses PD0 low for M17 TX.
+- **Microphone on air** (route on, PD0 low, `0x30` low byte 0x37, K
+  connector unplugged, operator counting and blowing): the decoded Codec2
+  audio carries the voice and the blowing (background RMS 120-150, speech
+  400-535, blowing 1300-2400; no silence frames); the operator confirmed
+  hearing both. Speech is weak. The route is on (`MIC_ROUTE_ENABLED` 1).
+  Band B's internal MICIN-to-AFOUT switch (AnyTone's "analog switch") is
+  still unknown and may give a cleaner, stronger path.
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
@@ -763,8 +794,8 @@ Tested on air at 0.2 W into a dummy load, with an SDR recording baseband IQ
   froze the radio (USB included) as soon as M17 was selected.
 - **Path compatibility**: two paths can run together if they share neither
   source nor sink.
-- **Key-up in M17** (`radio_D890UV.c`): PD0 = PD1 = 1, PD2 = 0, band B GPO1
-  low; band A's chip gets the FM TX sequence without CTCSS, then the flat
+- **Key-up in M17** (`radio_D890UV.c`): PD1 = 1, PD0 = PD2 = 0 (PD0 was 1
+  until the leak was found, 3.8), band B GPO1 low; band A's chip gets the FM TX sequence without CTCSS, then the flat
   baseband set-up (`wx4818nTxConfig.baseband`: `0x2B` F08D, `0x10` A3E0,
   `0x48` 9826, `0x2E` entry 6 = 0) and `0x31` = 0x1000 | 0x6B0; no SCT3288
   TX packets.
@@ -1138,7 +1169,10 @@ Pitfalls met so far:
   1 ms slice in stock's waiting and polling loops: start-up to the SCT3288
   set-up (2.4 s) in seconds instead of minutes.
 - `materials/work/m17dec.py` decodes M17 stream frames from a recording down
-  to the Codec2 payload (check: zero Viterbi errors, rising frame numbers);
+  to the Codec2 payload (check: zero Viterbi errors, rising frame numbers;
+  the strongest sync peaks are taken first). With `rtlcap.py` recordings
+  most frames fail from the reader's sample drops, so record with SDR++
+  for listening tests;
   `c2dec 3200` makes audio. Codec2 3200 encodes digital silence as
   `010009439ce42108`. gr-m17's decoder, fed this way, flags the frames as
   undecodable and outputs that silence frame.
@@ -1191,4 +1225,7 @@ Pitfalls met so far:
 11. **One modulation source for FM and M17** (carrier drift after FM,
     3.11): through the board it fails (codec not controllable, 3.5); the
     way left is FM audio made by the MCU on the M17 path, which needs the
-    microphone route (item 1, AnyTone's answer).
+    microphone route: it works now, weak (3.8).
+12. **Band B's internal mic switch**: waiting for AnyTone's register (asked
+    again 2026-11-17); otherwise the full register sweep (`0x00`-`0x7F`,
+    3.8).
