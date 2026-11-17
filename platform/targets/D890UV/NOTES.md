@@ -731,8 +731,13 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   8 in hardware, `materials/work/ovstest.py`): mic stream noise floor
   during M17 TX with the microphone cut 209 -> 83 RMS, -8 dB (-9 dB
   expected for white noise): the floor was the ADC's own noise. The
-  remaining floor (about 5 ADC counts) is the next limit; a shorter
-  sampling time would allow more conversions per sample.
+  remaining floor (about 5 ADC counts) is the next limit. A shorter
+  sampling time is worse: 16 conversions at 68.5 cycles 481, 32 at 68.5
+  cycles 405, against 332 for 8 at 391.5 (gain x64): the averaging only
+  filters noise over the time it spans, and short conversions are
+  noisier. So the remaining floor is analog, before PC0. Gain x64 since
+  (x16 left speech about 15 dB below full scale): speech and noise louder
+  together, as heard on air.
   Band B's internal MICIN-to-AFOUT switch (AnyTone's "analog switch") is
   still unknown and may give a cleaner, stronger path.
 - The development radio is an early AnyTone sample. Weak speech on air with
@@ -1252,8 +1257,8 @@ Pitfalls met so far:
     way left is FM audio made by the MCU on the M17 path, which needs the
     microphone route: it works now, weak (3.8).
 12. **M17 microphone noise and level** (3.8): ADC oversampling done (-8 dB
-    noise). Next: more conversions per sample (shorter sampling time),
-    band B's gain registers, the digital gain once the noise allows it.
+    noise), gain x64; the rest is in the analog microphone path (with
+    item 1: inspect the microphone path, band B's gain registers).
 13. **Band B's internal mic switch**: waiting for AnyTone's register (asked
     again 2026-11-17); otherwise the full register sweep (`0x00`-`0x7F`,
     3.8).
