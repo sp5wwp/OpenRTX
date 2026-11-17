@@ -22,7 +22,17 @@
  * which interrupts a regular one and lets it resume. A TIM6 interrupt at the
  * sample rate stores the previous result and starts the next conversion, so
  * the CPU never waits for the ADC (391.5 cycle sampling, about 10us).
+ *
+ * The microphone signal arrives only just above the ADC's own noise
+ * (NOTES.md 3.8): the injected conversion is oversampled in hardware, the
+ * average of MIC_OVERSAMPLE conversions (about 82us of the 125us sample
+ * period at 8kHz), right shifted back to 14 bits. Regular conversions are
+ * not oversampled (ROVSE stays clear). Measured during M17 TX with the
+ * microphone cut: noise floor 209 -> 83 RMS (-8dB, -9dB expected for white
+ * noise), so the floor was the ADC's own noise.
  */
+#define MIC_OVERSAMPLE 8
+#define MIC_OVERSAMPLE_SHIFT 3
 
 static struct streamCtx *stream;
 static volatile size_t writePos;
@@ -106,6 +116,19 @@ static int micD890UV_start(const uint8_t instance, const void *config,
         ;
     ADC1->PCSEL |= 1u << ADC_AF_CH;
     ADC1->JSQR = ADC_AF_CH << ADC_JSQR_JSQ1_Pos;
+
+    // CFGR2 may only be written with no conversion running: wait for a
+    // regular one (battery, volume) to end, with interrupts off so that no
+    // other thread starts one meanwhile.
+    uint32_t cfgr2 = ADC1->CFGR2
+                   & ~(ADC_CFGR2_JOVSE | ADC_CFGR2_OVSR | ADC_CFGR2_OVSS);
+    cfgr2 |= ADC_CFGR2_JOVSE | ((MIC_OVERSAMPLE - 1) << ADC_CFGR2_OVSR_Pos)
+           | (MIC_OVERSAMPLE_SHIFT << ADC_CFGR2_OVSS_Pos);
+    __disable_irq();
+    while ((ADC1->CR & ADC_CR_ADSTART) != 0)
+        ;
+    ADC1->CFGR2 = cfgr2;
+    __enable_irq();
 
     ctx->running = 1;
     stream = ctx;
