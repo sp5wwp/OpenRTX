@@ -723,9 +723,16 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
     voice in the decoded audio (background RMS 120-200, speech up to about
     1900). Remaining issues: the background noise and the low level.
   - The microphone driver (`mic_D890UV.c`) takes one 14-bit conversion per
-    8 kHz sample with a fixed x16 gain; whether the noise comes from the
-    ADC, the op-amp stage before PC0 or band B's chip is not measured
-    yet.
+    8 kHz sample with a fixed x16 gain. The background is about the same
+    with the K connector in (microphone cut, decoded RMS about 177), so it
+    is electronic, and PC0 sat at the ADC noise (7-16 counts) in the bit
+    sweep.
+- **ADC oversampling** (`mic_D890UV.c`, injected conversion averaged over
+  8 in hardware, `materials/work/ovstest.py`): mic stream noise floor
+  during M17 TX with the microphone cut 209 -> 83 RMS, -8 dB (-9 dB
+  expected for white noise): the floor was the ADC's own noise. The
+  remaining floor (about 5 ADC counts) is the next limit; a shorter
+  sampling time would allow more conversions per sample.
   Band B's internal MICIN-to-AFOUT switch (AnyTone's "analog switch") is
   still unknown and may give a cleaner, stronger path.
 - The development radio is an early AnyTone sample. Weak speech on air with
@@ -1244,9 +1251,9 @@ Pitfalls met so far:
     3.11): through the board it fails (codec not controllable, 3.5); the
     way left is FM audio made by the MCU on the M17 path, which needs the
     microphone route: it works now, weak (3.8).
-12. **M17 microphone noise and level** (3.8): find where the noise enters
-    (ADC, op-amp stage, band B's chip), then raise the gain ahead of it or
-    reduce it (ADC oversampling, band B's gain registers).
+12. **M17 microphone noise and level** (3.8): ADC oversampling done (-8 dB
+    noise). Next: more conversions per sample (shorter sampling time),
+    band B's gain registers, the digital gain once the noise allows it.
 13. **Band B's internal mic switch**: waiting for AnyTone's register (asked
     again 2026-11-17); otherwise the full register sweep (`0x00`-`0x7F`,
     3.8).
