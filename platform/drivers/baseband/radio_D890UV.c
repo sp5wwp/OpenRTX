@@ -902,8 +902,10 @@ void radio_enableTx()
      * FM: stock routing (0x081140EC mode 0 with the TX flag set), PE0 high
      * selects the digital board output, PD0-PD2 low feed it to MICIN.
      * M17: the MCU baseband on PB9 (TONE net, selected onto AF-REP by band B
-     * chip GPO1 low) reaches MICIN with PD0 and PD1 high and PD2 low, as in
-     * AnyTone's M17 proposal; checked on air (NOTES.md 3.10).
+     * chip GPO1 low) reaches MICIN with PD1 high and PD0, PD2 low, as in
+     * AnyTone's M17 routing. PD0 high also joins the microphone line to the
+     * chain: our baseband then leaked into the microphone and, with band B's
+     * microphone route on, came back as an echo (NOTES.md 3.8, 3.10).
      */
     bool m17 = (opMode == OPMODE_M17);
     gpio_clearPin(BT_MIC_EN);
@@ -912,7 +914,7 @@ void radio_enableTx()
     if (m17) {
         wx4818n_setGpio(&wx4818nB, GPIO_B_TONE, false);
         gpio_setPin(AF_SW1);
-        gpio_setPin(AF_SW0);
+        gpio_clearPin(AF_SW0);
     } else {
         gpio_clearPin(AF_SW1);
         gpio_clearPin(AF_SW0);
