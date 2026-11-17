@@ -38,6 +38,10 @@ static int gpioZephyr_mode(const struct gpioDev *dev, const uint8_t pin,
             flags = GPIO_OUTPUT;
             break;
 
+        case OUTPUT_ACTIVE_LOW:
+            flags = GPIO_OUTPUT | GPIO_ACTIVE_LOW;
+            break;
+
         case OPEN_DRAIN:
             flags = GPIO_OUTPUT | GPIO_OPEN_DRAIN;
             break;
