@@ -36,6 +36,9 @@ static unsigned queueHead;
 static unsigned queueCount;
 
 static struct tetra_speech_ws channelWs; /* rtx thread only */
+static volatile uint32_t statFrames;     /* Speech frames decoded */
+static volatile uint32_t statBad;        /* Of which failed the CRC (BFI) */
+static volatile uint32_t statOtherTs;    /* Slots ignored: other timeslot */
 static uint8_t followTn;                 /* rtx thread only, 0 = none */
 static long long followLast;             /* rtx thread only, ms */
 static oa_dec_t decoder;                 /* Playback thread only */
@@ -182,8 +185,10 @@ void tetraSpeech_traffic(const struct tetra_traffic *t)
      */
     long long now = getTick();
     if (followTn != 0 && t->time.tn != followTn
-        && now - followLast < FOLLOW_HOLD_MS)
+        && now - followLast < FOLLOW_HOLD_MS) {
+        statOtherTs++;
         return;
+    }
     followTn = t->time.tn;
     followLast = now;
 
@@ -201,11 +206,26 @@ void tetraSpeech_traffic(const struct tetra_traffic *t)
         memcpy(f->bits, sp.bits[i], OA_FRAME_BITS);
         f->bfi = sp.bfi[i];
         queueCount++;
+        statFrames++;
+        if (sp.bfi[i])
+            statBad++;
     }
     pthread_mutex_unlock(&queueMutex);
 }
 
+void tetraSpeech_stats(uint32_t *frames, uint32_t *bad, uint32_t *otherTs)
+{
+    *frames = statFrames;
+    *bad = statBad;
+    *otherTs = statOtherTs;
+}
+
 #else  /* CONFIG_TETRA_SPEECH */
+
+void tetraSpeech_stats(uint32_t *frames, uint32_t *bad, uint32_t *otherTs)
+{
+    *frames = *bad = *otherTs = 0;
+}
 
 void tetraSpeech_start(void)
 {

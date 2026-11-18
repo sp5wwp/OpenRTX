@@ -7,6 +7,8 @@
 #ifndef OPENRTX_TETRA_SPEECH_H
 #define OPENRTX_TETRA_SPEECH_H
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,6 +42,15 @@ void tetraSpeech_stop(void);
  * callback; encrypted and data slots are ignored.
  */
 void tetraSpeech_traffic(const struct tetra_traffic *t);
+
+/**
+ * Speech statistics since boot, for test and remote control.
+ *
+ * @param frames: speech frames decoded (two per traffic slot).
+ * @param bad: of which failed the CRC and were concealed.
+ * @param otherTs: traffic slots ignored, from a timeslot not followed.
+ */
+void tetraSpeech_stats(uint32_t *frames, uint32_t *bad, uint32_t *otherTs);
 
 #ifdef __cplusplus
 }

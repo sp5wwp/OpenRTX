@@ -85,6 +85,37 @@ void tetraStatus_setDemod(unsigned phaseErr, int carrierHz);
  */
 bool tetraStatus_sync(void);
 
+/*
+ * Receiver diagnostics, for test and remote control. Read without locking:
+ * each field is consistent, the set is approximately so.
+ */
+struct tetraDiag {
+    uint32_t crcOk;      /**< Downlink blocks that passed the CRC, total */
+    uint32_t realigned;  /**< libtetra slot grid moves */
+    bool locked;         /**< libtetra lock */
+    uint32_t reacquired; /**< Demodulator re-acquisitions */
+    uint32_t slips;      /**< Demodulator timing jumps followed */
+    uint32_t symbols;    /**< Symbols since the last (re)acquisition */
+    unsigned phaseErr;   /**< RMS phase error, % of pi/4 */
+    int carrierHz;       /**< Carrier offset */
+    int clockPpm;        /**< Sample clock offset */
+    bool eqSeed;         /**< Equalizer started from the measured taps */
+    float eq[9];         /**< Equalizer taps */
+};
+
+/**
+ * Copy the receiver diagnostics (TETRA mode only, defined by the opmode).
+ */
+void tetra_getDiag(struct tetraDiag *out);
+
+/**
+ * Restart the receiver from scratch at its next update.
+ *
+ * @param seedEqualizer: start the equalizer from the measured taps
+ * (CONFIG_TETRA_EQ_INIT) rather than a pass-through.
+ */
+void tetra_requestReset(bool seedEqualizer);
+
 #ifdef __cplusplus
 }
 #endif
