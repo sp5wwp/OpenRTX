@@ -465,6 +465,20 @@ void vp_queueInteger(const int value)
     vp_queueString(buf, 0);
 }
 
+/**
+ * Check whether the voice data has a recording for a prompt.
+ *
+ * @param pos: prompt index.
+ * @return true if the prompt has audio data.
+ */
+static bool promptRecorded(const uint16_t pos)
+{
+    if (pos + 1 >= VOICE_PROMPTS_TOC_SIZE)
+        return false;
+
+    return tableOfContents[pos + 1] > tableOfContents[pos];
+}
+
 void vp_queueStringTableEntry(const char *const *stringTableStringPtr)
 {
     /*
@@ -482,6 +496,12 @@ void vp_queueStringTableEntry(const char *const *stringTableStringPtr)
 
     uint16_t pos = NUM_VOICE_PROMPTS
                  + (stringTableStringPtr - &currentLanguage->languageName);
+
+    // Strings added after the voice data was built have no recording
+    if (!promptRecorded(pos)) {
+        vp_queueString(*stringTableStringPtr, vpAnnounceCommonSymbols);
+        return;
+    }
 
     vp_queuePrompt(pos);
 }
