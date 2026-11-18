@@ -1,0 +1,42 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# A long M17 destination shown in DISPLAY mode (VFO, not editing) must stay on
+# one channel-line, prefixed with '@', truncated with an ellipsis instead of
+# wrapping into the meter row. Boot is VFO mode (FM); MONI+5 switches the
+# mode to M17. Then # opens
+# the destination editor; multi-tap a 9-char callsign and ENTER to commit and
+# drop back to the display.
+rssi 0
+wait_stable 5000 3
+keycombo MONI 5
+wait_stable
+key HASH
+wait_stable
+# Type 9 chars via multi-tap (distinct keys each commit + advance).
+key 2
+wait_stable
+key 3
+wait_stable
+key 4
+wait_stable
+key 5
+wait_stable
+key 6
+wait_stable
+key 7
+wait_stable
+key 8
+wait_stable
+key 9
+wait_stable
+key 2
+wait_stable
+# Commit the destination and return to the display.
+key ENTER
+wait_stable
+screenshot_sync m17_dst_display.bmp
+quit

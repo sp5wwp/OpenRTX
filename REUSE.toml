@@ -12,12 +12,6 @@ SPDX-License-Identifier = "GPL-2.0-or-later"
 SPDX-FileCopyrightText = "Terraneo Federico"
 precedence = "override"
 
-[[annotations]]
-path = "openrtx/include/fonts/adafruit/**/*"
-SPDX-License-Identifier = "Ubuntu-font-1.0"
-SPDX-FileCopyrightText = "2012 Adafruit Industries"
-precedence = "override"
-
 # The text font blobs embed Ubuntu glyphs (text) and FontAwesome glyphs (icons).
 [[annotations]]
 path = "openrtx/fonts/ubuntu_*.bin"
@@ -46,6 +40,7 @@ path = [
     "osx.txt",
     "tests/unit/assets/**/*",
     "tests/e2e/golden/**/*",
+    "tests/e2e/*.rtxc",
     "README.md",
     "CONTRIBUTING.md",
     "openrtx/src/locale/**/*",
@@ -61,35 +56,10 @@ path = [
     "subprojects/codec2.wrap",
     "subprojects/XPowersLib.wrap",
     "scripts/uf2families.json",
-    "scripts/generate_symbols.py",
 ]
 SPDX-License-Identifier = "GPL-3.0-or-later"
 SPDX-FileCopyrightText = "OpenRTX Contributors"
 
-# This section is for font glyph sources that were taken from Pictogrammers
-[[annotations]]
-path = [
-    "openrtx/include/fonts/symbols/sources/access-point.svg",
-    "openrtx/include/fonts/symbols/sources/access-point.svg",
-    "openrtx/include/fonts/symbols/sources/alpha-m-box-outline.svg",
-    "openrtx/include/fonts/symbols/sources/call-made.svg",
-    "openrtx/include/fonts/symbols/sources/call-received.svg",
-    "openrtx/include/fonts/symbols/sources/cog.svg",
-    "openrtx/include/fonts/symbols/sources/crosshairs-gps.svg",
-    "openrtx/include/fonts/symbols/sources/crosshairs.svg",
-    "openrtx/include/fonts/symbols/sources/lock.svg",
-    "openrtx/include/fonts/symbols/sources/network.svg",
-    "openrtx/include/fonts/symbols/sources/transmission-tower.svg",
-    "openrtx/include/fonts/symbols/sources/wifi-strength-1.svg",
-    "openrtx/include/fonts/symbols/sources/wifi-strength-2.svg",
-    "openrtx/include/fonts/symbols/sources/wifi-strength-3.svg",
-    "openrtx/include/fonts/symbols/sources/wifi-strength-4.svg",
-    "openrtx/include/fonts/symbols/sources/mail.svg"
-]
-SPDX-License-Identifier = "Apache-2.0"
-SPDX-FileCopyrightText = "Pictogrammers"
-
-# This section is for font glyph sources that were taken from Pictogrammers
 [[annotations]]
 path = "lib/qdec/**/*"
 SPDX-License-Identifier = "MIT"

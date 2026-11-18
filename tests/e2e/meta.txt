@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# Settings > M17 > Meta Txt: opens the modal text editor (title, scrolling
+# field with a block cursor, key hint) and commits back to the M17 list.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# M17 is Settings row idx 4 (Display, Time&Date, GPS, Radio, M17, ...)
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Move to Meta Txt (row 1) and open the modal editor with ENTER.
+key DOWN
+wait_stable
+key ENTER
+wait_stable
+# Cursor-cycle a few characters, extending the field with RIGHT.
+key UP UP UP
+wait_stable
+key RIGHT
+wait_stable
+key UP UP
+wait_stable
+key RIGHT
+wait_stable
+key UP
+wait_stable
+screenshot_sync meta_modal.bmp
+# Commit with ENTER; the M17 list shows the new meta value.
+key ENTER
+wait_stable
+screenshot_sync meta_committed.bmp
+quit

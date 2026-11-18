@@ -6,7 +6,7 @@ wait_stable 5000 3
 # Menu > Settings > Display: brightness
 key ENTER
 wait_stable
-key ENTER
+key DOWN DOWN DOWN DOWN ENTER
 wait_stable
 key ENTER
 wait_stable

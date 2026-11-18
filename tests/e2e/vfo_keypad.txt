@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# VFO frequency keypad entry. Digits fill the RX frequency most-significant
+# first; the seventh digit auto-advances to the TX set. Pin a strong signal so
+# the S-meter saturates identically before and after the rtx reconfigure that
+# applying a frequency triggers (see vfo_tune).
+rssi 0
+wait_stable 5000 3
+# Enter 1 4 5 -> the hero shows 145.000 under an "ENTER RX" prompt.
+key 1 4 5
+wait_stable
+screenshot_sync vfo_keypad_rx.bmp
+# Finish RX (5 0 0 0 -> 145.500), then ENTER mirrors TX=RX and applies it.
+key 5 0 0 0
+wait_stable
+key ENTER
+wait_stable
+screenshot_sync vfo_keypad_applied.bmp
+quit

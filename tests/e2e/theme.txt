@@ -1,0 +1,46 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# Display > Theme (High Contrast) and Text (Crisp): pure-mono, non-AA UI.
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Settings is main-menu row idx 5; Display is the first Settings row
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+key ENTER
+wait_stable
+# scroll past Brightness..Battery to the Theme row (row 6)
+key DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+# edit Theme: UP raises Standard -> High Contrast (whole UI recolours mono)
+key ENTER
+wait_stable
+key UP
+wait_stable
+key ENTER
+wait_stable
+screenshot_sync theme_display_hc.bmp
+# move to Text, edit: UP raises Smooth -> Crisp (drops text anti-aliasing)
+key DOWN ENTER
+wait_stable
+key UP
+wait_stable
+key ENTER
+wait_stable
+screenshot_sync theme_display_crisp.bmp
+# back out to the VFO home screen: white-on-black, crisp
+key ESC
+wait_stable
+key ESC
+wait_stable
+key ESC
+wait_stable
+screenshot_sync theme_vfo.bmp
+# the main menu list also renders pure mono
+key ENTER
+wait_stable
+screenshot_sync theme_menu.bmp
+quit

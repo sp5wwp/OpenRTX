@@ -1,0 +1,23 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# Settings > Default Settings: two-step reset confirmation.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Default Settings is the last Settings row (idx 7)
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync defaults.bmp
+# ENTER arms the confirmation ("Are you sure?")
+key ENTER
+wait_stable
+screenshot_sync defaults_armed.bmp
+# ESC cancels without resetting
+key ESC
+wait_stable
+quit

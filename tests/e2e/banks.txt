@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# Main-menu Banks browser: "All channels" entry plus the codeplug banks.
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Banks is main-menu row idx 0 (already selected on entering the menu)
+key ENTER
+wait_stable
+screenshot_sync banks_list.bmp
+# Move the highlight to "2m Repeaters" (idx 1)
+key DOWN
+wait_stable
+screenshot_sync banks_selected.bmp
+# ENTER enables the bank and loads its first channel, popping to the VFO.
+# Not asserted (post-load VFO S-meter is RSSI-timing-flaky); manually
+# verified to load 146.520 (2m Calling, first channel of the bank).
+key ENTER
+wait_stable
+quit

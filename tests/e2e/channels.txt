@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# Main-menu Channels browser: list the codeplug channels and move selection.
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Channels is main-menu row idx 1 (Banks, Channels, Contacts, ...)
+key DOWN ENTER
+wait_stable
+screenshot_sync channels_list.bmp
+# Move the highlight down to "M17 CQ" (idx 2)
+key DOWN DOWN
+wait_stable
+screenshot_sync channels_selected.bmp
+# ENTER loads the channel and pops to the VFO home. Not asserted with a
+# screenshot: the VFO S-meter reading is RSSI-timing-dependent after the
+# channel's rtx reconfigure. Manually verified to load 433.475 (M17 CQ).
+key ENTER
+wait_stable
+quit

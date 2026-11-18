@@ -6,7 +6,7 @@ wait_stable 5000 3
 # Menu > Info: version, heap, hardware version, HMI, tuning pot
 key ENTER
 wait_stable
-key DOWN ENTER
+key DOWN DOWN DOWN DOWN DOWN ENTER
 wait_stable
 screenshot_sync info_top.bmp
 key DOWN DOWN DOWN DOWN

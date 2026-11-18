@@ -110,13 +110,7 @@ openrtx/src/protocols/M17/LinkSetupFrame.cpp
 openrtx/src/protocols/M17/MetaText.cpp
 openrtx/src/protocols/M17/Modulator.cpp
 openrtx/src/rtx/OpMode_FM.cpp
-openrtx/src/ui/default/ui.c
-openrtx/src/ui/default/ui_main.c
-openrtx/src/ui/default/ui_menu.c
-openrtx/src/ui/default/ui_strings.c
-openrtx/src/ui/module17/ui.c
-openrtx/src/ui/module17/ui_main.c
-openrtx/src/ui/module17/ui_menu.c
+openrtx/src/ui/ui_strings.c
 platform/drivers/ADC/ADC0_GDx.c
 platform/drivers/ADC/adc_at32.c
 platform/drivers/ADC/adc_at32.h

@@ -1,0 +1,43 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# The FM CTCSS/DCS tone in the VFO mode stack follows the direction: a
+# decode (RX) tone shows while receiving and hides while transmitting; an
+# encode (TX) tone would show only on TX. Enable a decode tone via
+# Settings > FM (CTCSS En. -> Decode), return to the VFO, then PTT.
+rssi 0
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Main menu: Banks/Channels/Contacts/GPS/Messages/Settings -> DOWN x5.
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Settings: Display/Time&Date/GPS/Radio/M17/FM -> DOWN x5.
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# FM: CTCSS Tone / CTCSS En. -> DOWN to CTCSS En., edit, UP to "Decode".
+key DOWN
+wait_stable
+key ENTER
+wait_stable
+key UP
+wait_stable
+key ENTER
+wait_stable
+# ESC back to the VFO.
+key ESC
+wait_stable
+key ESC
+wait_stable
+key ESC
+wait_stable
+screenshot_sync fm_tone_rx.bmp
+# PTT: the decode tone hides (no encode tone enabled).
+ptt
+wait_stable
+screenshot_sync fm_tone_tx.bmp
+ptt
+wait_stable
+quit

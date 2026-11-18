@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# VFO/MEM toggle and channel stepping. ESC leaves VFO for memory mode and
+# loads channel 1 (2m Calling, 146.520); UP steps to channel 2 (70cm Rptr,
+# 446.000). Pin a strong signal so the S-meter saturates identically across
+# the rtx reconfigure each channel load triggers (see vfo_tune).
+rssi 0
+wait_stable 5000 3
+key ESC
+wait_stable
+screenshot_sync vfo_mem.bmp
+key UP
+wait_stable
+screenshot_sync vfo_mem_next.bmp
+quit

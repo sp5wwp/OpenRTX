@@ -6,7 +6,7 @@ wait_stable 5000 3
 # Menu > About
 key ENTER
 wait_stable
-key DOWN DOWN ENTER
+key DOWN DOWN DOWN DOWN DOWN DOWN ENTER
 wait_stable
 screenshot_sync about_top.bmp
 # Scroll to the bottom of the author list

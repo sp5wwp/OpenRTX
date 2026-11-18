@@ -1,0 +1,32 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# ETSI multi-tap keypad entry in the M17 Meta modal: a digit key types a
+# letter; repeating the same key within 700ms cycles it; a different key
+# commits the character and advances. The repeats go in one command so a
+# slow host can't let the 700ms window expire between them.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# M17 is Settings row idx 4.
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Open the Meta Txt modal (row 1).
+key DOWN
+wait_stable
+key ENTER
+wait_stable
+# Type over the default: 3 -> 'd'; 6 6 6 -> 'o' (cycle m,n,o); 4 -> 'g'.
+# Each different key auto-commits the previous character.
+key 3
+wait_stable
+key 6 6 6
+wait_stable
+key 4
+wait_stable
+screenshot_sync multitap.bmp
+quit

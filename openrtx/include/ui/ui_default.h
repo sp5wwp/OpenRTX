@@ -187,16 +187,11 @@ typedef struct layout_t
     point_t line4_pos;
     point_t bottom_pos;
     fontSize_t top_font;
-    symbolSize_t top_symbol_size;
     fontSize_t line1_font;
-    symbolSize_t line1_symbol_size;
     fontSize_t line2_font;
-    symbolSize_t line2_symbol_size;
     fontSize_t line3_font;
-    symbolSize_t line3_symbol_size;
     fontSize_t line3_large_font;
     fontSize_t line4_font;
-    symbolSize_t line4_symbol_size;
     fontSize_t bottom_font;
     fontSize_t input_font;
     fontSize_t menu_font;

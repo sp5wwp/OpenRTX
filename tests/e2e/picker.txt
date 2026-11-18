@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# UTF-8 character picker: a long-press in the Meta modal opens a grid of
+# accented Latin + symbols (from the custom icon/fallback font); ENTER
+# inserts the chosen code point. 'keylong' injects the long-press because the
+# harness clock is frozen (a real timed hold can't elapse 700ms).
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Open the Meta Txt modal (row 1).
+key DOWN
+wait_stable
+key ENTER
+wait_stable
+# Long-press opens the picker.
+keylong 1
+wait_stable
+screenshot_sync picker_open.bmp
+# Navigate the grid and pick a character.
+key RIGHT RIGHT RIGHT DOWN
+wait_stable
+screenshot_sync picker_sel.bmp
+# ENTER selects and returns to the field with the code point inserted.
+key ENTER
+wait_stable
+screenshot_sync picker_inserted.bmp
+quit

@@ -1,0 +1,24 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# VFO+M17 CAN detail shows only when the CAN actually gates traffic: nothing
+# while receiving with the CAN check off (promiscuous, the default — the CAN
+# filters nothing, so it is hidden), and "CAN 0" while transmitting (you key
+# up on your own CAN). Switch VFO to M17 with MONI+5, then toggle
+# PTT.
+rssi 0
+wait_stable 5000 3
+keycombo MONI 5
+wait_stable
+screenshot_sync m17_can_rx.bmp
+# PTT: the CAN detail appears -- the CAN you key up on.
+ptt
+wait_stable
+screenshot_sync m17_can_tx.bmp
+# Release: the CAN detail hides again (promiscuous RX, nothing gated).
+ptt
+wait_stable
+screenshot_sync m17_can_rx2.bmp
+quit

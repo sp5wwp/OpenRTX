@@ -1,0 +1,50 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# Settings > Time & Date: display the clock, then the keypad digit editor.
+# Under faketime the clock is frozen (2000-01-01 00:00:00) and state_task's
+# 100ms throttle never elapses, so a committed time sticks -- deterministic.
+rssi 0
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Main menu: Banks/Channels/Contacts/GPS/Messages/Settings -> DOWN x5.
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Settings: Display/Time & Date -> DOWN x1 to Time & Date.
+key DOWN ENTER
+wait_stable
+screenshot_sync td_display.bmp
+# ENTER opens the digit editor (empty placeholders).
+key ENTER
+wait_stable
+screenshot_sync td_edit_empty.bmp
+# Type dd/mm/yy hh:mm = 25/12/80 13:45.
+key 2
+wait_stable
+key 5
+wait_stable
+key 1
+wait_stable
+key 2
+wait_stable
+key 8
+wait_stable
+key 0
+wait_stable
+key 1
+wait_stable
+key 3
+wait_stable
+key 4
+wait_stable
+key 5
+wait_stable
+screenshot_sync td_edit_full.bmp
+# ENTER commits; back in display mode showing the applied time.
+key ENTER
+wait_stable
+screenshot_sync td_committed.bmp
+quit

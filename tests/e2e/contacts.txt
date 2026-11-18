@@ -1,0 +1,19 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# Main-menu Contacts browser: read-only list of the codeplug contacts.
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Contacts is main-menu row idx 2 (Banks, Channels, Contacts, ...)
+key DOWN DOWN ENTER
+wait_stable
+screenshot_sync contacts_list.bmp
+# Scroll the highlight down one (ENTER is a no-op here, read-only viewer)
+key DOWN
+wait_stable
+screenshot_sync contacts_selected.bmp
+quit

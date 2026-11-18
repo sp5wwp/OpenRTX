@@ -6,9 +6,9 @@ wait_stable 5000 3
 # Menu > Settings > M17
 key ENTER
 wait_stable
-key ENTER
+key DOWN DOWN DOWN DOWN ENTER
 wait_stable
-key DOWN ENTER
+key DOWN DOWN ENTER
 wait_stable
 screenshot_sync m17_settings.bmp
 # Edit the callsign, which is selected

@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# M17 callsign character-wheel delete: cycle a character to the ⌫ slot, then
+# a move key applies the deletion. Universal (no dedicated key needed).
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# M17 is Settings row idx 4.
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Edit Callsign ("OPNRTX", cursor on the leading 'O').
+key ENTER
+wait_stable
+# Cycle 'O' down 16 steps: O -> ... -> space -> ⌫ (the delete slot).
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync callsign_del_marker.bmp
+# A move key (RIGHT) applies the delete, removing the character.
+key RIGHT
+wait_stable
+screenshot_sync callsign_deleted.bmp
+quit

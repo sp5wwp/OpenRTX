@@ -1,0 +1,15 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# GPS Position screen with no fix: enter GPS (idx 3). With isolated
+# settings (XDG_STATE_HOME) gps_enabled defaults off, so this is the
+# deterministic "GPS Off" status state, not the live-fix layout.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync gps_off.bmp
+quit

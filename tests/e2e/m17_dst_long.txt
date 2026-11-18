@@ -1,0 +1,38 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# A full-length M17 destination must stay on one channel-line (no wrap).
+rssi 0
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+key HASH
+wait_stable
+# Type 9 chars via multi-tap (distinct keys each commit + advance).
+key 2
+wait_stable
+key 3
+wait_stable
+key 4
+wait_stable
+key 5
+wait_stable
+key 6
+wait_stable
+key 7
+wait_stable
+key 8
+wait_stable
+key 9
+wait_stable
+key 2
+wait_stable
+screenshot_sync m17_dst_long.bmp
+quit

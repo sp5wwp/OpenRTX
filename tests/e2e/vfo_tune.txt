@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# VFO tuning: UP steps the RX+TX frequency by one step (12.5 kHz default).
+# Three steps from the 430.000 default lands on 430.037.
+# Tuning triggers an rtx reconfigure, after which the emulator RSSI reads one
+# of two values; pin a strong signal so the S-meter saturates identically in
+# both, keeping the frame deterministic.
+rssi 0
+wait_stable 5000 3
+# Space the three steps so each is processed before the screenshot even when
+# the UI thread is loaded (parallel suite runs), landing deterministically.
+key UP
+wait_stable
+key UP
+wait_stable
+key UP
+wait_stable
+screenshot_sync vfo_tune.bmp
+quit

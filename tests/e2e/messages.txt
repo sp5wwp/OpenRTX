@@ -17,16 +17,19 @@ wait_stable
 # Switch to M17 with MONI+5; the inbox now offers a new message
 keycombo MONI 5
 wait_stable
+# The menu keeps Messages selected
 key ENTER
 wait_stable
-key DOWN DOWN DOWN DOWN ENTER
+key ENTER
 wait_stable
 screenshot_sync messages_m17.bmp
-# Open the compose form; it starts editing the body
+# Open the compose form on the message row
 key ENTER
 wait_stable
 screenshot_sync compose.bmp
-# Type "A" and confirm it
+# Open the body editor, type "A" and confirm it
+key ENTER
+wait_stable
 key 2
 wait_stable
 key ENTER

@@ -8,7 +8,6 @@
 #define GRAPHICS_H
 
 #include "core/datatypes.h"
-#include "fonts/symbols/symbols.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -76,16 +75,34 @@ typedef enum {
 } fontSize_t;
 
 typedef enum {
-    SYMBOLS_SIZE_5PT,
-    SYMBOLS_SIZE_6PT,
-    SYMBOLS_SIZE_8PT
-} symbolSize_t;
-
-typedef enum {
     TEXT_ALIGN_LEFT = 0,
     TEXT_ALIGN_CENTER,
     TEXT_ALIGN_RIGHT
 } textAlign_t;
+
+/*
+ * Icon glyphs, as UTF-8 strings, from the FontAwesome codepoints merged into
+ * each UI font. Pass them to gfx_print() like any other text (the text path
+ * decodes UTF-8), e.g. gfx_print(pos, FONT_SIZE_8PT, ..., SYMBOL_WIFI). Extend
+ * the set by adding codepoints to scripts/gen_fonts.sh and regenerating.
+ */
+#define SYMBOL_SIGNAL "\xEF\x80\x92"        /* 0xF012 */
+#define SYMBOL_SETTINGS "\xEF\x80\x93"      /* 0xF013 */
+#define SYMBOL_LOCK "\xEF\x80\xA3"          /* 0xF023 */
+#define SYMBOL_MUTE "\xEF\x80\xA6"          /* 0xF026 */
+#define SYMBOL_VOLUME "\xEF\x80\xA8"        /* 0xF028 */
+#define SYMBOL_WARNING "\xEF\x81\xB1"       /* 0xF071 */
+#define SYMBOL_CALL "\xEF\x82\x95"          /* 0xF095 */
+#define SYMBOL_MENU "\xEF\x83\x89"          /* 0xF0C9 */
+#define SYMBOL_ENVELOPE "\xEF\x83\xA0"      /* 0xF0E0 */
+#define SYMBOL_CHARGE "\xEF\x83\xA7"        /* 0xF0E7 */
+#define SYMBOL_BELL "\xEF\x83\xB3"          /* 0xF0F3 */
+#define SYMBOL_GPS "\xEF\x84\xA4"           /* 0xF124 */
+#define SYMBOL_BRIGHTNESS "\xEF\x86\x85"    /* 0xF185 */
+#define SYMBOL_WIFI "\xEF\x87\xAB"          /* 0xF1EB */
+#define SYMBOL_BATTERY_FULL "\xEF\x89\x80"  /* 0xF240 */
+#define SYMBOL_BATTERY_HALF "\xEF\x89\x82"  /* 0xF242 */
+#define SYMBOL_BATTERY_EMPTY "\xEF\x89\x84" /* 0xF244 */
 
 /**
  * This function calls the correspondent method of the low level interface display.h
@@ -145,6 +162,29 @@ void gfx_fillScreen(color_t color);
 void gfx_setPixel(point_t pos, color_t color);
 
 /**
+ * Restrict all subsequent drawing to a rectangle (screen space). Pixels outside
+ * it are suppressed by gfx_setPixel, so text, fills, lines and circles are all
+ * clipped. Used by the UI toolkit to clip each widget to its box.
+ * @param x,y: top-left corner.
+ * @param width,height: rectangle size (a zero dimension clips out everything).
+ */
+void gfx_setClipRect(int16_t x, int16_t y, uint16_t width, uint16_t height);
+
+/**
+ * Remove the clip rectangle (drawing is bounded only by the screen again).
+ */
+void gfx_resetClipRect(void);
+
+/**
+ * Select the crisp (1bpp, non-anti-aliased) text font, or the default smooth
+ * anti-aliased font. On colour targets both sets are embedded and this switches
+ * the font returned for all subsequent text. No effect on monochrome targets,
+ * which ship only the 1bpp font. Defaults to off (smooth).
+ * @param on: true for the crisp 1bpp font, false for the smooth AA font.
+ */
+void gfx_setFontMono(bool on);
+
+/**
  * Draw a line from start to end coordinates, ends included.
  * @param start: line start point, in pixel coordinates.
  * @param end: line end point, in pixel coordinates.
@@ -193,6 +233,16 @@ void gfx_drawCircle(point_t start, uint16_t r, color_t color);
  * @return font height
  */
 uint8_t gfx_getFontHeight(fontSize_t size);
+
+/**
+ * Font vertical metrics, in pixels, from the font's own header.
+ * @param size: text font size, defined as enum.
+ * @return ascent (above baseline), descent (below baseline, <= 0) or the full
+ *         line height (ascent - descent).
+ */
+uint8_t gfx_getFontAscent(fontSize_t size);
+int8_t gfx_getFontDescent(fontSize_t size);
+uint8_t gfx_getFontLineHeight(fontSize_t size);
 
 /**
  * Prints text on the screen at the specified coordinates.
@@ -332,20 +382,6 @@ point_t gfx_printLine(uint8_t cur, uint8_t tot, int16_t startY, int16_t endY,
  * @param size: text font size, defined as enum.
  */
 void gfx_printError(const char *text, fontSize_t size);
-
-/**
- * Prints text on the screen at the specified coordinates.
- * @param start: text line start point, in pixel coordinates.
- * @param size: icon font size, defined as enum.
- * @param alignment: text alignment type, defined as enum. DEPRECATED: in the
- *                   future this will be always LEFT.
- * @param color: text color, in color_t format.
- * @param symbol: symbol to be printed.
- * @return position immediately to the right of the drawn symbol, suitable
- *         for chaining consecutive symbol draws.
- */
-point_t gfx_drawSymbol(point_t start, symbolSize_t size, textAlign_t alignment,
-                       color_t color, symbol_t symbol);
 
 /**
  * Function to draw battery of arbitrary size.

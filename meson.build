@@ -12,13 +12,6 @@ project('OpenRTX', ['c', 'cpp'],
 openrtx_def = {}
 
 ##
-## UI font configuration, only one uncommented at a time
-##
-
-openrtx_def += {'FONT_UBUNTU_REGULAR': ''}
-# openrtx_def += {'FONT_FREE_SANS': ''}
-
-##
 ## Firmware configuration parameters
 ##
 
@@ -37,6 +30,8 @@ openrtx_src = ['openrtx/src/core/state.c',
                'openrtx/src/core/threads.c',
                'openrtx/src/core/battery.c',
                'openrtx/src/core/graphics.c',
+               'openrtx/src/core/fonts/lv_font_bin.c',
+               'openrtx/src/core/fontData.S',
                'openrtx/src/core/input.c',
                'openrtx/src/core/utils.c',
                'openrtx/src/core/queue.c',
@@ -74,21 +69,62 @@ openrtx_src = ['openrtx/src/core/state.c',
                'openrtx/src/protocols/M17/PacketFramer.cpp',
                'openrtx/src/protocols/M17/SmsPacket.cpp']
 
-openrtx_inc = ['openrtx/include', 'platform']
+openrtx_inc = ['openrtx/include', 'platform', 'openrtx/src/ui']
 
 ##
 ## OpenRTX UI sources
 ##
+## The retained-widget UI toolkit — a single unified codebase for every target
+## (it replaced the former per-family "default" and "module17" immediate-mode
+## UIs). ui_strings.c holds the currentLanguage table the voice-prompt subsystem
+## depends on.
+##
 
-ui_src_default = ['openrtx/src/ui/default/ui.c',
-                  'openrtx/src/ui/default/ui_main.c',
-                  'openrtx/src/ui/default/ui_menu.c',
-                  'openrtx/src/ui/default/ui_messages.c',
-                  'openrtx/src/ui/default/ui_strings.c']
-
-ui_src_module17 = ['openrtx/src/ui/module17/ui.c',
-                   'openrtx/src/ui/module17/ui_main.c',
-                   'openrtx/src/ui/module17/ui_menu.c']
+ui_src = ['openrtx/src/ui/ui_shim.cpp',
+               'openrtx/src/ui/core/Object.cpp',
+               'openrtx/src/ui/core/UiText.cpp',
+               'openrtx/src/ui/core/View.cpp',
+               'openrtx/src/ui/core/SettingsListView.cpp',
+               'openrtx/src/ui/core/Navigator.cpp',
+               'openrtx/src/ui/style/Theme.cpp',
+               'openrtx/src/ui/render/DrawCtx.cpp',
+               'openrtx/src/ui/layout/Flex.cpp',
+               'openrtx/src/ui/widgets/Widgets.cpp',
+               'openrtx/src/ui/widgets/TextRow.cpp',
+               'openrtx/src/ui/widgets/SettingRow.cpp',
+               'openrtx/src/ui/widgets/List.cpp',
+               'openrtx/src/ui/widgets/BatteryIcon.cpp',
+               'openrtx/src/ui/widgets/TopBar.cpp',
+               'openrtx/src/ui/widgets/SignalMeter.cpp',
+               'openrtx/src/ui/widgets/BarRow.cpp',
+               'openrtx/src/ui/widgets/FreqHero.cpp',
+               'openrtx/src/ui/widgets/Compass.cpp',
+               'openrtx/src/ui/widgets/TextInput.cpp',
+               'openrtx/src/ui/widgets/TextBlock.cpp',
+               'openrtx/src/ui/views/VfoView.cpp',
+               'openrtx/src/ui/views/VolumeOverlayView.cpp',
+               'openrtx/src/ui/views/TextInputView.cpp',
+               'openrtx/src/ui/views/PickerView.cpp',
+               'openrtx/src/ui/views/MacroView.cpp',
+               'openrtx/src/ui/views/MenuView.cpp',
+               'openrtx/src/ui/views/InfoView.cpp',
+               'openrtx/src/ui/views/AboutView.cpp',
+               'openrtx/src/ui/views/DisplayView.cpp',
+               'openrtx/src/ui/views/TimeDateView.cpp',
+               'openrtx/src/ui/views/ChecklistView.cpp',
+               'openrtx/src/ui/views/GpsView.cpp',
+               'openrtx/src/ui/views/FmView.cpp',
+               'openrtx/src/ui/views/RadioView.cpp',
+               'openrtx/src/ui/views/M17View.cpp',
+               'openrtx/src/ui/views/GpsSettingsView.cpp',
+               'openrtx/src/ui/views/DefaultsView.cpp',
+               'openrtx/src/ui/views/ChannelsView.cpp',
+               'openrtx/src/ui/views/ContactsView.cpp',
+               'openrtx/src/ui/views/BanksView.cpp',
+               'openrtx/src/ui/views/MessagesView.cpp',
+               'openrtx/src/ui/views/MessageDetailView.cpp',
+               'openrtx/src/ui/views/MessageComposeView.cpp',
+               'openrtx/src/ui/ui_strings.c']
 
 ##
 ## Selection of main entrypoint
@@ -386,16 +422,16 @@ linux_def  += {'sniprintf':'snprintf', 'vsniprintf':'vsnprintf'}
 #
 # Standard UI
 #
-linux_default_src = linux_src + ui_src_default
+linux_default_src = linux_src + ui_src
 linux_default_def = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
-                                 'CONFIG_GPS': '', 'CONFIG_RTC': ''}
+                                 'CONFIG_FONT_AA': '', 'CONFIG_GPS': '', 'CONFIG_RTC': ''}
 linux_small_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
                                  'CONFIG_GPS': '', 'CONFIG_RTC': ''}
 
 #
 # Module17 UI
 #
-linux_mod17_src = linux_src + ui_src_module17
+linux_mod17_src = linux_src + ui_src
 linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': ''}
 
 linux_c_args   = ['-ffunction-sections', '-fdata-sections', '-std=gnu17']
@@ -440,9 +476,9 @@ md3x0_src = ['platform/drivers/CPS/cps_io_native_MD3x0.c',
              'platform/targets/MD-3x0/hwconfig.c']
 
 md3x0_inc = ['platform/targets/MD-3x0']
-md3x0_def = {'PLATFORM_MD3x0': '', 'timegm': 'mktime'}
+md3x0_def = {'PLATFORM_MD3x0': '', 'CONFIG_FONT_AA': '', 'timegm': 'mktime'}
 
-md3x0_src += openrtx_src + stm32f405_src + ui_src_default + mdx_src
+md3x0_src += openrtx_src + stm32f405_src + ui_src + mdx_src
 md3x0_inc += openrtx_inc + stm32f405_inc
 md3x0_def += openrtx_def + stm32f405_def
 
@@ -464,9 +500,9 @@ mduv3x0_src = ['platform/drivers/CPS/cps_io_native_MDUV3x0.c',
                'platform/drivers/baseband/HR_C6000_UV3x0.cpp']
 
 mduv3x0_inc = ['platform/targets/MD-UV3x0']
-mduv3x0_def =  {'PLATFORM_MDUV3x0': '', 'timegm': 'mktime'}
+mduv3x0_def =  {'PLATFORM_MDUV3x0': '', 'CONFIG_FONT_AA': '', 'timegm': 'mktime'}
 
-mduv3x0_src += openrtx_src + stm32f405_src + ui_src_default + mdx_src
+mduv3x0_src += openrtx_src + stm32f405_src + ui_src + mdx_src
 mduv3x0_inc += openrtx_inc + stm32f405_inc
 mduv3x0_def += openrtx_def + stm32f405_def
 
@@ -487,7 +523,7 @@ md9600_src = ['platform/targets/MD-9600/platform.c',
 md9600_inc = ['platform/targets/MD-9600']
 md9600_def = {'PLATFORM_MD9600': ''}
 
-md9600_src += openrtx_src + stm32f405_src + ui_src_default + mdx_src
+md9600_src += openrtx_src + stm32f405_src + ui_src + mdx_src
 md9600_inc += openrtx_inc + stm32f405_inc
 md9600_def += openrtx_def + stm32f405_def
 
@@ -498,7 +534,7 @@ gd77_src = []
 gd77_inc = []
 gd77_def = {'PLATFORM_GD77': ''}
 
-gd77_src += openrtx_src + mk22fn512_src + ui_src_default + gdx_src
+gd77_src += openrtx_src + mk22fn512_src + ui_src + gdx_src
 gd77_inc += openrtx_inc + mk22fn512_inc + gdx_inc
 gd77_def += openrtx_def + mk22fn512_def
 
@@ -509,7 +545,7 @@ dm1801_src = []
 dm1801_inc = []
 dm1801_def = {'PLATFORM_DM1801': ''}
 
-dm1801_src += openrtx_src + mk22fn512_src + ui_src_default + gdx_src
+dm1801_src += openrtx_src + mk22fn512_src + ui_src + gdx_src
 dm1801_inc += openrtx_inc + mk22fn512_inc + gdx_inc
 dm1801_def += openrtx_def + mk22fn512_def
 
@@ -531,7 +567,7 @@ mod17_src = ['platform/targets/Module17/platform.c',
 mod17_inc = ['platform/targets/Module17']
 mod17_def = {'PLATFORM_MOD17': ''}
 
-mod17_src += openrtx_src + stm32f405_src + ui_src_module17
+mod17_src += openrtx_src + stm32f405_src + ui_src
 mod17_inc += openrtx_inc + stm32f405_inc
 mod17_def += openrtx_def + stm32f405_def
 
@@ -562,9 +598,9 @@ cs7000_src = ['platform/drivers/NVM/nvmem_CS7000.c',
              'platform/targets/CS7000/platform.c']
 
 cs7000_inc = ['platform/targets/CS7000']
-cs7000_def = {'PLATFORM_CS7000': '', 'timegm': 'mktime'}
+cs7000_def = {'PLATFORM_CS7000': '', 'CONFIG_FONT_AA': '', 'timegm': 'mktime'}
 
-cs7000_src += openrtx_src + stm32f405_src + ui_src_default
+cs7000_src += openrtx_src + stm32f405_src + ui_src
 cs7000_inc += openrtx_inc + stm32f405_inc
 cs7000_def += openrtx_def + stm32f405_def
 
@@ -593,9 +629,9 @@ cs7000p_src = ['platform/drivers/NVM/nvmem_CS7000.c',
                'platform/targets/CS7000-PLUS/platform.c']
 
 cs7000p_inc = ['platform/targets/CS7000-PLUS']
-cs7000p_def = {'PLATFORM_CS7000P': '', 'timegm': 'mktime'}
+cs7000p_def = {'PLATFORM_CS7000P': '', 'CONFIG_FONT_AA': '', 'timegm': 'mktime'}
 
-cs7000p_src += openrtx_src + stm32h743_src + miosix_cm7_src + ui_src_default
+cs7000p_src += openrtx_src + stm32h743_src + miosix_cm7_src + ui_src
 cs7000p_inc += openrtx_inc + stm32h743_inc + miosix_cm7_inc
 cs7000p_def += openrtx_def + stm32h743_def + miosix_cm7_def
 
@@ -615,9 +651,9 @@ dm1701_src = ['platform/targets/DM-1701/platform.c',
               'platform/drivers/baseband/HR_C6000_UV3x0.cpp']
 
 dm1701_inc = ['platform/targets/DM-1701']
-dm1701_def = {'PLATFORM_DM1701': '', 'timegm': 'mktime'}
+dm1701_def = {'PLATFORM_DM1701': '', 'CONFIG_FONT_AA': '', 'timegm': 'mktime'}
 
-dm1701_src += openrtx_src + stm32f405_src + ui_src_default + mdx_src
+dm1701_src += openrtx_src + stm32f405_src + ui_src + mdx_src
 dm1701_inc += openrtx_inc + stm32f405_inc
 dm1701_def += openrtx_def + stm32f405_def
 
@@ -640,7 +676,7 @@ rt4d_src = ['platform/drivers/NVM/nvmem_rt4d.c',
 rt4d_inc = ['platform/targets/RT-4D']
 rt4d_def = {'PLATFORM_RT4D': ''}
 
-rt4d_src += openrtx_src + at32f423_src + ui_src_default
+rt4d_src += openrtx_src + at32f423_src + ui_src
 rt4d_inc += openrtx_inc + at32f423_inc
 rt4d_def += openrtx_def + at32f423_def
 
@@ -1291,7 +1327,7 @@ unit_test_opts = {'c_args'             : linux_c_args,
                   'dependencies'       : [sdl_dep, threads_dep, codec2_dep, catch2_dep],
                   'link_args'          : linux_l_args}
 
-unit_test_src = linux_src + ui_src_default
+unit_test_src = linux_src + ui_src
 
 m17_golay_test = executable('m17_golay_test',
                             sources : unit_test_src + ['tests/unit/M17_golay.cpp'],
