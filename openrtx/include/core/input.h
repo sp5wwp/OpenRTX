@@ -21,6 +21,14 @@ extern "C" {
 static const uint16_t input_longPressTimeout = 700;
 
 /**
+ * Once an auto-repeating key (the arrows) is held past input_longPressTimeout, a
+ * fresh key event is generated every this many milliseconds, so holding an arrow
+ * tunes / scrolls continuously instead of stepping once. Tune the feel on
+ * hardware; other keys keep their single one-shot long-press.
+ */
+static const uint16_t input_repeatInterval = 120;
+
+/**
  * Structure that represents a keyboard event payload
  * The maximum size of an event payload is 30 bits
  * For a keyboard event we use 1 bit to signal a short or long press

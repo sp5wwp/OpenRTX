@@ -9,7 +9,11 @@
 #include <stdbool.h>
 #include "core/input.h"
 
-static long long keyTs[KBD_NUM_KEYS]; // Timestamp of each keypress
+/* Keys that auto-repeat while held (navigation / tuning); every other key keeps
+ * its single one-shot long-press. */
+#define INPUT_REPEAT_MASK (KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT)
+
+static long long keyTs[KBD_NUM_KEYS]; // Timestamp of the last event per key
 static uint32_t longPressSent;        // Flags to manage long-press events
 static keyboard_t prevKeys = 0;       // Previous keyboard status
 
@@ -41,17 +45,33 @@ bool input_scanKeyboard(kbd_msg_t *msg)
     }
     // Some key is kept pressed
     else if (keys != 0) {
-        // Check for saved timestamp to trigger long-presses
+        // Check the saved timestamps to trigger long-presses and auto-repeat
         for (uint8_t k = 0; k < KBD_NUM_KEYS; k++) {
             keyboard_t mask = 1 << k;
+            if ((keys & mask) == 0)
+                continue;
 
-            // The key is pressed and its long-press timer is over
-            if (((keys & mask) != 0) && ((longPressSent & mask) == 0)
-                && ((now - keyTs[k]) >= input_longPressTimeout)) {
-                msg->long_press = 1;
+            const long long held = now - keyTs[k];
+            const bool repeatable = (mask & INPUT_REPEAT_MASK) != 0;
+
+            if ((longPressSent & mask) == 0) {
+                // First crossing of the long-press threshold.
+                if (held >= input_longPressTimeout) {
+                    // Arrows begin auto-repeat (a fresh key event, so every
+                    // Key handler steps/scrolls again); other keys fire the
+                    // usual one-shot long-press instead.
+                    if (!repeatable)
+                        msg->long_press = 1;
+                    msg->keys = keys;
+                    kbd_event = true;
+                    longPressSent |= mask;
+                    keyTs[k] = now; // measure the next repeat from here
+                }
+            } else if (repeatable && (held >= input_repeatInterval)) {
+                // Subsequent auto-repeat tick for a held arrow.
                 msg->keys = keys;
                 kbd_event = true;
-                longPressSent |= mask;
+                keyTs[k] = now;
             }
         }
     }
