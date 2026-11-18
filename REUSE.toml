@@ -18,6 +18,24 @@ SPDX-License-Identifier = "Ubuntu-font-1.0"
 SPDX-FileCopyrightText = "2012 Adafruit Industries"
 precedence = "override"
 
+# The text font blobs embed Ubuntu glyphs (text) and FontAwesome glyphs (icons).
+[[annotations]]
+path = "openrtx/fonts/ubuntu_*.bin"
+SPDX-License-Identifier = "Ubuntu-font-1.0 AND OFL-1.1"
+SPDX-FileCopyrightText = "2010-2011 Canonical Ltd. AND Fonticons, Inc."
+precedence = "override"
+
+# The custom icon font blobs and their source SVG are the M17 project logo,
+# as distributed in M17-Project/ref-dash (images/m17_logo.svg) under GPL-3.0.
+[[annotations]]
+path = [
+    "openrtx/fonts/icons_*.bin",
+    "openrtx/fonts/m17_logo.svg",
+]
+SPDX-License-Identifier = "GPL-3.0-only"
+SPDX-FileCopyrightText = "M17 Project"
+precedence = "override"
+
 # This section is for OpenRTX sources that cannot have comments in them, like `json` files
 [[annotations]]
 path = [
@@ -31,6 +49,7 @@ path = [
     "README.md",
     "CONTRIBUTING.md",
     "openrtx/src/locale/**/*",
+    "docs/**/*",
     "99-openrtx.rules",
     ".github/**/*",
     ".devcontainer/**/*",
