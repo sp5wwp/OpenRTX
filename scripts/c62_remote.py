@@ -130,9 +130,19 @@ class Remote:
             self.ser.flush()
             time.sleep(0.002)
 
-    def cmd(self, line, timeout=3.0, expect=None):
+    def cmd(self, line, timeout=3.0, expect=None, tries=3):
         """Send a command, return the first reply starting with expect
-        (default: the command's first word, or E for an error)."""
+        (default: the command's first word, or E for an error). The radio
+        polls its UART: a busy moment can lose a character, so retry."""
+        for i in range(tries):
+            try:
+                return self._cmd(line, timeout / tries if i else timeout,
+                                 expect)
+            except TimeoutError:
+                if i == tries - 1:
+                    raise
+
+    def _cmd(self, line, timeout, expect):
         want = expect or {"ping": "pong", "s": "S "}.get(line.split()[0],
                                                          line.split()[0])
         self.send(line)
