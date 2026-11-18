@@ -1,0 +1,35 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+wait_stable 5000 3
+# Menu > Messages on FM: empty inbox, no compose entry
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync messages_fm.bmp
+key ESC
+wait_stable
+key ESC
+wait_stable
+# Switch to M17 with MONI+5; the inbox now offers a new message
+keycombo MONI 5
+wait_stable
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+screenshot_sync messages_m17.bmp
+# Open the compose form; it starts editing the body
+key ENTER
+wait_stable
+screenshot_sync compose.bmp
+# Type "A" and confirm it
+key 2
+wait_stable
+key ENTER
+wait_stable
+screenshot_sync compose_body.bmp
+quit
