@@ -7,7 +7,6 @@
 #ifndef UI_STRINGS_H
 #define UI_STRINGS_H
 
-#define NUM_LANGUAGES 2
 
 /*
  * NOTE: This string table's order must not be altered as voice prompts will be
@@ -116,7 +115,7 @@ typedef struct
 }
 stringsTable_t;
 
-extern const stringsTable_t languages[];
+extern const stringsTable_t englishStrings; // Built-in English table
 extern const stringsTable_t* currentLanguage;
 
 /**

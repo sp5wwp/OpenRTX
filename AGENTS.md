@@ -214,7 +214,7 @@ about the layer directly below it, and generic layers never learn a specific pro
 Two structures cannot be reordered, ever, and both failure modes are silent:
 
 - **`settings_t` (`openrtx/include/core/settings.h`)** — new fields are appended at the **bottom** of the struct. Inserting a field in the middle invalidates every user's saved settings (#340, #427).
-- **`stringsTable_t` (`openrtx/include/ui/ui_strings.h`)** — new strings are appended at the **end**, and must be added to *every* language table (`EnglishStrings.h`, `SpanishStrings.h`, …) at the matching position. A missing or misordered entry breaks voice prompts and crashes the firmware once multi-language support lands (#335, #339, #353).
+- **`stringsTable_t` (`openrtx/include/ui/ui_strings.h`)** — new strings are appended at the **end**, with their English text at the matching position in `EnglishStrings.h`, marked with `N_()`; then run `scripts/update_pot.sh`. Translations are made on Weblate in `openrtx/src/locale/*.po`, never in C. A missing or misordered entry breaks voice prompts and crashes the firmware once multi-language support lands (#335, #339, #353).
 - Know which store a value belongs in. Settings are what the user sets independently of the tuned channel. Per-channel values belong to the channel; volatile operating values belong to the VFO state. Not everything that needs to survive a screen change is a setting (#390, #409). When unsure, ask before adding a field: M17 meta text went back and forth three times on #390.
 - Default values derive from the hardware configuration, not from a constant. A hardcoded frequency default breaks VHF radios; see `cps.c` (#335).
 

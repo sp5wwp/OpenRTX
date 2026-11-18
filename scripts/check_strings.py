@@ -104,12 +104,11 @@ def main() -> int:
         print(f"error: no fields parsed from {source_path}", file=sys.stderr)
         return 2
 
+    # Translations live in openrtx/src/locale/*.po; English may be the only
+    # table, but any other *Strings.h is still checked.
     other_files = sorted(
         p for p in UI_DIR.glob("*Strings.h") if p.name != SOURCE_FILE
     )
-    if not other_files:
-        print(f"error: no translation string tables found alongside {SOURCE_FILE}", file=sys.stderr)
-        return 2
 
     failed = False
 
