@@ -51,6 +51,11 @@ struct tetraDemodParams {
     float fitAlpha;  /* Gain and offset fit averaging, per symbol */
     float eqMu;      /* Equalizer step size (normalised LMS) */
     float softScale; /* Soft value at pi/4 from the decision boundary */
+    float eqBiasMu;  /* Equalizer bias step size (0: the fit alone tracks
+                        the carrier offset) */
+    float fitHold;   /* Non-zero: no fit adaptation before timing lock */
+    float acqEnergy; /* Non-zero: acquire timing at the maximum energy of
+                        the integrated signal, and the gain from it */
 };
 
 extern struct tetraDemodParams tetraDemodParams;
@@ -73,9 +78,10 @@ struct tetraDemod {
     float sx, sxx, st, sxt; /* Running moments */
     /* Timing */
     float cost[TETRA_DEMOD_SPS];
+    float energy[TETRA_DEMOD_SPS]; /* Variance per phase, while acquiring */
     bool acquired;
-    float drift; /* Total timing correction, samples */
-    float rate;  /* Timing correction per symbol (clock offset) */
+    float drift;                   /* Total timing correction, samples */
+    float rate; /* Timing correction per symbol (clock offset) */
     /* Equalizer */
     float eqIn[TETRA_DEMOD_EQ_TAPS];
     float eq[TETRA_DEMOD_EQ_TAPS];

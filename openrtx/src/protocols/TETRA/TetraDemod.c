@@ -64,6 +64,9 @@ struct tetraDemodParams tetraDemodParams = {
     .fitAlpha = FIT_ALPHA,
     .eqMu = EQ_MU,
     .softScale = SOFT_SCALE,
+    .eqBiasMu = EQ_MU,
+    .fitHold = 0,
+    .acqEnergy = 1,
 };
 #define P tetraDemodParams
 
@@ -140,6 +143,7 @@ static void reacquire(struct tetraDemod *dm)
     dm->symbols = WARMUP_SYMBOLS + TETRA_DEMOD_EQ_TAPS;
     dm->acquired = false;
     memset(dm->cost, 0, sizeof(dm->cost));
+    memset(dm->energy, 0, sizeof(dm->energy));
     memcpy(dm->eq, dm->eqInit, sizeof(dm->eq));
     dm->eqBias = 0;
     dm->errPow = 0;
@@ -233,19 +237,20 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
      */
     bool converging = dm->symbols < GRACE_SYMBOLS;
     bool adapt = converging || dm->errFast < BAD_ERROR * BAD_ERROR;
+    bool adaptFit = adapt && (P.fitHold == 0 || dm->acquired);
 
     /* Least-squares fit of t = gain * (d - offset) to the decisions */
     float x = dm->gain * (d - dm->offset);
     float t = decide(x) * (PI_F / 4);
     t += 2 * PI_F * roundf((x - t) / (2 * PI_F)); /* Keep 2 pi clicks */
-    if (adapt) {
+    if (adaptFit) {
         dm->sx += P.fitAlpha * (d - dm->sx);
         dm->sxx += P.fitAlpha * (d * d - dm->sxx);
         dm->st += P.fitAlpha * (t - dm->st);
         dm->sxt += P.fitAlpha * (d * t - dm->sxt);
     }
     float var = dm->sxx - dm->sx * dm->sx;
-    if (adapt && var > 0) {
+    if (adaptFit && var > 0) {
         float g = (dm->sxt - dm->sx * dm->st) / var;
         if (g > 0) {
             dm->gain = g;
@@ -269,7 +274,7 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
         float mu = P.eqMu * e / pow;
         for (int i = 0; i < TETRA_DEMOD_EQ_TAPS; i++)
             dm->eq[i] -= mu * dm->eqIn[i];
-        dm->eqBias -= P.eqMu * e;
+        dm->eqBias -= P.eqBiasMu * e;
     }
     dm->errPow += ERR_ALPHA * (e * e - dm->errPow);
     dm->errFast += ERR_FAST_ALPHA * (e * e - dm->errFast);
@@ -301,6 +306,36 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
 }
 
 /**
+ * Acquisition without trusting the gain and offset: the integrated signal
+ * has the most energy at the symbol centre, whatever the gain. Set the gain
+ * from that energy (pi/4-DQPSK: E[phi^2] = 5 (pi/4)^2) and seed the fit.
+ *
+ * @return position of the maximum relative to the current one, samples.
+ */
+static float acquireByEnergy(struct tetraDemod *dm)
+{
+    int best = 0;
+    for (int o = 1; o < SPS; o++) {
+        if (dm->energy[o] > dm->energy[best])
+            best = o;
+    }
+    float em = dm->energy[(best + SPS - 1) % SPS];
+    float e0 = dm->energy[best];
+    float ep = dm->energy[(best + 1) % SPS];
+    float den = em - 2 * e0 + ep;
+    float vertex = best - SPS / 2 + (den < 0 ? 0.5f * (em - ep) / den : 0);
+
+    if (e0 > 0) {
+        float g = sqrtf(5.0f) * (PI_F / 4) / sqrtf(e0);
+        float var = dm->sxx - dm->sx * dm->sx;
+        dm->gain = g;
+        dm->st = g * (dm->sx - dm->offset);
+        dm->sxt = dm->sx * dm->st + g * var;
+    }
+    return vertex;
+}
+
+/**
  * Timing: running decision error at the 8 phases around the symbol, then
  * steer to the minimum (parabolic interpolation, circular).
  */
@@ -313,6 +348,10 @@ static void timing(struct tetraDemod *dm)
         float v = sampleAt(dm, o - SPS / 2);
         float e = decisionError(dm->gain * (v - dm->offset));
         dm->cost[o] += P.costAlpha * (e * e - dm->cost[o]);
+        if (!dm->acquired) {
+            float a = v - dm->offset;
+            dm->energy[o] += P.costAlpha * (a * a - dm->energy[o]);
+        }
     }
 
     int best = 0;
@@ -329,6 +368,8 @@ static void timing(struct tetraDemod *dm)
     if (!dm->acquired) {
         if (dm->symbols < WARMUP_SYMBOLS + ACQUIRE_SYMBOLS)
             return;
+        if (P.acqEnergy != 0)
+            vertex = acquireByEnergy(dm);
         /* Jump to the best phase once, then track */
         advance(dm, vertex);
         dm->drift += vertex;

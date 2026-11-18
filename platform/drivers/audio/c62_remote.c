@@ -24,7 +24,7 @@
  *                        esc up down left right moni f1
  *   p                    list the TETRA demodulator parameters
  *   p <name> <value>     set one: costAlpha timingKp timingKi fitAlpha
- *                        eqMu softScale
+ *                        eqMu softScale eqBiasMu fitHold acqEnergy
  *   r [0|1]              restart the TETRA receiver; 1 (default) starts
  *                        the equalizer from the measured taps, 0 not
  *   d 0|1                stop or resume recording baseband samples
@@ -163,6 +163,12 @@ static float *param(const char *name)
         return &p->eqMu;
     if (!strcmp(name, "softScale"))
         return &p->softScale;
+    if (!strcmp(name, "eqBiasMu"))
+        return &p->eqBiasMu;
+    if (!strcmp(name, "fitHold"))
+        return &p->fitHold;
+    if (!strcmp(name, "acqEnergy"))
+        return &p->acqEnergy;
     return NULL;
 }
 
@@ -250,8 +256,10 @@ static void execute(char *cmd)
         reply("v %d", v);
 #ifdef CONFIG_TETRA
     } else if (!strcmp(argv[0], "p") && argc == 1) {
-        static const char *names[] = { "costAlpha", "timingKp", "timingKi",
-                                       "fitAlpha",  "eqMu",     "softScale" };
+        static const char *names[] = {
+            "costAlpha", "timingKp", "timingKi", "fitAlpha",  "eqMu",
+            "softScale", "eqBiasMu", "fitHold",  "acqEnergy",
+        };
         for (size_t i = 0; i < ARRAY_SIZE(names); i++)
             printParam(names[i], *param(names[i]));
     } else if (!strcmp(argv[0], "p") && argc == 3) {
