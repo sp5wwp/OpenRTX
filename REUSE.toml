@@ -30,6 +30,7 @@ path = [
     "tests/e2e/golden/**/*",
     "README.md",
     "CONTRIBUTING.md",
+    "openrtx/src/locale/**/*",
     "99-openrtx.rules",
     ".github/**/*",
     ".devcontainer/**/*",

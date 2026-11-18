@@ -28,3 +28,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Check UI string tables are in sync with stringsTable_t and English
         run: python3 ./scripts/check_strings.py
+      - name: Check the translation template is up to date
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext
+          ./scripts/update_pot.sh --check

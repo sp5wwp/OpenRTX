@@ -1,0 +1,580 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
+"POT-Creation-Date: 2026-11-18 16:43-0600\n"
+"PO-Revision-Date: 2025-11-10 17:30+0000\n"
+"Last-Translator: Paulo Dutra <mcpauloh@gmail.com>\n"
+"Language-Team: Portuguese (Brazil) <https://hosted.weblate.org/projects/"
+"openrtx/openrtx/pt_BR/>\n"
+"Language: pt_BR\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 5.15-dev\n"
+
+#. i18n: This should be the endonym for the language/locale; it is used in the locale selection menu
+#: openrtx/include/ui/EnglishStrings.h
+msgid "English"
+msgstr "Português (Brasil)"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OFF"
+msgstr "Desligado"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ON"
+msgstr "Ligado"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Banks"
+msgstr "Bancos"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Channels"
+msgstr "Canais"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contacts"
+msgstr "Contatos"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS"
+msgstr "GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Settings"
+msgstr "Configurações"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup & Restore"
+msgstr "Backup & Restauração"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Info"
+msgstr "Informações"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "About"
+msgstr "Sobre"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Display"
+msgstr "Mostrador"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Time & Date"
+msgstr "Hora e Data"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "FM"
+msgstr "FM"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17"
+msgstr "M17"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "DMR"
+msgstr "DMR"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Default Settings"
+msgstr "Configurações Padrão"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Brightness"
+msgstr "Brilho"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contrast"
+msgstr "Contraste"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Timer"
+msgstr "Temporizador"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Enabled"
+msgstr "GPS Ativado"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "GPS Set Time"
+msgstr "Hora definida pelo GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UTC Timezone"
+msgstr "Fuso horário UTC"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Voice"
+msgstr "Voz"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Level"
+msgstr "Nível"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Phonetic"
+msgstr "Fonética"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Beep"
+msgstr "Bip"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup"
+msgstr "Backup"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Restore"
+msgstr "Restaurar"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Voltage"
+msgstr "Voltagem da Bateria"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Charge"
+msgstr "Carga da Bateria"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "RSSI"
+msgstr "Indicador de Força de Sinal Recebido (RSSI)"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Model"
+msgstr "Modelo"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Band"
+msgstr "Banda"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "VHF"
+msgstr "VHF"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UHF"
+msgstr "UHF"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "LCD Type"
+msgstr "Tipo do LCD"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Niccolo' IU2KIN"
+msgstr "Niccolo' IU2KIN"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Silvano IU2KWO"
+msgstr "Silvano IU2KWO"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Federico IU2NUO"
+msgstr "Federico IU2NUO"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fred IU2NRO"
+msgstr "Fred IU2NRO"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Joseph VK7JS"
+msgstr "Joseph VK7JS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "All channels"
+msgstr "Todos os Canais"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Menu"
+msgstr "Menu"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS OFF"
+msgstr "GPS Desligado"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No Fix"
+msgstr "Sem correção"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fix Lost"
+msgstr "Correção Perdida"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ERROR"
+msgstr "ERRO"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Backup"
+msgstr "Backup do Flash"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Connect to RTXTool"
+msgstr "Conectar ao RTXTool"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to backup flash and"
+msgstr "para fazer o backup do flash e"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press PTT to start."
+msgstr "aperte PTT para iniciar."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Restore"
+msgstr "Restaurar Flash"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to restore flash and"
+msgstr "para restaurar o flash e"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OpenRTX"
+msgstr "OpenRTX"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Settings"
+msgstr "Configurações do GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17 Settings"
+msgstr "Configurações do M17"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Callsign:"
+msgid "Callsign"
+msgstr "Indicativo:"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reset to Defaults"
+msgstr "Restaurar Padrões de Fábrica"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To reset:"
+msgstr "Para Resetar:"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Press Enter twice"
+msgstr "Aperte Entrar duas vezes"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Macro Menu"
+msgstr "Menu Macro"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "For emergency use"
+msgstr "Para uso em emergência"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press any button."
+msgstr "aperte qualquer botão."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Accessibility"
+msgstr "Acessibilidade"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Used heap"
+msgstr "Pilha (heap) usada"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ALL"
+msgstr "TODOS (ALL)"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio Settings"
+msgstr "Configurações do Rádio"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Offset"
+msgstr "Desvio"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Macro Latch"
+msgstr "Trava do Macro"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No GPS"
+msgstr "Sem GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Battery Icon"
+msgstr "Ícone da Bateria"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS Tone"
+msgstr "Tom CTCSS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS En."
+msgstr "Ativar CTCSS."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Encode"
+msgstr "Codificar"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Decode"
+msgstr "Decodificar"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Both"
+msgstr "Ambos"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "None"
+msgstr "Nenhum"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Direction"
+msgstr "Direção"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Step"
+msgstr "Passo"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio"
+msgstr "Rádio"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN RX Check"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Meta Txt"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "New Message"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reply"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Send"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Message"
+msgstr ""
+
+#, c-format
+#~ msgid "%d.%d"
+#~ msgstr "%d.%d"
+
+#, c-format
+#~ msgid "%02d:%02d:%02d"
+#~ msgstr "%02d:%02d:%02d"
+
+#, c-format
+#~ msgid "%.1fV"
+#~ msgstr "%.1fV"
+
+#, c-format
+#~ msgid "%d%%"
+#~ msgstr "%d%%"
+
+#, c-format
+#~ msgid "%01d-%03d: %.12s"
+#~ msgstr "%01d-%03d: %.12s"
+
+#, c-format
+#~ msgid "DMR TG%s"
+#~ msgstr "DMR TG%s"
+
+#, c-format
+#~ msgid "M17 #%s"
+#~ msgstr "M17 #%s"
+
+#~ msgid "5 s"
+#~ msgstr "5 segundos"
+
+#~ msgid "10 s"
+#~ msgstr "10 segundos"
+
+#~ msgid "15 s"
+#~ msgstr "15 segundos"
+
+#~ msgid "20 s"
+#~ msgstr "20 segundos"
+
+#~ msgid "25 s"
+#~ msgstr "25 segundos"
+
+#~ msgid "30 s"
+#~ msgstr "30 segundos"
+
+#~ msgid "1 min"
+#~ msgstr "1 minuto"
+
+#~ msgid "2 min"
+#~ msgstr "2 minutos"
+
+#~ msgid "3 min"
+#~ msgstr "3 minutos"
+
+#~ msgid "4 min"
+#~ msgstr "4 minutos"
+
+#~ msgid "5 min"
+#~ msgstr "5 minutos"
+
+#~ msgid "15 min"
+#~ msgstr "15 minutos"
+
+#~ msgid "30 min"
+#~ msgstr "30 minutos"
+
+#~ msgid "45 min"
+#~ msgstr "45 minutos"
+
+#~ msgid "1 hour"
+#~ msgstr "1 hora"
+
+#, c-format
+#~ msgid "%c%d.%d"
+#~ msgstr "%c%d.%d"
+
+#~ msgid "M"
+#~ msgstr "M"
+
+#~ msgid "k"
+#~ msgstr "k"
+
+#, c-format
+#~ msgid "%u.%u"
+#~ msgstr "%u.%u"
+
+#, c-format
+#~ msgid "%s%cHz"
+#~ msgstr "%s%cHz"
+
+#, c-format
+#~ msgid "%d.%dV"
+#~ msgstr "%d.%dV"
+
+#, c-format
+#~ msgid "%<PRIi32>dBm"
+#~ msgstr "%<PRIi32>dBm"
+
+#, c-format
+#~ msgid "%dB"
+#~ msgstr "%dB"
+
+#~ msgid "DGPS"
+#~ msgstr "DGPS"
+
+#~ msgid "PPS"
+#~ msgstr "PPS (Pulsos por segundo)"
+
+#~ msgid "RTK"
+#~ msgstr "RTK"
+
+#~ msgid "2D"
+#~ msgstr "2D"
+
+#~ msgid "3D"
+#~ msgstr "3D"
+
+#~ msgid "S     "
+#~ msgstr "S     "
+
+#~ msgid "N     "
+#~ msgstr "N     "
+
+#~ msgid "W     "
+#~ msgstr "O     "
+
+#~ msgid "E     "
+#~ msgstr "L     "
+
+#, c-format
+#~ msgid "S %dkm/h  A %dm"
+#~ msgstr "Vel. %dkm/h  Alt. %dm"
+
+#, c-format
+#~ msgid "%02d/%02d/%02d"
+#~ msgstr "%02d/%02d/%02d"
+
+#~ msgid "__/__/__"
+#~ msgstr "__/__/__"
+
+#~ msgid "__:__:00"
+#~ msgstr "__:__:00"
+
+#, c-format
+#~ msgid "%d.%dW"
+#~ msgstr "%d.%dW"
+
+#, fuzzy
+#~ msgid "Unlk"
+#~ msgstr "DESB"
+
+#, fuzzy
+#~ msgid "Lck"
+#~ msgstr "BLO"
+
+#~ msgid ""
+#~ "O P N\n"
+#~ "R T X"
+#~ msgstr ""
+#~ "O P N\n"
+#~ "R T X"
+
+#, c-format
+#~ msgid "CAN %02d"
+#~ msgstr "CAN %02d"
+
+#~ msgid "Cancel"
+#~ msgstr "Cancelar"
+
+#~ msgid "Accept"
+#~ msgstr "Aceitar"
+
+#~ msgid "SPS"
+#~ msgstr "SPS (Amostras por Símbolo)"
+
+#, c-format
+#~ msgid "S %4.1fkm/h  A %4.1fm"
+#~ msgstr "Vel. %4.1fkm/h  Alt. %4.1fm"
+
+#~ msgid "Time&Date"
+#~ msgstr "Hora&Data"
+
+#~ msgid "Module17 Settings"
+#~ msgstr "Configurações do Module17"

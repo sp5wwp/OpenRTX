@@ -134,6 +134,18 @@ it makes the diff very hard to review. Open a second PR instead.
 
 When a maintainer rebases or mainlines a branch underneath yours, re-sync your fork and force-push.
 
+## Translations
+
+English is the only language built into the firmware; its text lives in
+`openrtx/include/ui/EnglishStrings.h`. To add a UI string, append a field at
+the end of `stringsTable_t` and its English text at the same position in
+`EnglishStrings.h`, wrapped in `N_()`, with an `// i18n:` comment above it if
+translators need context. Then run `scripts/update_pot.sh` (needs GNU gettext)
+and commit `openrtx/src/locale/OpenRTX.pot` with your change.
+
+Translations are made on [Weblate](https://hosted.weblate.org/projects/openrtx/)
+in the `.po` files under `openrtx/src/locale/`. Don't edit them by hand.
+
 ## Pull Request Process
 
 Once you've completed a contribution, please submit it as a pull request. Ensure that you own the intellectual property that you are contributing (or have an appropriate license).

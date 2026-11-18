@@ -1,0 +1,385 @@
+# Italian translations for PACKAGE package.
+# Copyright (C) 2025 THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# Automatically generated, 2025.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
+"POT-Creation-Date: 2026-11-18 16:43-0600\n"
+"PO-Revision-Date: 2025-11-10 13:03+0000\n"
+"Last-Translator: Ryan Turner <ryan@turnrye.com>\n"
+"Language-Team: Italian <https://hosted.weblate.org/projects/openrtx/openrtx/"
+"it/>\n"
+"Language: it_IT\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n != 1;\n"
+"X-Generator: Weblate 5.15-dev\n"
+
+#. i18n: This should be the endonym for the language/locale; it is used in the locale selection menu
+#: openrtx/include/ui/EnglishStrings.h
+msgid "English"
+msgstr "Italiano"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OFF"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ON"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Banks"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Channels"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contacts"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Settings"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup & Restore"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Info"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "About"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Display"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Time & Date"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "FM"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "DMR"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Default Settings"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Brightness"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contrast"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Timer"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Enabled"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Set Time"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UTC Timezone"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Voice"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Level"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Phonetic"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Beep"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Restore"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Voltage"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Charge"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "RSSI"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Model"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Band"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "VHF"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UHF"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "LCD Type"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Niccolo' IU2KIN"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Silvano IU2KWO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Federico IU2NUO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fred IU2NRO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Joseph VK7JS"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "All channels"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Menu"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS OFF"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No Fix"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fix Lost"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ERROR"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Backup"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Connect to RTXTool"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to backup flash and"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press PTT to start."
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Restore"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to restore flash and"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OpenRTX"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Settings"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17 Settings"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Callsign"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reset to Defaults"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To reset:"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Press Enter twice"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Macro Menu"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "For emergency use"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press any button."
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Accessibility"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Used heap"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ALL"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio Settings"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Offset"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Macro Latch"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No GPS"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Battery Icon"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS Tone"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS En."
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Encode"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Decode"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Both"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "None"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Direction"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Step"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN RX Check"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Meta Txt"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "New Message"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reply"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Send"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Message"
+msgstr ""

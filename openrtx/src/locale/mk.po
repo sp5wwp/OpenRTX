@@ -1,0 +1,559 @@
+# SOME DESCRIPTIVE TITLE.
+# Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
+# This file is distributed under the same license as the PACKAGE package.
+# FIRST AUTHOR <EMAIL@ADDRESS>, YEAR.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PACKAGE VERSION\n"
+"Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
+"POT-Creation-Date: 2026-11-18 16:43-0600\n"
+"PO-Revision-Date: 2025-11-11 01:09+0000\n"
+"Last-Translator: Andrej <tunas@cryptolab.net>\n"
+"Language-Team: Macedonian <https://hosted.weblate.org/projects/openrtx/"
+"openrtx/mk/>\n"
+"Language: mk\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=n==1 || n%10==1 ? 0 : 1;\n"
+"X-Generator: Weblate 5.15-dev\n"
+
+#. i18n: This should be the endonym for the language/locale; it is used in the locale selection menu
+#: openrtx/include/ui/EnglishStrings.h
+msgid "English"
+msgstr "Македонски"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OFF"
+msgstr "ИСК"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ON"
+msgstr "ВКЛ"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Banks"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Channels"
+msgstr "Канали"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contacts"
+msgstr "Контакти"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS"
+msgstr "GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Settings"
+msgstr "Поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup & Restore"
+msgstr "Бекап и Враќање"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Info"
+msgstr "Инфо"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "About"
+msgstr "За OpenRTX"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Display"
+msgstr "Екран"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Time & Date"
+msgstr "Време и Датум"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "FM"
+msgstr "FM"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17"
+msgstr "М17"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "DMR"
+msgstr "DMR"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Default Settings"
+msgstr "Фабрички поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Brightness"
+msgstr "Светлост"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Contrast"
+msgstr "Контраст"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Timer"
+msgstr "Тајмер"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Enabled"
+msgstr "GPS Вклучен"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Set Time"
+msgstr "GPS Намести Време"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UTC Timezone"
+msgstr "UTC Временска зона"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Voice"
+msgstr "Глас"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Level"
+msgstr "Ниво"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Phonetic"
+msgstr "Фонетски"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Beep"
+msgstr "Бип"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Backup"
+msgstr "Бекап"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Restore"
+msgstr "Враќање"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Voltage"
+msgstr "Бат. Напон"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Bat. Charge"
+msgstr "Бат. Полнеж"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "RSSI"
+msgstr "RSSI"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Model"
+msgstr "Модел"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Band"
+msgstr "Банд"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "VHF"
+msgstr "VHF"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "UHF"
+msgstr "UHF"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "LCD Type"
+msgstr "Тип на LCD"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Niccolo' IU2KIN"
+msgstr "Niccolo' IU2KIN"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Silvano IU2KWO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Federico IU2NUO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fred IU2NRO"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Joseph VK7JS"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "All channels"
+msgstr "Сите канали"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Menu"
+msgstr "Мени"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS OFF"
+msgstr "GPS ИСКЛУЧЕН"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No Fix"
+msgstr "Нема позиција"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Fix Lost"
+msgstr "Изгубен сигнал"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ERROR"
+msgstr "ГРЕШКА"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Backup"
+msgstr "Бекап на флеш"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Connect to RTXTool"
+msgstr "Поврзете се со RTXTool"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to backup flash and"
+msgstr "за да направите бекап на"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press PTT to start."
+msgstr "флеш меморијата, и притиснете PTT за да започнете."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Flash Restore"
+msgstr "Враќање на флеш"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "to restore flash and"
+msgstr "за да го вратите флешот и"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OpenRTX"
+msgstr "OpenRTX"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "GPS Settings"
+msgstr "GPS Поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "M17 Settings"
+msgstr "M17 Поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Callsign:"
+msgid "Callsign"
+msgstr "Пов. Знак:"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reset to Defaults"
+msgstr "Ресет на Стандарни Поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To reset:"
+msgstr "За да ресетирате:"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Press Enter twice"
+msgstr "Притиснете Enter двапати"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Macro Menu"
+msgstr "Макро мени"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "For emergency use"
+msgstr "За итна употреба"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "press any button."
+msgstr "притиснете било кое копче."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Accessibility"
+msgstr "Пристапност"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Used heap"
+msgstr "Искористен heap"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ALL"
+msgstr "СИТЕ"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio Settings"
+msgstr "Радио поставки"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Offset"
+msgstr "Офсет"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Macro Latch"
+msgstr "Задржување на Макро"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No GPS"
+msgstr "Нема GPS"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Battery Icon"
+msgstr "Икона за Батерија"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS Tone"
+msgstr "CTCSS Тон"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS En."
+msgstr "CTCSS Вкл."
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Encode"
+msgstr "Енкодирање"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Decode"
+msgstr "Декодирање"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Both"
+msgstr "Обете"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "None"
+msgstr "Ништо"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Direction"
+msgstr "Насока"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Step"
+msgstr "Чекор"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Radio"
+msgstr "Радио"
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CAN RX Check"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Meta Txt"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No messages"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "New Message"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reply"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Send"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "To"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Message"
+msgstr ""
+
+#, c-format
+#~ msgid "%d.%d"
+#~ msgstr "%d,%d"
+
+#, c-format
+#~ msgid "%02d:%02d:%02d"
+#~ msgstr "%02d:%02d:%02d"
+
+#, c-format
+#~ msgid "%.1fV"
+#~ msgstr "%.1fV"
+
+#, c-format
+#~ msgid "%d%%"
+#~ msgstr "%d%%"
+
+#, c-format
+#~ msgid "%01d-%03d: %.12s"
+#~ msgstr "%01d-%03d: %.12s"
+
+#, c-format
+#~ msgid "DMR TG%s"
+#~ msgstr "DMR TG%s"
+
+#, c-format
+#~ msgid "M17 #%s"
+#~ msgstr "M17 #%s"
+
+#~ msgid "5 s"
+#~ msgstr "5 сек"
+
+#~ msgid "10 s"
+#~ msgstr "10 сек"
+
+#~ msgid "15 s"
+#~ msgstr "15 сек"
+
+#~ msgid "20 s"
+#~ msgstr "20 сек"
+
+#~ msgid "25 s"
+#~ msgstr "25 сек"
+
+#~ msgid "30 s"
+#~ msgstr "30 сек"
+
+#~ msgid "1 min"
+#~ msgstr "1 мин"
+
+#~ msgid "2 min"
+#~ msgstr "2 мин"
+
+#~ msgid "3 min"
+#~ msgstr "3 мин"
+
+#~ msgid "4 min"
+#~ msgstr "4 мин"
+
+#~ msgid "5 min"
+#~ msgstr "5 мин"
+
+#~ msgid "15 min"
+#~ msgstr "15 мин"
+
+#~ msgid "30 min"
+#~ msgstr "30 мин"
+
+#~ msgid "45 min"
+#~ msgstr "45 мин"
+
+#~ msgid "1 hour"
+#~ msgstr "1 ч"
+
+#, c-format
+#~ msgid "%c%d.%d"
+#~ msgstr "%c%d.%d"
+
+#~ msgid "M"
+#~ msgstr "М"
+
+#~ msgid "k"
+#~ msgstr "К"
+
+#, c-format
+#~ msgid "%u.%u"
+#~ msgstr "%u.%u"
+
+#, c-format
+#~ msgid "%s%cHz"
+#~ msgstr "%s%cХц"
+
+#, c-format
+#~ msgid "%d.%dV"
+#~ msgstr "%d.%dV"
+
+#, c-format
+#~ msgid "%<PRIi32>dBm"
+#~ msgstr "%<PRIi32>dBm"
+
+#, c-format
+#~ msgid "%dB"
+#~ msgstr "%dБ"
+
+#~ msgid "DGPS"
+#~ msgstr "DGPS"
+
+#~ msgid "PPS"
+#~ msgstr "PPS"
+
+#~ msgid "RTK"
+#~ msgstr "RTK"
+
+#~ msgid "2D"
+#~ msgstr "2Д"
+
+#~ msgid "3D"
+#~ msgstr "3Д"
+
+#, fuzzy, c-format
+#~ msgid "S %dkm/h  A %dm"
+#~ msgstr "S %dkm/h  A %dm"
+
+#, c-format
+#~ msgid "%02d/%02d/%02d"
+#~ msgstr "%02d/%02d/%02d"
+
+#~ msgid "__/__/__"
+#~ msgstr "__/__/__"
+
+#~ msgid "__:__:00"
+#~ msgstr "__:__:00"
+
+#, c-format
+#~ msgid "%d.%dW"
+#~ msgstr "%d.%dW"
+
+#~ msgid "Unlk"
+#~ msgstr "Откл"
+
+#~ msgid "Lck"
+#~ msgstr "Закл"
+
+#~ msgid ""
+#~ "O P N\n"
+#~ "R T X"
+#~ msgstr ""
+#~ "O P N\n"
+#~ "R T X"
+
+#, c-format
+#~ msgid "CAN %02d"
+#~ msgstr "CAN %02d"
+
+#~ msgid "Cancel"
+#~ msgstr "Откажи"
+
+#~ msgid "Accept"
+#~ msgstr "Прифати"
+
+#~ msgid "SPS"
+#~ msgstr "SPS"
+
+#, c-format
+#~ msgid "S %4.1fkm/h  A %4.1fm"
+#~ msgstr "S %4.1fkm/h  A %4.1fm"
+
+#~ msgid "Time&Date"
+#~ msgstr "Време&Датум"
+
+#~ msgid "Module17 Settings"
+#~ msgstr "Поставки за Module17"
