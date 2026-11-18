@@ -112,6 +112,36 @@ typedef struct
     const char* send;
     const char* to;
     const char* message;
+    const char* squelch;
+    const char* vox;
+    const char* battery;
+    const char* icon;
+    const char* percent;
+    const char* theme;
+    const char* standard;
+    const char* highContrast;
+    const char* textStyle;
+    const char* smooth;
+    const char* crisp;
+    const char* hwVersion;
+    const char* noChannels;
+    const char* noContacts;
+    const char* resetSettings;
+    const char* areYouSure;
+    const char* hintOkCancel;
+    const char* hintConfirmReset;
+    const char* hintSet;
+    const char* pickCharacter;
+    const char* hintKeypadClear;
+    const char* hintKeypadClearShort;
+    const char* hintKeypadSpace;
+    const char* hintKeypadSpaceShort;
+    const char* hintArrows;
+    const char* volume;
+    const char* mode;
+    const char* outOfBand;
+    const char* enterRx;
+    const char* enterTx;
 }
 stringsTable_t;
 

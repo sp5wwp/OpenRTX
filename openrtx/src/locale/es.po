@@ -386,6 +386,182 @@ msgstr "Para"
 msgid "Message"
 msgstr "Mensaje"
 
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Squelch"
+msgstr "Silenciador"
+
+#. i18n: voice-operated transmit level
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Vox"
+msgstr "VOX"
+
+#. i18n: how the top bar shows the battery, as an icon or a percentage
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Battery Icon"
+msgid "Battery"
+msgstr "Ícono de batería"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Icon"
+msgstr "Icono"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Percent"
+msgstr "Porcentaje"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Theme"
+msgstr "Tema"
+
+#. i18n: the default colour theme
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Standard"
+msgstr "Estándar"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Contrast"
+msgid "High Contrast"
+msgstr "Contraste"
+
+#. i18n: how text is drawn, smooth or crisp
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Text"
+msgstr "Texto"
+
+#. i18n: anti-aliased text
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Smooth"
+msgstr "Suave"
+
+#. i18n: text without anti-aliasing
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Crisp"
+msgstr "Nítido"
+
+#. i18n: hardware version, keep it short
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "HW Ver"
+msgstr "Ver. HW"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "All channels"
+msgid "No channels"
+msgstr "Todos los canales"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Contacts"
+msgid "No contacts"
+msgstr "Contactos"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Default Settings"
+msgid "Reset settings?"
+msgstr "Ajustes por defecto"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Are you sure?"
+msgstr "¿Está seguro?"
+
+#. i18n: key hint, keep the key names ENTER and ESC
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "ENTER=OK  ESC=cancel"
+msgstr "ENTER=OK  ESC=cancelar"
+
+#. i18n: key hint, keep the key names ENTER and ESC
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "ENTER=RESET  ESC=back"
+msgstr "ENTER=BORRAR  ESC=atrás"
+
+#. i18n: key hint, keep the key name ENTER
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "ENTER=set"
+msgstr "ENTER=ajustar"
+
+#. i18n: spoken only, when the character picker opens
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Pick a character"
+msgstr "Elija un carácter"
+
+#. i18n: keypad hint, keep the key names; one line on a 160 px screen
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "2-9 *:del 0:sp   #:clear"
+msgstr "2-9 *:bor 0:esp  #:limpiar"
+
+#. i18n: keypad hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "2-9 *:del  #:clr"
+msgstr "2-9 *:bor  #:limp"
+
+#. i18n: keypad hint, keep the key names; one line on a 160 px screen
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "2-9:type  *:del  #:space"
+msgstr "2-9:escr  *:bor  #:esp"
+
+#. i18n: keypad hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "2-9 *:del #sp"
+msgstr "2-9 *:bor #esp"
+
+#. i18n: key hint, keep the key names and the \xEF\x95\x9A backspace glyph
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Up/Dn:char ( del)  L/R:move"
+msgstr "Up/Dn:car ( bor)  L/R:mover"
+
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "Volume"
+msgstr "Volumen"
+
+#. i18n: radio mode, such as FM or M17
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+#| msgid "Model"
+msgid "Mode"
+msgstr "Modelo"
+
+#. i18n: the typed frequency is outside the radio's bands
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "OUT OF BAND"
+msgstr "FUERA DE BANDA"
+
+#. i18n: asks for the receive frequency to be typed
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "ENTER RX"
+msgstr "INGRESAR RX"
+
+#. i18n: asks for the transmit frequency to be typed
+#: openrtx/include/ui/EnglishStrings.h
+#, fuzzy
+msgid "ENTER TX"
+msgstr "INGRESAR TX"
+
 #, c-format
 #~ msgid "%d.%d"
 #~ msgstr "%d.%d"

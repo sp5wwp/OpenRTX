@@ -14,7 +14,7 @@ msgstr ""
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "Language: \n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=CHARSET\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 
 #. i18n: This should be the endonym for the language/locale; it is used in the locale selection menu
@@ -380,4 +380,144 @@ msgstr ""
 
 #: openrtx/include/ui/EnglishStrings.h
 msgid "Message"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Squelch"
+msgstr ""
+
+#. i18n: voice-operated transmit level
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Vox"
+msgstr ""
+
+#. i18n: how the top bar shows the battery, as an icon or a percentage
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Battery"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Icon"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Percent"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Theme"
+msgstr ""
+
+#. i18n: the default colour theme
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Standard"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "High Contrast"
+msgstr ""
+
+#. i18n: how text is drawn, smooth or crisp
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Text"
+msgstr ""
+
+#. i18n: anti-aliased text
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Smooth"
+msgstr ""
+
+#. i18n: text without anti-aliasing
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Crisp"
+msgstr ""
+
+#. i18n: hardware version, keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "HW Ver"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No channels"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "No contacts"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Reset settings?"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Are you sure?"
+msgstr ""
+
+#. i18n: key hint, keep the key names ENTER and ESC
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ENTER=OK  ESC=cancel"
+msgstr ""
+
+#. i18n: key hint, keep the key names ENTER and ESC
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ENTER=RESET  ESC=back"
+msgstr ""
+
+#. i18n: key hint, keep the key name ENTER
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ENTER=set"
+msgstr ""
+
+#. i18n: spoken only, when the character picker opens
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Pick a character"
+msgstr ""
+
+#. i18n: keypad hint, keep the key names; one line on a 160 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "2-9 *:del 0:sp   #:clear"
+msgstr ""
+
+#. i18n: keypad hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "2-9 *:del  #:clr"
+msgstr ""
+
+#. i18n: keypad hint, keep the key names; one line on a 160 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "2-9:type  *:del  #:space"
+msgstr ""
+
+#. i18n: keypad hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "2-9 *:del #sp"
+msgstr ""
+
+#. i18n: key hint, keep the key names and the \xEF\x95\x9A backspace glyph
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Up/Dn:char ( del)  L/R:move"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Volume"
+msgstr ""
+
+#. i18n: radio mode, such as FM or M17
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Mode"
+msgstr ""
+
+#. i18n: the typed frequency is outside the radio's bands
+#: openrtx/include/ui/EnglishStrings.h
+msgid "OUT OF BAND"
+msgstr ""
+
+#. i18n: asks for the receive frequency to be typed
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ENTER RX"
+msgstr ""
+
+#. i18n: asks for the transmit frequency to be typed
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ENTER TX"
 msgstr ""

@@ -103,5 +103,55 @@ const stringsTable_t englishStrings =
     .send              = N_("Send"),
     .to                = N_("To"),
     .message           = N_("Message"),
+    .squelch           = N_("Squelch"),
+    // i18n: voice-operated transmit level
+    .vox               = N_("Vox"),
+    // i18n: how the top bar shows the battery, as an icon or a percentage
+    .battery           = N_("Battery"),
+    .icon              = N_("Icon"),
+    .percent           = N_("Percent"),
+    .theme             = N_("Theme"),
+    // i18n: the default colour theme
+    .standard          = N_("Standard"),
+    .highContrast      = N_("High Contrast"),
+    // i18n: how text is drawn, smooth or crisp
+    .textStyle         = N_("Text"),
+    // i18n: anti-aliased text
+    .smooth            = N_("Smooth"),
+    // i18n: text without anti-aliasing
+    .crisp             = N_("Crisp"),
+    // i18n: hardware version, keep it short
+    .hwVersion         = N_("HW Ver"),
+    .noChannels        = N_("No channels"),
+    .noContacts        = N_("No contacts"),
+    .resetSettings     = N_("Reset settings?"),
+    .areYouSure        = N_("Are you sure?"),
+    // i18n: key hint, keep the key names ENTER and ESC
+    .hintOkCancel      = N_("ENTER=OK  ESC=cancel"),
+    // i18n: key hint, keep the key names ENTER and ESC
+    .hintConfirmReset  = N_("ENTER=RESET  ESC=back"),
+    // i18n: key hint, keep the key name ENTER
+    .hintSet           = N_("ENTER=set"),
+    // i18n: spoken only, when the character picker opens
+    .pickCharacter     = N_("Pick a character"),
+    // i18n: keypad hint, keep the key names; one line on a 160 px screen
+    .hintKeypadClear   = N_("2-9 *:del 0:sp   #:clear"),
+    // i18n: keypad hint, keep the key names; one line on a 128 px screen
+    .hintKeypadClearShort = N_("2-9 *:del  #:clr"),
+    // i18n: keypad hint, keep the key names; one line on a 160 px screen
+    .hintKeypadSpace   = N_("2-9:type  *:del  #:space"),
+    // i18n: keypad hint, keep the key names; one line on a 128 px screen
+    .hintKeypadSpaceShort = N_("2-9 *:del #sp"),
+    // i18n: key hint, keep the key names and the \xEF\x95\x9A backspace glyph
+    .hintArrows        = N_("Up/Dn:char (\xEF\x95\x9A del)  L/R:move"),
+    .volume            = N_("Volume"),
+    // i18n: radio mode, such as FM or M17
+    .mode              = N_("Mode"),
+    // i18n: the typed frequency is outside the radio's bands
+    .outOfBand         = N_("OUT OF BAND"),
+    // i18n: asks for the receive frequency to be typed
+    .enterRx           = N_("ENTER RX"),
+    // i18n: asks for the transmit frequency to be typed
+    .enterTx           = N_("ENTER TX"),
 };
 #endif  // ENGLISHSTRINGS_H
