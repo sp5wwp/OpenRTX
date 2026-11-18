@@ -99,8 +99,16 @@ if(C62_TETRA)
                         "-DC62_TETRA=OFF")
   endif()
   add_subdirectory(${C62_LIBTETRA} ${CMAKE_BINARY_DIR}/libtetra)
-  # Build it with the Zephyr compiler flags (CPU, FPU, ABI)
-  target_link_libraries(tetra PRIVATE zephyr_interface)
+  # Build it with the Zephyr compiler flags (CPU, FPU, ABI), without a link
+  # dependency on zephyr_interface: libtetra may export its target
+  target_compile_options(tetra PRIVATE
+    $<TARGET_PROPERTY:zephyr_interface,INTERFACE_COMPILE_OPTIONS>)
+  target_compile_definitions(tetra PRIVATE
+    $<TARGET_PROPERTY:zephyr_interface,INTERFACE_COMPILE_DEFINITIONS>)
+  target_include_directories(tetra PRIVATE
+    $<TARGET_PROPERTY:zephyr_interface,INTERFACE_INCLUDE_DIRECTORIES>)
+  target_include_directories(tetra SYSTEM PRIVATE
+    $<TARGET_PROPERTY:zephyr_interface,INTERFACE_SYSTEM_INCLUDE_DIRECTORIES>)
   target_link_libraries(app PRIVATE tetra)
   target_sources(app PRIVATE
     ${OPENRTX_ROOT}/openrtx/src/protocols/TETRA/TetraDemod.c
