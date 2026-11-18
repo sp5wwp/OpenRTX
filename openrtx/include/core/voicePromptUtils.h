@@ -86,6 +86,15 @@ void vp_replayLastPrompt();
  */
 void vp_announceError(const enum vpQueueFlags flags);
 
+/**
+ * Announce a string table entry by its voice prompt.
+ *
+ * @param entry: pointer to the entry in currentLanguage.
+ * @param flags: voice prompt queue flags.
+ */
+void vp_announceStringTableEntry(const char *const *entry,
+                                 const enum vpQueueFlags flags);
+
 /*
 This function first tries to see if we have a prompt for the text
 passed in and if so, queues it, but if not, just spells the text

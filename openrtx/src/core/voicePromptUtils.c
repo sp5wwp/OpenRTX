@@ -290,6 +290,14 @@ void vp_announceError(const enum vpQueueFlags flags)
     playIfNeeded(flags);
 }
 
+void vp_announceStringTableEntry(const char *const *entry,
+                                 const enum vpQueueFlags flags)
+{
+    clearCurrPromptIfNeeded(flags);
+    vp_queueStringTableEntry(entry);
+    playIfNeeded(flags);
+}
+
 void vp_announceText(const char *text, const enum vpQueueFlags flags)
 {
     if ((text == NULL) || (*text == '\0'))
