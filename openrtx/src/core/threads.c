@@ -65,6 +65,16 @@ void *ui_threadFunc(void *arg)
 
         vp_tick();                           // continue playing voice prompts in progress if any.
 
+#ifdef C62_REMOTE
+        // The remote control changed the channel
+        extern volatile bool ui_rtxSyncRequest;
+        if(ui_rtxSyncRequest)
+        {
+            ui_rtxSyncRequest = false;
+            sync_rtx = true;
+        }
+#endif
+
         // If synchronization needed take mutex and update RTX configuration
         if(sync_rtx)
         {

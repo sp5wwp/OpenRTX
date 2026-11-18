@@ -52,6 +52,10 @@ target_sources(app
 #
 option(C62_WIDE_RX "Widest BK4819 RX filter in M17 mode" ON)
 option(C62_BASEBAND_DUMP "Stream raw RX baseband over UART" ON)
+# C62_REMOTE: remote control over the programming cable, for automated tests
+#   (scripts/c62_remote.py). The cable's TX line is the PTT pad, which
+#   becomes UART RX: PTT does not work in these builds.
+option(C62_REMOTE "Remote control over the programming cable (no PTT)" OFF)
 # The C62 programming cables top out at 115200 baud (11.5 kB/s), far below
 # the 96 kB/s of a 48 kHz s16 stream: use burst mode there. Streaming needs
 # at least 1500000 baud for s16 or 921600 for 12-bit samples.
@@ -78,6 +82,14 @@ endif()
 if(C62_REG43_SWEEP)
   target_compile_definitions(app PRIVATE C62_REG43_SWEEP
                              C62_REG43_SWEEP_MS=${C62_REG43_SWEEP_MS})
+endif()
+if(C62_REMOTE AND NOT C62_BASEBAND_DUMP)
+  message(FATAL_ERROR "C62_REMOTE needs C62_BASEBAND_DUMP: its replies are "
+                      "dump control packets")
+endif()
+if(C62_REMOTE)
+  target_sources(app PRIVATE ${OPENRTX_ROOT}/platform/drivers/audio/c62_remote.c)
+  target_compile_definitions(app PRIVATE C62_REMOTE)
 endif()
 if(C62_BASEBAND_DUMP)
   target_sources(app PRIVATE

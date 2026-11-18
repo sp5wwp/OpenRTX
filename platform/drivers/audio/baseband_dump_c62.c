@@ -76,6 +76,21 @@ static uint16_t sequence;
 static uint16_t next_flags = BBDUMP_FLAG_RESTART;
 static bool burst_hold;
 static bool active;
+static volatile bool paused; /* Remote control: no samples recorded */
+
+/*
+ * Control packets (remote control replies), sent between sample packets:
+ *   0  u8[4] magic A5 5A C3 3D
+ *   4  u8    text length n
+ *   5  n     ASCII text
+ *   5+n u16  CRC-16/CCITT-FALSE over bytes 4 to 4+n
+ */
+#define CTRL_RING_SIZE 2048 /* A power of two */
+#define CTRL_MAX_TEXT 250
+static uint8_t ctrl_ring[CTRL_RING_SIZE];
+static volatile uint32_t ctrl_head;
+static volatile uint32_t ctrl_tail;
+static struct k_spinlock ctrl_lock;
 
 static struct k_thread sender;
 K_THREAD_STACK_DEFINE(sender_stack, SENDER_STACK_SIZE);
@@ -199,7 +214,7 @@ void baseband_dump_restart(void)
 
 void baseband_dump_push(const int16_t *samples, size_t count)
 {
-    if (!active)
+    if (!active || paused)
         return;
     while (count > 0) {
         size_t n = MIN(count, BBDUMP_PACKET_SAMPLES - pending_count);
@@ -227,23 +242,84 @@ static void sender_main(void *a, void *b, void *c)
     (void)a;
     (void)b;
     (void)c;
+    uint32_t in_packet = 0; /* Bytes of the current sample packet sent */
     for (;;) {
+        uint32_t level = sys_read32(UART_BASE + UART_TFL);
+        uint32_t room = level < UART_FIFO_DEPTH ? UART_FIFO_DEPTH - level : 0;
+
+        /* Control packets go first, but never inside a sample packet */
+        uint32_t ctrl = ctrl_head - ctrl_tail;
+        if (in_packet == 0 && ctrl != 0) {
+            uint32_t n = MIN(ctrl, room);
+            uint32_t tail = ctrl_tail;
+            for (uint32_t i = 0; i < n; i++)
+                sys_write32(ctrl_ring[(tail + i) % CTRL_RING_SIZE],
+                            UART_BASE + UART_THR);
+            compiler_barrier();
+            ctrl_tail = tail + n;
+            k_usleep(SENDER_SLEEP_US);
+            continue;
+        }
+
         uint32_t used = ring_head - ring_tail;
         if (used == 0) {
             k_sleep(K_MSEC(1));
             continue;
         }
-        uint32_t level = sys_read32(UART_BASE + UART_TFL);
-        uint32_t room = level < UART_FIFO_DEPTH ? UART_FIFO_DEPTH - level : 0;
-        uint32_t n = MIN(used, room);
+        uint32_t n = MIN(MIN(used, room), BBDUMP_PACKET_SIZE - in_packet);
         uint32_t tail = ring_tail;
         for (uint32_t i = 0; i < n; i++)
             sys_write32(ring[(tail + i) % BBDUMP_RING_SIZE],
                         UART_BASE + UART_THR);
         compiler_barrier();
         ring_tail = tail + n;
+        in_packet = (in_packet + n) % BBDUMP_PACKET_SIZE;
         k_usleep(SENDER_SLEEP_US);
     }
+}
+
+bool baseband_dump_send_text(const char *text, size_t len)
+{
+    if (!active)
+        return false;
+    if (len > CTRL_MAX_TEXT)
+        len = CTRL_MAX_TEXT;
+    uint8_t pkt[4 + 1 + CTRL_MAX_TEXT + 2];
+    pkt[0] = 0xa5;
+    pkt[1] = 0x5a;
+    pkt[2] = 0xc3;
+    pkt[3] = 0x3d;
+    pkt[4] = (uint8_t)len;
+    memcpy(pkt + 5, text, len);
+    put16(pkt + 5 + len, crc16(pkt + 4, 1 + len));
+    size_t size = 5 + len + 2;
+
+    k_spinlock_key_t key = k_spin_lock(&ctrl_lock);
+    bool ok = CTRL_RING_SIZE - (ctrl_head - ctrl_tail) >= size;
+    if (ok) {
+        uint32_t head = ctrl_head;
+        for (size_t i = 0; i < size; i++)
+            ctrl_ring[(head + i) % CTRL_RING_SIZE] = pkt[i];
+        compiler_barrier();
+        ctrl_head = head + size;
+    }
+    k_spin_unlock(&ctrl_lock, key);
+    return ok;
+}
+
+void baseband_dump_pause(bool pause)
+{
+    if (!pause && paused) {
+        /* Resuming: the timeline jumps */
+        pending_count = 0;
+        next_flags |= BBDUMP_FLAG_RESTART;
+    }
+    paused = pause;
+}
+
+bool baseband_dump_paused(void)
+{
+    return paused;
 }
 
 static int discard_char(int c)

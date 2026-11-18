@@ -14,6 +14,9 @@
 #include "csk6_codec.h"
 #ifdef C62_BASEBAND_DUMP
 #include "baseband_dump_c62.h"
+#ifdef C62_REMOTE
+#include "c62_remote.h"
+#endif
 #endif
 
 /*
@@ -101,6 +104,11 @@ void audio_init(void)
     /* After restore_console(): switches the UART to the dump baud rate */
     if (initialized)
         baseband_dump_init();
+#ifdef C62_REMOTE
+    /* After the dump: replies are dump control packets */
+    if (initialized)
+        c62_remote_init();
+#endif
 #endif
     k_mutex_unlock(&board_mutex);
 }

@@ -211,6 +211,10 @@ int8_t platform_getChSelector()
 
 bool platform_getPttStatus()
 {
+#ifdef C62_REMOTE
+    /* The PTT pad carries the remote control's UART RX */
+    return false;
+#endif
     return gpio_pin_get_dt(&button_ptt);
 }
 

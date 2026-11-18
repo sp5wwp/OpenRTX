@@ -70,6 +70,28 @@ void baseband_dump_push(const int16_t *samples, size_t count);
  */
 bool baseband_dump_recording(void);
 
+/**
+ * Queue a control packet carrying text (remote control replies). It is sent
+ * between sample packets, ahead of queued samples. Packet layout:
+ *   0  u8[4] magic A5 5A C3 3D
+ *   4  u8    text length n (at most 250)
+ *   5  n     ASCII text
+ *   5+n u16  CRC-16/CCITT-FALSE over bytes 4 to 4+n
+ *
+ * @return false if the dump is not active or the queue is full.
+ */
+bool baseband_dump_send_text(const char *text, size_t len);
+
+/**
+ * Stop or resume recording samples. Queued samples are still sent.
+ */
+void baseband_dump_pause(bool pause);
+
+/**
+ * @return true while recording is stopped by baseband_dump_pause().
+ */
+bool baseband_dump_paused(void);
+
 #ifdef __cplusplus
 }
 #endif
