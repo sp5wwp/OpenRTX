@@ -224,6 +224,8 @@ python3 OpenRTX/scripts/c62_remote.py -p /dev/ttyUSB0 --watch 1000
 | `p` / `p <name> <value>` | List / set the demodulator loop constants (`tetraDemodParams`) |
 | `r [0\|1]` | Restart the TETRA receiver, starting the equalizer from the measured taps (1) or not (0) |
 | `d 0\|1` | Stop / resume recording baseband samples |
+| `fo [hz]` | Read / set a fine RX tuning offset, added to the channel frequency |
+| `rr <reg>` / `rw <reg> <value>` | Read / write a BK4819 register (the driver may overwrite it at the next mode or frequency change) |
 
 Status fields in T mode: `e` phase error (% of pi/4), `cfo` carrier offset
 (Hz), `clk` sample clock offset (ppm), `lk`/`sync` libtetra lock, `crc`

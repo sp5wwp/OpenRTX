@@ -68,6 +68,17 @@ extern "C" {
  * with the board devicetree (gpioa/gpiob nodes).
  */
 extern const struct BK4819 c62_bk4819;
+
+/**
+ * Set the fine RX tuning offset, added to the channel frequency (Hz, 10 Hz
+ * resolution). Retunes at once when receiving.
+ */
+void c62_setRxOffset(int32_t hz);
+
+/**
+ * @return the fine RX tuning offset, Hz.
+ */
+int32_t c62_getRxOffset(void);
 extern const struct gpioDev c62_bk4819_gpio;
 extern const struct BK1080 c62_bk1080;
 

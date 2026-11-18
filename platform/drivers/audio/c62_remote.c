@@ -29,6 +29,10 @@
  *                        the equalizer from the measured taps, 0 not
  *   d 0|1                stop or resume recording baseband samples
  *   v <0-15>             set the volume (OpenRTX 0-255 scale, 17 per step)
+ *   fo [hz]              read or set the fine RX tuning offset
+ *   rr <reg>             read a BK4819 register (hex or decimal)
+ *   rw <reg> <value>     write a BK4819 register; the radio driver may
+ *                        overwrite it at the next mode or frequency change
  */
 
 #include <stdarg.h>
@@ -44,6 +48,8 @@
 #include "core/ui.h"
 #include "interfaces/keyboard.h"
 #include "rtx/rtx.h"
+#include <hwconfig.h>
+#include "drivers/baseband/BK4819.h"
 #include "baseband_dump_c62.h"
 #include "c62_remote.h"
 #ifdef CONFIG_TETRA
@@ -261,6 +267,32 @@ static void execute(char *cmd)
         tetra_requestReset(seed);
         reply("r %d", seed);
 #endif
+    } else if (!strcmp(argv[0], "fo")) {
+        if (argc == 2) {
+            long hz = strtol(argv[1], NULL, 0);
+            if (hz < -20000 || hz > 20000) {
+                reply("E fo range");
+                return;
+            }
+            c62_setRxOffset(hz);
+        }
+        reply("fo %ld", (long)c62_getRxOffset());
+    } else if (!strcmp(argv[0], "rr") && argc == 2) {
+        unsigned long reg = strtoul(argv[1], NULL, 0);
+        if (reg > 0x7f) {
+            reply("E rr reg");
+            return;
+        }
+        reply("rr 0x%02lx 0x%04x", reg, BK4819_readReg(&c62_bk4819, reg));
+    } else if (!strcmp(argv[0], "rw") && argc == 3) {
+        unsigned long reg = strtoul(argv[1], NULL, 0);
+        unsigned long val = strtoul(argv[2], NULL, 0);
+        if (reg > 0x7f || val > 0xffff) {
+            reply("E rw reg");
+            return;
+        }
+        BK4819_writeReg(&c62_bk4819, reg, val);
+        reply("rw 0x%02lx 0x%04x", reg, BK4819_readReg(&c62_bk4819, reg));
     } else if (!strcmp(argv[0], "d") && argc == 2) {
         baseband_dump_pause(argv[1][0] == '0');
         reply("d %d", !baseband_dump_paused());

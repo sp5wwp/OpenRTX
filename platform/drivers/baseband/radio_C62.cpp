@@ -52,7 +52,13 @@ static const rtxStatus_t
     *config; // Pointer to data structure with radio configuration
 
 static enum opstatus radioStatus; // Current operating status
-static enum opmode radioMode;     // Current operating mode
+
+/*
+ * Fine RX tuning offset, Hz, added to the channel frequency: for tests and
+ * a frequency correction loop. See c62_setRxOffset().
+ */
+static volatile int32_t rxOffset;
+static enum opmode radioMode; // Current operating mode
 
 /*
  * BK4819 REG_43 for M17 RX, written whole (see the V3 register list):
@@ -279,7 +285,7 @@ void radio_enableRx()
         gpioDev_set(&c62_bk4819_gpio, GPIO_UHF_RX_LNA);
     }
 
-    bk4819_set_freq(&c62_bk4819, config->rxFrequency);
+    bk4819_set_freq(&c62_bk4819, config->rxFrequency + rxOffset);
 
     if (flatMode(radioMode)) {
         applyM17Fields(false);
@@ -397,4 +403,15 @@ rssi_t radio_getRssi()
 enum opstatus radio_getStatus()
 {
     return radioStatus;
+}
+extern "C" void c62_setRxOffset(int32_t hz)
+{
+    rxOffset = hz;
+    if (radioStatus == RX && config != NULL)
+        bk4819_set_freq(&c62_bk4819, config->rxFrequency + hz);
+}
+
+extern "C" int32_t c62_getRxOffset(void)
+{
+    return rxOffset;
 }
