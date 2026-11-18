@@ -92,8 +92,7 @@ static void _ui_drawTetraInfo(void)
         return;
     }
 
-    gfx_drawSymbol(layout.line2_pos, layout.line2_symbol_size,
-                   TEXT_ALIGN_LEFT, color_white, SYMBOL_TRANSMISSION_TOWER);
+    /* No symbol: centred, the cell text reaches the left edge (as in M17) */
     if (ts.sysinfo)
         gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
                   color_white, "T %u-%u LA %u%s", ts.mcc, ts.mnc, ts.la,
