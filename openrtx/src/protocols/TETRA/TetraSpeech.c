@@ -18,10 +18,11 @@
 #include "core/audio_stream.h"
 #include "interfaces/delays.h"
 
-#define QUEUE_FRAMES 16   /* 480 ms */
-#define PREBUFFER_FRAMES 5 /* 150 ms: frame 18 leaves a 113 ms gap */
-#define SILENCE_FRAMES 34 /* About one second of 30 ms frames */
+#define QUEUE_FRAMES 16     /* 480 ms */
+#define PREBUFFER_FRAMES 5  /* 150 ms: frame 18 leaves a 113 ms gap */
+#define SILENCE_FRAMES 34   /* About one second of 30 ms frames */
 #define THREAD_STACK 4096
+#define FOLLOW_HOLD_MS 1000 /* Keep following a timeslot this long */
 
 struct frame {
     uint8_t bits[OA_FRAME_BITS];
@@ -35,6 +36,8 @@ static unsigned queueHead;
 static unsigned queueCount;
 
 static struct tetra_speech_ws channelWs; /* rtx thread only */
+static uint8_t followTn;                 /* rtx thread only, 0 = none */
+static long long followLast;             /* rtx thread only, ms */
 static oa_dec_t decoder;                 /* Playback thread only */
 static stream_sample_t pcm[2 * OA_FRAME_SAMPLES];
 
@@ -131,6 +134,7 @@ void tetraSpeech_start(void)
     pthread_mutex_lock(&queueMutex);
     queueHead = queueCount = 0;
     pthread_mutex_unlock(&queueMutex);
+    followTn = 0;
     stopRequest = false;
 
     pthread_attr_init(&attr);
@@ -169,6 +173,19 @@ void tetraSpeech_traffic(const struct tetra_traffic *t)
 {
     if (!running || t->encrypted || t->circuit_type != 0)
         return;
+
+    /*
+     * One decoder plays one stream: follow the timeslot of the first speech
+     * heard and ignore the others, or two calls on different timeslots would
+     * be interleaved frame by frame. Move on once the followed timeslot has
+     * been quiet for as long as the speaker is held after speech.
+     */
+    long long now = getTick();
+    if (followTn != 0 && t->time.tn != followTn
+        && now - followLast < FOLLOW_HOLD_MS)
+        return;
+    followTn = t->time.tn;
+    followLast = now;
 
     struct tetra_speech sp;
     tetra_speech_decode(&channelWs, t, &sp);
