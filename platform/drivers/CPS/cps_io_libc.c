@@ -23,6 +23,11 @@ const char *default_descr = "Codeplug description.";
  */
 int _readHeader(cps_header_t *header)
 {
+    /* No codeplug open (cps_open failed / not called yet): fail gracefully
+     * instead of dereferencing a NULL FILE*. */
+    if(cps_file == NULL)
+        return -1;
+
     fseek(cps_file, 0L, SEEK_SET);
     fread(header, sizeof(cps_header_t), 1, cps_file);
     // Validate magic number
