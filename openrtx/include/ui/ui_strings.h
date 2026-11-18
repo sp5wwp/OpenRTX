@@ -14,6 +14,12 @@
  * indexed in the same order as these strings.
  * Also, menus may be printed using string table offsets.
  */
+/**
+ * Mark a string for translation: xgettext extracts it into the
+ * template (scripts/update_pot.sh), and it compiles to the string.
+ */
+#define N_(s) s
+
 typedef struct
 {
     const char* languageName;
