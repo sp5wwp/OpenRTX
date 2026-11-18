@@ -1,0 +1,82 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef ORTX_UI_TEXTBLOCK_HPP
+#define ORTX_UI_TEXTBLOCK_HPP
+
+#include <cstdint>
+#include "core/Object.hpp"
+#include "core/graphics.h"
+#include "style/SemanticColor.hpp"
+
+namespace ortxui
+{
+
+/**
+ * Read-only wrapped text that scrolls vertically one line at a time, with the
+ * same scroll indicator as List. The text is borrowed; the owner may re-point
+ * it every frame (the message body moves inside the inbox pool), and the scroll
+ * position is kept across re-points.
+ */
+class TextBlock : public Object
+{
+public:
+    /** Point at new text, keeping the scroll position. */
+    void setText(const char *t)
+    {
+        text_ = (t != nullptr) ? t : "";
+    }
+
+    /** Set the text font. */
+    void setFont(fontSize_t f)
+    {
+        font_ = f;
+    }
+
+    /** Set the text colour role. */
+    void setColor(Sem c)
+    {
+        color_ = c;
+    }
+
+    /** Scroll by `lines` rows; returns false if already at that end. */
+    bool scroll(int lines);
+
+    /** Show the first line. */
+    void scrollToTop();
+
+    /** Show the last line (resolved against the text at the next use). */
+    void scrollToEnd();
+
+    /** Draw the visible lines and, when the text overflows, the indicator. */
+    void draw(DrawCtx &d) override;
+
+private:
+    /** Right edge (exclusive) the text wraps at, clear of the indicator. */
+    int16_t wrapX() const;
+
+    /** Height of the wrapped text in pixels. */
+    uint16_t textHeight() const;
+
+    /** Largest useful scroll offset for the current text and area. */
+    int16_t maxOffset() const;
+
+    /** Current scroll offset, clamped to the current text. */
+    int16_t offset() const;
+
+    /** Borrowed text. */
+    const char *text_ = "";
+    /** Text font. */
+    fontSize_t font_ = FONT_SIZE_8PT;
+    /** Text colour role. */
+    Sem color_ = Sem::OnSurface;
+    /** Scroll offset in pixels, clamped by offset() when used. */
+    int16_t scroll_ = 0;
+};
+
+} // namespace ortxui
+
+#endif /* ORTX_UI_TEXTBLOCK_HPP */
