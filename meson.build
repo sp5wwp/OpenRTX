@@ -1373,6 +1373,10 @@ ui_check_standby_test = executable('ui_check_standby_test',
                                     sources : unit_test_src + ['tests/unit/ui_check_standby.cpp'],
                                     kwargs  : unit_test_opts)
 
+ui_strings_test = executable('ui_strings_test',
+                             sources : unit_test_src + ['tests/unit/ui_strings.cpp'],
+                             kwargs  : unit_test_opts)
+
 m17_packet_test = executable('m17_packet_test',
                               sources : unit_test_src + ['tests/unit/M17_packet.cpp'],
                               kwargs  : unit_test_opts)
@@ -1469,6 +1473,7 @@ test('Codeplug Test',         cps_test)
 ## test('Linux InputStream Test', linux_inputStream_test)
 test('minmea conversion Test', minmea_conversion_test)
 test('UI Check Standby Test', ui_check_standby_test)
+test('UI Strings Test', ui_strings_test)
 test('M17 Packet Frame Test', m17_packet_test)
 test('C62 Calibration Test', c62_calib_test)
 test('DSP Oversampling Test', dsp_oversampling_test)
