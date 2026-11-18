@@ -39,6 +39,7 @@ typedef struct {
     float chSelector;
     bool PTTstatus;
     bool powerOff;
+    keyboard_t heldKeys; //< keys held down via the 'keyhold' shell command
 } emulator_state_t;
 
 extern emulator_state_t emulator_state;
