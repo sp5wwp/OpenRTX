@@ -106,67 +106,109 @@ static const fontBlob_t monoFontBlobs[FONT_SIZE_NUM] = {
     { _font_mono_12_start, _font_mono_12_end }, // FONT_SIZE_12PT
     { _font_mono_16_start, _font_mono_16_end }, // FONT_SIZE_16PT
 };
-static lvFont_t g_fonts_mono[FONT_SIZE_NUM];
-static bool g_font_mono_ready[FONT_SIZE_NUM];
-static bool g_use_mono_font = false;
+#else
+/* Mono targets ship only the 1bpp set: the crisp set is the text set. */
+#define monoFontBlobs fontBlobs
 #endif
 
-static lvFont_t g_fonts[FONT_SIZE_NUM];
-static lvFont_t g_icon_fonts[FONT_SIZE_NUM];
-static bool g_font_ready[FONT_SIZE_NUM];
-static bool g_icon_ready[FONT_SIZE_NUM];
+/* Built-in blobs for each font set, the default source of every font. */
+static const fontBlob_t *const builtinBlobs[FONT_SET_NUM] = {
+    fontBlobs,     // FONT_SET_TEXT
+    monoFontBlobs, // FONT_SET_CRISP
+    iconBlobs,     // FONT_SET_ICONS
+};
 
-/** Decode (once) and return the same-size custom icon font as a fallback, so app
- *  glyphs (e.g. the M17 logo) resolve without touching the text blobs. Shared by
- *  the AA and mono text fonts. Returns NULL if the blob is invalid. */
-static const lvFont_t *icon_fallback(fontSize_t size)
+/* Fonts installed with gfx_setFontSource(); a NULL start means built-in. */
+static fontBlob_t fontSources[FONT_SET_NUM][FONT_SIZE_NUM];
+
+static lvFont_t g_fonts[FONT_SET_NUM][FONT_SIZE_NUM];
+static bool g_font_ready[FONT_SET_NUM][FONT_SIZE_NUM];
+static bool g_use_mono_font = false;
+
+/**
+ * Decode a font from its blob.
+ *
+ * @param font: font to initialise.
+ * @param blob: blob to decode.
+ */
+static void decode_blob(lvFont_t *font, const fontBlob_t *blob)
 {
-    if (!g_icon_ready[size]) {
-        const fontBlob_t *ib = &iconBlobs[size];
-        lvFont_init(&g_icon_fonts[size], ib->start,
-                    (uint32_t)(ib->end - ib->start));
-        g_icon_ready[size] = true;
-    }
-    return g_icon_fonts[size].valid ? &g_icon_fonts[size] : NULL;
+    lvFont_init(font, blob->start, (uint32_t)(blob->end - blob->start));
 }
 
-/** Return the decoded font for a size, initialising it from the embedded blob
- *  on first use. Falls back to the smallest font on a bad index. On colour
- *  targets the crisp (1bpp) text set is returned when the user has selected it
- *  via gfx_setFontMono(). */
+/**
+ * Get a font, decoding it on first use from its installed source, or from
+ * the built-in blob if there is none or it is not a valid font.
+ *
+ * @param set: font set.
+ * @param size: font size.
+ * @return the font, possibly invalid if the built-in blob is.
+ */
+static lvFont_t *load_font(fontSet_t set, fontSize_t size)
+{
+    lvFont_t *font = &g_fonts[set][size];
+
+    if (!g_font_ready[set][size]) {
+        const fontBlob_t *src = &fontSources[set][size];
+        if (src->start != NULL)
+            decode_blob(font, src);
+        if ((src->start == NULL) || !font->valid)
+            decode_blob(font, &builtinBlobs[set][size]);
+        g_font_ready[set][size] = true;
+    }
+
+    return font;
+}
+
+/**
+ * Get the text font for a size, with the same-size icon font as its
+ * fallback so app glyphs (e.g. the M17 logo) resolve. Uses the crisp set
+ * when selected with gfx_setFontMono(); a bad size gets the smallest font.
+ *
+ * @param size: font size.
+ * @return the font.
+ */
 static const lvFont_t *get_font(fontSize_t size)
 {
     if ((unsigned)size >= FONT_SIZE_NUM)
         size = FONT_SIZE_5PT;
+
+    fontSet_t set = FONT_SET_TEXT;
 #ifdef CONFIG_FONT_AA
-    if (g_use_mono_font) {
-        if (!g_font_mono_ready[size]) {
-            const fontBlob_t *b = &monoFontBlobs[size];
-            lvFont_init(&g_fonts_mono[size], b->start,
-                        (uint32_t)(b->end - b->start));
-            g_fonts_mono[size].fallback = icon_fallback(size);
-            g_font_mono_ready[size] = true;
-        }
-        return &g_fonts_mono[size];
-    }
+    // Mono targets ship only the 1bpp set, so crisp is the text font there
+    if (g_use_mono_font)
+        set = FONT_SET_CRISP;
 #endif
-    if (!g_font_ready[size]) {
-        const fontBlob_t *b = &fontBlobs[size];
-        lvFont_init(&g_fonts[size], b->start, (uint32_t)(b->end - b->start));
-        g_fonts[size].fallback = icon_fallback(size);
-        g_font_ready[size] = true;
-    }
-    return &g_fonts[size];
+    lvFont_t *font = load_font(set, size);
+    lvFont_t *icons = load_font(FONT_SET_ICONS, size);
+    font->fallback = icons->valid ? icons : NULL;
+
+    return font;
 }
 
 void gfx_setFontMono(bool on)
 {
-#ifdef CONFIG_FONT_AA
     g_use_mono_font = on;
-#else
-    /* Mono targets ship only the 1bpp font; nothing to switch. */
-    (void)on;
-#endif
+}
+
+bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
+                       uint32_t len)
+{
+    if (((unsigned)set >= FONT_SET_NUM) || ((unsigned)size >= FONT_SIZE_NUM))
+        return false;
+
+    if (data != NULL) {
+        lvFont_t probe;
+        lvFont_init(&probe, data, len);
+        if (!probe.valid)
+            return false;
+    }
+
+    fontSources[set][size].start = data;
+    fontSources[set][size].end = (data != NULL) ? (data + len) : NULL;
+    g_font_ready[set][size] = false;
+
+    return true;
 }
 
 #ifdef CONFIG_PIX_FMT_RGB565

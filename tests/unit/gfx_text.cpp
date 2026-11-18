@@ -503,3 +503,34 @@ TEST_CASE("last glyph of each font decodes (non-zero width)",
     REQUIRE(gfx_getTextWidth(FONT_SIZE_8PT, "\xEF\x89\x84") > 0);
     REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x89\x84") > 0);
 }
+
+/* Built-in 16 pt text font, embedded by fontData.S. */
+extern "C" const uint8_t _font_16_start[];
+extern "C" const uint8_t _font_16_end[];
+
+TEST_CASE("gfx_setFontSource replaces a font and restores the built-in one",
+          "[gfx][font]")
+{
+    const uint8_t h5 = gfx_getFontLineHeight(FONT_SIZE_5PT);
+    const uint8_t h16 = gfx_getFontLineHeight(FONT_SIZE_16PT);
+    const uint32_t len = (uint32_t)(_font_16_end - _font_16_start);
+    REQUIRE(h5 != h16);
+
+    SECTION("a valid font is used for that size")
+    {
+        REQUIRE(gfx_setFontSource(FONT_SET_TEXT, FONT_SIZE_5PT, _font_16_start,
+                                  len));
+        REQUIRE(gfx_getFontLineHeight(FONT_SIZE_5PT) == h16);
+    }
+
+    SECTION("invalid data is rejected and the font is unchanged")
+    {
+        static const uint8_t junk[64] = { 0 };
+        REQUIRE_FALSE(gfx_setFontSource(FONT_SET_TEXT, FONT_SIZE_5PT, junk,
+                                        sizeof(junk)));
+        REQUIRE(gfx_getFontLineHeight(FONT_SIZE_5PT) == h5);
+    }
+
+    REQUIRE(gfx_setFontSource(FONT_SET_TEXT, FONT_SIZE_5PT, NULL, 0));
+    REQUIRE(gfx_getFontLineHeight(FONT_SIZE_5PT) == h5);
+}

@@ -185,6 +185,29 @@ void gfx_resetClipRect(void);
 void gfx_setFontMono(bool on);
 
 /**
+ * Font sets: each holds one font per fontSize_t.
+ */
+typedef enum {
+    FONT_SET_TEXT = 0, ///< Default text font
+    FONT_SET_CRISP,    ///< 1bpp text font, see gfx_setFontMono()
+    FONT_SET_ICONS,    ///< App icon glyphs, fallback of the text fonts
+    FONT_SET_NUM
+} fontSet_t;
+
+/**
+ * Use a font from outside the firmware, e.g. a font pack, instead of the
+ * built-in one. The data is borrowed and must stay valid while installed.
+ *
+ * @param set: font set.
+ * @param size: font size.
+ * @param data: LVGL binary font, or NULL to restore the built-in font.
+ * @param len: data length in bytes.
+ * @return false, leaving the font unchanged, if the data is not a valid font.
+ */
+bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
+                       uint32_t len);
+
+/**
  * Draw a line from start to end coordinates, ends included.
  * @param start: line start point, in pixel coordinates.
  * @param end: line end point, in pixel coordinates.
