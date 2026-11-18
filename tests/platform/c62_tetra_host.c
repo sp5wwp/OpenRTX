@@ -19,9 +19,11 @@
  *  -v  print libtetra events
  *  -t  trace the demodulator every 0.48 s
  *  -g  input gain (float), applied before the demodulator
+ *  -P  name=value: set a demodulator parameter (tetraDemodParams)
  */
 
 #include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -71,11 +73,41 @@ static void initTmo(void)
     tetra_tmo_init(&tmo, &cfg);
 }
 
+/* "name=value": set a tetraDemodParams field */
+static bool setParam(const char *arg)
+{
+    static const struct {
+        const char *name;
+        float *field;
+    } fields[] = {
+        { "costAlpha", &tetraDemodParams.costAlpha },
+        { "timingKp", &tetraDemodParams.timingKp },
+        { "timingKi", &tetraDemodParams.timingKi },
+        { "fitAlpha", &tetraDemodParams.fitAlpha },
+        { "eqMu", &tetraDemodParams.eqMu },
+        { "softScale", &tetraDemodParams.softScale },
+        { "eqBiasMu", &tetraDemodParams.eqBiasMu },
+        { "fitHold", &tetraDemodParams.fitHold },
+        { "acqEnergy", &tetraDemodParams.acqEnergy },
+    };
+    const char *eq = strchr(arg, '=');
+    if (eq == NULL)
+        return false;
+    for (size_t i = 0; i < sizeof(fields) / sizeof(fields[0]); i++) {
+        if (strlen(fields[i].name) == (size_t)(eq - arg)
+            && !strncmp(arg, fields[i].name, eq - arg)) {
+            *fields[i].field = strtof(eq + 1, NULL);
+            return true;
+        }
+    }
+    return false;
+}
+
 int main(int argc, char **argv)
 {
     int useResync = 0, seedEq = 1, opt;
     float inGain = 1.0f;
-    while ((opt = getopt(argc, argv, "rvteg:")) != -1) {
+    while ((opt = getopt(argc, argv, "rvteg:P:")) != -1) {
         switch (opt) {
             case 'r':
                 useResync = 1;
@@ -91,6 +123,12 @@ int main(int argc, char **argv)
                 break;
             case 'g':
                 inGain = strtof(optarg, NULL);
+                break;
+            case 'P':
+                if (!setParam(optarg)) {
+                    fprintf(stderr, "bad -P %s\n", optarg);
+                    return 2;
+                }
                 break;
             default:
                 fprintf(stderr, "usage: %s [-r] [-v] [-e] [-g gain] in\n",
@@ -172,10 +210,11 @@ int main(int argc, char **argv)
     double secs = samples / 48000.0;
     printf("secs %.1f crc %u crc/s %.1f sync %.0f%% err %.1f%% "
            "reacq %u slips %u inits %u realign %u cfo %d clk %d "
-           "traffic %u calls %u sds %u\n",
+           "traffic %u calls %u sds %u eq %.3f %.3f %.3f biasHz %.0f\n",
            secs, crcTotal, crcTotal / secs, 100.0 * syncBlocks / blocks,
            errN ? errSum / errN : 0, demod.reacquired, demod.slips, inits,
            tetra_tmo_realigned(&tmo, NULL), tetraDemod_carrierOffset(&demod),
-           tetraDemod_clockOffset(&demod), nTraffic, nCalls, nSds);
+           tetraDemod_clockOffset(&demod), nTraffic, nCalls, nSds, demod.eq[3],
+           demod.eq[4], demod.eq[5], demod.eqBias * 18000 / (2 * 3.14159265));
     return 0;
 }
