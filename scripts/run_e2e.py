@@ -17,6 +17,9 @@ stores its goldens under golden/about/module17/), or it has a line such as
 
     # variants: default smallscreen
 
+A line such as "# codeplug: channels.rtxc" runs the test with that file
+from tests/e2e as the emulator's codeplug.
+
 The variants and the meson targets they are built from are:
 
     default      openrtx_linux               default UI, 160x128 colour
@@ -28,7 +31,8 @@ key press instead of sleeping for a fixed time, and take screenshots with
 "screenshot_sync" so the file exists before the next command runs.
 
 Every run starts from a clean state: the emulator runs in a temporary
-directory with its own settings storage and no codeplug, offscreen with
+directory with its own settings storage and no codeplug (unless the
+script names one), offscreen with
 SDL's software renderer and dummy audio, in UTC, under faketime with the
 wall clock frozen at 2000-01-01 00:00:00. FAKETIME_DONT_FAKE_MONOTONIC=1
 keeps the monotonic clock, which the firmware tick is derived from, running
@@ -115,6 +119,7 @@ KEY_NAMES = {
 KEY_RE = re.compile(r"^\s*(?:key|keycombo)\s+(.*)$")
 SCREENSHOT_RE = re.compile(r"^\s*screenshot(?:_sync)?\s+(\S+)\s*$")
 VARIANTS_RE = re.compile(r"^#\s*variants:\s*(.*)$")
+CODEPLUG_RE = re.compile(r"^#\s*codeplug:\s*(\S+)\s*$")
 
 
 class TestScript:
@@ -124,6 +129,7 @@ class TestScript:
         self.path = path
         self.name = path.stem
         self.variants = list(VARIANTS)
+        self.codeplug = None
         self.commands = []
         self.screenshots = []
         self.errors = []
@@ -148,6 +154,15 @@ class TestScript:
                 self.errors.append(
                     f"line {lineno}: unknown variant(s)"
                     f" {', '.join(sorted(unknown))}"
+                )
+            return
+
+        m = CODEPLUG_RE.match(line)
+        if m:
+            self.codeplug = self.path.parent / m.group(1)
+            if not self.codeplug.is_file():
+                self.errors.append(
+                    f"line {lineno}: codeplug {m.group(1)!r} not found"
                 )
             return
 
@@ -243,6 +258,9 @@ def run_emulator(script, binary, workdir, args):
     Return the emulator output and a list of problems.
     """
     problems = []
+    if script.codeplug is not None:
+        # The emulator reads its codeplug from default.rtxc in its cwd
+        shutil.copy2(script.codeplug, workdir / "default.rtxc")
     env = {
         **os.environ,
         "TZ": "UTC",
