@@ -57,6 +57,16 @@
 static const uint64_t SYNC_SEQ = 0x30673A7067ULL;
 #define SYNC_MASK 0x3FFFFFFFFFULL
 
+struct tetraDemodParams tetraDemodParams = {
+    .costAlpha = COST_ALPHA,
+    .timingKp = TIMING_KP,
+    .timingKi = TIMING_KI,
+    .fitAlpha = FIT_ALPHA,
+    .eqMu = EQ_MU,
+    .softScale = SOFT_SCALE,
+};
+#define P tetraDemodParams
+
 static float wrapf(float phi)
 {
     while (phi >= PI_F)
@@ -229,10 +239,10 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
     float t = decide(x) * (PI_F / 4);
     t += 2 * PI_F * roundf((x - t) / (2 * PI_F)); /* Keep 2 pi clicks */
     if (adapt) {
-        dm->sx += FIT_ALPHA * (d - dm->sx);
-        dm->sxx += FIT_ALPHA * (d * d - dm->sxx);
-        dm->st += FIT_ALPHA * (t - dm->st);
-        dm->sxt += FIT_ALPHA * (d * t - dm->sxt);
+        dm->sx += P.fitAlpha * (d - dm->sx);
+        dm->sxx += P.fitAlpha * (d * d - dm->sxx);
+        dm->st += P.fitAlpha * (t - dm->st);
+        dm->sxt += P.fitAlpha * (d * t - dm->sxt);
     }
     float var = dm->sxx - dm->sx * dm->sx;
     if (adapt && var > 0) {
@@ -256,10 +266,10 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
     }
     float e = decisionError(y);
     if (dm->acquired && adapt) {
-        float mu = EQ_MU * e / pow;
+        float mu = P.eqMu * e / pow;
         for (int i = 0; i < TETRA_DEMOD_EQ_TAPS; i++)
             dm->eq[i] -= mu * dm->eqIn[i];
-        dm->eqBias -= EQ_MU * e;
+        dm->eqBias -= P.eqMu * e;
     }
     dm->errPow += ERR_ALPHA * (e * e - dm->errPow);
     dm->errFast += ERR_FAST_ALPHA * (e * e - dm->errFast);
@@ -280,7 +290,7 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
         y = -y;
 
     /* Soft bits: b1 = 1 for a negative phase change, b2 for |phi| > pi/2 */
-    float k = SOFT_SCALE / (PI_F / 4);
+    float k = P.softScale / (PI_F / 4);
     float s1 = -y * k;
     float s2 = (fabsf(y) - PI_F / 2) * k;
     s1 = s1 > 127 ? 127 : (s1 < -127 ? -127 : s1);
@@ -302,7 +312,7 @@ static void timing(struct tetraDemod *dm)
     for (int o = 0; o < SPS; o++) {
         float v = sampleAt(dm, o - SPS / 2);
         float e = decisionError(dm->gain * (v - dm->offset));
-        dm->cost[o] += COST_ALPHA * (e * e - dm->cost[o]);
+        dm->cost[o] += P.costAlpha * (e * e - dm->cost[o]);
     }
 
     int best = 0;
@@ -344,8 +354,8 @@ static void timing(struct tetraDemod *dm)
         return;
     }
 
-    dm->rate += TIMING_KI * vertex;
-    float step = TIMING_KP * vertex + dm->rate;
+    dm->rate += P.timingKi * vertex;
+    float step = P.timingKp * vertex + dm->rate;
     advance(dm, step);
     dm->drift += step;
 }
