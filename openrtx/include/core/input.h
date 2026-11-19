@@ -21,24 +21,29 @@ extern "C" {
 static const uint16_t input_longPressTimeout = 700;
 
 /**
- * Once an auto-repeating key (the arrows) is held past input_longPressTimeout, a
- * fresh key event is generated every this many milliseconds, so holding an arrow
- * tunes / scrolls continuously instead of stepping once. Tune the feel on
- * hardware; other keys keep their single one-shot long-press.
+ * Time interval in milliseconds between two consecutive repeat events, sent
+ * while the keyboard state stays unchanged past the long-press threshold
  */
-static const uint16_t input_repeatInterval = 120;
+static const uint16_t input_repeatInterval = 100;
 
 /**
  * Structure that represents a keyboard event payload
- * The maximum size of an event payload is 30 bits
- * For a keyboard event we use 1 bit to signal a short or long press
- * And the remaining 29 bits to communicate currently pressed keys.
+ * The maximum size of an event payload is 31 bits
+ * For a keyboard event we use 1 bit to signal a short or long press,
+ * 29 bits to communicate currently pressed keys and 1 bit to signal a repeat.
+ *
+ * Repeat events are sent every input_repeatInterval milliseconds once the
+ * keyboard state has been unchanged for input_longPressTimeout plus
+ * input_repeatInterval milliseconds. They carry all the keys currently
+ * pressed. The UI decides which handlers act on them, everything else must
+ * ignore them.
  */
 typedef union {
     struct {
         uint32_t long_press : 1;
         uint32_t keys       : 29;
-        uint32_t _padding   : 2;
+        uint32_t repeat     : 1;
+        uint32_t _padding   : 1;
     };
 
     uint32_t value;

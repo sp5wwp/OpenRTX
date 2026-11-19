@@ -1459,6 +1459,12 @@ m17_replay_test = executable('m17_replay_test',
                              sources : unit_test_src + m17_replay_src + m17_signal_src + ['tests/unit/M17_replay.cpp'],
                              kwargs  : m17_replay_test_opts)
 
+# Built from input.c alone, to stub keyboard and system tick
+input_repeat_test = executable('input_repeat_test',
+                                sources : ['openrtx/src/core/input.c',
+                                           'tests/unit/input_repeat.cpp'],
+                                kwargs  : unit_test_opts)
+
 rtx_tx_disable_test = executable('rtx_tx_disable_test',
                                   sources : unit_test_src + ['tests/unit/rtx_tx_disable.cpp'],
                                   kwargs  : unit_test_opts)
@@ -1523,6 +1529,7 @@ test('GFX Band Test',        gfx_band_test)
 test('GFX Framebuffer Test', gfx_frame_test)
 test('Audio Codec Test',     audio_codec_test)
 test('M17 Baseband Replay Test', m17_replay_test, timeout : 120) # ~40 s in CI with coverage
+test('Input Repeat Test',    input_repeat_test)
 test('RTX TX Disable Test', rtx_tx_disable_test)
 test('M17 Packet Disassembly Test', m17_packet_disassembly_test)
 test('M17 Packet Framing Test', m17_packet_framing_test)
