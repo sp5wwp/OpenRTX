@@ -80,6 +80,14 @@ void stripTrailingZeroes(char *str);
 uint8_t rssiToSlevel(const rssi_t rssi);
 
 /**
+ * Get the RSSI at which the FM squelch opens.
+ *
+ * @param level: squelch level, 0 to 15.
+ * @return RSSI in dBm, from -127 at level 0 to -61 at level 15.
+ */
+rssi_t squelchToRssi(const uint8_t level);
+
+/**
  * Retrieve the CTCSS tone index given its frequency in tenths of Hz.
  *
  * @param freq: CTCSS frequency

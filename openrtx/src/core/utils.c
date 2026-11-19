@@ -87,6 +87,12 @@ uint8_t rssiToSlevel(const rssi_t rssi)
     return (uint8_t)(127 + rssi) / 6;
 }
 
+rssi_t squelchToRssi(const uint8_t level)
+{
+    // Squelch 0 to 15 spans -127 dBm to -61 dBm
+    return -127 + (level * 66) / 15;
+}
+
 uint8_t ctcssFreqToIndex(const uint16_t freq)
 {
     for(uint8_t idx = 0; idx < CTCSS_FREQ_NUM; idx += 1)
