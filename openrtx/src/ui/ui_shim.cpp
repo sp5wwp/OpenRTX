@@ -185,8 +185,6 @@ extern "C" void ui_init()
 
     standby = false;
     last_event_tick = getTick();
-
-    state.ui_screen = 0; /* MAIN_VFO */
 }
 
 extern "C" void ui_drawSplashScreen()

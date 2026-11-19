@@ -31,7 +31,6 @@ typedef struct {
     rssi_t rssi;
     uint8_t volume;
 
-    uint8_t ui_screen;
     uint8_t tuner_mode;
 
     uint16_t channel_index;
