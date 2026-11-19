@@ -214,10 +214,15 @@ extern "C" void ui_saveState()
     last_state = state;
 }
 
-extern "C" void ui_updateFSM(bool *sync_rtx)
+/**
+ * Handle one UI tick: wake-keeping, the volume HUD, and at most one queued
+ * event.
+ *
+ * @param now: current tick.
+ * @param sync_rtx: set when the radio configuration must be re-applied.
+ */
+static void handleTick(long long now, bool *sync_rtx)
 {
-    const long long now = getTick();
-
     /* Wake-keeping activity — ongoing RF (TX or an open squelch) or the user
      * turning the volume — keeps the display awake and wakes it from standby.
      * Checked every tick, BEFORE draining the event queue: state_task bundles
@@ -317,6 +322,27 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
      * (the wake-keeping activity was already handled at the top). */
     if (_ui_checkStandby(now - last_event_tick))
         enterStandby();
+}
+
+/**
+ * Allow transmitting only from the home screen with the macro menu closed, as
+ * the classic UI did, so a PTT press in a menu or editor never keys up.
+ *
+ * @param sync_rtx: set when the gate changes, so the rtx thread applies it.
+ */
+static void updatePttGate(bool *sync_rtx)
+{
+    const bool disable = macroOpen || (nav.activeId() != ViewId::Vfo);
+    if (disable != state.pttDisable) {
+        state.pttDisable = disable;
+        *sync_rtx = true;
+    }
+}
+
+extern "C" void ui_updateFSM(bool *sync_rtx)
+{
+    handleTick(getTick(), sync_rtx);
+    updatePttGate(sync_rtx);
 }
 
 extern "C" bool ui_updateGUI()

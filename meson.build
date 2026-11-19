@@ -1386,6 +1386,10 @@ minmea_conversion_test = executable('minmea_conversion_test',
                                      sources : unit_test_src + ['tests/unit/convert_minmea_coord.cpp'],
                                      kwargs  : unit_test_opts)
 
+ui_ptt_gate_test = executable('ui_ptt_gate_test',
+                              sources : unit_test_src + ['tests/unit/ui_ptt_gate.cpp'],
+                              kwargs  : unit_test_opts)
+
 ui_check_standby_test = executable('ui_check_standby_test',
                                     sources : unit_test_src + ['tests/unit/ui_check_standby.cpp'],
                                     kwargs  : unit_test_opts)
@@ -1529,6 +1533,7 @@ test('Codeplug Test',         cps_test)
 ## test('Linux InputStream Test', linux_inputStream_test)
 test('minmea conversion Test', minmea_conversion_test)
 test('UI Check Standby Test', ui_check_standby_test)
+test('UI PTT Gate Test', ui_ptt_gate_test)
 test('UI Strings Test', ui_strings_test)
 test('UI View Slot Test', ui_view_slot_test)
 test('UI Key Repeat Test', ui_key_repeat_test)
