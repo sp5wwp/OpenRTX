@@ -15,6 +15,9 @@
 #include "interfaces/platform.h"
 #include "interfaces/nvmem.h"
 #include "interfaces/delays.h"
+#ifdef CONFIG_NVM_SAVE_ON_CHANGE
+#include "core/crc.h"
+#endif
 
 state_t state;
 pthread_mutex_t state_mutex;
@@ -80,6 +83,67 @@ void state_terminate()
     pthread_mutex_destroy(&state_mutex);
 }
 
+#ifdef CONFIG_NVM_SAVE_ON_CHANGE
+/*
+ * Settings and VFO saved some seconds after they last changed, for radios
+ * where saving at power off is not reliable.
+ */
+#define SAVE_CHECK_MS 1000
+#define SAVE_DELAY_MS 5000
+#define SAVE_RETRY_MS 60000 /* After a failed save */
+
+uint32_t state_nvmSaves;
+static uint32_t savedCrc;   /* What is stored, or was loaded at boot */
+static uint32_t pendingCrc; /* Changed contents waiting to settle */
+static long long pendingSince;
+static long long lastCheck;
+static bool crcKnown;
+
+static void saveOnChange()
+{
+    long long now = getTick();
+    if ((now - lastCheck) < SAVE_CHECK_MS)
+        return;
+    lastCheck = now;
+
+    settings_t settings;
+    channel_t vfo;
+    pthread_mutex_lock(&state_mutex);
+    settings = state.settings;
+    vfo = state.channel;
+    pthread_mutex_unlock(&state_mutex);
+
+    // Never store a brightness of 0, as in state_terminate()
+    if (settings.brightness == 0)
+        settings.brightness = 5;
+
+    uint32_t crc = ((uint32_t)crc_ccitt(&settings, sizeof(settings)) << 16)
+                 | crc_ccitt(&vfo, sizeof(vfo));
+    if (!crcKnown) {
+        savedCrc = pendingCrc = crc;
+        crcKnown = true;
+        return;
+    }
+    if (crc == savedCrc)
+        return;
+    if (crc != pendingCrc) {
+        pendingCrc = crc;
+        pendingSince = now;
+        return;
+    }
+    if ((now - pendingSince) < SAVE_DELAY_MS)
+        return;
+
+    if (nvm_writeSettingsAndVfo(&settings, &vfo) == 0) {
+        savedCrc = crc;
+        state_nvmSaves++;
+    } else {
+        /* Do not hammer the flash: try again later */
+        pendingSince = now + SAVE_RETRY_MS - SAVE_DELAY_MS;
+    }
+}
+#endif
+
 void state_task()
 {
     // Update radio state once every 100ms
@@ -125,6 +189,10 @@ void state_task()
     pthread_mutex_unlock(&state_mutex);
 
     ui_pushEvent(EVENT_STATUS, 0);
+
+#ifdef CONFIG_NVM_SAVE_ON_CHANGE
+    saveOnChange();
+#endif
 }
 
 void state_resetSettingsAndVfo()

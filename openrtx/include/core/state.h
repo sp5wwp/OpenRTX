@@ -97,6 +97,14 @@ void state_terminate();
  */
 void state_task();
 
+#ifdef CONFIG_NVM_SAVE_ON_CHANGE
+/**
+ * Number of times settings and VFO were saved since boot, by the periodic
+ * save that follows a change (CONFIG_NVM_SAVE_ON_CHANGE).
+ */
+extern uint32_t state_nvmSaves;
+#endif
+
 /**
  * Reset the fields of radio state containing user settings and VFO channel.
  */
