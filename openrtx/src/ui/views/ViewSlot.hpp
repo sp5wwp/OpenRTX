@@ -84,7 +84,7 @@ public:
     });
 
     /** Alignment of the storage, enough for any view. */
-    static constexpr size_t ALIGN = alignof(std::max_align_t);
+    static constexpr size_t ALIGN = __BIGGEST_ALIGNMENT__;
 
     /** Constructor. */
     ViewSlot();
