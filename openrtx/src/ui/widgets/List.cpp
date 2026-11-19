@@ -45,7 +45,8 @@ void List::setPosition(const ListPos &p)
 {
     const uint16_t n = rows();
     selected_ = (p.selected < n) ? p.selected : 0;
-    top_ = (p.top <= selected_) ? p.top : selected_;
+    const uint16_t last = selectable_ ? selected_ : maxTop();
+    top_ = (p.top <= last) ? p.top : last;
     invalidate();
 }
 
@@ -138,6 +139,40 @@ void List::moveSelection(int dir)
     announceSelection();
 }
 
+void List::scroll(int dir)
+{
+    const uint16_t last = maxTop();
+    uint16_t top = top_;
+    if ((dir > 0) && (top < last))
+        top++;
+    else if ((dir < 0) && (top > 0))
+        top--;
+
+    if (top == top_)
+        return;
+    top_ = top;
+    invalidate();
+}
+
+uint16_t List::maxTop() const
+{
+    /* Walk up from the last row while the rows below still fit. */
+    const uint16_t n = rows();
+    uint16_t top = n;
+    int sum = 0;
+    while (top > 0) {
+        sum += rowHeight(static_cast<uint16_t>(top - 1));
+        if (sum > static_cast<int>(area_.h))
+            break;
+        top--;
+    }
+
+    /* A last row taller than the viewport still shows from its top. */
+    if ((top == n) && (n > 0))
+        top = static_cast<uint16_t>(n - 1);
+    return top;
+}
+
 void List::announceSelection() const
 {
     /* Speak the freshly-selected row (label, then value or checkbox state) when
@@ -173,22 +208,25 @@ void List::announceSelection() const
 
 bool List::onEvent(const Event &e)
 {
+    int dir = 0;
     if (e.kind == EvKind::Encoder) {
-        moveSelection(e.encoder);
-        return true;
+        dir = e.encoder;
+    } else if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
+        /* A held arrow keeps scrolling. */
+        if ((e.keys & KEY_DOWN) != 0u)
+            dir = +1;
+        else if ((e.keys & KEY_UP) != 0u)
+            dir = -1;
     }
-    /* A held arrow keeps scrolling. */
-    if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
-        if ((e.keys & KEY_DOWN) != 0u) {
-            moveSelection(1);
-            return true;
-        }
-        if ((e.keys & KEY_UP) != 0u) {
-            moveSelection(-1);
-            return true;
-        }
-    }
-    return false;
+    if (dir == 0)
+        return false;
+
+    /* Without a selection there is nothing to move but the window. */
+    if (selectable_)
+        moveSelection(dir);
+    else
+        scroll(dir);
+    return true;
 }
 
 void List::draw(DrawCtx &d)

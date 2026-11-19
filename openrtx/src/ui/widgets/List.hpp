@@ -62,7 +62,8 @@ public:
  * offset, so a menu of any length stays within the Screen focus ring and maps
  * to the rotary knob / arrow keys. Encoder steps and UP/DOWN move the selection
  * (wrapping) and scroll to keep it visible; ENTER/ESC are left for the owning
- * view (which reads selected()/item() to navigate or toggle). The selected row
+ * view (which reads selected()/item() to navigate or toggle). A list without a
+ * selection scrolls by a row instead, stopping at either end. The selected row
  * is a solid blue fill with black text; rows are separated by thin dividers.
  *
  * The item table is borrowed, not copied, matching the no-heap discipline.
@@ -121,6 +122,22 @@ public:
 private:
     void scrollToSelected();
     void moveSelection(int dir);
+
+    /**
+     * Move the window of a list without a selection by a row, keeping the
+     * last page full.
+     *
+     * @param dir: +1 down, -1 up.
+     */
+    void scroll(int dir);
+
+    /**
+     * Get the scroll offset that shows the last row at the bottom.
+     *
+     * @return the largest first visible row.
+     */
+    uint16_t maxTop() const;
+
     void getItem(uint16_t i, ListItem &out) const;
     static SettingRow::Kind kindOf(const ListItem &it);
     int16_t rowHeight(uint16_t i) const;
