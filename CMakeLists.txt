@@ -79,7 +79,6 @@ execute_process(COMMAND git describe --tags --dirty --always
 target_compile_definitions(app
   PRIVATE
     _GNU_SOURCE
-    FONT_UBUNTU_REGULAR
     CODEC2_MODE_EN_DEFAULT=0
     FREEDV_MODE_EN_DEFAULT=0
     CODEC2_MODE_3200_EN=1
@@ -110,6 +109,8 @@ target_sources(app
     openrtx/src/core/threads.c
     openrtx/src/core/battery.c
     openrtx/src/core/graphics.c
+    openrtx/src/core/fonts/lv_font_bin.c
+    openrtx/src/core/fontData.c
     openrtx/src/core/input.c
     openrtx/src/core/utils.c
     openrtx/src/core/queue.c
