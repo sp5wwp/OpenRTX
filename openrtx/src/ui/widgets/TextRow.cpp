@@ -7,8 +7,6 @@
 #include "widgets/TextRow.hpp"
 #include "render/DrawCtx.hpp"
 
-#include <cstring>
-
 namespace ortxui
 {
 
@@ -28,9 +26,7 @@ void TextRow::setText(uint8_t i, const char *text)
 {
     if (i >= kMaxRuns)
         return;
-    strncpy(runs_[i].text, (text != nullptr) ? text : "",
-            sizeof(runs_[i].text) - 1);
-    runs_[i].text[sizeof(runs_[i].text) - 1] = '\0';
+    runs_[i].text = (text != nullptr) ? text : "";
 }
 
 void TextRow::setColor(uint8_t i, Sem color)

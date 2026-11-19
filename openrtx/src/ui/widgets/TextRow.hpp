@@ -35,7 +35,8 @@ namespace ortxui
 class TextRow : public Object
 {
 public:
-    static constexpr uint8_t kMaxRuns = 4;
+    /** Runs a row holds: a value and its tag or unit. */
+    static constexpr uint8_t kMaxRuns = 2;
 
     enum class Side : uint8_t { Left, Right };
 
@@ -53,7 +54,13 @@ public:
     /** Define run `i` (font / colour / group). Extends the run count to cover
      *  `i`. Text starts empty; set it with setText(). */
     void setRun(uint8_t i, fontSize_t font, Sem color, Side side);
-    /** Update run `i`'s text (copied). An empty string hides the run. */
+    /**
+     * Update a run's text. The text is borrowed, not copied, so the caller
+     * keeps it alive while the row may draw.
+     *
+     * @param i: run index.
+     * @param text: text; empty or nullptr hides the run.
+     */
     void setText(uint8_t i, const char *text);
     /** Per-run colour override (e.g. a muted unit next to a bright value). */
     void setColor(uint8_t i, Sem color);
@@ -63,7 +70,7 @@ public:
 
 private:
     struct Run {
-        char text[16] = "";
+        const char *text = ""; ///< Borrowed text
         fontSize_t font = FONT_SIZE_8PT;
         Sem color = Sem::OnSurface;
         Side side = Side::Left;
