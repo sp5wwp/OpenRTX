@@ -22,8 +22,8 @@ namespace ortxui
  * Selection and scroll offset of a list, kept while its view is destroyed.
  */
 struct ListPos {
-    uint8_t selected; ///< Selected row
-    uint8_t top;      ///< First visible row
+    uint16_t selected; ///< Selected row
+    uint16_t top;      ///< First visible row
 };
 
 /**

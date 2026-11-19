@@ -38,7 +38,7 @@ void List::setModel(const ListModel *model)
 
 ListPos List::position() const
 {
-    return { static_cast<uint8_t>(selected_), static_cast<uint8_t>(top_) };
+    return { selected_, top_ };
 }
 
 void List::setPosition(const ListPos &p)
