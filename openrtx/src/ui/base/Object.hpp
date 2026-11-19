@@ -30,12 +30,9 @@ enum ObjFlag : uint8_t {
 };
 
 /**
- * Base class for every retained UI object.
- *
- * The tree is intrusive: each node stores pointers to its parent, first child
- * and next sibling, so building a screen allocates no containers. Areas
- * are in absolute screen coordinates. Objects are owned by their view, and none
- * is freed while it is in a tree.
+ * Base class of every UI object. The tree is intrusive (parent, first child,
+ * next sibling), so building a screen allocates no containers. Objects are
+ * owned by their view and never freed while in a tree.
  */
 class Object
 {
@@ -48,7 +45,10 @@ public:
     /** Destructor. */
     virtual ~Object() = default;
 
+    /** Not copyable: the tree links point at this instance. */
     Object(const Object &) = delete;
+
+    /** Not assignable: the tree links point at this instance. */
     Object &operator=(const Object &) = delete;
 
     /**
@@ -67,8 +67,7 @@ public:
     virtual bool onEvent(const Event &e);
 
     /**
-     * Append a child, walking the siblings to the end: trees are built once
-     * per screen, so no last-child pointer is kept for it.
+     * Append a child; walks the siblings, as trees are built once per screen.
      *
      * @param child: object to append.
      */
@@ -178,20 +177,16 @@ public:
     }
 
     /**
-     * Intrinsic preferred size. The default is the current area size; widgets
-     * whose size depends on content (e.g. measured text) override this so a
-     * layout container can size them without an explicit basis.
+     * Get the preferred size; content-sized widgets override it.
+     *
+     * @return the size, by default the current area's.
      */
     virtual Size natural() const
     {
         return { bounds.w, bounds.h };
     }
 
-    /**
-     * Arrange descendants after this object's own area has been set. Leaf
-     * objects do nothing; layout containers override this to position their
-     * children (in absolute coordinates) and recurse.
-     */
+    /** Place the children once this object's area is set; containers only. */
     virtual void onLayout()
     {
     }
@@ -217,7 +212,7 @@ protected:
     Object *nextSiblingLink = nullptr; ///< Next child of the parent
     Rect bounds = { 0, 0, 0, 0 };      ///< Area in screen coordinates
 
-    /* Layout hints and flags, packed in a word: every widget carries them. */
+    /* Packed: every widget carries the layout hints and flags. */
     int16_t basis = -1;           ///< Preferred main-axis extent, -1: natural()
     uint8_t grow : 4, margin : 4; ///< Flex weight; uniform margin (px)
     uint8_t self : 3, objFlags : 5; ///< Cross alignment (Align); ObjFlag set

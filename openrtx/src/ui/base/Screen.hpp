@@ -17,11 +17,8 @@ namespace ortxui
 {
 
 /**
- * The root of a screen's widget tree. Owns focus and whether the screen needs
- * a repaint, and dispatches events to the focused object with a rotary-knob
- * focus-ring fallback. A repaint redraws the whole screen, so no dirty
- * rectangle is kept. Concrete screens are expressed as Views that populate a
- * Screen; see views/.
+ * Root of a view's widget tree: owns the focus and the repaint flag, and sends
+ * events to the focused object. A repaint redraws the whole screen.
  */
 class Screen : public Object
 {
@@ -64,7 +61,11 @@ public:
         return focus;
     }
 
-    /** Check whether the screen needs a repaint. */
+    /**
+     * Check whether the screen needs a repaint.
+     *
+     * @return true if it does.
+     */
     bool dirty() const
     {
         return needsRepaint;

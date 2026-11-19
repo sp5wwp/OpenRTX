@@ -130,7 +130,7 @@ void Flex::onLayout()
                   static_cast<uint16_t>(mainSize) };
 
         c->setArea(r);
-        c->onLayout(); /* recurse into nested containers */
+        c->onLayout();
 
         cursor += 2 * h.margin + mainSize + spacing;
     }

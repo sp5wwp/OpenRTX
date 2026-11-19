@@ -20,19 +20,9 @@ namespace ortxui
 {
 
 /**
- * A flexbox-style layout container.
- *
- * Arranges its direct children along a main axis (Row/Column) inside its own
- * area: each child's main-axis size comes from its basis (or natural() size)
- * plus a share of the free space proportional to its grow weight, and free
- * space left over when nothing grows is distributed per the justify mode. On
- * the cross axis children are aligned (or stretched) per the container's
- * alignment and any per-child override. Children may carry a uniform margin.
- *
- * Layout is computed in onLayout(), which a parent calls after setting this
- * container's area; nested Flex children are recursed into, so a whole screen
- * lays out from one top-level call. An optional background colour lets a Flex
- * paint a styled surface such as a status bar.
+ * Flexbox-style container: lays its children along a main axis by basis and
+ * grow weight, and aligns them on the cross axis. Nested containers are laid
+ * out in turn, so a screen lays out from one onLayout() call.
  */
 class Flex : public Object
 {
@@ -117,7 +107,11 @@ public:
         hasBg = true;
     }
 
-    /** Paint the background, if set. */
+    /**
+     * Paint the background, if set.
+     *
+     * @param d: drawing context.
+     */
     void draw(DrawCtx &d) override;
 
     /** Place the children in the area, and lay each one out. */
