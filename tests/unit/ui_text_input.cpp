@@ -117,6 +117,25 @@ TEST_CASE("Moving the cursor ends a multi-tap", "[ui][textinput]")
     REQUIRE(strcmp(buf, "AA") == 0);
 }
 
+TEST_CASE("A picked character is one cell", "[ui][textinput]")
+{
+    char buf[10] = "AB";
+    TextInput t;
+    bindCallsign(t, buf, sizeof(buf));
+
+    t.putCodePoint(0xE9); /* e acute */
+    REQUIRE(memcmp(buf, "\xC3\xA9", 2) == 0);
+    REQUIRE(strcmp(buf + 2, "B") == 0);
+
+    char out[16];
+    t.formatBracketed(out, sizeof(out));
+    REQUIRE(strcmp(out, "[\xC3\xA9]B") == 0);
+
+    t.moveCursor(+1);
+    t.formatBracketed(out, sizeof(out));
+    REQUIRE(strcmp(out, "\xC3\xA9[B]") == 0);
+}
+
 TEST_CASE("A text field follows the editor key contract", "[ui][textinput]")
 {
     char buf[10] = "AB1CD";

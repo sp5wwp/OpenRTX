@@ -13,7 +13,6 @@
 #include "core/utils.h"
 #include "interfaces/keyboard.h"
 
-#include <cstdio>
 #include <cstring>
 
 namespace ortxui
@@ -47,6 +46,26 @@ static constexpr uint32_t REPEAT_KEYS = KEY_STAR | KEY_UP | KEY_DOWN | KEY_LEFT
 static constexpr bool knobOnly()
 {
     return !kbdHasArrows() && !kbdHasNumeric();
+}
+
+/**
+ * Append bytes to a NUL-terminated string, if they fit.
+ *
+ * @param o: end of the string, moved past the bytes.
+ * @param rem: space left at `o`, including the NUL.
+ * @param s: bytes.
+ * @param n: number of bytes.
+ * @return false if they did not fit.
+ */
+static bool append(char *&o, size_t &rem, const char *s, size_t n)
+{
+    if (n >= rem)
+        return false;
+    memcpy(o, s, n);
+    o += n;
+    rem -= n;
+    *o = '\0';
+    return true;
 }
 
 /**
@@ -557,104 +576,61 @@ void TextInput::stripTrailingSpaces()
 
 void TextInput::formatBracketed(char *out, size_t sz) const
 {
-    if ((out == nullptr) || (sz == 0))
-        return;
-    char *o = out;
-    size_t rem = sz;
-    if (buf_ != nullptr) {
-        for (uint16_t i = 0; (i < len_) && (rem > 6); i++) {
-            int n;
-            if (i == cursor_)
-                n = (buf_[i] == DELETE_CELL) ?
-                        sniprintf(o, rem, "[%s]", DELETE_GLYPH) :
-                        sniprintf(o, rem, "[%c]", buf_[i]);
-            else
-                n = sniprintf(o, rem, "%c", buf_[i]);
-            if (n < 0)
-                break;
-            o += n;
-            rem -= static_cast<size_t>(n);
-        }
-    }
-    *o = '\0';
+    composeWindow(out, sz, 0, len_);
 }
 
 void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
                               uint16_t hi) const
 {
-    if ((out == nullptr) || (sz == 0))
-        return;
+    static constexpr size_t ELLIPSIS_LEN = sizeof(SYMBOL_ELLIPSIS) - 1;
     char *o = out;
     size_t rem = sz;
-    int n;
 
-    if ((lo > 0) && (rem > sizeof(SYMBOL_ELLIPSIS))) {
-        n = sniprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
-        if (n > 0) {
-            o += n;
-            rem -= static_cast<size_t>(n);
-        }
-    }
-    if (buf_ != nullptr) {
-        for (uint16_t i = lo; (i < hi) && (rem > 6); i++) {
-            if (i == cursor_)
-                n = (buf_[i] == DELETE_CELL) ?
-                        sniprintf(o, rem, "[%s]", DELETE_GLYPH) :
-                        sniprintf(o, rem, "[%c]", buf_[i]);
-            else
-                n = sniprintf(o, rem, "%c", buf_[i]);
-            if (n < 0)
-                break;
-            o += n;
-            rem -= static_cast<size_t>(n);
-        }
-    }
-    if ((hi < len_) && (rem > sizeof(SYMBOL_ELLIPSIS))) {
-        n = sniprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
-        if (n > 0) {
-            o += n;
-            rem -= static_cast<size_t>(n);
-        }
-    }
     *o = '\0';
+    if (lo > 0)
+        append(o, rem, SYMBOL_ELLIPSIS, ELLIPSIS_LEN);
+    for (uint16_t i = lo; i < hi; i = nextCell(i)) {
+        const bool del = (buf_[i] == DELETE_CELL);
+        const char *cell = del ? DELETE_GLYPH : (buf_ + i);
+        const size_t n = del ? (sizeof(DELETE_GLYPH) - 1) : cellLen(i);
+        const bool here = (i == cursor_);
+        if ((here && !append(o, rem, "[", 1)) || !append(o, rem, cell, n)
+            || (here && !append(o, rem, "]", 1)))
+            return;
+    }
+    if (hi < len_)
+        append(o, rem, SYMBOL_ELLIPSIS, ELLIPSIS_LEN);
 }
 
 void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
                              fontSize_t font) const
 {
-    if ((out == nullptr) || (sz == 0))
-        return;
-
-    /* Fast path: the whole bracketed string already fits. */
     formatBracketed(out, sz);
-    if ((buf_ == nullptr) || (len_ == 0)
-        || (gfx_getTextWidth(font, out) <= maxW))
+    if (gfx_getTextWidth(font, out) <= maxW)
         return;
 
     /* Grow a [lo, hi) cell window outward from the cursor, alternately left and
-     * right, committing an expansion only while the composed window (including
-     * its ellipses) still fits -- so the cursor cell stays visible and the
-     * field scrolls with it. */
-    uint16_t lo = (cursor_ < len_) ? cursor_ : static_cast<uint16_t>(len_ - 1);
-    uint16_t hi = static_cast<uint16_t>(lo + 1);
-
+     * right, while the composed window (with its ellipses) still fits, so the
+     * cursor cell stays visible and the field scrolls with it. */
+    uint16_t lo = cursor_;
+    uint16_t hi = nextCell(lo);
     char cand[LINE_BUF];
     bool grew = true;
     while (grew) {
         grew = false;
         if (lo > 0) {
-            composeWindow(cand, sizeof(cand), static_cast<uint16_t>(lo - 1),
-                          hi);
+            const uint16_t l = prevCell(lo);
+            composeWindow(cand, sizeof(cand), l, hi);
             if (gfx_getTextWidth(font, cand) <= maxW) {
-                lo--;
+                lo = l;
                 grew = true;
             }
         }
         if (hi < len_) {
-            composeWindow(cand, sizeof(cand), lo,
-                          static_cast<uint16_t>(hi + 1));
+            const uint16_t h = nextCell(hi);
+            composeWindow(cand, sizeof(cand), lo, h);
             if (gfx_getTextWidth(font, cand) <= maxW) {
-                hi++;
+                hi = h;
                 grew = true;
             }
         }
