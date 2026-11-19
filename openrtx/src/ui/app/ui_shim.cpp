@@ -45,7 +45,7 @@ static uint8_t evQueue_wrPos = 0;
 
 /* Snapshot of the radio state the views are drawn from, copied under
  * state_mutex by ui_saveState(). */
-static state_t last_state;
+static state_t lastState;
 
 /* The one live view, the screen stack over it, and the volume HUD, which
  * stays built because it draws over the screen without replacing it. */
@@ -56,7 +56,7 @@ static VolumeOverlayView volumeOverlay;
 /* Backlight timeout: after settings.display_timer of no activity the backlight
  * is off and nothing is drawn until a key press, RF or the volume knob. */
 static bool standby = false;
-static long long last_event_tick = 0;
+static long long lastEventTick = 0;
 
 /* Macro menu, opened by a held MONI key rather than by a view. */
 static bool macroOpen = false;
@@ -128,7 +128,7 @@ static void enterStandby()
  */
 static bool exitStandby(long long now)
 {
-    last_event_tick = now;
+    lastEventTick = now;
     if (!standby)
         return false;
     standby = false;
@@ -186,7 +186,7 @@ extern "C" void ui_init()
 {
     evQueue_rdPos = 0;
     evQueue_wrPos = 0;
-    last_state = state;
+    lastState = state;
 
     volumeOverlay.build();
     nav.setRoot(ViewId::Vfo);
@@ -195,7 +195,7 @@ extern "C" void ui_init()
     gfx_setFontCrisp(state.settings.crispText);
 
     standby = false;
-    last_event_tick = getTick();
+    lastEventTick = getTick();
     macroOpen = false;
     macroLatched = false;
     moniDown = false;
@@ -226,7 +226,7 @@ extern "C" void ui_drawSplashScreen()
 
 extern "C" void ui_saveState()
 {
-    last_state = state;
+    lastState = state;
 }
 
 /**
@@ -437,12 +437,12 @@ static void handleTick(long long now, bool *sync_rtx)
      * tick, not only on an empty queue: the volume changes with a status
      * event. */
     if ((rtx_getStatus()->opStatus == TX) || rtx_rxSquelchOpen()
-        || (state.volume != last_state.volume))
+        || (state.volume != lastState.volume))
         exitStandby(now);
 
     /* Turning the volume knob shows the volume HUD, except over the macro
      * menu. */
-    if ((state.volume != last_state.volume) && !macroOpen)
+    if ((state.volume != lastState.volume) && !macroOpen)
         nav.presentOverlay(&volumeOverlay, now, VOLUME_HUD_MS);
 
     nav.tickOverlay(now);
@@ -490,7 +490,7 @@ static void handleTick(long long now, bool *sync_rtx)
     }
 
     /* No event this tick: blank the backlight once the idle timer elapses. */
-    if (ui_checkStandby(now - last_event_tick))
+    if (ui_checkStandby(now - lastEventTick))
         enterStandby();
 }
 
@@ -534,7 +534,7 @@ extern "C" void ui_updateGUI()
     if (view == nullptr)
         return;
 
-    view->syncFromState(last_state);
+    view->syncFromState(lastState);
 
     Screen &screen = view->screen();
     if (!screen.dirty())
