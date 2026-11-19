@@ -26,8 +26,6 @@ namespace ortxui
 class AboutView : public View
 {
 public:
-    static constexpr uint16_t kMaxAuthors = 16;
-
     void build() override;
 
     Screen &screen() override
@@ -48,7 +46,6 @@ private:
     Label brand_;
     Label version_;
     List authors_;
-    ListItem authorItems_[kMaxAuthors] = {};
 };
 
 } // namespace ortxui

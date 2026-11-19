@@ -5,17 +5,20 @@
  */
 
 #include "views/AboutView.hpp"
+#include "core/utils.h"
 #include "hwconfig.h"
 
 namespace ortxui
 {
 
-/* Contributor credits (borrowed static table; mirrors the classic UI). */
-static const char *const kAuthors[] = {
-    "Niccolo' IU2KIN", "Silvano IU2KWO", "Federico IU2NUO", "Fred IU2NRO",
-    "Joseph VK7JS",    "Morgan ON4MOD",  "Marco DM4RCO",
+/* Contributor credits, as list rows the list borrows from flash (mirrors the
+ * classic UI). */
+static constexpr ListItem AUTHORS[] = {
+    { UiText("Niccolo' IU2KIN") }, { UiText("Silvano IU2KWO") },
+    { UiText("Federico IU2NUO") }, { UiText("Fred IU2NRO") },
+    { UiText("Joseph VK7JS") },    { UiText("Morgan ON4MOD") },
+    { UiText("Marco DM4RCO") },
 };
-static constexpr uint16_t kAuthorCount = sizeof(kAuthors) / sizeof(kAuthors[0]);
 
 void AboutView::build()
 {
@@ -51,13 +54,7 @@ void AboutView::build()
     header_.addChild(&version_);
 
     /* Scrolling, non-selectable credits list fills the rest. */
-    uint16_t n = kAuthorCount;
-    if (n > kMaxAuthors)
-        n = kMaxAuthors;
-    for (uint16_t i = 0; i < n; i++)
-        authorItems_[i].label = kAuthors[i];
-
-    authors_.setItems(authorItems_, n);
+    authors_.setItems(AUTHORS, ARRAY_SIZE(AUTHORS));
     authors_.setContentPad(1);
     authors_.setSelectable(false);
     authors_.setGrow(1);
