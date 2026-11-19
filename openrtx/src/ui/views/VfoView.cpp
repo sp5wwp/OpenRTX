@@ -9,7 +9,7 @@
 #include "style/Charsets.hpp"
 #include "base/Event.hpp"
 #include "base/UiFormat.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "base/Layout.hpp"
 #include "interfaces/delays.h"
 #include "core/utils.h"

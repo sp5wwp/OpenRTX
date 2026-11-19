@@ -12,7 +12,7 @@
 #endif
 
 #include <cstdint>
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "views/VolumeHud.hpp"
 #include "core/state.h"
 

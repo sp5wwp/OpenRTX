@@ -6,7 +6,7 @@
 
 #include "base/Navigator.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "views/ViewSlot.hpp"
 #include "widgets/List.hpp"
 

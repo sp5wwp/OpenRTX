@@ -6,7 +6,7 @@
 
 #include "views/MacroView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "base/UiFormat.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"

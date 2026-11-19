@@ -16,7 +16,7 @@
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
-#include "base/ViewId.hpp"
+#include "views/ViewId.hpp"
 #include "base/UiText.hpp"
 #include "core/messages.h"
 #include "style/Charsets.hpp"

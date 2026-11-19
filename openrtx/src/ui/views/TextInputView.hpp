@@ -8,7 +8,7 @@
 #define ORTX_UI_TEXTINPUTVIEW_HPP
 
 #include <cstdint>
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"
 #include "widgets/TextInput.hpp"

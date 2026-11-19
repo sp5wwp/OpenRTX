@@ -7,7 +7,7 @@
 #include "views/MessageComposeView.hpp"
 #include "views/TextInputView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "core/state.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"

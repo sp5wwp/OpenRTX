@@ -153,10 +153,10 @@ target_sources(app
     openrtx/src/ui/base/Event.cpp
     openrtx/src/ui/base/UiText.cpp
     openrtx/src/ui/base/UiFormat.cpp
-    openrtx/src/ui/base/View.cpp
-    openrtx/src/ui/base/SettingsListView.cpp
+    openrtx/src/ui/views/View.cpp
+    openrtx/src/ui/views/SettingsListView.cpp
     openrtx/src/ui/base/Navigator.cpp
-    openrtx/src/ui/base/UiMemory.cpp
+    openrtx/src/ui/views/UiMemory.cpp
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp

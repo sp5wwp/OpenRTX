@@ -6,7 +6,7 @@
 
 #include "views/TimeDateView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"

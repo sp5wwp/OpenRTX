@@ -8,7 +8,7 @@
 #define ORTX_UI_INFOVIEW_HPP
 
 #include <cstdint>
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "views/InfoTable.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"

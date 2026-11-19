@@ -7,7 +7,7 @@
 #include "views/TextInputView.hpp"
 #include "views/PickerView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "base/Keypad.hpp"
 #include "base/Layout.hpp"
 #include "interfaces/keyboard.h"

@@ -14,7 +14,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
-#include "base/ViewId.hpp"
+#include "views/ViewId.hpp"
 #include "views/VfoView.hpp"
 #include "views/MacroView.hpp"
 #include "views/MenuView.hpp"

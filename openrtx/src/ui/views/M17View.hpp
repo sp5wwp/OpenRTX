@@ -10,7 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
-#include "base/SettingsListView.hpp"
+#include "views/SettingsListView.hpp"
 #include "widgets/TextInput.hpp"
 #include "core/state.h"
 

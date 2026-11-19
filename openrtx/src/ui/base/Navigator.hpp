@@ -13,8 +13,8 @@
 
 #include <array>
 #include <cstdint>
-#include "base/View.hpp"
-#include "base/ViewId.hpp"
+#include "views/View.hpp"
+#include "views/ViewId.hpp"
 
 namespace ortxui
 {

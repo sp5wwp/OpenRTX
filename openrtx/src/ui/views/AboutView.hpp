@@ -7,7 +7,7 @@
 #ifndef ORTX_UI_ABOUTVIEW_HPP
 #define ORTX_UI_ABOUTVIEW_HPP
 
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"

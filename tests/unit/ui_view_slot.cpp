@@ -11,7 +11,7 @@
 
 #include "base/Event.hpp"
 #include "base/Navigator.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "core/state.h"
 #include "interfaces/keyboard.h"
 #include "views/ViewSlot.hpp"

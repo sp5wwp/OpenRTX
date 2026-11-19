@@ -7,7 +7,7 @@
 #include "views/M17View.hpp"
 #include "views/TextInputView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "interfaces/delays.h"
 #include "core/state.h"
 #include "core/voicePrompts.h"

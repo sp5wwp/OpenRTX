@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "widgets/List.hpp"
 #include "widgets/TopBar.hpp"
 #include "interfaces/keyboard.h"

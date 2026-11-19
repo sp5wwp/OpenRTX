@@ -6,7 +6,7 @@
 
 #include "views/RadioView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "interfaces/keyboard.h"
 #include "core/utils.h"
 #include "core/state.h"

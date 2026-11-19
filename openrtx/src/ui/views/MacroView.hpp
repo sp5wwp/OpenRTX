@@ -11,7 +11,7 @@
 #error This header is C++ only!
 #endif
 
-#include "base/View.hpp"
+#include "views/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/BarRow.hpp"
 #include "widgets/TopBar.hpp"

@@ -8,7 +8,7 @@
 #include "views/MessageDetailView.hpp"
 #include "views/MessageComposeView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "core/state.h"
 #include "core/graphics.h"
 #include "core/utils.h"

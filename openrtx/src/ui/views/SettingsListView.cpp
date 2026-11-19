@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "base/SettingsListView.hpp"
+#include "views/SettingsListView.hpp"
 #include "base/Event.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "core/state.h"
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"

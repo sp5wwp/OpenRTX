@@ -5,7 +5,7 @@
  */
 
 #include "views/PickerView.hpp"
-#include "base/UiMemory.hpp"
+#include "views/UiMemory.hpp"
 #include "base/Event.hpp"
 #include "interfaces/keyboard.h"
 
