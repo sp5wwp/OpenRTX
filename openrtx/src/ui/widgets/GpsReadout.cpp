@@ -20,7 +20,7 @@ static constexpr int16_t PAD = 2;        ///< Inset of the rows in the column
 static constexpr size_t VALUE_SIZE = 16; ///< Size of a composed value
 
 /** Unit of each row; a fix puts its hemisphere on the first two. */
-static constexpr UiText UNITS[] = { UiText("N"), UiText("E"), STR(locator),
+static constexpr UiText UNITS[] = { STR(north), STR(east), STR(locator),
                                     STR(altitudeShort), STR(speedShort) };
 
 /**
@@ -47,8 +47,8 @@ static const char *formatCoord(int32_t coord, bool isLat, char *val,
               (long)(min100 % 100));
 
     if (isLat)
-        return (coord < 0) ? "S" : "N";
-    return (coord < 0) ? "W" : "E";
+        return ((coord < 0) ? STR(south) : STR(north)).str();
+    return ((coord < 0) ? STR(west) : STR(east)).str();
 }
 
 /**

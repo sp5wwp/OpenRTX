@@ -173,6 +173,12 @@ typedef struct
     const char* TX;
     const char* CTCSS;
     const char* timeFields;
+    const char* nfm;
+    const char* wfm;
+    const char* north;
+    const char* east;
+    const char* south;
+    const char* west;
 }
 stringsTable_t;
 

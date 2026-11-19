@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRTX\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
-"POT-Creation-Date: 2026-11-19 16:09-0600\n"
+"POT-Creation-Date: 2026-11-19 16:37-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -655,4 +655,34 @@ msgstr ""
 #. fields of the time and date entry hint, in the same letters
 #: openrtx/include/ui/EnglishStrings.h
 msgid "hh:mm"
+msgstr ""
+
+#. i18n: narrow FM, the 12.5 kHz channel bandwidth; keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "NFM"
+msgstr ""
+
+#. i18n: wide FM, the 25 kHz channel bandwidth; keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "WFM"
+msgstr ""
+
+#. i18n: compass point and hemisphere on the GPS screen, one letter
+#: openrtx/include/ui/EnglishStrings.h
+msgid "N"
+msgstr ""
+
+#. i18n: compass point and hemisphere on the GPS screen, one letter
+#: openrtx/include/ui/EnglishStrings.h
+msgid "E"
+msgstr ""
+
+#. i18n: compass point and hemisphere on the GPS screen, one letter
+#: openrtx/include/ui/EnglishStrings.h
+msgid "S"
+msgstr ""
+
+#. i18n: compass point and hemisphere on the GPS screen, one letter
+#: openrtx/include/ui/EnglishStrings.h
+msgid "W"
 msgstr ""

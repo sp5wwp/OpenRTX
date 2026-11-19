@@ -81,9 +81,9 @@ uint32_t nextPower(uint32_t mw)
     return POWER_STEPS_MW[0];
 }
 
-const char *bandwidthLabel(uint8_t bandwidth)
+UiText bandwidthLabel(uint8_t bandwidth)
 {
-    return (bandwidth == BW_25) ? "WFM" : "NFM";
+    return (bandwidth == BW_25) ? STR(wfm) : STR(nfm);
 }
 
 UiText modeLabel(uint8_t mode)

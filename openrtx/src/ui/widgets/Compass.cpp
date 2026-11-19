@@ -5,6 +5,7 @@
  */
 
 #include "widgets/Compass.hpp"
+#include "base/UiText.hpp"
 #include "render/DrawCtx.hpp"
 #include "core/graphics.h"
 
@@ -45,17 +46,17 @@ void Compass::draw(DrawCtx &d)
      * left), each centred in a small box straddling the ring. */
     const int16_t o = static_cast<int16_t>(r + 6);
     struct {
-        const char *s;
+        UiText s;
         int16_t dx, dy;
-    } card[4] = { { "N", 0, static_cast<int16_t>(-o) },
-                  { "E", o, 0 },
-                  { "S", 0, o },
-                  { "W", static_cast<int16_t>(-o), 0 } };
+    } card[4] = { { STR(north), 0, static_cast<int16_t>(-o) },
+                  { STR(east), o, 0 },
+                  { STR(south), 0, o },
+                  { STR(west), static_cast<int16_t>(-o), 0 } };
     for (auto &k : card) {
         const Rect box = { static_cast<int16_t>(c.x + k.dx - 5),
                            static_cast<int16_t>(c.y + k.dy - 5), 10, 10 };
         d.textInBox(box, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurfaceMuted,
-                    k.s);
+                    k.s.str());
     }
 
     /* The font has no degree glyph: a plain 3-digit bearing. */

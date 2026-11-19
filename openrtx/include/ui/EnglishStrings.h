@@ -201,5 +201,17 @@ const stringsTable_t englishStrings =
     // i18n: spoken when the time and date entry reaches the time; the time
     // fields of the time and date entry hint, in the same letters
     .timeFields        = N_("hh:mm"),
+    // i18n: narrow FM, the 12.5 kHz channel bandwidth; keep it short
+    .nfm               = N_("NFM"),
+    // i18n: wide FM, the 25 kHz channel bandwidth; keep it short
+    .wfm               = N_("WFM"),
+    // i18n: compass point and hemisphere on the GPS screen, one letter
+    .north             = N_("N"),
+    // i18n: compass point and hemisphere on the GPS screen, one letter
+    .east              = N_("E"),
+    // i18n: compass point and hemisphere on the GPS screen, one letter
+    .south             = N_("S"),
+    // i18n: compass point and hemisphere on the GPS screen, one letter
+    .west              = N_("W"),
 };
 #endif  // ENGLISHSTRINGS_H

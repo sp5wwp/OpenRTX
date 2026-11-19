@@ -127,7 +127,8 @@ void MacroTiles::composeValue(MacroAction action, const Readings &r, char *out,
                 sniprintf(out, n, "-");
             break;
         case MacroAction::Bandwidth:
-            sniprintf(out, n, "%s", fm ? bandwidthLabel(r.bandwidth) : "-");
+            sniprintf(out, n, "%s",
+                      fm ? bandwidthLabel(r.bandwidth).str() : "-");
             break;
         case MacroAction::Mode:
             sniprintf(out, n, "%s", modeLabel(r.mode).str());

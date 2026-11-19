@@ -80,8 +80,9 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
             sniprintf(out, n, "%lu B", static_cast<unsigned long>(heapUsed));
             break;
         case RowBand:
-            sniprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
-                      hw->uhf_band ? "UHF" : "");
+            sniprintf(out, n, "%s%s%s", hw->vhf_band ? STR(VHF).str() : "",
+                      hw->vhf_band ? " " : "",
+                      hw->uhf_band ? STR(UHF).str() : "");
             break;
         default:
             sniprintf(out, n, "%u", hw->hw_version);

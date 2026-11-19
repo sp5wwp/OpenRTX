@@ -366,7 +366,7 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
     const char *m1 = "--";
     switch (ch.mode) {
         case OPMODE_FM:
-            m1 = bandwidthLabel(ch.bandwidth);
+            m1 = bandwidthLabel(ch.bandwidth).str();
             break;
         case OPMODE_DMR:
             m1 = STR(dmr).str();

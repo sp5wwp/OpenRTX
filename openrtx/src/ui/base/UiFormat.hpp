@@ -78,9 +78,9 @@ uint32_t nextPower(uint32_t mw);
  * Get the label of an FM bandwidth.
  *
  * @param bandwidth: BW_12_5 or BW_25.
- * @return "NFM" or "WFM".
+ * @return NFM or WFM.
  */
-const char *bandwidthLabel(uint8_t bandwidth);
+UiText bandwidthLabel(uint8_t bandwidth);
 
 /**
  * Get the label of an operating mode.
