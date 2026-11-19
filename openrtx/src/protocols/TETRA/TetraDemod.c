@@ -37,7 +37,14 @@
 #endif
 #define ERR_ALPHA (1.0f / 1024)
 #define ERR_FAST_ALPHA (1.0f / 64)
-#define SOFT_SCALE 40.0f /* Soft value at pi/4 from the decision boundary */
+/*
+ * Soft value at pi/4 from the decision boundary. Large, so that most values
+ * saturate at +-127: a discriminator's clicks make some symbols confidently
+ * wrong, and a decoder suffers most from those. On C62 captures at -92 dBm,
+ * 200 instead of 40 doubled the blocks decoded and divided the bad speech
+ * frames by 50; stronger signals do not change.
+ */
+#define SOFT_SCALE 200.0f
 /*
  * Equalizer protection. A disturbance (lost samples, a timing jump, a burst
  * of interference) feeds the equalizer garbage for a few symbols before the
