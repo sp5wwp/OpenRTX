@@ -20,6 +20,14 @@
 namespace ortxui
 {
 
+/* Highest squelch level. */
+static constexpr uint8_t SQL_MAX = 15;
+
+/* Brightness range and step of the brightness actions, in percent. */
+static constexpr int BRIGHTNESS_MIN = 5;
+static constexpr int BRIGHTNESS_MAX = 100;
+static constexpr int BRIGHTNESS_STEP = 5;
+
 /**
  * Get the digit of a number key, ignoring the MONI bit.
  *
@@ -28,7 +36,7 @@ namespace ortxui
  */
 static int digitFromKeys(uint32_t keys)
 {
-    const uint32_t digits = keys & 0x3FFu;
+    const uint32_t digits = keys & KBD_NUM_MASK;
     return (digits == 0u) ? -1 : __builtin_ctz(digits);
 }
 
@@ -61,10 +69,9 @@ void MacroView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
     root_.setAxis(Axis::Column);
 
-    /* Shared top bar (clock/battery/lock), same as every other screen. */
     TopBar &bar = useTopBar(STR(macroMenu));
     root_.addChild(&bar);
 
@@ -79,8 +86,8 @@ void MacroView::build()
     footer_.setBasis(regular ? 14 : 10);
     sqlBar_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     sqlBar_.setLabel(STR(squelch), SYMBOL_VOLUME);
-    sqlBar_.setColors(Sem::SurfaceHigh, Sem::TxDanger); /* squelch = red, as on
-                                                           the VFO meter gate */
+    /* Red, like the squelch mark on the VFO meter. */
+    sqlBar_.setColors(Sem::SurfaceHigh, Sem::TxDanger);
     sqlBar_.setTextColor(Sem::OnSurface);
     sqlBar_.setReadout(sqlBuf_);
     /* Fill the footer width via grow (BarRow's natural() exceeds the screen). */
@@ -122,7 +129,8 @@ void MacroView::syncFromState(const state_t &s)
     if (strncmp(sq, sqlBuf_, sizeof(sqlBuf_)) != 0) {
         strncpy(sqlBuf_, sq, sizeof(sqlBuf_) - 1);
         sqlBuf_[sizeof(sqlBuf_) - 1] = '\0';
-        sqlBar_.setValue(fmSql ? s.settings.sqlLevel / 15.0f : 0.0f);
+        sqlBar_.setValue(
+            fmSql ? s.settings.sqlLevel / static_cast<float>(SQL_MAX) : 0.0f);
         sqlBar_.setColors(Sem::SurfaceHigh,
                           fmSql ? Sem::TxDanger : Sem::OnSurfaceMuted);
         sqlBar_.setTextColor(fmSql ? Sem::OnSurface : Sem::OnSurfaceMuted);
@@ -136,13 +144,13 @@ void MacroView::stepSquelch(int dir)
     if (state.channel.mode != OPMODE_FM)
         return;
 
-    int v = (int)state.settings.sqlLevel + dir;
+    int v = static_cast<int>(state.settings.sqlLevel) + dir;
     if (v < 0)
         v = 0;
-    if (v > 15)
-        v = 15;
-    if ((uint8_t)v != state.settings.sqlLevel) {
-        state.settings.sqlLevel = (uint8_t)v;
+    if (v > SQL_MAX)
+        v = SQL_MAX;
+    if (static_cast<uint8_t>(v) != state.settings.sqlLevel) {
+        state.settings.sqlLevel = static_cast<uint8_t>(v);
         requestSyncRtx();
         vp_announceSquelch(state.settings.sqlLevel,
                            vp_getVoiceLevelQueueFlags());
@@ -211,13 +219,14 @@ void MacroView::doAction(uint8_t number)
 #ifdef CONFIG_SCREEN_BRIGHTNESS
         case 7:   /* brightness down */
         case 8: { /* brightness up */
-            int b = (int)state.settings.brightness + (number == 8 ? 5 : -5);
-            if (b < 5)
-                b = 5;
-            if (b > 100)
-                b = 100;
-            state.settings.brightness = (uint8_t)b;
-            display_setBacklightLevel((uint8_t)b);
+            const int step = (number == 8) ? BRIGHTNESS_STEP : -BRIGHTNESS_STEP;
+            int b = static_cast<int>(state.settings.brightness) + step;
+            if (b < BRIGHTNESS_MIN)
+                b = BRIGHTNESS_MIN;
+            if (b > BRIGHTNESS_MAX)
+                b = BRIGHTNESS_MAX;
+            state.settings.brightness = static_cast<uint8_t>(b);
+            display_setBacklightLevel(static_cast<uint8_t>(b));
             vp_announceSettingsInt(&currentLanguage->brightness, flags, b);
             break;
         }

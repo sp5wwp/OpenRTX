@@ -32,10 +32,10 @@ public:
     static constexpr uint8_t TILES = 9;
 
     /** Constructor. */
-    MacroTiles();
+    MacroTiles() = default;
 
     /** Destructor. */
-    ~MacroTiles();
+    ~MacroTiles() = default;
 
     /**
      * Follow a state snapshot.
@@ -61,7 +61,7 @@ public:
 private:
     /**
      * Get the area of a tile: the grid is three rows sharing its height, each
-     * a row of three tiles growing equally, TILE_GAP apart.
+     * of three equal tiles, TILE_GAP apart.
      *
      * @param tile: tile index.
      * @return the area, empty if the grid has no room.

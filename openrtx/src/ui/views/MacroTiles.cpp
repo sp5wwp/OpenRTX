@@ -79,14 +79,6 @@ struct ScratchTile {
     Label value; ///< Live value
 };
 
-MacroTiles::MacroTiles()
-{
-}
-
-MacroTiles::~MacroTiles()
-{
-}
-
 void MacroTiles::setUp(uint8_t tile, char *keyBuf)
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
@@ -118,7 +110,6 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf)
 
 Rect MacroTiles::tileArea(uint8_t tile) const
 {
-    /* The rows grew equally from nothing, so they split the grid evenly. */
     const uint16_t rowH = static_cast<uint16_t>(area_.h / 3);
     const Rect row = { area_.x,
                        static_cast<int16_t>(area_.y + (tile / 3) * rowH),

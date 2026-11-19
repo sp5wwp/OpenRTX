@@ -10,7 +10,6 @@
 #include <array>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
-#include "widgets/Label.hpp"
 #include "widgets/BarRow.hpp"
 #include "widgets/TopBar.hpp"
 #include "views/MacroTiles.hpp"
@@ -20,15 +19,12 @@ namespace ortxui
 {
 
 /**
- * The macro menu — a graphical icon-tile grid of quick radio actions, ported
- * from the classic MONI overlay (`_ui_fsm_menuMacro`).
- *
- * A 3x3 grid of tiles: each shows its number key + an icon and the live value.
- * Number keys 1-9 act (tone enc/dec, tone -, tone +, bandwidth, mode, power,
- * brightness -, brightness +, keypad lock); LEFT/DOWN and RIGHT/UP change the
- * squelch shown in the footer. It is a modal overlay driven by a held MONI key,
- * pushed/popped by ui_shim via Navigator::openOverlay (not the normal nav
- * stack), so its events arrive with the MONI bit also set.
+ * The macro menu: a 3x3 grid of quick radio actions, each tile showing its
+ * number key, an icon and the live value. Number keys 1-9 act (tone
+ * encode/decode, tone -, tone +, bandwidth, mode, power, brightness -,
+ * brightness +, keypad lock); LEFT/DOWN and RIGHT/UP change the squelch in the
+ * footer. ui_shim opens and closes it from MONI, so its events arrive with the
+ * MONI bit set.
  */
 class MacroView : public View
 {
@@ -39,18 +35,47 @@ public:
     /** Destructor. */
     ~MacroView() = default;
 
+    /** Build the widget tree. */
     void build() override;
 
+    /**
+     * Follow the tile values and the squelch.
+     *
+     * @param s: state snapshot.
+     */
     void syncFromState(const state_t &s) override;
+
+    /**
+     * Act on a key or the knob.
+     *
+     * @param e: event.
+     * @return no navigation: ui_shim opens and closes the menu.
+     */
     NavIntent onEvent(const Event &e) override;
 
+    /**
+     * Get the widget tree.
+     *
+     * @return the screen.
+     */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
+    /**
+     * Run a macro action and speak its result.
+     *
+     * @param number: number key of the action, 1 to 9.
+     */
     void doAction(uint8_t number);
+
+    /**
+     * Step the FM squelch by one level, within its range.
+     *
+     * @param dir: +1 up, -1 down.
+     */
     void stepSquelch(int dir);
 
     /**
@@ -69,15 +94,15 @@ private:
      */
     void onKnobEvent(const Event &e);
 
-    Screen screen_;
-    Flex root_;
-    std::array<Flex, 3> rows_; //< grid rows, sizing the tiles in the column
-    MacroTiles tiles_;
-    Flex footer_;
-    BarRow sqlBar_; //< squelch level, using the shared level-bar control
+    Screen screen_;            ///< Widget tree
+    Flex root_;                ///< Column of the bar, grid and footer
+    std::array<Flex, 3> rows_; ///< Grid rows, sizing the tiles
+    MacroTiles tiles_;         ///< The action tiles
+    Flex footer_;              ///< Row of the squelch bar
+    BarRow sqlBar_;            ///< Squelch level
 
-    char sqlBuf_[8] = { 0 };
-    uint8_t selected_ = 0; ///< Tile the knob picked, without number keys
+    char sqlBuf_[8] = { 0 };   ///< Squelch readout
+    uint8_t selected_ = 0;     ///< Tile the knob picked, without number keys
 };
 
 } // namespace ortxui
