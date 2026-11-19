@@ -189,7 +189,8 @@ void gfx_setFontMono(bool on);
  */
 typedef enum {
     FONT_SET_TEXT = 0, ///< Default text font
-    FONT_SET_CRISP,    ///< 1bpp text font, see gfx_setFontMono()
+    FONT_SET_CRISP,    ///< 1bpp text font, see gfx_setFontMono(); the text
+                       ///< font itself on monochrome targets
     FONT_SET_ICONS,    ///< App icon glyphs, fallback of the text fonts
     FONT_SET_NUM
 } fontSet_t;

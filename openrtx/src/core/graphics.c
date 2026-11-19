@@ -106,23 +106,33 @@ static const fontBlob_t monoFontBlobs[FONT_SIZE_NUM] = {
     { _font_mono_12_start, _font_mono_12_end }, // FONT_SIZE_12PT
     { _font_mono_16_start, _font_mono_16_end }, // FONT_SIZE_16PT
 };
-#else
-/* Mono targets ship only the 1bpp set: the crisp set is the text set. */
-#define monoFontBlobs fontBlobs
 #endif
 
-/* Built-in blobs for each font set, the default source of every font. */
-static const fontBlob_t *const builtinBlobs[FONT_SET_NUM] = {
-    fontBlobs,     // FONT_SET_TEXT
-    monoFontBlobs, // FONT_SET_CRISP
-    iconBlobs,     // FONT_SET_ICONS
+/* Font sets the target has. Mono targets ship only the 1bpp set, so there the
+ * crisp set is the text set and gets no slot of its own. */
+enum fontSlot {
+    FONT_SLOT_TEXT = 0,
+#ifdef CONFIG_FONT_AA
+    FONT_SLOT_CRISP,
+#endif
+    FONT_SLOT_ICONS,
+    FONT_SLOT_NUM,
+};
+
+/* Built-in blobs for each font slot, the default source of every font. */
+static const fontBlob_t *const builtinBlobs[FONT_SLOT_NUM] = {
+    fontBlobs,     // FONT_SLOT_TEXT
+#ifdef CONFIG_FONT_AA
+    monoFontBlobs, // FONT_SLOT_CRISP
+#endif
+    iconBlobs,     // FONT_SLOT_ICONS
 };
 
 /* Fonts installed with gfx_setFontSource(); a NULL start means built-in. */
-static fontBlob_t fontSources[FONT_SET_NUM][FONT_SIZE_NUM];
+static fontBlob_t fontSources[FONT_SLOT_NUM][FONT_SIZE_NUM];
 
-static lvFont_t g_fonts[FONT_SET_NUM][FONT_SIZE_NUM];
-static bool g_font_ready[FONT_SET_NUM][FONT_SIZE_NUM];
+static lvFont_t g_fonts[FONT_SLOT_NUM][FONT_SIZE_NUM];
+static bool g_font_ready[FONT_SLOT_NUM][FONT_SIZE_NUM];
 static bool g_use_mono_font = false;
 
 /**
@@ -137,6 +147,26 @@ static void decode_blob(lvFont_t *font, const fontBlob_t *blob)
 }
 
 /**
+ * Get the slot holding a font set.
+ *
+ * @param set: font set.
+ * @return the slot.
+ */
+static enum fontSlot font_slot(fontSet_t set)
+{
+    switch (set) {
+#ifdef CONFIG_FONT_AA
+        case FONT_SET_CRISP:
+            return FONT_SLOT_CRISP;
+#endif
+        case FONT_SET_ICONS:
+            return FONT_SLOT_ICONS;
+        default:
+            return FONT_SLOT_TEXT;
+    }
+}
+
+/**
  * Get a font, decoding it on first use from its installed source, or from
  * the built-in blob if there is none or it is not a valid font.
  *
@@ -146,15 +176,16 @@ static void decode_blob(lvFont_t *font, const fontBlob_t *blob)
  */
 static lvFont_t *load_font(fontSet_t set, fontSize_t size)
 {
-    lvFont_t *font = &g_fonts[set][size];
+    const enum fontSlot slot = font_slot(set);
+    lvFont_t *font = &g_fonts[slot][size];
 
-    if (!g_font_ready[set][size]) {
-        const fontBlob_t *src = &fontSources[set][size];
+    if (!g_font_ready[slot][size]) {
+        const fontBlob_t *src = &fontSources[slot][size];
         if (src->start != NULL)
             decode_blob(font, src);
         if ((src->start == NULL) || !font->valid)
-            decode_blob(font, &builtinBlobs[set][size]);
-        g_font_ready[set][size] = true;
+            decode_blob(font, &builtinBlobs[slot][size]);
+        g_font_ready[slot][size] = true;
     }
 
     return font;
@@ -204,9 +235,10 @@ bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
             return false;
     }
 
-    fontSources[set][size].start = data;
-    fontSources[set][size].end = (data != NULL) ? (data + len) : NULL;
-    g_font_ready[set][size] = false;
+    const enum fontSlot slot = font_slot(set);
+    fontSources[slot][size].start = data;
+    fontSources[slot][size].end = (data != NULL) ? (data + len) : NULL;
+    g_font_ready[slot][size] = false;
 
     return true;
 }
