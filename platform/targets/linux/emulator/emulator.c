@@ -40,6 +40,9 @@
  */
 #define WAIT_STABLE_UI_LOOPS UI_EVENT_QUEUE_LEN
 
+/* How often the key commands check whether the UI has read their keys. */
+#define KEY_POLL_MS 1
+
 /* Custom SDL Event to request a screenshot */
 extern Uint32 SDL_Screenshot_Event;
 
@@ -51,7 +54,6 @@ emulator_state_t emulator_state = {
     1,       // chSelector
     false,   // PTT status
     false,   // power off
-    0        // held keys
 };
 
 typedef int (*_climenu_fn)(void *self, int argc, char **argv);
@@ -76,42 +78,28 @@ static int32_t screenshotRequests;
 /** Iterations of the UI main loop, counted by emulator_getKeys(). */
 static _Atomic uint32_t uiLoops;
 
+/** Keys held down by 'keyhold', reported on every keyboard scan. */
+static _Atomic keyboard_t heldKeys;
+
+/* Key states typed by the shell, one read per keyboard scan. The shell thread
+ * writes an entry and then counts it in _skq_in; the UI thread reads it and
+ * then counts it in _skq_out. */
 static keyboard_t _shellkeyq[25] = { 0 };
 static int _skq_cap = 25;
 static int _skq_head;
 static int _skq_tail;
-static int _skq_in;
-static int _skq_out;
+static _Atomic int _skq_in;
+static _Atomic int _skq_out;
 
-// NOTE: unused function
-// static void _dump_skq()
-// {
-//     for(int i = 0; i < _skq_cap; i++)
-//     {
-//         printf("skq[%d] == %d\n", i, _shellkeyq[i]);
-//     }
-// }
-
-// NOTE: unused function
-// static void _test_skq()
-// {
-//     for(int i = 0; i < 257; i++)
-//     {
-//         shellkeyq_put(i + 1);
-//     }
-//
-//     //clear it out now
-//     while(emulator_getKeys());
-// }
-
+/**
+ * Queue a key state for the next free keyboard scan. A 0 entry is a release,
+ * which separates two presses of the same key.
+ *
+ * @param keys: keys pressed in that scan.
+ */
 static void shellkeyq_put(keyboard_t keys)
 {
-    // note - we must allow keys == 0 to be inserted because otherwise a queue
-    // full of [1,1,1,1,1] is simulating HOLDING 1, and we sometimes
-    // (well, often) want [1,0,1,0,1,0] to simulate separate keypresses
-    // this, of course, relies on the kbd_thread getting just one element off
-    // the queue for every kbd_getKeys().
-    if (_skq_in > _skq_out + _skq_cap) {
+    if ((_skq_in - _skq_out) >= _skq_cap) {
         printf("too many keys!\n");
         return;
     }
@@ -121,16 +109,32 @@ static void shellkeyq_put(keyboard_t keys)
     _skq_tail = (_skq_tail + 1) % _skq_cap;
 }
 
-static int shell_ready(void *_self, int _argc, char **_argv)
+/**
+ * Wait until the UI has started some more keyboard scans. Each scan reads the
+ * key state, so after two scans the state set before the call has been read
+ * and the event it made is in the UI event queue.
+ *
+ * @param scans: number of scans to wait for.
+ */
+static void waitScans(uint32_t scans)
 {
-    (void)_self;
-    (void)_argc;
-    (void)_argv;
+    const uint32_t start = uiLoops;
 
-    while (_skq_in > _skq_out) {
-        usleep(10 * 1000); //sleep until keyboard is caught up
-    }
-    return SH_CONTINUE;
+    while (((uiLoops - start) < scans) && !emulator_state.powerOff)
+        usleep(KEY_POLL_MS * 1000);
+}
+
+/**
+ * Wait until the UI has read every key state queued by the shell, and the
+ * release after the last one, so that however slowly the UI runs, no press
+ * is lost or merged with the next command's.
+ */
+static void waitKeysRead(void)
+{
+    while ((_skq_in > _skq_out) && !emulator_state.powerOff)
+        usleep(KEY_POLL_MS * 1000);
+
+    waitScans(2);
 }
 
 static keyboard_t keyname2keyboard(char *name)
@@ -183,6 +187,15 @@ static keyboard_t keyname2keyboard(char *name)
     return 0;
 }
 
+/**
+ * Shell command 'key': press and release keys one after the other, and wait
+ * until the UI has read them all.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of key names.
+ * @param _argv: key names.
+ * @return SH_CONTINUE.
+ */
 static int pressKey(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -194,28 +207,28 @@ static int pressKey(void *_self, int _argc, char **_argv)
         if (_argv[i] != NULL) {
             printf("\t%s, \n", _argv[i]);
             keyboard_t press = keyname2keyboard(_argv[i]);
-            if (press == last) {
-                /* otherwise if you send key ENTER DOWN DOWN DOWN DOWN DOWN
-                 * it will just hold DOWN for (5/(kbd_task_hz)) seconds
-                 * so we need to give it a 0 value to get a 'release'
-                 * so the next input is recognized as separate
-                 * we only need to do this if we have two identical keys back
-                 * to back, because keyboard_t will have a zero for this key's
-                 * flag on other keys, which gives us the release we need
-                 */
+            /* The same key twice in a row would read as one held key */
+            if (press == last)
                 shellkeyq_put(0);
-            }
+
             shellkeyq_put(press);
             last = press;
         }
     }
     printf("\t]\n");
-    shell_ready(NULL, 0, NULL);
+    waitKeysRead();
     return SH_CONTINUE; // continue
 }
 
-// pressMultiKeys allows for key combos by sending all the keys specified in
-// one keyboard_t
+/**
+ * Shell command 'keycombo': press keys together and release them, and wait
+ * until the UI has read them.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of key names.
+ * @param _argv: key names.
+ * @return SH_CONTINUE.
+ */
 static int pressMultiKeys(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -231,14 +244,15 @@ static int pressMultiKeys(void *_self, int _argc, char **_argv)
 
     shellkeyq_put(combo);
     printf("\t]\n");
-    shell_ready(NULL, 0, NULL);
+    waitKeysRead();
     return SH_CONTINUE; // continue
 }
 
 /**
  * Shell command 'keyhold': hold keys down, reported on every keyboard scan,
  * until 'keyrelease'. Unlike the momentary 'key', it models a held button,
- * such as MONI for the macro menu or a key held into a long press.
+ * such as MONI for the macro menu or a key held into a long press. Returns
+ * once the UI has read the press, so a 'sleep' after it times the hold.
  *
  * @param _self: menu option.
  * @param _argc: number of key names.
@@ -255,14 +269,15 @@ static int holdKeys(void *_self, int _argc, char **_argv)
             combo |= keyname2keyboard(_argv[i]);
     }
 
-    emulator_state.heldKeys = combo;
+    heldKeys = combo;
     printf("Hold keys: 0x%08X\n", (unsigned)combo);
-    shell_ready(NULL, 0, NULL);
+    waitScans(2);
     return SH_CONTINUE; // continue
 }
 
 /**
- * Shell command 'keyrelease': release the keys held by 'keyhold'.
+ * Shell command 'keyrelease': release the keys held by 'keyhold', after the
+ * UI has read them once more, so the hold lasts at least until the command.
  *
  * @param _self: menu option.
  * @param _argc: unused.
@@ -275,28 +290,12 @@ static int releaseKeys(void *_self, int _argc, char **_argv)
     (void)_argc;
     (void)_argv;
 
-    emulator_state.heldKeys = 0;
+    waitScans(2);
+    heldKeys = 0;
     printf("Release held keys\n");
-    shell_ready(NULL, 0, NULL);
+    waitScans(2);
     return SH_CONTINUE; // continue
 }
-
-// NOTE: unused function
-// static int template(void *_self, int _argc, char **_argv)
-// {
-//     _climenu_option *self = (_climenu_option *) _self;
-//     printf("%s\n\t%s\n", self->name, self->description);
-//
-//     for(int i = 0; i < _argc; i++)
-//     {
-//         if(_argv[i] != NULL)
-//         {
-//             printf("\tArgs:\t%s\n", _argv[i]);
-//         }
-//     }
-//
-//     return SH_CONTINUE; // continue
-// }
 
 /**
  * Ask the SDL thread for a screenshot.
@@ -413,7 +412,8 @@ static int shell_sleep(void *_self, int _argc, char **_argv)
 
 /**
  * Shell command 'wait_stable': wait until the UI has handled the input given
- * so far and the screen stopped changing.
+ * so far and the screen stopped changing. Only polls during which the UI ran
+ * count toward the timeout.
  *
  * @param _self: menu option.
  * @param _argc: number of arguments.
@@ -448,8 +448,9 @@ static int shell_waitStable(void *_self, int _argc, char **_argv)
     uint64_t lastHash = sdlEngine_getFrameHash(&lastCount);
     uint32_t identical = 0;
     uint32_t quiet = 0; // Time since the last new frame, in ms
+    uint32_t lastLoops = 0;
 
-    for (uint32_t waited = 0; waited < timeout; waited += WAIT_STABLE_POLL_MS) {
+    for (uint32_t waited = 0; waited < timeout;) {
         usleep(WAIT_STABLE_POLL_MS * 1000);
 
         uint32_t count;
@@ -473,6 +474,11 @@ static int shell_waitStable(void *_self, int _argc, char **_argv)
         if ((loops >= WAIT_STABLE_UI_LOOPS) && settled) {
             return SH_CONTINUE;
         }
+
+        // A host too busy to run the UI does not time the wait out
+        if (loops != lastLoops)
+            waited += WAIT_STABLE_POLL_MS;
+        lastLoops = loops;
     }
 
     printf("wait_stable: screen not stable after %u ms\n", timeout);
@@ -583,7 +589,7 @@ static _climenu_option _options[] = {
                                 NULL,   screenshot_sync
     },
     {"sleep",   "Wait some number of ms",           NULL,   shell_sleep },
-    {"wait_stable", "[timeout_ms=5000] [frames=3] Wait until the UI has handled all input and the screen stopped changing (that many identical frames, or none for 500 ms)",
+    {"wait_stable", "[timeout_ms=5000] [frames=3] Wait until the UI has handled all input and the screen stopped changing (that many identical frames, or none for 500 ms); only time the UI runs counts toward the timeout",
                                 NULL,   shell_waitStable
     },
     {"wait_rtx", "<OFF|RX|TX> [timeout_ms=5000] Wait until the rtx is in that state, e.g. after ptt",
@@ -592,10 +598,6 @@ static _climenu_option _options[] = {
     {"help",    "Print this help",                  NULL,   shell_help },
     {"nop",     "Do nothing (useful for comments)", NULL,   shell_nop},
     {"quit",    "Quit, close the emulator",         NULL,   shell_quit },
-    /*{"ready",     */
-    /*"Wait until ready. Currently supports keyboard, so will wait until all keyboard events are processed,"*/
-    /*"but is already implied by key and keycombo so there's not much direct use for it right now",*/
-    /*NULL,   shell_ready },*/
 };
 /* clang-format on */
 
@@ -761,10 +763,9 @@ keyboard_t emulator_getKeys()
 
     /* Keys held by 'keyhold' are reported on every scan, with any momentary
      * key from the shell queue. */
-    keyboard_t out = emulator_state.heldKeys;
+    keyboard_t out = heldKeys;
 
     if (_skq_in > _skq_out) {
-        //only if we've fallen behind and there's data in there:
         out |= _shellkeyq[_skq_head];
         _shellkeyq[_skq_head] = 0;
         _skq_out++;
