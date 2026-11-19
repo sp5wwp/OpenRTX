@@ -19,20 +19,23 @@ static SDL_Window *window;
 static SDL_Renderer *renderer;
 static SDL_Texture *displayTexture;
 
-// Id and outcome of the last synchronous screenshot request served, written by
-// the SDL thread and read by the thread waiting for it
+/** Id of the last synchronous screenshot request served by the SDL thread. */
 static _Atomic int32_t screenshotDoneId;
+
+/** Outcome of that request: zero, or -EIO if saving failed. */
 static _Atomic int screenshotResult;
 
-// Hash of the last frame received from the display driver and number of frames
-// received so far, both protected by frameLock
+/** Lock of frameHash and frameCount. */
 static SDL_mutex *frameLock;
+
+/** Hash of the last frame received from the display driver. */
 static uint64_t frameHash;
+
+/** Frames received from the display driver so far. */
 static uint32_t frameCount;
 
-// Parameters of the 64-bit FNV-1a hash
-#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL
-#define FNV_PRIME 0x100000001b3ULL
+#define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL ///< 64-bit FNV-1a basis
+#define FNV_PRIME 0x100000001b3ULL             ///< 64-bit FNV-1a prime
 
 static bool ready = false;  // Signal if the main loop is ready
 static keyboard_t sdl_keys; // Store the keyboard status

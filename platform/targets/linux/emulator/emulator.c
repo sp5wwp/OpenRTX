@@ -21,30 +21,22 @@
 #include "core/utils.h"
 #include "rtx/rtx.h"
 
-/*
- * How long screenshot_sync waits for the SDL thread to write the file. It is
- * generous because the SDL thread may be busy rendering when the request is
- * queued.
- */
+/** How long screenshot_sync waits, generous as the SDL thread may be busy. */
 #define SCREENSHOT_SYNC_TIMEOUT_MS 5000
 
 /*
- * Default arguments of wait_stable: give up after 5s unless three consecutive
- * frames are identical, checking every 10ms. A UI that redraws only when
- * something changes stops sending frames once it has settled, so half a second
- * without a new frame counts as stable too.
+ * wait_stable gives up after a timeout unless enough consecutive frames are
+ * identical; a UI that redraws only on change stops sending frames once
+ * settled, so a quiet spell counts as stable too.
  */
-#define WAIT_STABLE_TIMEOUT_MS 5000
-#define WAIT_STABLE_FRAMES 3
-#define WAIT_STABLE_POLL_MS 10
-#define WAIT_STABLE_QUIET_MS 500
+#define WAIT_STABLE_TIMEOUT_MS 5000 ///< Default timeout
+#define WAIT_STABLE_FRAMES 3        ///< Default identical frames
+#define WAIT_STABLE_POLL_MS 10      ///< Polling period
+#define WAIT_STABLE_QUIET_MS 500    ///< Time without a frame that is stable
 
-/*
- * The UI handles one event per iteration of its main loop, so a key press is
- * queued behind any pending status update and can take effect some loops
- * after it was read, while frames identical to the previous screen keep
- * coming. After as many loops as the event queue has slots, all the events
- * queued before then have been handled.
+/**
+ * UI loops after which every event queued before them has been handled: the
+ * UI handles one event per loop.
  */
 #define WAIT_STABLE_UI_LOOPS UI_EVENT_QUEUE_LEN
 
@@ -78,11 +70,10 @@ enum shell_retvals {
     SH_EXIT_OK = 2,
 };
 
-// Number of synchronous screenshots requested so far, used as request id
+/** Synchronous screenshots requested so far, used as request id. */
 static int32_t screenshotRequests;
 
-// Calls to emulator_getKeys(), which the UI makes once per iteration of its
-// main loop
+/** Iterations of the UI main loop, counted by emulator_getKeys(). */
 static _Atomic uint32_t uiLoops;
 
 static keyboard_t _shellkeyq[25] = { 0 };
@@ -768,9 +759,8 @@ keyboard_t emulator_getKeys()
     // The UI thread calls this once per iteration of its main loop
     uiLoops++;
 
-    /* Keys held via 'keyhold' are reported on every scan (until 'keyrelease'),
-     * OR-ed with any momentary key dequeued from the shell key queue. This lets
-     * a script hold e.g. MONI down across screenshots and other keypresses. */
+    /* Keys held by 'keyhold' are reported on every scan, with any momentary
+     * key from the shell queue. */
     keyboard_t out = emulator_state.heldKeys;
 
     if (_skq_in > _skq_out) {

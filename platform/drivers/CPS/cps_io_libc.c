@@ -23,8 +23,7 @@ const char *default_descr = "Codeplug description.";
  */
 int _readHeader(cps_header_t *header)
 {
-    /* No codeplug open (cps_open failed / not called yet): fail gracefully
-     * instead of dereferencing a NULL FILE*. */
+    /* No codeplug open: fail rather than dereference a NULL FILE *. */
     if(cps_file == NULL)
         return -1;
 

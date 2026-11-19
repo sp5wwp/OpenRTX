@@ -47,12 +47,8 @@ void platform_terminate()
     printf("Platform terminate\n");
 
     /*
-     * On the radios this function cuts the power and never returns: end the
-     * process right away in the same way. exit() would instead run the exit
-     * handlers and the C++ static destructors while the UI and rtx threads,
-     * which are not joined before getting here, may still be using the
-     * objects being destroyed. Settings have already been saved at this
-     * point, so there is nothing left to do.
+     * End at once, as a radio cutting its power does: exit() would run the
+     * static destructors while the unjoined UI and rtx threads still run.
      */
     fflush(NULL);
     _exit(0);
