@@ -1410,6 +1410,26 @@ gfx_text_test = executable('gfx_text_test',
                             sources : unit_test_src + ['tests/unit/gfx_text.cpp'],
                             kwargs  : gfx_text_test_opts)
 
+# Drawing in bands must match drawing in a framebuffer: the test is built both
+# ways, with only the graphics code and a display stub keeping what it is sent.
+gfx_band_src = ['openrtx/src/core/graphics.c',
+                'openrtx/src/core/fonts/lv_font_bin.c',
+                'openrtx/src/core/fontData.S',
+                'lib/QRCode/qrcode.c',
+                'tests/unit/gfx_band.cpp']
+gfx_band_def = ['-UCONFIG_GFX_BAND_ROWS', '-DCONFIG_GFX_BAND_ROWS=16']
+gfx_band_test = executable('gfx_band_test',
+                           sources : gfx_band_src,
+                           kwargs  : unit_test_opts + {
+                             'c_args'   : linux_c_args + gfx_band_def,
+                             'cpp_args' : linux_cpp_args + gfx_band_def})
+gfx_frame_def = ['-UCONFIG_GFX_BAND_ROWS']
+gfx_frame_test = executable('gfx_frame_test',
+                            sources : gfx_band_src,
+                            kwargs  : unit_test_opts + {
+                              'c_args'   : linux_c_args + gfx_frame_def,
+                              'cpp_args' : linux_cpp_args + gfx_frame_def})
+
 audio_codec_test = executable('audio_codec_test',
                               sources : unit_test_src + ['tests/unit/audio_codec.cpp'],
                               kwargs  : unit_test_opts)
@@ -1495,6 +1515,8 @@ test('M17 Packet Frame Test', m17_packet_test)
 test('C62 Calibration Test', c62_calib_test)
 test('DSP Oversampling Test', dsp_oversampling_test)
 test('GFX Text Test',        gfx_text_test)
+test('GFX Band Test',        gfx_band_test)
+test('GFX Framebuffer Test', gfx_frame_test)
 test('Audio Codec Test',     audio_codec_test)
 test('M17 Baseband Replay Test', m17_replay_test, timeout : 120) # ~40 s in CI with coverage
 test('RTX TX Disable Test', rtx_tx_disable_test)
