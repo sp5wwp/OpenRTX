@@ -17,6 +17,7 @@
 
 #include "emulator.h"
 #include "sdl_engine.h"
+#include "core/ui.h"
 
 /*
  * How long screenshot_sync waits for the SDL thread to write the file. It is
@@ -40,10 +41,10 @@
  * The UI handles one event per iteration of its main loop, so a key press is
  * queued behind any pending status update and can take effect some loops
  * after it was read, while frames identical to the previous screen keep
- * coming. The event queue of the UI holds 16 events, so after 16 loops all
- * the events queued before then have been handled.
+ * coming. After as many loops as the event queue has slots, all the events
+ * queued before then have been handled.
  */
-#define WAIT_STABLE_UI_LOOPS 16
+#define WAIT_STABLE_UI_LOOPS UI_EVENT_QUEUE_LEN
 
 /* Custom SDL Event to request a screenshot */
 extern Uint32 SDL_Screenshot_Event;
@@ -241,10 +242,16 @@ static int pressMultiKeys(void *_self, int _argc, char **_argv)
     return SH_CONTINUE; // continue
 }
 
-// holdKeys presses and HOLDS the given keys down (reported on every keyboard
-// scan) until releaseKeys is called. Unlike 'key'/'keycombo' (momentary), this
-// lets a script model a held button — e.g. MONI for the macro menu, or holding
-// a key long enough to trigger a long-press.
+/**
+ * Shell command 'keyhold': hold keys down, reported on every keyboard scan,
+ * until 'keyrelease'. Unlike the momentary 'key', it models a held button,
+ * such as MONI for the macro menu or a key held into a long press.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of key names.
+ * @param _argv: key names.
+ * @return SH_CONTINUE.
+ */
 static int holdKeys(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -261,7 +268,14 @@ static int holdKeys(void *_self, int _argc, char **_argv)
     return SH_CONTINUE; // continue
 }
 
-// releaseKeys clears any keys held by holdKeys.
+/**
+ * Shell command 'keyrelease': release the keys held by 'keyhold'.
+ *
+ * @param _self: menu option.
+ * @param _argc: unused.
+ * @param _argv: unused.
+ * @return SH_CONTINUE.
+ */
 static int releaseKeys(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -291,6 +305,14 @@ static int releaseKeys(void *_self, int _argc, char **_argv)
 //     return SH_CONTINUE; // continue
 // }
 
+/**
+ * Ask the SDL thread for a screenshot.
+ *
+ * @param argc: number of arguments.
+ * @param argv: file name, screenshot.bmp if none.
+ * @param sync: wait until the file is written.
+ * @return SH_CONTINUE, or SH_ERR if the request or the save failed.
+ */
 static int queueScreenshot(int argc, char **argv, bool sync)
 {
     char *filename = "screenshot.bmp";
@@ -329,12 +351,29 @@ static int queueScreenshot(int argc, char **argv, bool sync)
     return (err == 0) ? SH_CONTINUE : SH_ERR;
 }
 
+/**
+ * Shell command 'screenshot': save a screenshot without waiting for it.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of arguments.
+ * @param _argv: file name, screenshot.bmp if none.
+ * @return SH_CONTINUE, or SH_ERR if the request failed.
+ */
 static int screenshot(void *_self, int _argc, char **_argv)
 {
     (void)_self;
     return queueScreenshot(_argc, _argv, false);
 }
 
+/**
+ * Shell command 'screenshot_sync': save a screenshot and wait until the file
+ * is written.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of arguments.
+ * @param _argv: file name, screenshot.bmp if none.
+ * @return SH_CONTINUE, or SH_ERR if the screenshot was not saved.
+ */
 static int screenshot_sync(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -379,6 +418,15 @@ static int shell_sleep(void *_self, int _argc, char **_argv)
     return SH_CONTINUE;
 }
 
+/**
+ * Shell command 'wait_stable': wait until the UI has handled the input given
+ * so far and the screen stopped changing.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of arguments.
+ * @param _argv: timeout in ms and number of identical frames, both optional.
+ * @return SH_CONTINUE, or SH_ERR on timeout.
+ */
 static int shell_waitStable(void *_self, int _argc, char **_argv)
 {
     (void)_self;
