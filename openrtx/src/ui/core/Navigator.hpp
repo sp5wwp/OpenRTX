@@ -140,8 +140,6 @@ public:
     }
 
 private:
-    static constexpr uint8_t kMaxDepth = 8;
-
     /**
      * Push a screen onto the stack and build it.
      *
@@ -164,6 +162,8 @@ private:
      * @param v: view becoming active.
      */
     static void activate(View *v);
+
+    static constexpr uint8_t kMaxDepth = 8;
 
     ViewSlot &slot_;               ///< Where the top screen is built
     UiMemory &mem_;                ///< What survives a view

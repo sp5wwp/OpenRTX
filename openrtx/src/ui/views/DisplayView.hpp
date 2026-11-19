@@ -38,6 +38,14 @@ public:
     void syncFromState(const state_t &s) override;
 
 private:
+    uint8_t curValue(uint8_t row) const;
+    void applyValue(uint8_t row, uint8_t v); //< write settings + side-effect
+
+    /* SettingsListView hooks. */
+    void formatValue(uint8_t row, char *out, size_t cap) override;
+    void setValueText(uint8_t row, const char *s) override;
+    void onAdjust(uint8_t row, int dir) override;
+
     enum Row : uint8_t {
         RowBrightness,
         RowContrast,
@@ -58,14 +66,6 @@ private:
         uint8_t max;
         uint8_t step;
     };
-
-    uint8_t curValue(uint8_t row) const;
-    void applyValue(uint8_t row, uint8_t v); //< write settings + side-effect
-
-    /* SettingsListView hooks. */
-    void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][20] = {};

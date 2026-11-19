@@ -20,10 +20,6 @@ namespace ortxui
  * Space is first so a fresh slot reads as blank and cycles up into letters.
  */
 struct Charset {
-    const char *chars; //< ordered characters, NUL-terminated string body
-    uint16_t len;      //< number of characters (excludes the NUL)
-    const char *name;  //< short label (for a future keyboard-picker UI)
-
     /** Index of `c` in the set, or 0 (space) when absent. */
     int indexOf(char c) const
     {
@@ -39,6 +35,10 @@ struct Charset {
         const int n = static_cast<int>(len);
         return chars[((i % n) + n) % n];
     }
+
+    const char *chars; //< ordered characters, NUL-terminated string body
+    uint16_t len;      //< number of characters (excludes the NUL)
+    const char *name;  //< short label (for a future keyboard-picker UI)
 };
 
 /* Callsign / M17 destination: space + uppercase + digits + a few separators

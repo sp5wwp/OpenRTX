@@ -93,14 +93,6 @@ private:
     bool fitsOneLine(const UiText &label, const UiText &value,
                      int16_t rowW) const;
 
-    Label label_;
-    Label value_;
-    Kind kind_ = Kind::Plain;
-    bool checked_ = false;
-    bool selected_ = false;
-    int16_t padY_ = 4;
-    int16_t gap_ = 2;
-
     static constexpr int16_t kPadX = 6;   //< left inset for the label
     static constexpr int16_t kFitGap = 8; //< min gutter between label & value
                                           //  when they share one line
@@ -110,6 +102,14 @@ private:
         (sizeClass() == SizeClass::Regular) ? FONT_SIZE_8PT : FONT_SIZE_6PT;
     static constexpr fontSize_t kValueFont =
         (sizeClass() == SizeClass::Regular) ? FONT_SIZE_6PT : FONT_SIZE_5PT;
+
+    Label label_;
+    Label value_;
+    Kind kind_ = Kind::Plain;
+    bool checked_ = false;
+    bool selected_ = false;
+    int16_t padY_ = 4;
+    int16_t gap_ = 2;
 };
 
 } // namespace ortxui

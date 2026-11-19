@@ -44,14 +44,6 @@ public:
     void syncFromState(const state_t &s) override;
 
 private:
-    enum Row : uint8_t {
-        RowCallsign,
-        RowMeta,
-        RowCan,
-        RowCanRx,
-        RowCount,
-    };
-
     /* SettingsListView hooks: Callsign is Custom (cursor-cycle editor), Meta is
      * an Action (modal push), CAN is a Stepper, CAN RX is a Checkbox. */
     RowKind rowKind(uint8_t row) const override;
@@ -74,6 +66,14 @@ private:
     void callsignMove(int dir);  //< move the cursor (extend at the end)
     void callsignConfirm();      //< strip + write to settings.callsign
     void announceCursorChar();   //< speak the char under the cursor (voice)
+
+    enum Row : uint8_t {
+        RowCallsign,
+        RowMeta,
+        RowCan,
+        RowCanRx,
+        RowCount,
+    };
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][24] = {};

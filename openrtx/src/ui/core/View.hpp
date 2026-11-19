@@ -37,9 +37,11 @@ enum class NavAction : uint8_t {
  * at a time, so a push names the screen to build.
  */
 struct NavIntent {
-    NavAction action = NavAction::None;
-    ViewId target = ViewId::Count; ///< Screen a push opens
-
+    /**
+     * Stay on the screen.
+     *
+     * @return the intent.
+     */
     static NavIntent none()
     {
         return {};
@@ -55,14 +57,29 @@ struct NavIntent {
     {
         return { NavAction::Push, id };
     }
+
+    /**
+     * Return to the parent screen.
+     *
+     * @return the intent.
+     */
     static NavIntent pop()
     {
         return { NavAction::Pop, ViewId::Count };
     }
+
+    /**
+     * Return to the home screen.
+     *
+     * @return the intent.
+     */
     static NavIntent popToRoot()
     {
         return { NavAction::PopToRoot, ViewId::Count };
     }
+
+    NavAction action = NavAction::None; ///< What to do
+    ViewId target = ViewId::Count;      ///< Screen a push opens
 };
 
 /**

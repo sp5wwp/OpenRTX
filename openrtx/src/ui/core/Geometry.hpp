@@ -24,11 +24,6 @@ struct Point {
  * An axis-aligned rectangle, origin at its top-left corner.
  */
 struct Rect {
-    int16_t x;
-    int16_t y;
-    uint16_t w;
-    uint16_t h;
-
     constexpr int16_t right() const
     {
         return static_cast<int16_t>(x + static_cast<int16_t>(w) - 1);
@@ -43,6 +38,11 @@ struct Rect {
     {
         return (w == 0) || (h == 0);
     }
+
+    int16_t x;
+    int16_t y;
+    uint16_t w;
+    uint16_t h;
 };
 
 /**

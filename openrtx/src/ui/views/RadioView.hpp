@@ -43,13 +43,6 @@ public:
     void syncFromState(const state_t &s) override;
 
 private:
-    enum Row : uint8_t {
-        RowOffset,
-        RowDirection,
-        RowStep,
-        RowCount,
-    };
-
     /* SettingsListView hooks: Direction/Step are Steppers; Offset is a Custom
      * (TextInput keypad) row the view drives itself. */
     RowKind rowKind(uint8_t row) const override;
@@ -70,6 +63,13 @@ private:
     offsetAdjust(int dir); //< nudge the offset by the tuning step (knob/UP)
     void offsetApply();    //< commit tx = rx +/- the entered offset
     uint32_t offsetKhz() const; //< the entered offset (filled slots as decimal)
+
+    enum Row : uint8_t {
+        RowOffset,
+        RowDirection,
+        RowStep,
+        RowCount,
+    };
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][20] = {};

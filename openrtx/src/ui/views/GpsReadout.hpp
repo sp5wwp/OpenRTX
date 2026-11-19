@@ -51,16 +51,6 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
-    /** Rows, top to bottom. */
-    enum Row : uint8_t {
-        ROW_LAT,
-        ROW_LON,
-        ROW_LOC,
-        ROW_ALT,
-        ROW_SPD,
-        ROW_COUNT,
-    };
-
     /**
      * Compose a row's value and unit.
      *
@@ -70,6 +60,16 @@ private:
      * @return the unit.
      */
     const char *composeRow(uint8_t row, char *val, size_t n) const;
+
+    /** Rows, top to bottom. */
+    enum Row : uint8_t {
+        ROW_LAT,
+        ROW_LON,
+        ROW_LOC,
+        ROW_ALT,
+        ROW_SPD,
+        ROW_COUNT,
+    };
 
     TextRow row_;    ///< Paints each row in turn
     int32_t lat_;    ///< Latitude shown, INT32_MIN before a fix

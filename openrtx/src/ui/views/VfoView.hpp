@@ -134,6 +134,32 @@ private:
     renderDstEdit(); //< write the bracket-cursor dest into the channel line
     void announceDstChar(); //< speak the char under the cursor
 
+    /* Frequency keypad entry (mirrors the classic MAIN_VFO_INPUT screen), now on
+     * the shared TextInput slot engine: two 7-slot numeric fields (RX then TX,
+     * 100 MHz..100 Hz), rendered through FreqHero. RX pre-fills from the current
+     * frequency; TX auto-derives from RX plus the channel's existing offset. */
+    static constexpr uint8_t kFreqDigits = 7;
+
+    /**
+     * A frequency or M17 destination entry (classic MAIN_VFO # -> dst input),
+     * edited in place through one TextInput. It exists only while open, so
+     * the screen does not carry it the rest of the time.
+     */
+    struct Entry {
+        TextInput input;               ///< The RX or TX digits, or the dest
+        long long errorAt = 0;         ///< getTick() of an out-of-band commit
+        int64_t shift = 0;             ///< TX - RX at open (repeater offset)
+        char rx[kFreqDigits + 1] = {}; ///< RX digits
+        char tx[kFreqDigits + 1] = {}; ///< TX digits
+        char dst[10] = {};             ///< Destination, as settings.m17_dest
+        uint8_t rxSlot = 0;            ///< RX cursor slot while TX is edited
+        uint8_t txSlot = 0;            ///< TX cursor slot while RX is edited
+        bool destination = false;      ///< Editing the dest, not the freq
+        bool txField = false;          ///< Editing TX rather than RX
+        bool rxPristine = true;        ///< RX untouched: a digit retypes it
+        bool txPristine = true;        ///< TX still derived from RX + offset
+    };
+
     Screen screen_;
 
     Flex root_;
@@ -162,33 +188,7 @@ private:
     uint8_t lastSql_ = 0xFFu;  //< squelch level last drawn on the meter marker
     uint8_t lastMode_ = 0xFFu; //< channel mode (marker only shows in FM)
 
-    /* Frequency keypad entry (mirrors the classic MAIN_VFO_INPUT screen), now on
-     * the shared TextInput slot engine: two 7-slot numeric fields (RX then TX,
-     * 100 MHz..100 Hz), rendered through FreqHero. RX pre-fills from the current
-     * frequency; TX auto-derives from RX plus the channel's existing offset. */
-    static constexpr uint8_t kFreqDigits = 7;
-
-    /**
-     * A frequency or M17 destination entry (classic MAIN_VFO # -> dst input),
-     * edited in place through one TextInput. It exists only while open, so
-     * the screen does not carry it the rest of the time.
-     */
-    struct Entry {
-        TextInput input;               ///< The RX or TX digits, or the dest
-        long long errorAt = 0;         ///< getTick() of an out-of-band commit
-        int64_t shift = 0;             ///< TX - RX at open (repeater offset)
-        char rx[kFreqDigits + 1] = {}; ///< RX digits
-        char tx[kFreqDigits + 1] = {}; ///< TX digits
-        char dst[10] = {};             ///< Destination, as settings.m17_dest
-        uint8_t rxSlot = 0;            ///< RX cursor slot while TX is edited
-        uint8_t txSlot = 0;            ///< TX cursor slot while RX is edited
-        bool destination = false;      ///< Editing the dest, not the freq
-        bool txField = false;          ///< Editing TX rather than RX
-        bool rxPristine = true;        ///< RX untouched: a digit retypes it
-        bool txPristine = true;        ///< TX still derived from RX + offset
-    };
-
-    Entry *entry_ = nullptr; ///< Open entry, on the heap; nullptr if none
+    Entry *entry_ = nullptr;   ///< Open entry, on the heap; nullptr if none
 };
 
 } // namespace ortxui

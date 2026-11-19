@@ -259,6 +259,8 @@ private:
     void
     insertBlankAt(uint16_t pos); //< open a ' ' cell at pos (Insert dialing)
 
+    static constexpr uint16_t kMaxSlots = 16; ///< Most slots of a masked field
+
     char *buf_ = nullptr;
     uint16_t cap_ = 0;
     uint16_t len_ = 0;
@@ -281,7 +283,6 @@ private:
     /* Slot/mask mode state. Slot buffer positions are resolved once at configure
      * time (the mask is not retained, so it may be a temporary), so every slot
      * op is O(1) and there is no dangling-pointer hazard. */
-    static constexpr uint16_t kMaxSlots = 16;
     bool slotMode_ = false;
     char placeholder_ = '-';
     uint16_t slotCount_ = 0;  //< number of editable slots laid into the buffer

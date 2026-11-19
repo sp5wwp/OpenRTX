@@ -31,14 +31,14 @@ enum class EvKind : uint8_t {
  * views can treat it like an LVGL-style encoder input device.
  */
 struct Event {
-    EvKind kind = EvKind::None;
-    uint32_t keys = 0;
-    int8_t encoder = 0;
-
     /**
      * Decode a raw event (event_t.type + payload) into a toolkit Event.
      */
     static Event decode(uint8_t type, uint32_t payload);
+
+    EvKind kind = EvKind::None;
+    uint32_t keys = 0;
+    int8_t encoder = 0;
 };
 
 } // namespace ortxui

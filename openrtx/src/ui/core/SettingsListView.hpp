@@ -41,6 +41,14 @@ struct ListEdit;
 class SettingsListView : public View
 {
 public:
+    /** How a row is edited. */
+    enum class RowKind : uint8_t {
+        Stepper,  ///< ENTER edits, the arrows step the value
+        Checkbox, ///< ENTER toggles
+        Action,   ///< ENTER acts, usually opening a screen
+        Custom,   ///< The view handles the edit itself
+    };
+
     /** Constructor. */
     SettingsListView() = default;
 
@@ -66,8 +74,6 @@ public:
     void restore(UiMemory &m) override;
 
 protected:
-    enum class RowKind : uint8_t { Stepper, Checkbox, Action, Custom };
-
     /**
      * Wire the shared scaffolding: derived build() seeds items_ (labels and
      * values) first, then calls this with the title and its item array.

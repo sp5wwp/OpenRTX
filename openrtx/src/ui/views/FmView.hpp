@@ -36,15 +36,15 @@ public:
     void syncFromState(const state_t &s) override;
 
 private:
+    void formatValue(uint8_t row, char *out, size_t cap) override;
+    void setValueText(uint8_t row, const char *s) override;
+    void onAdjust(uint8_t row, int dir) override;
+
     enum Row : uint8_t {
         RowTone,   //< CTCSS tone frequency (cycles the ctcss_tone table)
         RowEnable, //< None / Encode / Decode / Both
         RowCount,
     };
-
-    void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][12] = {};

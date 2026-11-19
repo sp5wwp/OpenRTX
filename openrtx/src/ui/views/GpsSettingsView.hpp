@@ -39,6 +39,12 @@ public:
     void syncFromState(const state_t &s) override;
 
 private:
+    RowKind rowKind(uint8_t row) const override;
+    void formatValue(uint8_t row, char *out, size_t cap) override;
+    void setValueText(uint8_t row, const char *s) override;
+    void onAdjust(uint8_t row, int dir) override;
+    void onToggle(uint8_t row, bool on) override;
+
     enum Row : uint8_t {
         RowEnabled,
         RowSetTime,
@@ -49,12 +55,6 @@ private:
     /* Timezone bounds in half-hours: -12:00 .. +14:00. */
     static constexpr int8_t kTzMin = -24;
     static constexpr int8_t kTzMax = 28;
-
-    RowKind rowKind(uint8_t row) const override;
-    void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
-    void onToggle(uint8_t row, bool on) override;
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][16] = {};

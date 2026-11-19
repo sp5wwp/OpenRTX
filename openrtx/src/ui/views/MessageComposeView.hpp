@@ -66,14 +66,6 @@ public:
     }
 
 private:
-    /** Rows of the form, top to bottom. */
-    enum Row : uint8_t {
-        ROW_TO,
-        ROW_BODY,
-        ROW_SEND,
-        ROW_COUNT,
-    };
-
     /** Hand the draft to the inbox; returns true once it is handed over. */
     bool send();
 
@@ -82,6 +74,14 @@ private:
 
     /** Point the row values at the current draft. */
     void refresh();
+
+    /** Rows of the form, top to bottom. */
+    enum Row : uint8_t {
+        ROW_TO,
+        ROW_BODY,
+        ROW_SEND,
+        ROW_COUNT,
+    };
 
     /** Widget-tree root. */
     Screen screen_;
