@@ -12,8 +12,7 @@
 using ortxui::UiText;
 
 /** Number of entries in stringsTable_t. */
-static constexpr size_t kEntries = sizeof(stringsTable_t)
-                                 / sizeof(const char *);
+static constexpr size_t ENTRIES = sizeof(stringsTable_t) / sizeof(const char *);
 
 /**
  * Get a string table's entries as an array.
@@ -28,7 +27,7 @@ static const char *const *entries(const stringsTable_t *table)
 
 TEST_CASE("Every English string table entry is set", "[ui]")
 {
-    for (size_t i = 0; i < kEntries; i++) {
+    for (size_t i = 0; i < ENTRIES; i++) {
         const char *s = entries(&englishStrings)[i];
         INFO("entry " << i);
         REQUIRE(s != nullptr);

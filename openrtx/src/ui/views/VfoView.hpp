@@ -273,14 +273,14 @@ private:
 
     /* Digits of a frequency field, 100 MHz to 100 Hz. RX pre-fills from the
      * current frequency; TX derives from RX plus the channel's offset. */
-    static constexpr uint8_t kFreqDigits = 7;
+    static constexpr uint8_t FREQ_DIGITS = 7;
 
     /** The part of an entry that save() keeps while the view is destroyed. */
     struct EntryState {
         long long errorAt = 0;         ///< getTick() of an out-of-band commit
         int32_t shift = 0;             ///< TX - RX at open (repeater offset)
-        char rx[kFreqDigits + 1] = {}; ///< RX digits
-        char tx[kFreqDigits + 1] = {}; ///< TX digits
+        char rx[FREQ_DIGITS + 1] = {}; ///< RX digits
+        char tx[FREQ_DIGITS + 1] = {}; ///< TX digits
         char dst[sizeof(settings_t::m17_dest)] = {}; ///< Destination
         uint8_t rxSlot = 0;       ///< RX cursor slot while TX is edited
         uint8_t txSlot = 0;       ///< TX cursor slot while RX is edited

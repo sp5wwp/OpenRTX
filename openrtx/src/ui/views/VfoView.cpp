@@ -31,21 +31,21 @@ namespace ortxui
 
 /* Slot mask for keypad frequency entry: 7 editable digits, no separators
  * (FreqHero composes the MHz.kHz layout). Slot 0 = 100 MHz .. slot 6 = 100 Hz. */
-static constexpr char kFreqMask[] = "9999999";
+static constexpr char FREQ_MASK[] = "9999999";
 
 /* Slots of a frequency field, and what an empty one shows. */
-static constexpr uint16_t kFreqSlots = sizeof(kFreqMask) - 1;
-static constexpr char kPlaceholder = '-';
+static constexpr uint16_t FREQ_SLOTS = sizeof(FREQ_MASK) - 1;
+static constexpr char PLACEHOLDER = '-';
 
 /* How long an out-of-band entry error stays on screen before it self-clears. */
-static constexpr long long kInputErrorMs = 1500;
+static constexpr long long INPUT_ERROR_MS = 1500;
 
 /* Thickness of the meter's bar. */
 static constexpr uint8_t METER_BAR_H = 7;
 
 /* The TX meter is a dB scale up to the highest power the macro menu sets,
- * emptying kPowerSpanDb below it. */
-static constexpr float kPowerSpanDb = 10.0f;
+ * emptying POWER_SPAN_DB below it. */
+static constexpr float POWER_SPAN_DB = 10.0f;
 
 /**
  * Clamp a fraction to [0, 1].
@@ -76,7 +76,7 @@ static float powerToFrac(uint32_t mw)
     const float db =
         10.0f
         * std::log10(static_cast<float>(mw) / static_cast<float>(POWER_MAX_MW));
-    return clampFrac(1.0f + db / kPowerSpanDb);
+    return clampFrac(1.0f + db / POWER_SPAN_DB);
 }
 
 /**
@@ -141,7 +141,7 @@ static freq_t slotCoeff(uint16_t o, uint16_t n)
  */
 static int slotDigit(const char *digits, uint16_t o)
 {
-    return (digits[o] != kPlaceholder) ? (digits[o] - '0') : -1;
+    return (digits[o] != PLACEHOLDER) ? (digits[o] - '0') : -1;
 }
 
 /**
@@ -154,10 +154,10 @@ static int slotDigit(const char *digits, uint16_t o)
 static freq_t freqFromSlots(const char *digits)
 {
     freq_t v = 0;
-    for (uint16_t o = 0; o < kFreqSlots; o++) {
+    for (uint16_t o = 0; o < FREQ_SLOTS; o++) {
         const int d = slotDigit(digits, o);
         if (d >= 0)
-            v += (freq_t)d * slotCoeff(o, kFreqSlots);
+            v += (freq_t)d * slotCoeff(o, FREQ_SLOTS);
     }
     return v;
 }
@@ -170,14 +170,14 @@ static freq_t freqFromSlots(const char *digits)
  */
 static void slotsFromFreq(char *digits, freq_t hz)
 {
-    for (uint16_t o = 0; o < kFreqSlots; o++)
+    for (uint16_t o = 0; o < FREQ_SLOTS; o++)
         digits[o] =
-            static_cast<char>('0' + (hz / slotCoeff(o, kFreqSlots)) % 10);
+            static_cast<char>('0' + (hz / slotCoeff(o, FREQ_SLOTS)) % 10);
 }
 
 /**
  * Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
- * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with kPlaceholder for
+ * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with PLACEHOLDER for
  * un-entered slots so the operator sees how many digits remain.
  *
  * @param digits: field buffer.
@@ -197,8 +197,8 @@ static void composeEntry(const char *digits, char *main, char *sub)
     main[7] = '\0';
 
     const int d6 = slotDigit(digits, 6);
-    sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : kPlaceholder;
-    sub[1] = (d6 >= 0) ? '0' : kPlaceholder;
+    sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : PLACEHOLDER;
+    sub[1] = (d6 >= 0) ? '0' : PLACEHOLDER;
     sub[2] = '\0';
 }
 
@@ -543,7 +543,7 @@ void VfoView::syncFromState(const state_t &s)
         }
     } else if (entry->errorAt != 0) {
         /* Expire a transient out-of-band error (this runs every GUI frame). */
-        if ((getTick() - entry->errorAt) >= kInputErrorMs) {
+        if ((getTick() - entry->errorAt) >= INPUT_ERROR_MS) {
             entry->errorAt = 0;
             refreshInput();
         }
@@ -754,11 +754,11 @@ bool VfoView::openInput()
 
     /* TX starts empty; RX is fully pre-filled with the cursor at the end. TX
      * is derived lazily on the first switch / commit. */
-    memset(n.tx, kPlaceholder, kFreqSlots);
-    n.tx[kFreqSlots] = '\0';
+    memset(n.tx, PLACEHOLDER, FREQ_SLOTS);
+    n.tx[FREQ_SLOTS] = '\0';
     slotsFromFreq(n.rx, ch.rx_frequency);
-    n.rx[kFreqSlots] = '\0';
-    bindField(false, kFreqSlots);
+    n.rx[FREQ_SLOTS] = '\0';
+    bindField(false, FREQ_SLOTS);
     return true;
 }
 
@@ -812,7 +812,7 @@ void VfoView::deriveTx()
     if (tx < 0)
         tx = 0; /* an underflowing offset is rejected in band at commit */
     slotsFromFreq(n.tx, (freq_t)tx);
-    n.txSlot = kFreqSlots;
+    n.txSlot = FREQ_SLOTS;
 }
 
 void VfoView::bindField(bool tx, uint8_t slot)
@@ -820,9 +820,9 @@ void VfoView::bindField(bool tx, uint8_t slot)
     /* Binding lays the mask over the buffer: put the digits back after. */
     Entry &n = *entry;
     char *buf = tx ? n.tx : n.rx;
-    char digits[kFreqDigits + 1];
+    char digits[FREQ_DIGITS + 1];
     memcpy(digits, buf, sizeof(digits));
-    n.input.configureSlots(buf, kFreqDigits + 1, kFreqMask, kPlaceholder,
+    n.input.configureSlots(buf, FREQ_DIGITS + 1, FREQ_MASK, PLACEHOLDER,
                            FONT_SIZE_8PT);
     memcpy(buf, digits, sizeof(digits));
     n.input.setCursorSlot(slot);

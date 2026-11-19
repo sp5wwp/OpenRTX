@@ -30,9 +30,9 @@ static constexpr color_t highContrastColor(Sem role)
         case Sem::Separator:
         case Sem::OnPrimary:
         case Sem::OnAccent:
-            return palette::black;
+            return palette::BLACK;
         default:
-            return palette::white;
+            return palette::WHITE;
     }
 }
 
@@ -46,34 +46,34 @@ static constexpr color_t instrumentColor(Sem role)
 {
     switch (role) {
         case Sem::Background:
-            return palette::background;
+            return palette::BACKGROUND;
         case Sem::Surface:
-            return palette::surface;
+            return palette::SURFACE;
         case Sem::SurfaceHigh:
-            return palette::surfaceHigh;
+            return palette::SURFACE_HIGH;
         case Sem::Separator:
-            return palette::separator;
+            return palette::SEPARATOR;
         case Sem::OnSurface:
-            return palette::onSurface;
+            return palette::ON_SURFACE;
         case Sem::OnSurfaceMuted:
-            return palette::onSurfaceMut;
+            return palette::ON_SURFACE_MUTED;
         case Sem::Primary:
-            return palette::selectionBlue;
+            return palette::SELECTION_BLUE;
         case Sem::OnPrimary:
         case Sem::OnAccent:
-            return palette::black;
+            return palette::BLACK;
         case Sem::Accent:
-            return palette::brandGold;
+            return palette::BRAND_GOLD;
         case Sem::TxDanger:
-            return palette::txOrange;
+            return palette::TX_ORANGE;
         case Sem::RxSuccess:
-            return palette::rxGreen;
+            return palette::RX_GREEN;
         case Sem::Warning:
-            return palette::warnOrange;
+            return palette::WARN_ORANGE;
         case Sem::Mark:
-            return palette::markRed;
+            return palette::MARK_RED;
         default:
-            return palette::onSurface;
+            return palette::ON_SURFACE;
     }
 }
 
