@@ -22,7 +22,7 @@ static constexpr size_t VALUE_SIZE = 16;
 
 /* Unit of each row, in row order; the hemisphere replaces the first two once
  * there is a fix. */
-static const char *const UNITS[] = { "N", "E", "QTH", "ALT", "SPD" };
+static constexpr const char *UNITS[] = { "N", "E", "QTH", "ALT", "SPD" };
 
 /**
  * Format a signed coordinate (millionths of a degree) as degrees and decimal

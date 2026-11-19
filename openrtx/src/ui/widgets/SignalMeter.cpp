@@ -16,11 +16,11 @@ namespace ortxui
 static constexpr int16_t kPad = 3;   ///< Outer gutter
 static constexpr int16_t kGap = 5;   ///< Gap around the label / readout
 static constexpr uint16_t kBarH = 7; ///< Preferred bar thickness
-static const fontSize_t kFont = FONT_SIZE_6PT;      ///< Label / readout
-static const fontSize_t kScaleFont = FONT_SIZE_5PT; ///< S-scale numbers
+static constexpr fontSize_t kFont = FONT_SIZE_6PT;      ///< Label / readout
+static constexpr fontSize_t kScaleFont = FONT_SIZE_5PT; ///< S-scale numbers
 
 /* S-points labelled beneath the bar; positioned by S/11 to match the axis. */
-static const uint8_t kScalePoints[] = { 1, 3, 5, 7, 9 };
+static constexpr uint8_t kScalePoints[] = { 1, 3, 5, 7, 9 };
 
 /**
  * Clamp a value to [0, 1].

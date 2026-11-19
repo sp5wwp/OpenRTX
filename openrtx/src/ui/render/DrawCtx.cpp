@@ -283,7 +283,7 @@ void DrawCtx::textInBoxEllipsized(const Rect &box, fontSize_t size,
 
     /* Too wide: drop trailing characters until the prefix plus the ellipsis
      * glyph (U+2026, from the fallback font) fits. */
-    static const char kEllipsis[] = SYMBOL_ELLIPSIS;
+    static constexpr char kEllipsis[] = SYMBOL_ELLIPSIS;
     const uint16_t ellW = gfx_getTextWidth(size, kEllipsis);
 
     char buf[64];

@@ -16,7 +16,7 @@ namespace ortxui
 
 void GpsSettingsView::build()
 {
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(gpsEnabled),
         STR(gpsSetTime),
         STR(UTCTimeZone),

@@ -17,7 +17,7 @@ void ChecklistView::build()
     const int16_t W = CONFIG_SCREEN_WIDTH;
     const int16_t H = CONFIG_SCREEN_HEIGHT;
 
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(phonetic),
         STR(macroLatching),
     };

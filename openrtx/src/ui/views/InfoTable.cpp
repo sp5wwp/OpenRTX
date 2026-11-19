@@ -20,7 +20,7 @@ namespace ortxui
 {
 
 /* Row keys, in row order. */
-static const UiText KEYS[InfoTable::ROW_COUNT] = {
+static constexpr UiText KEYS[InfoTable::ROW_COUNT] = {
     STR(batteryVoltage), STR(batteryCharge), STR(RSSI),
     STR(usedHeap),       STR(band),          STR(hwVersion),
 };

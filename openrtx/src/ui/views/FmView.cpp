@@ -17,12 +17,12 @@ namespace ortxui
 
 /* Encode/decode enable label, indexed by (rxToneEn << 1) | txToneEn — the same
  * order the classic UI uses (tx tone = encode, rx tone = decode). */
-static const UiText kEnableLabels[4] = { STR(None), STR(Encode), STR(Decode),
-                                         STR(Both) };
+static constexpr UiText kEnableLabels[4] = { STR(None), STR(Encode),
+                                             STR(Decode), STR(Both) };
 
 void FmView::build()
 {
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(CTCSSTone),
         STR(CTCSSEn),
     };

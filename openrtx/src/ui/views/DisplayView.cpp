@@ -18,7 +18,7 @@ namespace ortxui
 
 void DisplayView::build()
 {
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(brightness), STR(contrast),  STR(squelch),
         STR(vox),        STR(timer),     STR(battery),
 #ifdef CONFIG_PIX_FMT_RGB565
@@ -116,7 +116,7 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
     /* Standby-timer labels from 5 s on, mirroring the classic
      * display_timer_values table; 0 is Off. */
-    static const char *const kTimerLabels[] = {
+    static constexpr const char *kTimerLabels[] = {
         "5 s",   "10 s",   "15 s",   "20 s",   "25 s",
         "30 s",  "1 min",  "2 min",  "3 min",  "4 min",
         "5 min", "15 min", "30 min", "45 min", "1 hour",
@@ -151,7 +151,7 @@ void DisplayView::setValueText(uint8_t row, const char *s)
 
 void DisplayView::onAdjust(uint8_t row, int dir)
 {
-    static const Range kRanges[RowCount] = {
+    static constexpr Range kRanges[RowCount] = {
         { 5u, 100u, 5u }, //< Brightness
         { 0u, 255u, 4u }, //< Contrast
         { 0u, 15u, 1u },  //< Squelch

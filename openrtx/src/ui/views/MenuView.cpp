@@ -18,7 +18,7 @@ namespace ortxui
 
 /* Menu tables, mirroring the classic UI's menus; the config guards keep parity
  * with targets that omit GPS/RTC/M17/messages. */
-static const MenuRow MAIN_MENU[] = {
+static constexpr MenuRow MAIN_MENU[] = {
     { STR(banks), ViewId::Banks },
     { STR(channels), ViewId::Channels },
     { STR(contacts), ViewId::Contacts },
@@ -33,7 +33,7 @@ static const MenuRow MAIN_MENU[] = {
     { STR(about), ViewId::About },
 };
 
-static const MenuRow SETTINGS_MENU[] = {
+static constexpr MenuRow SETTINGS_MENU[] = {
     { STR(display), ViewId::Display },
 #ifdef CONFIG_RTC
     { STR(timeAndDate), ViewId::TimeDate },

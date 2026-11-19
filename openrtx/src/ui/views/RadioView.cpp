@@ -82,7 +82,7 @@ static void setSlotsDecimal(TextInput &f, uint32_t val)
 
 void RadioView::build()
 {
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(offset),
         STR(direction),
         STR(step),

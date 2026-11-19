@@ -25,7 +25,7 @@ namespace ortxui
 
 void M17View::build()
 {
-    static const UiText kLabels[RowCount] = {
+    static constexpr UiText kLabels[RowCount] = {
         STR(callsign),
         STR(metaText),
         STR(CAN),

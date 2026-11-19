@@ -22,7 +22,7 @@ namespace ortxui
 {
 
 /* Top-of-tile labels (number key + icon / short label), one per key 1-9. */
-static const char *const KEY_LABELS[MacroTiles::TILES] = {
+static constexpr const char *KEY_LABELS[MacroTiles::TILES] = {
     "1 " SYMBOL_BELL,           // tone encode/decode
     "2 T-",                     // tone down
     "3 T+",                     // tone up
@@ -36,12 +36,12 @@ static const char *const KEY_LABELS[MacroTiles::TILES] = {
 
 /* Just the number keys — used on the tiny mono screen where the icons and a
  * second line per tile do not fit. */
-static const char *const DIGITS[MacroTiles::TILES] = {
+static constexpr const char *DIGITS[MacroTiles::TILES] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9",
 };
 
 /* Tone encode/decode label, indexed by (txToneEn << 1) | rxToneEn. */
-static const UiText ENC_DEC[4] = {
+static constexpr UiText ENC_DEC[4] = {
     STR(None),
     STR(Decode),
     STR(Encode),
