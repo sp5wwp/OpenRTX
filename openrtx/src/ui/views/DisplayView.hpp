@@ -58,24 +58,20 @@ private:
 
     /** Rows, top to bottom. */
     enum Row : uint8_t {
+#ifdef CONFIG_SCREEN_BRIGHTNESS
         RowBrightness, ///< Backlight level
-        RowContrast,   ///< Display contrast
-        RowSquelch,    ///< FM squelch level
-        RowVox,        ///< Vox level
-        RowTimer,      ///< Standby timeout
-        RowBattery,    ///< Battery readout: percentage or icon
+#endif
+#ifdef CONFIG_SCREEN_CONTRAST
+        RowContrast, ///< Display contrast
+#endif
+        RowSquelch,  ///< FM squelch level
+        RowTimer,    ///< Standby timeout
+        RowBattery,  ///< Battery readout: percentage or icon
 #ifdef CONFIG_PIX_FMT_RGB565
-        RowTheme,      ///< Standard or high contrast palette
-        RowText,       ///< Smooth or crisp text
+        RowTheme,    ///< Standard or high contrast palette
+        RowText,     ///< Smooth or crisp text
 #endif
         RowCount,
-    };
-
-    /** Inclusive value range and step of a row. */
-    struct Range {
-        uint8_t min;  ///< Lowest value
-        uint8_t max;  ///< Highest value
-        uint8_t step; ///< Step of one key press
     };
 
     std::array<ListItem, RowCount> items_ = {}; ///< Rows

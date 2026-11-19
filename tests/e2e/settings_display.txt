@@ -4,7 +4,7 @@
 # variants: default smallscreen
 
 wait_stable 5000 3
-# Menu > Settings > Display: brightness, timer, battery icon
+# Menu > Settings > Display: brightness, squelch, timer, battery icon
 key ENTER
 wait_stable
 key DOWN DOWN DOWN DOWN DOWN ENTER
@@ -12,7 +12,7 @@ wait_stable
 key ENTER
 wait_stable
 screenshot_sync display_settings.bmp
-key DOWN DOWN
+key DOWN DOWN DOWN
 wait_stable
 screenshot_sync display_battery_icon.bmp
 quit

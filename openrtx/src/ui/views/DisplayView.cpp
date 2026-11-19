@@ -15,12 +15,27 @@
 namespace ortxui
 {
 
-/** Row labels, in row order. */
-static constexpr UiText LABELS[] = {
-    STR(brightness), STR(contrast),  STR(squelch),
-    STR(vox),        STR(timer),     STR(battery),
+/** Label and inclusive value range of a row. */
+struct RowInfo {
+    UiText label; ///< Row label
+    uint8_t min;  ///< Lowest value
+    uint8_t max;  ///< Highest value
+    uint8_t step; ///< Step of one key press
+};
+
+/** Rows, in row order. */
+static constexpr RowInfo ROWS[] = {
+#ifdef CONFIG_SCREEN_BRIGHTNESS
+    { STR(brightness), 5u, 100u, 5u },
+#endif
+#ifdef CONFIG_SCREEN_CONTRAST
+    { STR(contrast), 0u, 255u, 4u },
+#endif
+    { STR(squelch), 0u, 15u, 1u },     { STR(timer), TIMER_OFF, TIMER_1H, 1u },
+    { STR(battery), 0u, 1u, 1u },   // percent or icon
 #ifdef CONFIG_PIX_FMT_RGB565
-    STR(theme),      STR(textStyle),
+    { STR(theme), 0u, 1u, 1u },     // standard or high contrast
+    { STR(textStyle), 0u, 1u, 1u }, // smooth or crisp
 #endif
 };
 
@@ -32,24 +47,26 @@ static constexpr const char *TIMER_LABELS[] = {
 
 void DisplayView::build()
 {
-    static_assert(ARRAY_SIZE(LABELS) == RowCount, "a row has no label");
+    static_assert(ARRAY_SIZE(ROWS) == RowCount, "a row has no label");
 
     for (uint8_t i = 0; i < RowCount; i++)
-        items_[i].label = LABELS[i];
+        items_[i].label = ROWS[i].label;
     buildList(STR(display), items_.data(), RowCount);
 }
 
 uint8_t DisplayView::curValue(uint8_t row) const
 {
     switch (row) {
+#ifdef CONFIG_SCREEN_BRIGHTNESS
         case RowBrightness:
             return state.settings.brightness;
+#endif
+#ifdef CONFIG_SCREEN_CONTRAST
         case RowContrast:
             return state.settings.contrast;
+#endif
         case RowSquelch:
             return state.settings.sqlLevel;
-        case RowVox:
-            return state.settings.voxLevel;
         case RowTimer:
             return state.settings.display_timer;
         case RowBattery:
@@ -68,19 +85,20 @@ uint8_t DisplayView::curValue(uint8_t row) const
 void DisplayView::applyValue(uint8_t row, uint8_t v)
 {
     switch (row) {
+#ifdef CONFIG_SCREEN_BRIGHTNESS
         case RowBrightness:
             state.settings.brightness = v;
             display_setBacklightLevel(v);
             break;
+#endif
+#ifdef CONFIG_SCREEN_CONTRAST
         case RowContrast:
             state.settings.contrast = v;
             display_setContrast(v);
             break;
+#endif
         case RowSquelch:
             state.settings.sqlLevel = v;
-            break;
-        case RowVox:
-            state.settings.voxLevel = v;
             break;
         case RowTimer:
             /* The standby loop reads display_timer on every tick. */
@@ -109,9 +127,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
 void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
     const uint8_t v = curValue(row);
-    if ((row == RowVox) && (v == 0u))
-        sniprintf(out, cap, "%s", STR(off).str());
-    else if (row == RowSquelch)
+    if (row == RowSquelch)
         sniprintf(out, cap, "S%u", v);
     else if (row == RowTimer)
         sniprintf(out, cap, "%s",
@@ -132,19 +148,7 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 
 void DisplayView::onAdjust(uint8_t row, int8_t dir)
 {
-    static constexpr Range RANGES[RowCount] = {
-        { 5u, 100u, 5u },            // Brightness
-        { 0u, 255u, 4u },            // Contrast
-        { 0u, 15u, 1u },             // Squelch
-        { 0u, 10u, 1u },             // Vox
-        { TIMER_OFF, TIMER_1H, 1u }, // Timer
-        { 0u, 1u, 1u },              // Battery: percent or icon
-#ifdef CONFIG_PIX_FMT_RGB565
-        { 0u, 1u, 1u },              // Theme: standard or high contrast
-        { 0u, 1u, 1u },              // Text: smooth or crisp
-#endif
-    };
-    const Range &r = RANGES[row];
+    const RowInfo &r = ROWS[row];
 
     int v = curValue(row) + dir * r.step;
     if (v < r.min)

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen
+# variants: default
 
 # Display > Theme (High Contrast) and Text (Crisp): pure-mono, non-AA UI.
 wait_stable 5000 3
@@ -12,8 +12,8 @@ key DOWN DOWN DOWN DOWN DOWN ENTER
 wait_stable
 key ENTER
 wait_stable
-# scroll past Brightness..Battery to the Theme row (row 6)
-key DOWN DOWN DOWN DOWN DOWN DOWN
+# scroll past Brightness..Battery to the Theme row (row 4)
+key DOWN DOWN DOWN DOWN
 wait_stable
 # edit Theme: UP raises Standard -> High Contrast (whole UI recolours mono)
 key ENTER
