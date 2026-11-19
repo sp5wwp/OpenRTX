@@ -182,8 +182,6 @@ void *rtx_threadFunc(void *arg)
 {
     (void) arg;
 
-    rtx_init(&rtx_mutex);
-
     while(state.devStatus == RUNNING)
     {
         rtx_task();
@@ -201,6 +199,10 @@ void create_threads()
 {
     // Create RTX state mutex
     pthread_mutex_init(&rtx_mutex, NULL);
+
+    // The UI thread configures the rtx from its first loop, so initialise the
+    // rtx before any thread starts
+    rtx_init(&rtx_mutex);
 
     // Create rtx radio thread
     pthread_attr_t rtx_attr;
