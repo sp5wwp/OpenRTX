@@ -37,11 +37,16 @@ public:
     /** Destructor. */
     ~SettingRow() = default;
 
-    /** Per-list geometry: vertical content inset and the label/value gutter. */
+    /**
+     * Set the row's padding.
+     *
+     * @param inset: vertical inset of the content, in pixels.
+     * @param spacing: gap between the label and a value under it, in pixels.
+     */
     void setPad(int16_t inset, int16_t spacing);
 
     /**
-     * Bind the flyweight to one row's content and selection state.
+     * Bind the row to one item's content and selection state.
      *
      * @param kind: row kind.
      * @param label: row label.
@@ -53,9 +58,8 @@ public:
               bool selected);
 
     /**
-     * Row height for a given kind and content at the given row width, so the
-     * List can lay rows out before binding them. A value row that fits side
-     * by side is as short as a plain row; otherwise it carries a second line.
+     * Get the height of a row, so the List can place rows before binding
+     * them. A value row that fits on one line is as short as a plain row.
      *
      * @param kind: row kind.
      * @param label: row label, used by a value row only.
@@ -66,7 +70,7 @@ public:
     int16_t heightFor(Kind kind, const UiText &label, const UiText &value,
                       int16_t rowW) const;
 
-    /** The row's width by its height for the bound text. */
+    /** Get the row's width by its height for the bound text. */
     Size natural() const override;
 
     /** Lay the label and value on one line or two. */

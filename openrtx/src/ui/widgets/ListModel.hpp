@@ -18,11 +18,9 @@ namespace ortxui
 {
 
 /**
- * A single row of a List. The row style follows the fields set:
- *  - label only            -> a plain row (submenu / credits),
- *  - label + value         -> a settings row (label top-left, value low-right),
- *  - label + checkbox      -> a checklist row (box + tick when checked).
- * Plain texts are borrowed; the owner keeps them (and the item array) alive.
+ * A single row of a List, shaped by the fields set: a label only, a label and
+ * a value, or a label and a checkbox. Plain texts are borrowed; the owner
+ * keeps them (and the item array) alive.
  */
 struct ListItem {
     UiText label;          ///< Row label
@@ -32,12 +30,9 @@ struct ListItem {
 };
 
 /**
- * An on-demand source of list rows. Only the currently visible window is
- * queried (during draw), so a large list — e.g. a codeplug's hundreds of
- * channels — needs no per-row storage: the model reads each row lazily.
- *
- * rowAt() may point out.label at a scratch buffer that is only valid until the
- * next rowAt() call; the List draws each row immediately after fetching it.
+ * An on-demand source of list rows: the List reads only the rows it shows, so
+ * a large list such as a codeplug's channels needs no per-row storage.
+ * rowAt() may point the row's texts at a buffer valid until its next call.
  */
 class ListModel
 {
@@ -48,7 +43,11 @@ public:
     /** Destructor. */
     virtual ~ListModel() = default;
 
-    /** Get the number of rows. */
+    /**
+     * Get the number of rows.
+     *
+     * @return the number of rows.
+     */
     virtual uint16_t rowCount() const = 0;
 
     /**

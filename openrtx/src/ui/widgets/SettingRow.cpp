@@ -12,9 +12,8 @@ namespace ortxui
 
 SettingRow::SettingRow()
 {
-    /* A vertical stack; the engine centres the content and inserts the gutter,
-     * and stretches children across the width so the label / value alignments
-     * land at the row edges. */
+    /* Stretched children put the label and value alignments at the row
+     * edges. */
     setAxis(Axis::Column);
     setAlign(Align::Stretch);
     setJustify(Justify::Center);
@@ -53,8 +52,7 @@ void SettingRow::bind(Kind kind, const UiText &label, const UiText &value,
     nameLabel.setText(label);
     nameLabel.setColor(labelColor);
 
-    /* Only a value row carries the second line; hide it otherwise so the label
-     * centres on its own. */
+    /* Hide the value outside a value row, so the label centres alone. */
     valueLabel.setFlag(FlagHidden, rowKind != Kind::Value);
     if (rowKind == Kind::Value) {
         valueLabel.setText(value);
@@ -78,9 +76,8 @@ int16_t SettingRow::heightFor(Kind kind, const UiText &label,
 {
     const int16_t oneLine =
         static_cast<int16_t>(2 * insetY + gfx_getFontLineHeight(LABEL_FONT));
-    /* A value row keeps its second line only when the two texts do not fit side
-     * by side; a fitting row is as short as a plain row (the label font is the
-     * taller of the two). */
+    /* The label font is the taller, so a value row on one line is as high as
+     * a plain row. */
     if ((kind == Kind::Value) && !fitsOneLine(label, value, rowW))
         return static_cast<int16_t>(oneLine + gutter
                                     + gfx_getFontLineHeight(VALUE_FONT));
@@ -96,10 +93,7 @@ Size SettingRow::natural() const
 
 void SettingRow::onLayout()
 {
-    /* Choose the row shape from the bound text and the assigned width: a value
-     * row that fits collapses to a single line (label left, value right, each
-     * vertically centred); otherwise the value drops to a second line. Plain /
-     * checkbox rows are always the single-line column. */
+    /* One line, label left and value right, unless a value does not fit. */
     const bool oneLine = (rowKind != Kind::Value)
                       || fitsOneLine(nameLabel.text(), valueLabel.text(),
                                      bounds.w);

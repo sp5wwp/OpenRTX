@@ -235,10 +235,8 @@ void List::draw(DrawCtx &d)
     if (n == 0)
         return;
 
-    /* Paint each visible row through the scratch SettingRow: bind it to the
-     * item, size it to the item's content, lay it out and paint its subtree.
-     * Rows stack by their own heights, so a two-line value row is taller than
-     * a plain / checkbox row while keeping the same padding. */
+    /* Every visible row is painted through the scratch SettingRow, stacked
+     * by its own height. */
     const bool plain = plainRows();
     const int16_t plainH = plain ? rowHeight(topRow) : 0;
     SettingRow &scratchRow = Scratch::get<SettingRow>();

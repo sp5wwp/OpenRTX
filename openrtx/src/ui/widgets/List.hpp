@@ -88,7 +88,11 @@ public:
         selectable = s;
     }
 
-    /** Get the selected row. */
+    /**
+     * Get the selected row.
+     *
+     * @return the row.
+     */
     uint16_t selected() const
     {
         return selectedRow;
@@ -212,7 +216,11 @@ private:
      */
     int16_t rowHeight(uint16_t i) const;
 
-    /** Get the number of rows of the table or the model. */
+    /**
+     * Get the number of rows of the table or the model.
+     *
+     * @return the number of rows.
+     */
     uint16_t rows() const
     {
         return (listModel != nullptr) ? listModel->rowCount() : itemCount;
