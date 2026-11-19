@@ -13,11 +13,6 @@
 #include <cstdio>
 #include <cstring>
 
-/* The view is only built/wired under CONFIG_RTC (platform_setTime and the rest
- * of the time API are RTC-only); compile its body away on targets without an
- * RTC (e.g. Module17) so this translation unit still builds there. */
-#ifdef CONFIG_RTC
-
 namespace ortxui
 {
 
@@ -162,7 +157,10 @@ void TimeDateView::commit()
     local.minute = static_cast<int8_t>(d(8) * 10 + d(9));
     local.second = 0;
     const datetime_t utc = localTimeToUtc(local, state.settings.utc_timezone);
+#ifdef CONFIG_RTC
+    /* The screen is only built on targets with a clock to set. */
     platform_setTime(utc);
+#endif
     state.time = utc;
     editing_ = false;
     hint_.setText(STR(hintSet));
@@ -205,5 +203,3 @@ NavIntent TimeDateView::onEvent(const Event &e)
 }
 
 } // namespace ortxui
-
-#endif /* CONFIG_RTC */
