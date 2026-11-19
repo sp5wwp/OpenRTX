@@ -47,6 +47,9 @@ extern const struct gpsDevice gps;
 /* Screen pixel format */
 #define CONFIG_PIX_FMT_RGB565
 
+/* Draw the screen 16 rows at a time instead of keeping a framebuffer */
+#define CONFIG_GFX_BAND_ROWS 16
+
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 

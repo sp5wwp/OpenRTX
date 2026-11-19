@@ -40,6 +40,9 @@ extern const struct Adc adc1;
 /* Screen pixel format */
 #define CONFIG_PIX_FMT_RGB565
 
+/* Draw the screen 16 rows at a time instead of keeping a framebuffer */
+#define CONFIG_GFX_BAND_ROWS 16
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
