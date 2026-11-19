@@ -45,6 +45,15 @@ static constexpr const char *DIGITS[MacroTiles::TILES] = {
 /* Gap between the tiles of a row. */
 static constexpr uint8_t TILE_GAP = 2;
 
+/* Height of the key line of a two-line tile, width of the key of a
+ * one-line tile. */
+static constexpr int16_t KEY_H_REGULAR = 12;
+static constexpr int16_t KEY_W_COMPACT = 9;
+
+/* Padding inside a tile. */
+static constexpr uint8_t TILE_PAD_X = 2;
+static constexpr uint8_t TILE_PAD_Y = 1;
+
 /* Size of a composed tile value. */
 static constexpr size_t VALUE_SIZE = 14;
 
@@ -77,7 +86,7 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
      * a single row "N value" — icons and a second line don't fit on 128x64. */
     scratch.box.setAxis(regular ? Axis::Column : Axis::Row);
     scratch.box.setAlign(Align::Center);
-    scratch.box.setPadding(2, 1);
+    scratch.box.setPadding(TILE_PAD_X, TILE_PAD_Y);
 
     if (KEY_LABELS[tile] != nullptr)
         sniprintf(keyBuf, KEY_SIZE, "%s", KEY_LABELS[tile]);
@@ -88,7 +97,7 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
     scratch.key.setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_LEFT);
     scratch.key.setColor(Sem::Accent);
     scratch.key.setText(regular ? keyBuf : DIGITS[tile]);
-    scratch.key.setBasis(regular ? 12 : 9);
+    scratch.key.setBasis(regular ? KEY_H_REGULAR : KEY_W_COMPACT);
 
     scratch.value.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     scratch.value.setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_RIGHT);

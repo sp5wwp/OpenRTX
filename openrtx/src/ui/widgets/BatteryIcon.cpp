@@ -28,15 +28,20 @@ static constexpr int16_t ROUND2_W = 9;
 /* Inset of the charge fill from the outline. */
 static constexpr int16_t FILL_INSET = 2;
 
+/* Corner radius of the charge fill. */
+static constexpr uint16_t FILL_RADIUS = 1;
+
+/* Glyph footprint, a little shorter than the top bar so it has room above and
+ * below. */
+static constexpr Size SIZE_REGULAR = { 13, 12 };
+static constexpr Size SIZE_COMPACT = { 10, 9 };
+
 /* Charge at or below which the fill shows the warning colour. */
 static constexpr uint8_t LOW_CHARGE = 20;
 
 Size BatteryIcon::size()
 {
-    /* A little shorter than the top bar, so the glyph has room above and
-     * below. */
-    const bool regular = (sizeClass() == SizeClass::Regular);
-    return regular ? Size{ 13, 12 } : Size{ 10, 9 };
+    return (sizeClass() == SizeClass::Regular) ? SIZE_REGULAR : SIZE_COMPACT;
 }
 
 void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
@@ -105,7 +110,7 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
           static_cast<int16_t>(byBody + FILL_INSET + (innerH - fillH)),
           static_cast<uint16_t>(W - 2 * FILL_INSET),
           static_cast<uint16_t>(fillH) },
-        1, fill);
+        FILL_RADIUS, fill);
 }
 
 } // namespace ortxui

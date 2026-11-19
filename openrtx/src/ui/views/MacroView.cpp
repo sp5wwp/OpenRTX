@@ -22,6 +22,10 @@
 namespace ortxui
 {
 
+/* Height of the squelch footer, roomy and compact screens. */
+static constexpr int16_t FOOTER_H_REGULAR = 14;
+static constexpr int16_t FOOTER_H_COMPACT = 10;
+
 /* Highest squelch level. */
 static constexpr uint8_t SQL_MAX = 15;
 
@@ -90,7 +94,7 @@ void MacroView::build()
 
     footer_.setAxis(Axis::Row);
     footer_.setAlign(Align::Center);
-    footer_.setBasis(regular ? 14 : 10);
+    footer_.setBasis(regular ? FOOTER_H_REGULAR : FOOTER_H_COMPACT);
     sqlBar_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     sqlBar_.setLabel(STR(squelch), SYMBOL_VOLUME);
     /* Red, like the squelch mark on the VFO meter. */
