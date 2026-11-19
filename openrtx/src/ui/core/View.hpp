@@ -195,6 +195,13 @@ protected:
     TopBar &useTopBar(const UiText &title);
 
     /**
+     * Get the whole screen, the area a view's root fills.
+     *
+     * @return the screen area.
+     */
+    static Rect screenArea();
+
+    /**
      * Get the top bar shared by every screen.
      *
      * @return the top bar.

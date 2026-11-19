@@ -20,7 +20,6 @@
 #include "interfaces/cps_io.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
-#include "hwconfig.h"
 
 #include <cmath>
 #include <cstdio>
@@ -210,11 +209,9 @@ VfoView::~VfoView()
 
 void VfoView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
+    root_.setArea(screenArea());
     root_.setAxis(Axis::Column);
 
     /* Shared top bar with a blank title (VFO shows only the status cluster). */

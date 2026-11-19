@@ -10,7 +10,6 @@
 #include "core/state.h"
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"
-#include "hwconfig.h"
 
 #include <cstdio>
 
@@ -26,8 +25,7 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
             items[i].value = values_[i];
     }
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
-                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
+    root_.setArea(screenArea());
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(title);

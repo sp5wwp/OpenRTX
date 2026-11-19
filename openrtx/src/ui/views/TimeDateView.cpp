@@ -35,8 +35,7 @@ void TimeDateView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
-                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
+    root_.setArea(screenArea());
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(timeAndDate));

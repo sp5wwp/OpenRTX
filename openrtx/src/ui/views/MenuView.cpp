@@ -52,8 +52,7 @@ void MenuView::build()
     rows_ = settings ? SETTINGS_MENU : MAIN_MENU;
     count_ = settings ? ARRAY_SIZE(SETTINGS_MENU) : ARRAY_SIZE(MAIN_MENU);
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
-                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
+    root_.setArea(screenArea());
     root_.setAxis(Axis::Column);
 
     /* The list of plain label rows fills the space below the top bar. */

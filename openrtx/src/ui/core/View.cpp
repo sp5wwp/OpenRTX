@@ -11,12 +11,18 @@
 #include "interfaces/keyboard.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
+#include "hwconfig.h"
 
 namespace ortxui
 {
 
 /* One top bar serves every screen, since only one view exists at a time. */
 static TopBar sharedTopBar;
+
+Rect View::screenArea()
+{
+    return { 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT };
+}
 
 TopBar &View::topBar()
 {

@@ -8,16 +8,13 @@
 #include "core/UiMemory.hpp"
 #include "core/Event.hpp"
 #include "interfaces/keyboard.h"
-#include "hwconfig.h"
 
 namespace ortxui
 {
 
 void PickerView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-    grid_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
+    grid_.setArea(screenArea());
     grid_.setPosition(uiMemory.edit.pickerSelected, uiMemory.edit.pickerTop);
     screen_.addChild(&grid_);
     screen_.markAllDirty();

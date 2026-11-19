@@ -13,7 +13,6 @@
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 #include "style/Charsets.hpp"
-#include "hwconfig.h"
 
 #include <cstdio>
 #include <cstring>

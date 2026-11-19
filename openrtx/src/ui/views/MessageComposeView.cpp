@@ -13,7 +13,6 @@
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"
 #include "style/Charsets.hpp"
-#include "hwconfig.h"
 
 #include <cstdlib>
 #include <cstring>
@@ -23,7 +22,7 @@ namespace ortxui
 
 void MessageComposeView::build()
 {
-    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root_.setArea(screenArea());
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(uiMemory.draftReply ? STR(reply) : STR(newMessage));
