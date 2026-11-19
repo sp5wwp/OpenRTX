@@ -93,3 +93,22 @@ uint8_t ctcssFreqToIndex(const uint16_t freq)
 
     return 255;
 }
+
+size_t utf8Encode(uint32_t cp, char *out)
+{
+    if (cp < 0x80u) {
+        out[0] = (char)cp;
+        return 1;
+    }
+
+    if (cp < 0x800u) {
+        out[0] = (char)(0xC0u | (cp >> 6));
+        out[1] = (char)(0x80u | (cp & 0x3Fu));
+        return 2;
+    }
+
+    out[0] = (char)(0xE0u | (cp >> 12));
+    out[1] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
+    out[2] = (char)(0x80u | (cp & 0x3Fu));
+    return 3;
+}

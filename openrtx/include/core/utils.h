@@ -87,6 +87,15 @@ uint8_t rssiToSlevel(const rssi_t rssi);
 uint8_t ctcssFreqToIndex(const uint16_t freq);
 
 /**
+ * Encode a code point of the Basic Multilingual Plane as UTF-8.
+ *
+ * @param cp: code point, below 0x10000.
+ * @param out: output of at least three bytes, not NUL-terminated.
+ * @return the number of bytes written.
+ */
+size_t utf8Encode(uint32_t cp, char *out);
+
+/**
  * Convert coordinates from decimal value to Q1.23 representation.
  * The input value should be in decimal degrees multiplied by 1000000
  *
