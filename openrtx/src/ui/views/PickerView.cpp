@@ -30,10 +30,10 @@ void PickerView::open()
     uiMemory.edit.picked = 0;
 }
 
-void PickerView::save(UiMemory &m) const
+void PickerView::save() const
 {
-    m.edit.pickerSelected = static_cast<uint8_t>(grid_.selected());
-    m.edit.pickerTop = static_cast<uint8_t>(grid_.top());
+    uiMemory.edit.pickerSelected = static_cast<uint8_t>(grid_.selected());
+    uiMemory.edit.pickerTop = static_cast<uint8_t>(grid_.top());
 }
 
 void PickerView::announce()

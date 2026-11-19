@@ -52,10 +52,10 @@ public:
     static void open(uint32_t sequence);
 
     /** Keep the pinned message and the body scroll while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Take back the pinned message and the body scroll. */
-    void restore(UiMemory &m) override;
+    void restore() override;
 
     /** Read the message out: the other party, then the body. */
     void announce() override;

@@ -80,10 +80,10 @@ void TextInputView::configureField()
     field_.resume(r.cursor, r.topRow);
 }
 
-void TextInputView::save(UiMemory &m) const
+void TextInputView::save() const
 {
-    m.edit.cursor = field_.cursor();
-    m.edit.topRow = field_.topRow();
+    uiMemory.edit.cursor = field_.cursor();
+    uiMemory.edit.topRow = field_.topRow();
 }
 
 void TextInputView::onShow()

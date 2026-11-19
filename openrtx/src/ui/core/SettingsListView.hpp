@@ -60,10 +60,10 @@ public:
     }
 
     /** Keep the row being edited while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Reopen the row edit kept by save(). */
-    void restore(UiMemory &m) override;
+    void restore() override;
 
 protected:
     static constexpr uint8_t ROWS_MAX = 8;   ///< Most rows a screen has

@@ -55,7 +55,7 @@ public:
                      bool multiline, bool rtx);
 
     /** Keep the cursor and scroll of the edit while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Put in the character picked while the editor was destroyed. */
     void onShow() override;

@@ -87,18 +87,18 @@ void MessageDetailView::open(uint32_t sequence)
     messages_markRead(messages_findBySequence(sequence), true);
 }
 
-void MessageDetailView::save(UiMemory &m) const
+void MessageDetailView::save() const
 {
-    m.messageSeq = seq_;
-    m.messageScroll = body_.scrollOffset();
+    uiMemory.messageSeq = seq_;
+    uiMemory.messageScroll = body_.scrollOffset();
     /* The inbox follows the message this view ended on. */
-    m.inboxPinned = seq_;
+    uiMemory.inboxPinned = seq_;
 }
 
-void MessageDetailView::restore(UiMemory &m)
+void MessageDetailView::restore()
 {
-    seq_ = m.messageSeq;
-    body_.setScrollOffset(m.messageScroll);
+    seq_ = uiMemory.messageSeq;
+    body_.setScrollOffset(uiMemory.messageScroll);
 }
 
 bool MessageDetailView::canReply(const struct message *msg, uint8_t mode)

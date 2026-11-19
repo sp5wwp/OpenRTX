@@ -44,10 +44,10 @@ public:
     void build() override;
 
     /** Keep an open frequency or destination entry while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Reopen a frequency or destination entry kept by save(). */
-    void restore(UiMemory &m) override;
+    void restore() override;
 
     /**
      * Follow the state snapshot.

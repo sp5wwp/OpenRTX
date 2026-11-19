@@ -78,7 +78,7 @@ void Navigator::rebuild(bool announce)
         const List *l = old->list();
         if (l != nullptr)
             mem_.lists[static_cast<uint8_t>(built_)] = l->position();
-        old->save(mem_);
+        old->save();
     }
 
     built_ = stack_[depth_ - 1];
@@ -87,7 +87,7 @@ void Navigator::rebuild(bool announce)
     List *l = v->list();
     if (l != nullptr)
         l->setPosition(mem_.lists[static_cast<uint8_t>(built_)]);
-    v->restore(mem_);
+    v->restore();
 
     activate(v, announce);
 }

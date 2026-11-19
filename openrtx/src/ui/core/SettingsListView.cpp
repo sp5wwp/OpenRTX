@@ -52,9 +52,9 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
     }
 }
 
-void SettingsListView::save(UiMemory &m) const
+void SettingsListView::save() const
 {
-    InlineEdit &ie = m.inlineEdit;
+    InlineEdit &ie = uiMemory.inlineEdit;
     if (!editing_) {
         if (ie.owner == id())
             ie.owner = ViewId::Count;
@@ -67,9 +67,9 @@ void SettingsListView::save(UiMemory &m) const
     ie.owner = id();
 }
 
-void SettingsListView::restore(UiMemory &m)
+void SettingsListView::restore()
 {
-    InlineEdit &ie = m.inlineEdit;
+    InlineEdit &ie = uiMemory.inlineEdit;
     if (ie.owner != id())
         return;
     ie.owner = ViewId::Count;

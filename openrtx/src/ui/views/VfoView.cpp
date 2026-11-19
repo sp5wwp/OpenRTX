@@ -305,9 +305,9 @@ void VfoView::build()
     screen_.markAllDirty();
 }
 
-void VfoView::save(UiMemory &m) const
+void VfoView::save() const
 {
-    InlineEdit &ie = m.inlineEdit;
+    InlineEdit &ie = uiMemory.inlineEdit;
     if (entry_ == nullptr) {
         if (ie.owner == id())
             ie.owner = ViewId::Count;
@@ -336,9 +336,9 @@ void VfoView::save(UiMemory &m) const
     ie.owner = id();
 }
 
-void VfoView::restore(UiMemory &m)
+void VfoView::restore()
 {
-    InlineEdit &ie = m.inlineEdit;
+    InlineEdit &ie = uiMemory.inlineEdit;
     if (ie.owner != id())
         return;
     ie.owner = ViewId::Count;

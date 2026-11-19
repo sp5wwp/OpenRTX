@@ -24,7 +24,6 @@ namespace ortxui
 class TopBar;
 class List;
 struct Event;
-struct UiMemory;
 
 /**
  * What a View asks the Navigator to do after handling an event.
@@ -92,8 +91,9 @@ struct NavIntent {
  * A View owns a Screen (its retained widget tree) plus the navigation and
  * state-binding behaviour wrapped around it. Only the active view exists: the
  * Navigator builds it in a shared slot and destroys it when another screen
- * replaces it, so anything that must outlive it goes to UiMemory in save()
- * and comes back in restore().
+ * replaces it, so anything that must outlive it goes to uiMemory in save()
+ * and comes back in restore(). Views reach uiMemory directly, as do the
+ * static open() helpers that prepare a screen before it is pushed.
  */
 class View
 {
@@ -127,24 +127,14 @@ public:
         return nullptr;
     }
 
-    /**
-     * Store what must survive this view being destroyed.
-     *
-     * @param m: UI memory.
-     */
-    virtual void save(UiMemory &m) const
+    /** Store in uiMemory what must survive this view being destroyed. */
+    virtual void save() const
     {
-        (void)m;
     }
 
-    /**
-     * Take back what save() stored, right after build() and before onShow().
-     *
-     * @param m: UI memory.
-     */
-    virtual void restore(UiMemory &m)
+    /** Take back what save() stored, right after build() and before onShow(). */
+    virtual void restore()
     {
-        (void)m;
     }
 
     /** Called once the view is built and restored, before it is drawn. */

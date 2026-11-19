@@ -38,7 +38,7 @@ public:
     static void open();
 
     /** Keep the selection while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Speak the picker's title. */
     void announce() override;

@@ -44,10 +44,10 @@ public:
     void build() override;
 
     /** Keep the pinned entry while destroyed. */
-    void save(UiMemory &m) const override;
+    void save() const override;
 
     /** Take back the pinned entry, which the detail view may have moved. */
-    void restore(UiMemory &m) override;
+    void restore() override;
 
     /** Load the rows, with the selection on the pinned entry. */
     void onShow() override;

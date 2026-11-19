@@ -122,15 +122,15 @@ void MessagesView::reload(uint8_t mode)
     screen_.markAllDirty();
 }
 
-void MessagesView::save(UiMemory &m) const
+void MessagesView::save() const
 {
-    m.inboxPinned = pinned_;
+    uiMemory.inboxPinned = pinned_;
 }
 
-void MessagesView::restore(UiMemory &m)
+void MessagesView::restore()
 {
     /* Back from the detail view this is the message it ended on. */
-    pinned_ = m.inboxPinned;
+    pinned_ = uiMemory.inboxPinned;
 }
 
 void MessagesView::onShow()
