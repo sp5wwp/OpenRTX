@@ -7,11 +7,9 @@
 #ifndef GRAPHICS_H
 #define GRAPHICS_H
 
-#include "core/datatypes.h"
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-#include "core/gps.h"
 #include "hwconfig.h"
 
 #ifdef __cplusplus
@@ -155,15 +153,6 @@ void gfx_renderRows(uint8_t startRow, uint8_t endRow);
 void gfx_render();
 
 /**
- * Clears a portion of the screen content
- * This results in a black screen on color displays
- * And a white screen on B/W displays
- * @param startRow: first row of the framebuffer section to be cleared
- * @param endRow: last row of the framebuffer section to be cleared
- */
-void gfx_clearRows(uint8_t startRow, uint8_t endRow);
-
-/**
  * Clears the content of the screen
  * This results in a black screen on color displays
  * And a white screen on B/W displays
@@ -243,22 +232,6 @@ bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
 void gfx_drawLine(point_t start, point_t end, color_t color);
 
 /**
- * Draw a horizontal line with specified vertical position and width.
- * @param y: vertical position, in pixel coordinates.
- * @param height: line height, in pixel coordinates.
- * @param color: line color, in color_t format.
- */
-void gfx_drawHLine(int16_t y, uint16_t height, color_t color);
-
-/**
- * Draw a vertical line with specified horizontal position and width.
- * @param x: horizontal position, in pixel coordinates.
- * @param width: line width, in pixel coordinates.
- * @param color: line color, in color_t format.
- */
-void gfx_drawVLine(int16_t x, uint16_t width, color_t color);
-
-/**
  * Draw a rectangle of specified width, height and color.
  * @param start: screen position of the rectangle, in pixels
  * @param width: rectangle width, in pixels, borders included.
@@ -291,14 +264,6 @@ uint8_t gfx_getFontHeight(fontSize_t size);
  * @return pixels above the baseline.
  */
 uint8_t gfx_getFontAscent(fontSize_t size);
-
-/**
- * Get the descent of a font, from the font's own header.
- *
- * @param size: text font size, defined as enum.
- * @return pixels below the baseline, <= 0.
- */
-int8_t gfx_getFontDescent(fontSize_t size);
 
 /**
  * Get the line height of a font, from the font's own header.
@@ -421,129 +386,6 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
  */
 point_t gfx_print(point_t start, fontSize_t size, textAlign_t alignment,
                   color_t color, const char *fmt, ...);
-
-/**
- * Prints text on the screen, calculating the print position.
- * The print position is calculated to fit the desired number of lines in the vertical space
- * @param cur: current line number over total (1-based)
- * @param tot: number of lines to fit in screen
- * @param startY: starting Y coordinate to leave space at the top, use 0 to leave no space
- * @param endY: ending Y coordinate to leave space at the bottom, use 0 to leave no space
- * @param startX: starting X coordinate to leave space on the screen sides
- * @param size: text font size, defined as enum.
- * @param alignment: text alignment type, defined as enum.
- * @param color: text color, in color_t format.
- * @param fmt: printf style format string
- * @return text width and height as point_t coordinates
- */
-point_t gfx_printLine(uint8_t cur, uint8_t tot, int16_t startY, int16_t endY,
-                      int16_t startX, fontSize_t size, textAlign_t alignment,
-                      color_t color, const char *fmt, ...);
-
-/**
- * Prints an error message surrounded by a red box on the screen.
- * @param text: text to print.
- * @param size: text font size, defined as enum.
- */
-void gfx_printError(const char *text, fontSize_t size);
-
-/**
- * Function to draw battery of arbitrary size.
- * Starting coordinates are relative to the top left point.
- * @param start: battery icon start point, in pixel coordinates.
- * @param width: battery icon width
- * @param height: battery icon height
- * @param percentage: battery charge percentage
- */
-void gfx_drawBattery(point_t start, uint16_t width, uint16_t height,
-                     uint8_t percentage);
-
-/**
- * Function to draw Smeter of arbitrary size.
- * Starting coordinates are relative to the top left point.
- * @param start: Smeter start point, in pixel coordinates.
- * @param width: Smeter width
- * @param height: Smeter height
- * @param rssi: rssi level in dBm
- * @param squelch: squelch level in range {0, 15}
- * @param volume: speaker volume level in range {0, 255}
- * @param drawVolume: whether the volume bar should be drawn
- * @param color: color of the squelch bar
- */
-void gfx_drawSmeter(point_t start, uint16_t width, uint16_t height, rssi_t rssi,
-                    uint8_t squelch, uint8_t volume, bool drawVolume,
-                    color_t color);
-
-/**
- * Function to draw Smeter + level meter of arbitrary size.
- * Version without squelch bar for digital protocols
- * Starting coordinates are relative to the top left point.
- * @param start: Smeter start point, in pixel coordinates.
- * @param width: Smeter width
- * @param height: Smeter height
- * @param rssi: rssi level in dBm
- * @param level: level in range {0, 255}
- * @param volume: speaker volume level in range {0, 255}
- * @param drawVolume: whether the volume bar should be drawn
- */
-void gfx_drawSmeterLevel(point_t start, uint16_t width, uint16_t height,
-                         rssi_t rssi, uint8_t level, uint8_t volume,
-                         bool drawVolume);
-
-/**
- * Function to draw GPS SNR bar graph of arbitrary size.
- * Starting coordinates are relative to the top left point.
- * @param start: Bar graph start point, in pixel coordinates.
- * @param width: Bar graph width
- * @param height: Bar graph height
- * @param sats: pointer to the array of satellites data
- * @param active_sats: bitset representing which sats are part of the fix
- */
-void gfx_drawGPSgraph(point_t start, uint16_t width, uint16_t height,
-                      gpssat_t *sats, uint32_t active_sats);
-
-/**
- * Function to draw a compass of arbitrary size.
- * Starting coordinates are relative to the top left point.
- * @param start: Compass start point, in pixel coordinates.
- * @param width: Compass radius
- * @param deg: degrees marked by the compass needle
- * @param active: whether the needle is to be drawn or not
- */
-void gfx_drawGPScompass(point_t start, uint16_t radius, float deg, bool active);
-
-/**
- * Function to plot a collection of data on the screen.
- * Starting coordinates are relative to the top left point.
- * @param start: Plot start point, in pixel coordinates.
- * @param width: Plot width
- * @param height: Plot height
- * @param data: pointer to data buffer
- * @param len: data length, in elements
- */
-void gfx_plotData(point_t start, uint16_t width, uint16_t height,
-                  const int16_t *data, size_t len);
-
-/**
- * Draw a qr code containing string
- * in the specified rectangle with color and background color.
- * @param color: qr code color, in color_t format.
- * @param background_color: background color, in color_t format.
- * @param data the string to encode in the qr code
- */
-void gfx_drawQrCodeString(color_t color, color_t background_color,
-                          const char *data);
-
-/**
- * Draw a qr code containing string
- * in the specified rectangle with color and background color.
- * @param color: qr code color, in color_t format.
- * @param background_color: background color, in color_t format.
- * @param data the bytes to encode in the qr code
- * @param length the length of the data array
- */
-void gfx_drawQrCodeBytes(color_t color, color_t background_color, uint8_t *data,
-                         uint16_t length);
 
 #ifdef __cplusplus
 }
