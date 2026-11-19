@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include "views/View.hpp"
-#include "views/InfoTable.hpp"
+#include "widgets/InfoTable.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"
 #include "core/state.h"

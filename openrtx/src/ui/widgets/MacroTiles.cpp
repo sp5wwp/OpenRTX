@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/MacroTiles.hpp"
+#include "widgets/MacroTiles.hpp"
 #include "base/UiFormat.hpp"
 #include "base/UiText.hpp"
 #include "core/cps.h"

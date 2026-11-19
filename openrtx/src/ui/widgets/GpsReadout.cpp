@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/GpsReadout.hpp"
+#include "widgets/GpsReadout.hpp"
 #include "base/Layout.hpp"
 #include "base/UiText.hpp"
 

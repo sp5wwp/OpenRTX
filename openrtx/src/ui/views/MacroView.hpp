@@ -15,7 +15,7 @@
 #include "layout/Flex.hpp"
 #include "widgets/BarRow.hpp"
 #include "widgets/TopBar.hpp"
-#include "views/MacroTiles.hpp"
+#include "widgets/MacroTiles.hpp"
 #include "core/state.h"
 
 namespace ortxui

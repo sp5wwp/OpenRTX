@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/InfoTable.hpp"
+#include "widgets/InfoTable.hpp"
 #include "base/Layout.hpp"
 #include "base/UiText.hpp"
 #include "core/memory_profiling.h"

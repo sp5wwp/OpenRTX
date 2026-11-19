@@ -13,7 +13,7 @@
 #include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/Compass.hpp"
-#include "views/GpsReadout.hpp"
+#include "widgets/GpsReadout.hpp"
 #include "core/state.h"
 
 namespace ortxui
