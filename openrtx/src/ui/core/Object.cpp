@@ -15,23 +15,6 @@
 namespace ortxui
 {
 
-/* Bounding-box union of two rectangles. */
-static Rect unionRect(const Rect &a, const Rect &b)
-{
-    if (a.empty())
-        return b;
-    if (b.empty())
-        return a;
-
-    const int16_t x0 = (a.x < b.x) ? a.x : b.x;
-    const int16_t y0 = (a.y < b.y) ? a.y : b.y;
-    const int16_t x1 = (a.right() > b.right()) ? a.right() : b.right();
-    const int16_t y1 = (a.bottom() > b.bottom()) ? a.bottom() : b.bottom();
-
-    return Rect{ x0, y0, static_cast<uint16_t>(x1 - x0 + 1),
-                 static_cast<uint16_t>(y1 - y0 + 1) };
-}
-
 /* ---- Event decoding ---- */
 
 Event Event::decode(uint8_t type, uint32_t payload)
@@ -146,19 +129,17 @@ void Screen::draw(DrawCtx &d)
 
 void Screen::onDescendantInvalidated(const Rect &area)
 {
-    dirty_ = unionRect(dirty_, area);
+    (void)area; /* a repaint redraws the whole screen */
     hasDirty_ = true;
 }
 
 void Screen::markAllDirty()
 {
-    dirty_ = Rect{ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT };
     hasDirty_ = true;
 }
 
 void Screen::clearDirty()
 {
-    dirty_ = Rect{ 0, 0, 0, 0 };
     hasDirty_ = false;
 }
 

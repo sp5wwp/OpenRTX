@@ -159,9 +159,10 @@ protected:
 };
 
 /**
- * The root of a screen's widget tree. Owns focus and the per-frame dirty
- * rectangle, and dispatches events to the focused object with a rotary-knob
- * focus-ring fallback. Concrete screens are expressed as Views that populate a
+ * The root of a screen's widget tree. Owns focus and whether the screen needs
+ * a repaint, and dispatches events to the focused object with a rotary-knob
+ * focus-ring fallback. A repaint redraws the whole screen, so no dirty
+ * rectangle is kept. Concrete screens are expressed as Views that populate a
  * Screen; see views/.
  */
 class Screen : public Object
@@ -182,14 +183,10 @@ public:
         return focused_;
     }
 
-    /* ---- Dirty-rectangle tracking ---- */
+    /* ---- Repaint tracking ---- */
     bool dirty() const
     {
         return hasDirty_;
-    }
-    const Rect &dirtyArea() const
-    {
-        return dirty_;
     }
     void markAllDirty();
     void clearDirty();
@@ -201,8 +198,7 @@ private:
     void setFocus(Object *obj);
 
     Object *focused_ = nullptr;
-    Rect dirty_ = { 0, 0, 0, 0 };
-    bool hasDirty_ = true;
+    bool hasDirty_ = true; ///< The screen needs a repaint
 };
 
 } // namespace ortxui
