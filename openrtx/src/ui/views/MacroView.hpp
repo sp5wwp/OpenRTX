@@ -53,6 +53,22 @@ private:
     void doAction(uint8_t number);
     void stepSquelch(int dir);
 
+    /**
+     * Act on the number keys, and step the squelch with the arrows or the
+     * knob.
+     *
+     * @param e: event.
+     */
+    void onKeypadEvent(const Event &e);
+
+    /**
+     * On radios without number keys, pick a tile with the knob and act on it
+     * with ENTER, and step the squelch with the volume keys.
+     *
+     * @param e: event.
+     */
+    void onKnobEvent(const Event &e);
+
     Screen screen_;
     Flex root_;
     std::array<Flex, 3> rows_; //< grid rows, sizing the tiles in the column
@@ -61,6 +77,7 @@ private:
     BarRow sqlBar_; //< squelch level, using the shared level-bar control
 
     char sqlBuf_[8] = { 0 };
+    uint8_t selected_ = 0; ///< Tile the knob picked, without number keys
 };
 
 } // namespace ortxui

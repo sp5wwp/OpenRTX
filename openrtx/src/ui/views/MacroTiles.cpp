@@ -239,6 +239,12 @@ void MacroTiles::draw(DrawCtx &d)
         composeValue(i, *state_, value, sizeof(value));
         scratch.value.setText(value);
 
+        const bool selected = (i == selected_);
+        if (selected)
+            d.fillRect(tile, Sem::Primary);
+        scratch.key.setColor(selected ? Sem::OnPrimary : Sem::Accent);
+        scratch.value.setColor(selected ? Sem::OnPrimary : Sem::OnSurface);
+
         /* Clip to the tile as its container would. */
         const bool clip = !tile.empty();
         if (clip)

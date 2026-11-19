@@ -98,6 +98,9 @@ void MacroView::build()
         { top.x, top.y, top.w,
           static_cast<uint16_t>(rows_[2].area().bottom() - top.y + 1) });
     screen_.addChild(&tiles_);
+#if defined(CONFIG_UI_NO_KEYBOARD)
+    tiles_.select(selected_);
+#endif
     screen_.markAllDirty();
 }
 
@@ -227,32 +230,59 @@ void MacroView::doAction(uint8_t number)
     }
 }
 
-NavIntent MacroView::onEvent(const Event &e)
+void MacroView::onKeypadEvent(const Event &e)
 {
-    /* The macro overlay never self-navigates — ui_shim opens/closes it from the
-     * MONI key. It just applies quick actions from the number/arrow keys (which
-     * arrive with the MONI bit also set, ignored by digitFromKeys). */
+    /* Number keys arrive with the MONI bit also set, which digitFromKeys()
+     * ignores. */
     if (e.kind == EvKind::Encoder) {
         stepSquelch(e.encoder);
-        return NavIntent::none();
+        return;
     }
 
     /* Held keys keep stepping the squelch, the tone and the brightness; the
      * toggles and cycles act once. */
     const bool repeat = (e.kind == EvKind::KeyRepeat);
-    if ((e.kind == EvKind::Key) || repeat) {
-        const uint32_t k = e.keys;
-        if ((k & (KEY_LEFT | KEY_DOWN)) != 0u)
-            stepSquelch(-1);
-        else if ((k & (KEY_RIGHT | KEY_UP)) != 0u)
-            stepSquelch(+1);
-        else {
-            const int d = digitFromKeys(k);
-            const bool acts = (d >= 1) && (d <= 9);
-            if (acts && (!repeat || isStepAction((uint8_t)d)))
-                doAction((uint8_t)d);
-        }
+    if ((e.kind != EvKind::Key) && !repeat)
+        return;
+
+    const uint32_t k = e.keys;
+    if ((k & (KEY_LEFT | KEY_DOWN)) != 0u) {
+        stepSquelch(-1);
+    } else if ((k & (KEY_RIGHT | KEY_UP)) != 0u) {
+        stepSquelch(+1);
+    } else {
+        const int d = digitFromKeys(k);
+        const bool acts = (d >= 1) && (d <= 9);
+        if (acts && (!repeat || isStepAction((uint8_t)d)))
+            doAction((uint8_t)d);
     }
+}
+
+void MacroView::onKnobEvent(const Event &e)
+{
+    if (e.kind == EvKind::Encoder) {
+        selected_ = static_cast<uint8_t>(
+            (selected_ + MacroTiles::TILES + e.encoder) % MacroTiles::TILES);
+        tiles_.select(selected_);
+        tiles_.invalidate();
+    } else if (e.kind == EvKind::Key) {
+        if ((e.keys & KEY_ENTER) != 0u)
+            doAction(static_cast<uint8_t>(selected_ + 1));
+        else if ((e.keys & KEY_VOLDOWN) != 0u)
+            stepSquelch(-1);
+        else if ((e.keys & KEY_VOLUP) != 0u)
+            stepSquelch(+1);
+    }
+}
+
+NavIntent MacroView::onEvent(const Event &e)
+{
+    /* The menu never navigates: ui_shim opens and closes it. */
+#if defined(CONFIG_UI_NO_KEYBOARD)
+    onKnobEvent(e);
+#else
+    onKeypadEvent(e);
+#endif
     return NavIntent::none();
 }
 

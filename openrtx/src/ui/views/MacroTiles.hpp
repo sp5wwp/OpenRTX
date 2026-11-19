@@ -45,6 +45,16 @@ public:
      */
     bool sync(const state_t &s);
 
+    /**
+     * Highlight a tile, on radios that pick the tile with the knob.
+     *
+     * @param tile: tile index, TILES for none.
+     */
+    void select(uint8_t tile)
+    {
+        selected_ = tile;
+    }
+
     /** Paint the tiles. */
     void draw(DrawCtx &d) override;
 
@@ -79,6 +89,7 @@ private:
 
     const state_t *state_ = nullptr; ///< Snapshot the values come from
     uint32_t digest_ = 0;            ///< Digest of the values shown
+    uint8_t selected_ = TILES;       ///< Highlighted tile, TILES for none
 };
 
 } // namespace ortxui

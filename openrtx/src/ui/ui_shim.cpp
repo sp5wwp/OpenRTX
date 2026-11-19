@@ -411,6 +411,16 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
         return false; /* the release only closes the menu */
     }
 
+#if defined(CONFIG_UI_NO_KEYBOARD)
+    /* Without MONI, a long VOLDOWN press opens the macro menu latched. */
+    if (!macroOpen && msg.long_press && ((msg.keys & KEY_VOLDOWN) != 0u)) {
+        nav.openOverlay(ViewId::Macro);
+        macroOpen = true;
+        macroLatched = true;
+        return false;
+    }
+#endif
+
     return true;
 }
 
