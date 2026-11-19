@@ -167,6 +167,7 @@ typedef struct
     const char* speedShort;
     const char* metres;
     const char* kmPerHour;
+    const char* deleteChar;
 }
 stringsTable_t;
 

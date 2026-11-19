@@ -220,7 +220,11 @@ public:
         return topRow_;
     }
 
-    /** Character under the cursor, for voice prompts. */
+    /**
+     * Get the character under the cursor, for voice prompts.
+     *
+     * @return the character, ASCII DEL on the delete slot.
+     */
     char cursorChar() const
     {
         return (buf_ != nullptr && cursor_ < len_) ? buf_[cursor_] : ' ';

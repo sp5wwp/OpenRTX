@@ -22,6 +22,9 @@
 
 const uint16_t BOOT_MELODY[] = { 400, 3, 600, 3, 800, 3, 0, 0 };
 
+/** ASCII DEL, the delete slot of a text field. */
+static const char ASCII_DEL = 0x7F;
+
 static void clearCurrPromptIfNeeded(const enum vpQueueFlags flags)
 {
     if (flags & vpqInit)
@@ -253,6 +256,12 @@ void vp_announceInputChar(const char ch)
     buf[0] = ch;
 
     vp_flush();
+
+    if (ch == ASCII_DEL) {
+        vp_queueStringTableEntry(&currentLanguage->deleteChar);
+        vp_play();
+        return;
+    }
 
     uint8_t flags = vpAnnounceSpace | vpAnnounceCommonSymbols
                   | vpAnnounceLessCommonSymbols;

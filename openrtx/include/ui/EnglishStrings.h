@@ -185,5 +185,7 @@ const stringsTable_t englishStrings =
     .metres            = N_("m"),
     // i18n: unit symbol of the speed
     .kmPerHour         = N_("km/h"),
+    // i18n: spoken for the delete slot of a text field
+    .deleteChar        = N_("Delete"),
 };
 #endif  // ENGLISHSTRINGS_H

@@ -66,7 +66,9 @@ void vp_announceChannelSummary(const channel_t *channel,
                                const enum vpSummaryInfoFlags infoFlags);
 
 /**
+ * Speak a character being entered; ASCII DEL (0x7F) speaks "Delete".
  *
+ * @param ch: character.
  */
 void vp_announceInputChar(const char ch);
 
