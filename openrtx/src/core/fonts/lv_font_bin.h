@@ -90,10 +90,46 @@ bool lvFont_getGlyph(const lvFont_t *f, uint32_t code, lvGlyph_t *g);
 uint8_t lvGlyph_pixelRaw(const lvFont_t *f, const lvGlyph_t *g, uint16_t x,
                          uint16_t y);
 
-/** Decode a glyph's pixels into `out` as 8-bit coverage (0..255), box_w*box_h
- *  bytes row-major. Handles both raw and RLE-compressed (anti-aliased) fonts.
- *  Returns false on a zero-size glyph. */
-bool lvFont_decodeGlyph(const lvFont_t *f, const lvGlyph_t *g, uint8_t *out);
+/** Widest glyph, in pixels, that lvGlyph_beginRows() decodes. */
+#define LV_GLYPH_MAX_WIDTH 64
+
+/**
+ * State of decoding a glyph's pixels one row at a time, so a caller needs a
+ * row of coverage rather than the whole glyph.
+ */
+struct lvGlyphRows {
+    const uint8_t *in;   //< glyph bitstream
+    uint32_t rdp;        //< bit position of the next pixel value in *in
+    int32_t cnt;         //< RLE repeat counter
+    uint16_t w;          //< glyph width in pixels
+    uint8_t bpp;         //< bits per pixel
+    uint8_t compression; //< 0 = raw, 1 = RLE+prefilter, 2 = RLE
+    uint8_t state;       //< RLE decoder state
+    uint8_t prev;        //< last RLE pixel value
+    bool started;        //< false until the first pixel has been read
+    bool first;          //< no row decoded yet
+    uint8_t line[LV_GLYPH_MAX_WIDTH]; //< last row's values, for the prefilter
+};
+
+/**
+ * Start decoding a glyph's pixels row by row, from raw or RLE-compressed
+ * (anti-aliased) fonts.
+ *
+ * @param f: font the glyph was looked up in.
+ * @param g: glyph.
+ * @param r: decoder state to start.
+ * @return false on a zero-size glyph or one wider than LV_GLYPH_MAX_WIDTH.
+ */
+bool lvGlyph_beginRows(const lvFont_t *f, const lvGlyph_t *g,
+                       struct lvGlyphRows *r);
+
+/**
+ * Decode the next row of a glyph as 8-bit coverage (0..255).
+ *
+ * @param r: decoder state from lvGlyph_beginRows().
+ * @param out: output, box_w bytes.
+ */
+void lvGlyph_nextRow(struct lvGlyphRows *r, uint8_t *out);
 
 #ifdef __cplusplus
 }

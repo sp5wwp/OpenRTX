@@ -543,12 +543,12 @@ TEST_CASE("gfx_setFontSource replaces a font and restores the built-in one",
  * ----------------------------------------------------------------------- */
 
 /**
- * Get the largest glyph box area of a font blob.
+ * Get the widest glyph box of a font blob.
  *
  * @param path: font blob path.
- * @return the area in pixels, or 0 if the blob cannot be read.
+ * @return the width in pixels, or 0 if the blob cannot be read.
  */
-static uint32_t maxGlyphArea(const char *path)
+static uint32_t maxGlyphWidth(const char *path)
 {
     FILE *fp = fopen(path, "rb");
     if (fp == nullptr)
@@ -564,25 +564,23 @@ static uint32_t maxGlyphArea(const char *path)
     if (!lvFont_init(&font, data.data(), (uint32_t)data.size()))
         return 0;
 
-    uint32_t area = 0;
+    uint32_t width = 0;
     for (uint32_t cp = 0; cp < 0x110000; cp++) {
         lvGlyph_t g;
         if (!lvFont_getGlyph(&font, cp, &g))
             continue;
-        const uint32_t a = (uint32_t)g.box_w * g.box_h;
-        if (a > area)
-            area = a;
+        if (g.box_w > width)
+            width = g.box_w;
     }
-    return area;
+    return width;
 }
 
-TEST_CASE("Every built-in glyph fits the coverage buffer", "[gfx][text]")
+TEST_CASE("Every built-in glyph fits the row decoder", "[gfx][text]")
 {
     static const char *const NAMES[] = { "ubuntu", "icons" };
     static const unsigned SIZES[] = { 5, 6, 8, 9, 10, 12, 16 };
     static const unsigned BPPS[] = { 1, 4 };
 
-    uint32_t largest = 0;
     for (const char *name : NAMES) {
         for (unsigned pt : SIZES) {
             for (unsigned bpp : BPPS) {
@@ -590,15 +588,45 @@ TEST_CASE("Every built-in glyph fits the coverage buffer", "[gfx][text]")
                 snprintf(path, sizeof(path), "%s/%s_%u_%u.bin", FONT_DIR, name,
                          pt, bpp);
                 INFO(path);
-                const uint32_t area = maxGlyphArea(path);
-                REQUIRE(area > 0);
-                REQUIRE(area <= FONT_MAX_GLYPH_AREA);
-                if (area > largest)
-                    largest = area;
+                const uint32_t width = maxGlyphWidth(path);
+                REQUIRE(width > 0);
+                REQUIRE(width <= LV_GLYPH_MAX_WIDTH);
             }
         }
     }
+}
 
-    /* The buffer is no larger than it needs to be. */
-    REQUIRE(largest == FONT_MAX_GLYPH_AREA);
+TEST_CASE("Glyph rows decode as the pixels read one by one", "[gfx][text]")
+{
+    /* The 1bpp fonts are raw, so each pixel can be read on its own. */
+    char path[256];
+    snprintf(path, sizeof(path), "%s/ubuntu_8_1.bin", FONT_DIR);
+    FILE *fp = fopen(path, "rb");
+    REQUIRE(fp != nullptr);
+    std::vector<uint8_t> data;
+    uint8_t buf[512];
+    size_t n;
+    while ((n = fread(buf, 1, sizeof(buf), fp)) > 0)
+        data.insert(data.end(), buf, buf + n);
+    fclose(fp);
+
+    lvFont_t font;
+    REQUIRE(lvFont_init(&font, data.data(), (uint32_t)data.size()));
+    REQUIRE(font.compression == 0);
+
+    for (uint32_t cp = 0x20; cp < 0x7F; cp++) {
+        lvGlyph_t g;
+        struct lvGlyphRows rows;
+        if (!lvFont_getGlyph(&font, cp, &g)
+            || !lvGlyph_beginRows(&font, &g, &rows))
+            continue;
+
+        INFO("code point " << cp);
+        for (uint16_t y = 0; y < g.box_h; y++) {
+            uint8_t row[LV_GLYPH_MAX_WIDTH];
+            lvGlyph_nextRow(&rows, row);
+            for (uint16_t x = 0; x < g.box_w; x++)
+                REQUIRE(row[x] == lvGlyph_pixelRaw(&font, &g, x, y));
+        }
+    }
 }

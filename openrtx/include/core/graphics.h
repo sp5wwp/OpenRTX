@@ -196,14 +196,6 @@ typedef enum {
 } fontSet_t;
 
 /**
- * Pixels in the largest glyph box of the built-in fonts (the 16 pt icons). On
- * colour targets glyphs up to this size are decoded to coverage before being
- * blended; a larger one, from a font installed with gfx_setFontSource(), is
- * read pixel by pixel, which only uncompressed fonts support.
- */
-#define FONT_MAX_GLYPH_AREA 1450
-
-/**
  * Use a font from outside the firmware, e.g. a font pack, instead of the
  * built-in one. The data is borrowed and must stay valid while installed.
  *

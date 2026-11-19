@@ -257,17 +257,7 @@ uint8_t lvGlyph_pixelRaw(const lvFont_t *f, const lvGlyph_t *g, uint16_t x,
 
 enum { RLE_SINGLE = 0, RLE_REPEAT, RLE_COUNTER };
 
-typedef struct {
-    const uint8_t *in;
-    uint32_t rdp; //< absolute bit position into *in
-    uint8_t bpp;
-    uint8_t state;
-    uint8_t prev;
-    int32_t cnt;
-    bool started; //< false until the first pixel has been read
-} rle_t;
-
-static uint8_t rle_next(rle_t *r)
+static uint8_t rle_next(struct lvGlyphRows *r)
 {
     uint8_t ret = 0;
 
@@ -317,50 +307,47 @@ static uint8_t rle_next(rle_t *r)
     return ret;
 }
 
-bool lvFont_decodeGlyph(const lvFont_t *f, const lvGlyph_t *g, uint8_t *out)
+bool lvGlyph_beginRows(const lvFont_t *f, const lvGlyph_t *g,
+                       struct lvGlyphRows *r)
 {
     /* Decode with the font the glyph came from (a fallback may differ from f). */
     if (g->src != NULL)
         f = g->src;
-    uint16_t w = g->box_w, h = g->box_h;
-    if (w == 0 || h == 0)
+    if ((g->box_w == 0) || (g->box_h == 0) || (g->box_w > LV_GLYPH_MAX_WIDTH))
         return false;
 
-    if (f->compression == 0) {
-        /* Raw: bpp bits per pixel, row-major. */
-        for (uint32_t i = 0; i < (uint32_t)w * h; i++) {
-            uint32_t v = rd_bits(g->bmp, g->bmp_bit + i * f->bpp, f->bpp);
-            out[i] = opa_scale((uint8_t)v, f->bpp);
-        }
-        return true;
-    }
-
-    /* Compressed: decode line by line, undoing the per-line XOR prefilter. */
-    if (w > 64)
-        return false; /* guard the fixed line buffers */
-    const bool prefilter = (f->compression == 1);
-    rle_t r = { g->bmp, g->bmp_bit, f->bpp, RLE_SINGLE, 0, 0, false };
-    uint8_t line1[64], line2[64];
-
-    for (uint16_t x = 0; x < w; x++)
-        line1[x] = rle_next(&r);
-    for (uint16_t x = 0; x < w; x++)
-        out[x] = opa_scale(line1[x], f->bpp);
-
-    for (uint16_t y = 1; y < h; y++) {
-        if (prefilter) {
-            for (uint16_t x = 0; x < w; x++)
-                line2[x] = rle_next(&r);
-            for (uint16_t x = 0; x < w; x++) {
-                line1[x] ^= line2[x];
-                out[(uint32_t)y * w + x] = opa_scale(line1[x], f->bpp);
-            }
-        } else {
-            for (uint16_t x = 0; x < w; x++)
-                line1[x] = rle_next(&r);
-            for (uint16_t x = 0; x < w; x++)
-                out[(uint32_t)y * w + x] = opa_scale(line1[x], f->bpp);
-        }
-    }
+    r->in = g->bmp;
+    r->rdp = g->bmp_bit;
+    r->cnt = 0;
+    r->w = g->box_w;
+    r->bpp = f->bpp;
+    r->compression = f->compression;
+    r->state = RLE_SINGLE;
+    r->prev = 0;
+    r->started = false;
+    r->first = true;
     return true;
+}
+
+void lvGlyph_nextRow(struct lvGlyphRows *r, uint8_t *out)
+{
+    if (r->compression == 0) {
+        /* Raw: bpp bits per pixel, row-major. */
+        for (uint16_t x = 0; x < r->w; x++) {
+            uint32_t v = rd_bits(r->in, r->rdp, r->bpp);
+            r->rdp += r->bpp;
+            out[x] = opa_scale((uint8_t)v, r->bpp);
+        }
+        return;
+    }
+
+    /* Compressed: every row after the first is XOR-prefiltered against the
+     * previous one when compression == 1. */
+    const bool prefilter = (r->compression == 1) && !r->first;
+    for (uint16_t x = 0; x < r->w; x++) {
+        const uint8_t v = rle_next(r);
+        r->line[x] = prefilter ? (uint8_t)(r->line[x] ^ v) : v;
+        out[x] = opa_scale(r->line[x], r->bpp);
+    }
+    r->first = false;
 }

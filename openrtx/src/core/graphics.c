@@ -840,17 +840,23 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
         }
 
         /* Draw pixels, suppressing those outside the clip window. On colour
-         * displays each glyph is decoded to 8-bit coverage and alpha-blended
-         * (anti-aliasing); on 1bpp displays the coverage is thresholded. */
+         * displays each glyph row is decoded to 8-bit coverage and
+         * alpha-blended (anti-aliasing); a glyph too wide to decode is read
+         * pixel by pixel, which only uncompressed fonts support. On 1bpp
+         * displays the coverage is thresholded. */
 #ifdef CONFIG_PIX_FMT_RGB565
-        static uint8_t cov[FONT_MAX_GLYPH_AREA];
-        bool decoded = ((uint32_t)w * h <= sizeof(cov))
-                    && lvFont_decodeGlyph(f, &glyph, cov);
+        struct lvGlyphRows rows;
+        uint8_t cov[LV_GLYPH_MAX_WIDTH];
+        const bool decoded = lvGlyph_beginRows(f, &glyph, &rows);
 #endif
         for (uint16_t yy = 0; yy < h; yy++) {
+#ifdef CONFIG_PIX_FMT_RGB565
+            if (decoded)
+                lvGlyph_nextRow(&rows, cov);
+#endif
             for (uint16_t xx = 0; xx < w; xx++) {
 #ifdef CONFIG_PIX_FMT_RGB565
-                uint8_t a = decoded ? cov[(uint32_t)yy * w + xx] :
+                uint8_t a = decoded ? cov[xx] :
                                       lvGlyph_pixelRaw(f, &glyph, xx, yy);
                 if (a == 0)
                     continue;
