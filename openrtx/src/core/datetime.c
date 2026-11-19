@@ -149,3 +149,17 @@ void realignTimeInfo(datetime_t *time)
         }
     }
 }
+
+bool isValidTimeInfo(const datetime_t *time)
+{
+    if((time->month < 1) || (time->month > 12) || (time->year > 99))
+        return false;
+
+    int days_in_feb = ((daysInYear(time->year) == 366) ? 29 : 28);
+    if((time->date < 1) || (time->date > _DAYS_IN_MONTH(time->month)))
+        return false;
+
+    return (time->hour   >= 0) && (time->hour   <= 23) &&
+           (time->minute >= 0) && (time->minute <= 59) &&
+           (time->second >= 0) && (time->second <= 59);
+}

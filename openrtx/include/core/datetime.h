@@ -7,6 +7,7 @@
 #ifndef DATETIME_H
 #define DATETIME_H
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -56,6 +57,15 @@ datetime_t localTimeToUtc(const datetime_t local_time, const int8_t timezone);
  * @param time: pointer to a datetime_t struct.
  */
 void realignTimeInfo(datetime_t *time);
+
+/**
+ * Check that the members of datetime_t describe a real date and time; the
+ * day of the week is not checked.
+ *
+ * @param time: pointer to a datetime_t struct.
+ * @return true if every member is in range, the date within its month.
+ */
+bool isValidTimeInfo(const datetime_t *time);
 
 #ifdef __cplusplus
 }
