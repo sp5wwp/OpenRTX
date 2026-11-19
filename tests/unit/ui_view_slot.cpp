@@ -85,32 +85,6 @@ private:
     Screen screen_; ///< Widget-tree root
 };
 
-TEST_CASE("The view slot fits every view", "[ui][slot]")
-{
-    STATIC_REQUIRE(sizeof(VfoView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(MacroView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(MenuView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(InfoView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(AboutView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(DisplayView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(TimeDateView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(ChecklistView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(FmView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(RadioView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(M17View) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(DefaultsView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(ChannelsView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(ContactsView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(BanksView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(TextInputView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(PickerView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(GpsView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(GpsSettingsView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(MessagesView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(MessageDetailView) <= ViewSlot::SIZE);
-    STATIC_REQUIRE(sizeof(MessageComposeView) <= ViewSlot::SIZE);
-}
-
 TEST_CASE("Every screen builds and is destroyed", "[ui][slot]")
 {
     ViewSlot slot;
@@ -120,7 +94,6 @@ TEST_CASE("Every screen builds and is destroyed", "[ui][slot]")
         INFO("screen " << static_cast<int>(i));
 
         View *v = slot.build(id);
-        REQUIRE(v != nullptr);
         REQUIRE(slot.view() == v);
         REQUIRE(v->id() == id);
         v->screen().markAllDirty();

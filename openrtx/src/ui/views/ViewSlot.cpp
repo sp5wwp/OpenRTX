@@ -30,54 +30,77 @@ static View *make(void *mem)
     return new (mem) T();
 }
 
-/** How to construct each screen, indexed by ViewId; nullptr when the target
- * lacks the feature. */
-static View *(*const BUILDERS[])(void *) = {
-    make<VfoView>,      // ViewId::Vfo
-    make<MenuView>,     // ViewId::MainMenu
-    make<MenuView>,     // ViewId::SettingsMenu
-    make<MacroView>,    // ViewId::Macro
-    make<InfoView>,     // ViewId::Info
-    make<AboutView>,    // ViewId::About
-    make<DisplayView>,  // ViewId::Display
+/**
+ * How to construct a screen.
+ */
+struct Builder {
+    ViewId id;             ///< Screen
+    View *(*make)(void *); ///< Constructor, nullptr if the target lacks it
+};
+
+/** How to construct each screen, in ViewId order. */
+static constexpr Builder BUILDERS[] = {
+    { ViewId::Vfo, make<VfoView> },
+    { ViewId::MainMenu, make<MenuView> },
+    { ViewId::SettingsMenu, make<MenuView> },
+    { ViewId::Macro, make<MacroView> },
+    { ViewId::Info, make<InfoView> },
+    { ViewId::About, make<AboutView> },
+    { ViewId::Display, make<DisplayView> },
 #ifdef CONFIG_RTC
-    make<TimeDateView>, // ViewId::TimeDate
+    { ViewId::TimeDate, make<TimeDateView> },
 #else
-    nullptr,
+    { ViewId::TimeDate, nullptr },
 #endif
-    make<ChecklistView>, // ViewId::Accessibility
-    make<FmView>,        // ViewId::Fm
-    make<RadioView>,     // ViewId::Radio
+    { ViewId::Accessibility, make<ChecklistView> },
+    { ViewId::Fm, make<FmView> },
+    { ViewId::Radio, make<RadioView> },
 #ifdef CONFIG_M17
-    make<M17View>,       // ViewId::M17
+    { ViewId::M17, make<M17View> },
 #else
-    nullptr,
+    { ViewId::M17, nullptr },
 #endif
-    make<DefaultsView>,    // ViewId::Defaults
-    make<ChannelsView>,    // ViewId::Channels
-    make<ContactsView>,    // ViewId::Contacts
-    make<BanksView>,       // ViewId::Banks
-    make<TextInputView>,   // ViewId::TextInput
-    make<PickerView>,      // ViewId::Picker
+    { ViewId::Defaults, make<DefaultsView> },
+    { ViewId::Channels, make<ChannelsView> },
+    { ViewId::Contacts, make<ContactsView> },
+    { ViewId::Banks, make<BanksView> },
+    { ViewId::TextInput, make<TextInputView> },
+    { ViewId::Picker, make<PickerView> },
 #ifdef CONFIG_GPS
-    make<GpsView>,         // ViewId::Gps
-    make<GpsSettingsView>, // ViewId::GpsSettings
+    { ViewId::Gps, make<GpsView> },
+    { ViewId::GpsSettings, make<GpsSettingsView> },
 #else
-    nullptr,
-    nullptr,
+    { ViewId::Gps, nullptr },
+    { ViewId::GpsSettings, nullptr },
 #endif
 #ifdef CONFIG_MESSAGES
-    make<MessagesView>,       // ViewId::Messages
-    make<MessageDetailView>,  // ViewId::MessageDetail
-    make<MessageComposeView>, // ViewId::MessageCompose
+    { ViewId::Messages, make<MessagesView> },
+    { ViewId::MessageDetail, make<MessageDetailView> },
+    { ViewId::MessageCompose, make<MessageComposeView> },
 #else
-    nullptr,
-    nullptr,
-    nullptr,
+    { ViewId::Messages, nullptr },
+    { ViewId::MessageDetail, nullptr },
+    { ViewId::MessageCompose, nullptr },
 #endif
 };
 
+/**
+ * Check that each screen's builder sits at its ViewId.
+ *
+ * @return true if every entry is in place.
+ */
+static constexpr bool buildersInOrder()
+{
+    for (uint8_t i = 0; i < ARRAY_SIZE(BUILDERS); i++) {
+        if (static_cast<uint8_t>(BUILDERS[i].id) != i)
+            return false;
+    }
+
+    return true;
+}
+
 static_assert(ARRAY_SIZE(BUILDERS) == VIEW_COUNT, "a screen has no builder");
+static_assert(buildersInOrder(), "a builder is not at its ViewId");
 
 ViewSlot::ViewSlot() : view_(nullptr)
 {
@@ -91,11 +114,10 @@ ViewSlot::~ViewSlot()
 View *ViewSlot::build(ViewId id)
 {
     destroy();
-    view_ = BUILDERS[static_cast<uint8_t>(id)](storage_);
+    view_ = BUILDERS[static_cast<uint8_t>(id)].make(storage_);
     view_->id_ = id;
 
-    /* Lay out with the smooth font metrics, as every view did when they were
-     * all built at start-up, before the crisp text setting was applied. */
+    /* Lay out with the smooth font metrics whatever the text setting. */
     LayoutFonts fonts;
     view_->build();
     return view_;

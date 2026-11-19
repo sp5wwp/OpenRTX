@@ -83,14 +83,8 @@ public:
 #endif
     });
 
-    /** Strictest alignment of the views. */
-    static constexpr size_t ALIGN = std::max({
-        alignof(VfoView),
-        alignof(MacroView),
-        alignof(MenuView),
-        alignof(TextInputView),
-        alignof(View),
-    });
+    /** Alignment of the storage, enough for any view. */
+    static constexpr size_t ALIGN = alignof(std::max_align_t);
 
     /** Constructor. */
     ViewSlot();
