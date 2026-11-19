@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 #include <hwconfig.h>
@@ -16,6 +17,9 @@
 #include "protocols/TETRA/TetraSpeech.h"
 #include "protocols/TETRA/TetraStatus.h"
 #include "rtx/OpMode_TETRA.hpp"
+#ifdef CONFIG_TETRA_AFC
+#include "core/state.h"
+#endif
 
 /* 30 ms per half buffer: room for libtetra's per-slot decoding */
 #define HALF_SAMPLES 1440
@@ -30,8 +34,113 @@ static struct tetraDemod demod;
 static struct tetra_tmo_rx tmo;
 
 /* Diagnostics and remote control (see TetraStatus.h) */
-static uint32_t crcBase;            /* CRC passes of earlier tmo contexts */
-static uint32_t lastCrc;            /* CRC passes the demodulator was told of */
+static uint32_t crcBase; /* CRC passes of earlier tmo contexts */
+static uint32_t lastCrc;
+#ifdef CONFIG_TETRA_AFC
+/*
+ * Automatic frequency correction: every AFC_PERIOD_MS, the mean carrier
+ * offset measured by the demodulator while blocks decode moves the
+ * receiver's fine tuning towards a zero reading. That reading is about
+ * 0.15 of the real offset (the receive path removes most of the carrier's
+ * DC), but it is monotonic and zero where the phase error is lowest; the
+ * loop gain allows for it. The offset found is kept across retunes: it is
+ * mostly the radio's own (crystal, filters).
+ */
+#define AFC_PERIOD_MS 2000
+#define AFC_GAIN 3       /* Hz of correction per Hz of mean reading */
+#define AFC_STEP_MAX 300 /* Hz per period */
+#define AFC_DEADBAND 25  /* Hz of mean reading */
+#define AFC_RANGE 4000   /* Hz, either way: the C62 decodes about 4 kHz off */
+#define AFC_CRC_RECENT_MS 1000
+/*
+ * Readings are trusted below this phase error (% of pi/4): near the edges
+ * of the band where the C62 decodes (above 30%), the offset reading can
+ * have the wrong sign
+ */
+#define AFC_ERROR_MAX 35
+/* Nothing decoded this long: go back to no correction, and start again */
+#define AFC_LOST_MS 8000
+static int32_t afcOffset;
+static float afcSum;
+static uint32_t afcCount;
+static long long afcStart;
+static long long lastCrcTick;
+static int32_t afcApplied;
+
+static bool afcEnabled(void)
+{
+    return state.settings.tetraAfcOff == 0;
+}
+
+/**
+ * Apply an offset to the receiver, if it is not applied already.
+ */
+static void afcApply(int32_t offset)
+{
+    if (offset != afcApplied) {
+        radio_setRxOffset(offset);
+        afcApplied = offset;
+    }
+}
+
+/**
+ * Called after each block of samples.
+ */
+static void afcUpdate(void)
+{
+    if (!afcEnabled()) {
+        afcApply(0);
+        afcSum = 0;
+        afcCount = 0;
+        return;
+    }
+    afcApply(afcOffset); /* Turned on again */
+
+    /* Measure only while blocks decode: never steer on noise */
+    long long now = getTick();
+    if (tetra_tmo_locked(&tmo) && (now - lastCrcTick) < AFC_CRC_RECENT_MS
+        && tetraDemod_phaseError(&demod) < AFC_ERROR_MAX) {
+        afcSum += tetraDemod_carrierOffset(&demod);
+        afcCount++;
+    }
+
+    /*
+     * Lost for long, maybe because the correction is wrong for this signal
+     * (another cell, a jump): from no correction it can be found again
+     */
+    if ((now - lastCrcTick) > AFC_LOST_MS && afcOffset != 0) {
+        afcOffset = 0;
+        afcApply(0);
+        afcSum = 0;
+        afcCount = 0;
+        afcStart = now;
+        return;
+    }
+    if ((now - afcStart) < AFC_PERIOD_MS)
+        return;
+    afcStart = now;
+
+    uint32_t count = afcCount;
+    float mean = (count > 0) ? afcSum / count : 0;
+    afcSum = 0;
+    afcCount = 0;
+    if (count < 10 || fabsf(mean) <= AFC_DEADBAND)
+        return;
+
+    float step = AFC_GAIN * mean;
+    if (step > AFC_STEP_MAX)
+        step = AFC_STEP_MAX;
+    else if (step < -AFC_STEP_MAX)
+        step = -AFC_STEP_MAX;
+    int32_t next = afcOffset + (int32_t)lrintf(step);
+    if (next > AFC_RANGE)
+        next = AFC_RANGE;
+    else if (next < -AFC_RANGE)
+        next = -AFC_RANGE;
+    afcOffset = (next / 10) * 10; /* The BK4819 tunes in 10 Hz steps */
+    afcApply(afcOffset);
+}
+#endif                              /* CRC passes the demodulator was told of */
 static volatile bool resetRequest;
 static volatile bool eqSeed = true; /* Start from CONFIG_TETRA_EQ_INIT */
 
@@ -86,6 +195,14 @@ void OpMode_TETRA::resync(bool overrun)
 
 void OpMode_TETRA::enable()
 {
+#ifdef CONFIG_TETRA_AFC
+    /* Before receiving starts: no retune once it has settled */
+    afcApply(afcEnabled() ? afcOffset : 0);
+    afcSum = 0;
+    afcCount = 0;
+    afcStart = getTick();
+    lastCrcTick = afcStart; /* Not "lost" before trying */
+#endif
     reset();
     tetraSpeech_start();
     startRx = true;
@@ -96,6 +213,9 @@ void OpMode_TETRA::disable()
     startRx = false;
     stopSampling();
     tetraSpeech_stop();
+#ifdef CONFIG_TETRA_AFC
+    afcApply(0); /* The other modes tune where they are told */
+#endif
     radio_disableRtx();
     platform_ledOff(GREEN);
     tetraStatus_reset();
@@ -199,7 +319,13 @@ void OpMode_TETRA::update(rtxStatus_t *const rtx, const bool newCfg)
     if (crc != lastCrc) {
         lastCrc = crc;
         tetraDemod_signalOk(&demod);
+#ifdef CONFIG_TETRA_AFC
+        lastCrcTick = getTick();
+#endif
     }
+#ifdef CONFIG_TETRA_AFC
+    afcUpdate();
+#endif
 
     tetraStatus_setDemod(tetraDemod_phaseError(&demod),
                          tetraDemod_carrierOffset(&demod));
