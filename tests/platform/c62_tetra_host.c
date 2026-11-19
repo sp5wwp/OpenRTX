@@ -89,6 +89,7 @@ static bool setParam(const char *arg)
         { "eqBiasMu", &tetraDemodParams.eqBiasMu },
         { "fitHold", &tetraDemodParams.fitHold },
         { "acqEnergy", &tetraDemodParams.acqEnergy },
+        { "okHold", &tetraDemodParams.okHold },
     };
     const char *eq = strchr(arg, '=');
     if (eq == NULL)
@@ -164,7 +165,7 @@ int main(int argc, char **argv)
 
     static int16_t buf[HALF_SAMPLES];
     static int8_t soft[HALF_SAMPLES * 3 / 4 + 8];
-    uint32_t jumps = 0, samples = 0, inits = 1;
+    uint32_t jumps = 0, samples = 0, inits = 1, lastCrc = 0;
     double errSum = 0;
     unsigned errN = 0, syncBlocks = 0, blocks = 0;
     size_t n;
@@ -188,6 +189,12 @@ int main(int argc, char **argv)
             }
         }
         tetra_tmo_push_soft(&tmo, soft, k);
+        /* As OpMode_TETRA: good blocks keep the demodulator's lock */
+        uint32_t crcNow = crcTotal + tetra_tmo_crc_ok(&tmo);
+        if (crcNow != lastCrc) {
+            lastCrc = crcNow;
+            tetraDemod_signalOk(&demod);
+        }
         samples += n;
         blocks++;
         if (samples > 48000) {
