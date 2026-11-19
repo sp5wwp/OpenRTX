@@ -138,12 +138,14 @@ enum fontRole {
 /* The decoded font of each role, for the slot and size last asked for.
  * Decoding is a header parse, cheap next to drawing the glyphs, so the sizes
  * take turns in one font per role instead of each keeping its own. */
-static struct lvFont g_fonts[FONT_ROLE_NUM];
+static struct lvFont roleFonts[FONT_ROLE_NUM];
 
 /* Slot and size each role holds, as 1 + slot * FONT_SIZE_NUM + size; 0 for
  * none. */
-static uint8_t g_font_key[FONT_ROLE_NUM];
-static bool g_use_mono_font = false;
+static uint8_t roleFontKeys[FONT_ROLE_NUM];
+
+/** Text is drawn with the crisp set, as set by gfx_setFontMono(). */
+static bool useMonoFont = false;
 
 /**
  * Decode a font from its blob.
@@ -191,16 +193,16 @@ static struct lvFont *load_font(enum fontSet set, fontSize_t size)
     const enum fontRole role = (slot == FONT_SLOT_ICONS) ? FONT_ROLE_ICONS :
                                                            FONT_ROLE_TEXT;
     const uint8_t key = (uint8_t)(1 + slot * FONT_SIZE_NUM + size);
-    struct lvFont *font = &g_fonts[role];
+    struct lvFont *font = &roleFonts[role];
 
-    if (g_font_key[role] != key) {
+    if (roleFontKeys[role] != key) {
         const bool installed = (fontSources != NULL)
                             && (fontSources[slot][size].start != NULL);
         if (installed)
             decode_blob(font, &fontSources[slot][size]);
         if (!installed || !font->valid)
             decode_blob(font, &builtinBlobs[slot][size]);
-        g_font_key[role] = key;
+        roleFontKeys[role] = key;
     }
 
     return font;
@@ -222,7 +224,7 @@ static const struct lvFont *get_font(fontSize_t size)
     enum fontSet set = FONT_SET_TEXT;
 #ifdef CONFIG_FONT_AA
     // Mono targets ship only the 1bpp set, so crisp is the text font there
-    if (g_use_mono_font)
+    if (useMonoFont)
         set = FONT_SET_CRISP;
 #endif
     struct lvFont *font = load_font(set, size);
@@ -234,7 +236,7 @@ static const struct lvFont *get_font(fontSize_t size)
 
 void gfx_setFontMono(bool on)
 {
-    g_use_mono_font = on;
+    useMonoFont = on;
 }
 
 bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
@@ -262,7 +264,7 @@ bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
     const enum fontSlot slot = font_slot(set);
     fontSources[slot][size].start = data;
     fontSources[slot][size].end = (data != NULL) ? (data + len) : NULL;
-    memset(g_font_key, 0, sizeof(g_font_key));
+    memset(roleFontKeys, 0, sizeof(roleFontKeys));
 
     return true;
 }
