@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# M17 callsign delete on a keypad without LEFT/RIGHT: DOWN moves the cursor
+# right and '*' deletes the character before it.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# M17 is Settings row idx 4.
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Edit Callsign ("N0CALL", cursor on the leading 'N').
+key ENTER
+wait_stable
+# DOWN twice puts the cursor on 'C'.
+key DOWN DOWN
+wait_stable
+screenshot_sync callsign_del_cursor.bmp
+# '*' deletes the '0' before the cursor: "NCALL".
+key STAR
+wait_stable
+screenshot_sync callsign_deleted.bmp
+# ENTER commits: the M17 settings show the shorter callsign.
+key ENTER
+wait_stable
+screenshot_sync callsign_committed.bmp
+quit

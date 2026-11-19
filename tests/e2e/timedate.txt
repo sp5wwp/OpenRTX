@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen
+# variants: default smallscreen mduv3x0
 
 # Settings > Time & Date: display the clock, then the keypad digit editor.
 # Under faketime the host clock is frozen at 2000-01-01 00:00:00; setting the

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen
+# variants: default smallscreen mduv3x0
 
 # ETSI multi-tap keypad entry in the M17 Meta modal: a digit key types a
 # letter; repeating the same key within the long-press timeout cycles it; a

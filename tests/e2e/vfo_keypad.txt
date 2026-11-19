@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen
+# variants: default smallscreen mduv3x0
 
 # VFO frequency keypad entry. Digits fill the RX frequency most-significant
 # first; the seventh digit auto-advances to the TX set. Pin a strong signal so

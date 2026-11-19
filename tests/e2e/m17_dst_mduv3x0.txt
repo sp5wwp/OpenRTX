@@ -1,0 +1,28 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# M17 destination editor on a keypad without LEFT/RIGHT: digits type by
+# multi-tap and UP moves the cursor back. Boot is VFO mode (FM); MONI+5
+# switches the mode to M17 and # opens the destination editor. Pin a strong
+# signal so the saturated S-meter is deterministic (see vfo_tune).
+rssi 0
+wait_stable 5000 3
+keycombo MONI 5
+wait_stable
+key HASH
+wait_stable
+screenshot_sync m17_dst_open.bmp
+# 2 types 'A', 3 keeps it and types 'D'; UP moves the cursor onto 'A'.
+key 2 3 UP
+wait_stable
+screenshot_sync m17_dst_edit.bmp
+# 4 types 'G' over the 'A' under the cursor.
+key 4
+wait_stable
+screenshot_sync m17_dst_retyped.bmp
+# ENTER commits; the VFO shows the destination "@GD".
+key ENTER
+wait_stable
+screenshot_sync m17_dst_committed.bmp
+quit

@@ -1,0 +1,33 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# Character picker on a keypad without LEFT/RIGHT: the knob moves one cell and
+# UP/DOWN one row.
+wait_stable 5000 3
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+# Open the Meta Txt modal (row 1).
+key DOWN
+wait_stable
+key ENTER
+wait_stable
+# Long-press opens the picker.
+keyhold 1
+sleep 1000
+keyrelease
+wait_stable
+screenshot_sync picker_open.bmp
+# Three cells right with the knob, then one row down.
+key KNOB_RIGHT KNOB_RIGHT KNOB_RIGHT DOWN
+wait_stable
+screenshot_sync picker_sel.bmp
+# ENTER selects and returns to the field with the code point inserted.
+key ENTER
+wait_stable
+screenshot_sync picker_inserted.bmp
+quit
