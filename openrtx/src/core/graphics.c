@@ -467,10 +467,10 @@ inline void gfx_setPixel(point_t pos, color_t color)
         || (pos.y > clip_y1))
         return; // outside the active clip rectangle
 
-#ifdef CONFIG_PIX_FMT_RGB565
     // The clip keeps pos.y inside the rows the buffer holds
-    size_t idx = pos.x + (pos.y - band_y0) * CONFIG_SCREEN_WIDTH;
+    const size_t idx = pos.x + (pos.y - band_y0) * CONFIG_SCREEN_WIDTH;
 
+#ifdef CONFIG_PIX_FMT_RGB565
     // Blend old pixel value and new one
     if (color.alpha < 255) {
         uint8_t alpha = color.alpha;
@@ -487,8 +487,8 @@ inline void gfx_setPixel(point_t pos, color_t color)
 #elif defined CONFIG_PIX_FMT_BW
     // Ignore more than half transparent pixels
     if (color.alpha >= 128) {
-        uint16_t cell = (pos.x + pos.y * CONFIG_SCREEN_WIDTH) / 8;
-        uint16_t elem = (pos.x + pos.y * CONFIG_SCREEN_WIDTH) % 8;
+        const size_t cell = idx / 8;
+        const uint8_t elem = idx % 8;
         framebuffer[cell] &= ~(1 << elem);
         framebuffer[cell] |= (_color2bw(color) << elem);
     }
