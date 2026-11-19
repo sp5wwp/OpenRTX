@@ -132,7 +132,7 @@ void BarRow::draw(DrawCtx &d)
                 static_cast<int16_t>(left + std::lround(frac * trackW));
             d.fillRect({ x, static_cast<int16_t>(barY + barH), 1, 1 },
                        Sem::OnSurfaceMuted);
-            char num[3];
+            char num[4]; /* a uint8_t has up to three digits */
             sniprintf(num, sizeof(num), "%u",
                       static_cast<unsigned>(SCALE_POINTS[i]));
             d.textInBox(

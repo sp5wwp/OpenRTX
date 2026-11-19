@@ -43,7 +43,7 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
-    int16_t heading = 0;       ///< Heading, 0-359 degrees
+    uint16_t heading = 0;      ///< Heading, 0-359 degrees
     bool headingValid = false; ///< The needle shows
 };
 

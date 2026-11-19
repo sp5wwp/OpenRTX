@@ -20,7 +20,7 @@ void Compass::setHeading(int16_t deg, bool valid)
     int16_t d = static_cast<int16_t>(deg % 360);
     if (d < 0)
         d = static_cast<int16_t>(d + 360);
-    heading = d;
+    heading = static_cast<uint16_t>(d);
     headingValid = valid;
 }
 
@@ -61,7 +61,7 @@ void Compass::draw(DrawCtx &d)
     /* The font has no degree glyph: a plain 3-digit bearing. */
     char label[6] = "---";
     if (headingValid)
-        sniprintf(label, sizeof(label), "%03d", heading);
+        sniprintf(label, sizeof(label), "%03u", static_cast<unsigned>(heading));
     const Rect lblBox = { bounds.x, static_cast<int16_t>(bounds.y + dialH),
                           bounds.w, static_cast<uint16_t>(labelH) };
     d.textInBox(lblBox, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
