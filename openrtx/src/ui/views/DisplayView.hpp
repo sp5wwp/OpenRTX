@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_DISPLAYVIEW_HPP
 #define ORTX_UI_DISPLAYVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <array>
 #include <cstdint>
 #include <cstddef>

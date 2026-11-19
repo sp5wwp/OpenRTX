@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_CHARSETS_HPP
 #define ORTX_UI_CHARSETS_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include "base/Keypad.hpp"
 

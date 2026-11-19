@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_SETTINGSLISTVIEW_HPP
 #define ORTX_UI_SETTINGSLISTVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include <cstddef>
 #include "views/UiMemory.hpp"

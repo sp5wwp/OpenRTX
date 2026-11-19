@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_SYMBOLS_HPP
 #define ORTX_UI_SYMBOLS_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 /*
  * UTF-8 strings of the glyphs the UI draws. Pass them to gfx_print() like any
  * other text. Add a glyph to scripts/gen_fonts.sh before naming it here

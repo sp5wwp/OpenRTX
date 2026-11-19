@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_ABOUTVIEW_HPP
 #define ORTX_UI_ABOUTVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include "views/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"

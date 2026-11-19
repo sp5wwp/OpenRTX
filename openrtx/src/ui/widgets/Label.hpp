@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_LABEL_HPP
 #define ORTX_UI_LABEL_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include "base/Object.hpp"
 #include "base/UiText.hpp"
 #include "core/graphics.h"

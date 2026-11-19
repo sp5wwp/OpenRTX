@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_FREQHERO_HPP
 #define ORTX_UI_FREQHERO_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include "base/Object.hpp"
 #include "style/SemanticColor.hpp"
