@@ -153,32 +153,45 @@ target_sources(app
     openrtx/src/ui/core/Event.cpp
     openrtx/src/ui/core/UiText.cpp
     openrtx/src/ui/core/View.cpp
+    openrtx/src/ui/core/SettingsListView.cpp
     openrtx/src/ui/core/Navigator.cpp
     openrtx/src/ui/core/UiMemory.cpp
+    openrtx/src/ui/core/LayoutFonts.cpp
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp
     openrtx/src/ui/widgets/Label.cpp
     openrtx/src/ui/widgets/Panel.cpp
     openrtx/src/ui/widgets/Bar.cpp
+    openrtx/src/ui/widgets/TextRow.cpp
+    openrtx/src/ui/widgets/SettingRow.cpp
     openrtx/src/ui/widgets/List.cpp
+    openrtx/src/ui/widgets/Scratch.cpp
     openrtx/src/ui/widgets/BatteryIcon.cpp
     openrtx/src/ui/widgets/TopBar.cpp
     openrtx/src/ui/widgets/SignalMeter.cpp
     openrtx/src/ui/widgets/BarRow.cpp
     openrtx/src/ui/widgets/FreqHero.cpp
-    openrtx/src/ui/widgets/StatValue.cpp
     openrtx/src/ui/widgets/Compass.cpp
+    openrtx/src/ui/widgets/TextInput.cpp
     openrtx/src/ui/widgets/TextBlock.cpp
     openrtx/src/ui/views/ViewSlot.cpp
     openrtx/src/ui/views/VfoView.cpp
     openrtx/src/ui/views/VolumeOverlayView.cpp
+    openrtx/src/ui/views/TextInputView.cpp
+    openrtx/src/ui/views/PickerView.cpp
+    openrtx/src/ui/views/PickerGrid.cpp
+    openrtx/src/ui/views/MacroView.cpp
+    openrtx/src/ui/views/MacroTiles.cpp
     openrtx/src/ui/views/MenuView.cpp
     openrtx/src/ui/views/InfoView.cpp
+    openrtx/src/ui/views/InfoTable.cpp
     openrtx/src/ui/views/AboutView.cpp
     openrtx/src/ui/views/DisplayView.cpp
+    openrtx/src/ui/views/TimeDateView.cpp
     openrtx/src/ui/views/ChecklistView.cpp
     openrtx/src/ui/views/GpsView.cpp
+    openrtx/src/ui/views/GpsReadout.cpp
     openrtx/src/ui/views/FmView.cpp
     openrtx/src/ui/views/RadioView.cpp
     openrtx/src/ui/views/M17View.cpp
