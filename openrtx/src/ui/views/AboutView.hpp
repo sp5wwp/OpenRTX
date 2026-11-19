@@ -17,11 +17,8 @@ namespace ortxui
 {
 
 /**
- * The About screen: a title bar, the OpenRTX brand + firmware version, and a
- * scrolling (non-selectable) list of contributor credits. A leaf view — the
- * base View handles ESC (pop) and forwards the knob / up-down to the focused
- * credits list (reachable now that the Screen focus ring recurses into the
- * layout tree).
+ * The About screen: the OpenRTX name and firmware version over a list of
+ * contributor credits that the knob or UP/DOWN scroll.
  */
 class AboutView : public View
 {
@@ -32,8 +29,13 @@ public:
     /** Destructor. */
     ~AboutView() = default;
 
+    /** Build the header over the credits. */
     void build() override;
 
+    /** Speak the name and the credits. */
+    void announce() override;
+
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
@@ -46,12 +48,12 @@ public:
     }
 
 private:
-    Screen screen_;
-    Flex root_;
-    Flex header_;
-    Label brand_;
-    Label version_;
-    List authors_;
+    Screen screen_; ///< Widget tree root
+    Flex root_;     ///< Top bar, header and credits
+    Flex header_;   ///< Name over version
+    Label brand_;   ///< "OpenRTX"
+    Label version_; ///< Firmware version
+    List authors_;  ///< Credits
 };
 
 } // namespace ortxui

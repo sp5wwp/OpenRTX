@@ -6,27 +6,29 @@
 
 #include "views/AboutView.hpp"
 #include "core/utils.h"
+#include "core/voicePromptUtils.h"
 #include "hwconfig.h"
 
 namespace ortxui
 {
 
-/* Contributor credits, as list rows the list borrows from flash (mirrors the
- * classic UI). */
+/* Contributor credits, as list rows the list borrows from flash. */
 static constexpr ListItem AUTHORS[] = {
-    { UiText("Niccolo' IU2KIN") }, { UiText("Silvano IU2KWO") },
-    { UiText("Federico IU2NUO") }, { UiText("Fred IU2NRO") },
-    { UiText("Joseph VK7JS") },    { UiText("Morgan ON4MOD") },
-    { UiText("Marco DM4RCO") },
+    { STR(Niccolo), UiText() },
+    { STR(Silvano), UiText() },
+    { STR(Federico), UiText() },
+    { STR(Fred), UiText() },
+    { STR(Joseph), UiText() },
+    { UiText("Morgan ON4MOD"), UiText() },
+    { UiText("Marco DM4RCO"), UiText() },
 };
 
 void AboutView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(about));
@@ -68,6 +70,12 @@ void AboutView::build()
     screen_.focusFirst(); /* recurses into the layout tree to reach the list */
 
     screen_.markAllDirty();
+}
+
+void AboutView::announce()
+{
+    if (state.settings.vpLevel >= vpLow)
+        vp_announceAboutScreen();
 }
 
 } // namespace ortxui
