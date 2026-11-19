@@ -115,13 +115,14 @@ static void status(void)
         tetra_getDiag(&dg);
         tetra_getStatus(&ts);
         tetraSpeech_stats(&frames, &bad, &otherTs);
-        uint32_t played, busy, noStream, noBuffer;
-        tetraSpeech_playStats(&played, &busy, &noStream, &noBuffer);
+        uint32_t played, busy, noStream, noBuffer, bursts, streams;
+        tetraSpeech_playStats(&played, &busy, &noStream, &noBuffer, &bursts,
+                              &streams);
         n += snprintf(
             text + n, sizeof(text) - n,
             " e=%u cfo=%d clk=%d lk=%d sync=%d crc=%lu ral=%lu "
             "rq=%lu sl=%lu rs=%u ov=%u fr=%lu bad=%lu ots=%lu "
-            "cell=%u-%u la=%u seed=%d eq=%d,%d,%d spk=%lu,%lu,%lu,%lu",
+            "cell=%u-%u la=%u seed=%d eq=%d,%d,%d spk=%lu,%lu,%lu,%lu,%lu,%lu",
             dg.phaseErr, dg.carrierHz, dg.clockPpm, dg.locked, ts.sync,
             (unsigned long)dg.crcOk, (unsigned long)dg.realigned,
             (unsigned long)dg.reacquired, (unsigned long)dg.slips, ts.resyncs,
@@ -129,7 +130,8 @@ static void status(void)
             (unsigned long)otherTs, ts.mcc, ts.mnc, ts.la, dg.eqSeed,
             (int)(1000 * dg.eq[3]), (int)(1000 * dg.eq[4]),
             (int)(1000 * dg.eq[5]), (unsigned long)played, (unsigned long)busy,
-            (unsigned long)noStream, (unsigned long)noBuffer);
+            (unsigned long)noStream, (unsigned long)noBuffer,
+            (unsigned long)bursts, (unsigned long)streams);
     }
 #endif
     if (n < 0)

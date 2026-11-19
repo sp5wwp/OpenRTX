@@ -41,6 +41,8 @@ static volatile uint32_t statBad;        /* Of which failed the CRC (BFI) */
 static volatile uint32_t statOtherTs;    /* Slots ignored: other timeslot */
 /* Playback statistics, playback thread only */
 static volatile uint32_t playFrames;   /* Frames played */
+static volatile uint32_t playBursts;   /* Playback bursts begun */
+static volatile uint32_t playStreams;  /* Output streams started and synced */
 static volatile uint32_t playBusy;     /* Speaker path refused */
 static volatile uint32_t playNoStream; /* Output stream did not start */
 static volatile uint32_t playNoBuffer; /* No output buffer: burst cut */
@@ -81,6 +83,7 @@ static bool pop(struct frame *f)
  */
 static void playBurst(void)
 {
+    playBursts++;
     pathId path = audioPath_request(SOURCE_MCU, SINK_SPK, PRIO_RX);
     if (audioPath_getStatus(path) != PATH_OPEN) {
         playBusy++;
@@ -101,6 +104,7 @@ static void playBurst(void)
 
     oa_dec_init(&decoder, &oa_tables_tetra);
     outputStream_sync(stream, false);
+    playStreams++;
 
     unsigned silence = 0;
     while (!stopRequest && silence < SILENCE_FRAMES
@@ -224,8 +228,11 @@ void tetraSpeech_traffic(const struct tetra_traffic *t)
 }
 
 void tetraSpeech_playStats(uint32_t *played, uint32_t *busy, uint32_t *noStream,
-                           uint32_t *noBuffer)
+                           uint32_t *noBuffer, uint32_t *bursts,
+                           uint32_t *streams)
 {
+    *bursts = playBursts;
+    *streams = playStreams;
     *played = playFrames;
     *busy = playBusy;
     *noStream = playNoStream;
@@ -247,9 +254,10 @@ void tetraSpeech_stats(uint32_t *frames, uint32_t *bad, uint32_t *otherTs)
 }
 
 void tetraSpeech_playStats(uint32_t *played, uint32_t *busy, uint32_t *noStream,
-                           uint32_t *noBuffer)
+                           uint32_t *noBuffer, uint32_t *bursts,
+                           uint32_t *streams)
 {
-    *played = *busy = *noStream = *noBuffer = 0;
+    *played = *busy = *noStream = *noBuffer = *bursts = *streams = 0;
 }
 
 void tetraSpeech_start(void)

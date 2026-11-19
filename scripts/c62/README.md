@@ -238,7 +238,8 @@ demodulator re-acquisitions / timing jumps, `rs`/`ov` resyncs / overruns,
 ignored because speech follows another timeslot, `seed`, the centre
 equalizer taps (x1000), and `spk`: speech frames played on the speaker,
 then the times the speaker path was refused, the output stream did not
-start, and a burst ended for lack of an output buffer.
+start, a burst ended for lack of an output buffer, the playback bursts
+begun and the output streams started.
 
 `scripts/c62_remote.py` also works as a Python module (`Remote`) for test
 loops. For offline work, `tests/platform/c62_tetra_host.c` runs the same
