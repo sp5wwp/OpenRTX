@@ -80,7 +80,7 @@ private:
     /**
      * Get the width of the right slot.
      *
-     * @return the width of the icon or of the percentage.
+     * @return the width of the icon or of the widest percentage.
      */
     int16_t rightWidth() const;
 

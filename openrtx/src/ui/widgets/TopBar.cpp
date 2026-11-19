@@ -40,8 +40,10 @@ static constexpr int16_t GAP = 4;
  * centred title or clock centred. */
 static constexpr int16_t LOCK_W = REGULAR ? 28 : 22;
 
-/* Width of the battery percentage and of the battery icon slots. */
-static constexpr int16_t PCT_W = REGULAR ? 28 : 24;
+/* The widest battery percentage, which sizes its slot. */
+static constexpr char FULL_CHARGE[] = "100%";
+
+/* Width of the battery icon slot. */
 static constexpr int16_t ICON_W = REGULAR ? 16 : 12;
 
 /* Text font of the bar. */
@@ -100,7 +102,10 @@ const char *TopBar::middleText(char *clock) const
 
 int16_t TopBar::rightWidth() const
 {
-    return showIcon_ ? ICON_W : PCT_W;
+    if (showIcon_)
+        return ICON_W;
+
+    return static_cast<int16_t>(gfx_getTextWidth(FONT, FULL_CHARGE));
 }
 
 void TopBar::update(const state_t &s)
@@ -186,7 +191,7 @@ void TopBar::draw(DrawCtx &d)
         char pct[8] = "";
         if (charge_ != 0xFF)
             sniprintf(pct, sizeof(pct), "%u%%", charge_);
-        paintText(d, { x, textY, static_cast<uint16_t>(PCT_W), textH_ },
+        paintText(d, { x, textY, static_cast<uint16_t>(rightWidth()), textH_ },
                   TEXT_ALIGN_RIGHT, Sem::OnSurface, pct);
     } else {
         /* The icon is centred across the bar at its own height. */
