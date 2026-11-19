@@ -40,6 +40,9 @@ static constexpr char kPlaceholder = '-';
 /* How long an out-of-band entry error stays on screen before it self-clears. */
 static constexpr long long kInputErrorMs = 1500;
 
+/* Thickness of the meter's bar. */
+static constexpr uint8_t METER_BAR_H = 7;
+
 /* The TX meter is a dB scale up to the highest power the macro menu sets,
  * emptying kPowerSpanDb below it. */
 static constexpr float kPowerSpanDb = 10.0f;
@@ -249,7 +252,10 @@ void VfoView::build()
     /* The meter sits at the bottom under a growing spacer, tall enough for
      * the label and readout over the S-scale numbers. */
     meter_.setBasis(regular ? 19 : 15);
-    meter_.setColor(Sem::RxSuccess);
+    meter_.setBarHeight(METER_BAR_H);
+    meter_.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
+    meter_.setTextColor(Sem::RxSuccess);
+    meter_.setShowScale(true);
     meter_.setLabel("RX");
     spacer_.setGrow(1);
 
@@ -435,7 +441,8 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
 
         if (restyle) {
             meter_.setLabel("TX");
-            meter_.setColor(Sem::TxDanger);
+            meter_.setColors(Sem::SurfaceHigh, Sem::TxDanger);
+            meter_.setTextColor(Sem::TxDanger);
             meter_.setShowScale(false);
             meter_.setMarker(-1.0f); /* squelch is an RX/FM concept */
         }
@@ -448,7 +455,8 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
 
         if (restyle) {
             meter_.setLabel("RX");
-            meter_.setColor(Sem::RxSuccess);
+            meter_.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
+            meter_.setTextColor(Sem::RxSuccess);
             meter_.setShowScale(true);
 
             /* Map the squelch threshold like the fill, so the mark sits

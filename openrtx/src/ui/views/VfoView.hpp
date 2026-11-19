@@ -13,7 +13,7 @@
 #include "widgets/TextRow.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/FreqHero.hpp"
-#include "widgets/SignalMeter.hpp"
+#include "widgets/BarRow.hpp"
 #include "widgets/TextInput.hpp"
 #include "core/state.h"
 
@@ -308,7 +308,7 @@ private:
     Label chanIdx_;      ///< "VFO" or the memory index
     Label chanName_;     ///< Channel name or M17 destination
     TextRow chanDetail_; ///< CAN (M17) or CTCSS tone (FM), right-aligned
-    SignalMeter meter_;  ///< RSSI or TX power
+    BarRow meter_;       ///< RSSI or TX power
     Flex spacer_;        ///< Pushes the meter to the bottom
 
     /* The channel line, change-gated by string compare: it depends on the

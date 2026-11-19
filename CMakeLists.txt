@@ -167,7 +167,6 @@ target_sources(app
     openrtx/src/ui/widgets/Scratch.cpp
     openrtx/src/ui/widgets/BatteryIcon.cpp
     openrtx/src/ui/widgets/TopBar.cpp
-    openrtx/src/ui/widgets/SignalMeter.cpp
     openrtx/src/ui/widgets/BarRow.cpp
     openrtx/src/ui/widgets/FreqHero.cpp
     openrtx/src/ui/widgets/Compass.cpp
