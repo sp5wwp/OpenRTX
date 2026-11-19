@@ -93,6 +93,15 @@ void radio_disableRtx();
 void radio_updateConfiguration();
 
 /**
+ * Set a fine offset of the receive frequency, added to the configured one,
+ * for an automatic frequency correction. Applied at once when receiving.
+ * Implemented only by radios with CONFIG_TETRA_AFC.
+ *
+ * @param hz: offset in Hz.
+ */
+void radio_setRxOffset(int32_t hz);
+
+/**
  * Get the current RSSI level in dBm.
  *
  * @return RSSI level in dBm.

@@ -415,3 +415,10 @@ extern "C" int32_t c62_getRxOffset(void)
 {
     return rxOffset;
 }
+
+#ifdef CONFIG_TETRA_AFC
+void radio_setRxOffset(int32_t hz)
+{
+    c62_setRxOffset(hz);
+}
+#endif
