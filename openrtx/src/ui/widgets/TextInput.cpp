@@ -5,6 +5,8 @@
  */
 
 #include "widgets/TextInput.hpp"
+#include "core/Event.hpp"
+#include "core/Layout.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
 #include "interfaces/keyboard.h"
@@ -29,6 +31,10 @@ static constexpr long long kMultiTapMs = 700;
  * as the ⌫ glyph. */
 static constexpr char kDelete = 0x7F;
 static constexpr char kDeleteGlyph[] = SYMBOL_BACKSPACE;
+
+/** Keys that keep acting while held in a text field. */
+static constexpr uint32_t REPEAT_KEYS = KEY_STAR | KEY_UP | KEY_DOWN | KEY_LEFT
+                                      | KEY_RIGHT;
 
 /**
  * Minimal UTF-8 encoder (BMP) for putCodePoint().
@@ -450,14 +456,18 @@ void TextInput::commitPending()
     tapKeyIdx_ = -1;
 }
 
+TextInput::KeyResult TextInput::commit()
+{
+    commitPending();
+    if (!slotMode_)
+        stripTrailingSpaces();
+    return KeyResult::Committed;
+}
+
 TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
 {
-    if ((keys & KEY_ENTER) != 0u) {
-        commitPending();
-        if (!slotMode_)
-            stripTrailingSpaces();
-        return KeyResult::Committed;
-    }
+    if ((keys & KEY_ENTER) != 0u)
+        return commit();
     if ((keys & KEY_ESC) != 0u)
         return KeyResult::Cancelled;
     if ((keys & KEY_STAR) != 0u) {
@@ -467,16 +477,19 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
     if ((keys & KEY_HASH) != 0u) {
         if (slotMode_)
             return KeyResult::NotHandled; /* '#' is not a slot command */
-        clear();
-        return KeyResult::Editing;
+        if (!kbdSpaceOnHash()) {
+            clear();
+            return KeyResult::Editing;
+        }
     }
-    const uint32_t digits = keys & KBD_NUM_MASK;
-    if (digits != 0u) {
-        const uint8_t d = static_cast<uint8_t>(__builtin_ctz(digits));
+    /* A digit, or '#' where it is the space key, types through multi-tap. */
+    const uint32_t chars = keys & (KBD_NUM_MASK | KEY_HASH);
+    if (chars != 0u) {
+        const uint8_t k = static_cast<uint8_t>(__builtin_ctz(chars));
         if (slotMode_)
-            putDigit(d);
+            putDigit(k);
         else if (tapTable_ != nullptr)
-            tapKey(d, nowTick);
+            tapKey(k, nowTick);
         else
             return KeyResult::NotHandled;
         return KeyResult::Editing;
@@ -488,10 +501,40 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
     if ((keys & (KEY_UP | KEY_DOWN)) != 0u) {
         if (slotMode_)
             return KeyResult::NotHandled; /* host owns UP/DOWN (e.g. field swap) */
-        cycle(((keys & KEY_UP) != 0u) ? +1 : -1);
+        /* Without LEFT/RIGHT, UP/DOWN are what moves the cursor. */
+        const int dir = ((keys & KEY_UP) != 0u) ? +1 : -1;
+        if (kbdHasArrows())
+            cycle(dir);
+        else
+            moveCursor(-dir);
         return KeyResult::Editing;
     }
     return KeyResult::NotHandled;
+}
+
+TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
+{
+    switch (e.kind) {
+        case EvKind::Encoder:
+            /* The knob changes the character where LEFT/RIGHT move the cursor,
+             * and moves the cursor otherwise. */
+            if (kbdHasArrows())
+                cycle(e.encoder);
+            else
+                moveCursor(e.encoder);
+            return KeyResult::Editing;
+
+        case EvKind::KeyRepeat:
+            if ((e.keys & REPEAT_KEYS) == 0u)
+                return KeyResult::NotHandled;
+            return handleKey(e.keys & REPEAT_KEYS, nowTick);
+
+        case EvKind::Key:
+            return handleKey(e.keys, nowTick);
+
+        default:
+            return KeyResult::NotHandled;
+    }
 }
 
 void TextInput::clear()

@@ -128,8 +128,6 @@ private:
     onDstEditEvent(const Event &e); //< key handling while editing dest
     void beginDstEdit();            //< open the destination editor
     void endDstEdit(bool commit);   //< commit/cancel the destination
-    void dstCycle(int dir);         //< cycle the char under the cursor
-    void dstMove(int dir);          //< move the cursor (extends w/ space)
     void
     renderDstEdit(); //< write the bracket-cursor dest into the channel line
     void announceDstChar(); //< speak the char under the cursor

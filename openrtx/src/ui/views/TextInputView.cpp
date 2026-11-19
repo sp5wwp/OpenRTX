@@ -131,100 +131,38 @@ void TextInputView::refreshHint()
 void TextInputView::commit()
 {
     const EditRequest &r = uiMemory.edit;
-    field_.stripTrailingSpaces();
-    if ((r.dst != nullptr) && (r.work != nullptr)) {
-        strncpy(r.dst, r.work, r.cap - 1);
-        r.dst[r.cap - 1] = '\0';
-    }
+    strncpy(r.dst, r.work, r.cap - 1);
+    r.dst[r.cap - 1] = '\0';
     if (r.rtx)
         requestSyncRtx();
 }
 
 NavIntent TextInputView::onEvent(const Event &e)
 {
-    /* The knob moves the cursor where there are no arrows (the only way to
-     * reposition), and cycles the character where arrows already move it. */
-    if (e.kind == EvKind::Encoder) {
-        if (kbdHasArrows()) {
-            field_.cycle(e.encoder);
-        } else {
-            field_.commitPending();
-            field_.moveCursor(e.encoder > 0 ? +1 : -1);
-        }
-        afterEdit();
-        return NavIntent::none();
-    }
-
-    /* A long-press opens the UTF-8 character picker (accented Latin, symbols).
-     * Not an arrow's: an arrow is held to step, as on every other screen. */
-    const uint32_t arrows = KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT;
-    if ((e.kind == EvKind::KeyLong) && ((e.keys & arrows) == 0u)) {
+    /* A long press of a digit opens the character picker, whose choice then
+     * replaces the letter the press typed. */
+    if ((e.kind == EvKind::KeyLong) && ((e.keys & KBD_NUM_MASK) != 0u)) {
         PickerView::open();
         return NavIntent::push(ViewId::Picker);
     }
 
-    if (e.kind != EvKind::Key)
-        return NavIntent::none();
+    switch (field_.handleEvent(e, getTick())) {
+        case TextInput::KeyResult::Committed:
+            commit();
+            uiMemory.closeEdit();
+            return NavIntent::pop();
 
-    const uint32_t k = e.keys;
-    if ((k & KEY_ENTER) != 0u) {
-        field_.commitPending();
-        commit();
-        uiMemory.closeEdit();
-        return NavIntent::pop();
-    }
-    if ((k & KEY_ESC) != 0u) {
-        uiMemory.closeEdit();
-        return NavIntent::pop();
-    }
+        case TextInput::KeyResult::Cancelled:
+            uiMemory.closeEdit();
+            return NavIntent::pop();
 
-    /* '#' clears the field, but only where it isn't the space key (otherwise it
-     * stays space and falls through to multi-tap below). Checked before the
-     * multi-tap block, which would otherwise consume '#'. */
-    if (!kbdSpaceOnHash() && ((k & KEY_HASH) != 0u)) {
-        field_.commitPending();
-        field_.clear();
-        afterEdit();
-        return NavIntent::none();
-    }
+        case TextInput::KeyResult::Editing:
+            afterEdit();
+            break;
 
-    /* Numeric-keypad multi-tap (additive — digit keys only exist on keypad
-     * radios). '*' is backspace; the rest type via the ETSI table. */
-    if ((k & KBD_CHAR_MASK) != 0u) {
-        const uint8_t ki =
-            static_cast<uint8_t>(__builtin_ctz(k & KBD_CHAR_MASK));
-        if (ki == 10u) /* KEY_STAR */
-            field_.backspace();
-        else
-            field_.tapKey(ki, getTick());
-        afterEdit();
-        return NavIntent::none();
+        default:
+            break;
     }
-
-    /* Arrows (or their absence): move vs cursor-cycle the character. */
-    if (kbdHasArrows()) {
-        if ((k & KEY_LEFT) != 0u)
-            field_.moveCursor(-1);
-        else if ((k & KEY_RIGHT) != 0u)
-            field_.moveCursor(+1);
-        else if ((k & KEY_UP) != 0u)
-            field_.cycle(+1);
-        else if ((k & KEY_DOWN) != 0u)
-            field_.cycle(-1);
-        else
-            return NavIntent::none();
-    } else {
-        if ((k & KEY_UP) != 0u) {
-            field_.commitPending();
-            field_.moveCursor(-1);
-        } else if ((k & KEY_DOWN) != 0u) {
-            field_.commitPending();
-            field_.moveCursor(+1);
-        } else {
-            return NavIntent::none();
-        }
-    }
-    afterEdit();
     return NavIntent::none();
 }
 

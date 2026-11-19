@@ -9,8 +9,14 @@
 #include <cstdint>
 #include <cstring>
 
+#include "core/Event.hpp"
+#include "core/Navigator.hpp"
+#include "core/UiMemory.hpp"
 #include "core/input.h"
+#include "core/state.h"
+#include "interfaces/keyboard.h"
 #include "style/Charsets.hpp"
+#include "views/ViewSlot.hpp"
 #include "widgets/TextInput.hpp"
 
 using namespace ortxui;
@@ -34,6 +40,32 @@ static void bindCallsign(TextInput &t, char *buf, uint16_t cap)
                 FONT_SIZE_8PT);
     t.setMultiTap(MTAP_CALLSIGN);
     t.begin();
+}
+
+/**
+ * Make an event.
+ *
+ * @param kind: event kind.
+ * @param keys: keyboard bitmask.
+ * @return the event.
+ */
+static Event event(EvKind kind, uint32_t keys)
+{
+    Event e;
+    e.kind = kind;
+    e.keys = keys;
+    return e;
+}
+
+/**
+ * Make a key press event.
+ *
+ * @param keys: keyboard bitmask.
+ * @return the event.
+ */
+static Event press(uint32_t keys)
+{
+    return event(EvKind::Key, keys);
 }
 
 TEST_CASE("Typing after clearing the field starts from empty",
@@ -83,4 +115,109 @@ TEST_CASE("Moving the cursor ends a multi-tap", "[ui][textinput]")
     t.moveCursor(-1);
     t.tapKey(KEY_IDX_2, 2);
     REQUIRE(strcmp(buf, "AA") == 0);
+}
+
+TEST_CASE("A text field follows the editor key contract", "[ui][textinput]")
+{
+    char buf[10] = "AB1CD";
+    TextInput t;
+    bindCallsign(t, buf, sizeof(buf));
+    t.resume(4, 0); /* on the 'D' */
+
+    SECTION("a held star keeps deleting")
+    {
+        REQUIRE(t.handleEvent(press(KEY_STAR), 0)
+                == TextInput::KeyResult::Editing);
+        REQUIRE(t.handleEvent(event(EvKind::KeyRepeat, KEY_STAR), 0)
+                == TextInput::KeyResult::Editing);
+        REQUIRE(strcmp(buf, "ABD") == 0);
+    }
+
+    SECTION("a held digit types once")
+    {
+        t.handleEvent(press(KEY_2), 0);
+        REQUIRE(t.handleEvent(event(EvKind::KeyRepeat, KEY_2), 0)
+                == TextInput::KeyResult::NotHandled);
+        REQUIRE(strcmp(buf, "AB1CA") == 0);
+    }
+
+    SECTION("hash clears the field")
+    {
+        t.handleEvent(press(KEY_HASH), 0);
+        t.handleEvent(press(KEY_3), 0);
+        REQUIRE(strcmp(buf, "D") == 0);
+    }
+
+    SECTION("a long star or hash does nothing more")
+    {
+        REQUIRE(t.handleEvent(event(EvKind::KeyLong, KEY_STAR), 0)
+                == TextInput::KeyResult::NotHandled);
+        REQUIRE(t.handleEvent(event(EvKind::KeyLong, KEY_HASH), 0)
+                == TextInput::KeyResult::NotHandled);
+        REQUIRE(strcmp(buf, "AB1CD") == 0);
+    }
+
+    SECTION("enter commits without the trailing blank")
+    {
+        t.handleEvent(press(KEY_RIGHT), 0);
+        REQUIRE(t.handleEvent(press(KEY_ENTER), 0)
+                == TextInput::KeyResult::Committed);
+        REQUIRE(strcmp(buf, "AB1CD") == 0);
+    }
+
+    SECTION("escape cancels")
+    {
+        REQUIRE(t.handleEvent(press(KEY_ESC), 0)
+                == TextInput::KeyResult::Cancelled);
+    }
+}
+
+TEST_CASE("Escape restores the callsign being edited", "[ui][textinput]")
+{
+    ViewSlot slot;
+    Navigator nav(slot, uiMemory);
+    uiMemory.lists.fill({ 0, 0 });
+    strcpy(state.settings.callsign, "N0CALL");
+
+    nav.setRoot(ViewId::Vfo);
+    nav.openOverlay(ViewId::M17);
+    nav.dispatch(press(KEY_ENTER)); /* edit the callsign */
+    nav.dispatch(press(KEY_2));
+    nav.dispatch(press(KEY_ESC));
+    REQUIRE(strcmp(state.settings.callsign, "N0CALL") == 0);
+
+    nav.dispatch(press(KEY_ENTER));
+    nav.dispatch(press(KEY_2));
+    nav.dispatch(press(KEY_ENTER));
+    REQUIRE(strcmp(state.settings.callsign, "A0CALL") == 0);
+}
+
+TEST_CASE("Only a long digit opens the character picker", "[ui][textinput]")
+{
+    ViewSlot slot;
+    Navigator nav(slot, uiMemory);
+    uiMemory.lists.fill({ 0, 0 });
+    strcpy(state.settings.M17_meta_text, "ABC");
+
+    nav.setRoot(ViewId::Vfo);
+    nav.openOverlay(ViewId::M17);
+    nav.dispatch(press(KEY_DOWN)); /* Meta Txt */
+    nav.dispatch(press(KEY_ENTER));
+    REQUIRE(nav.active()->id() == ViewId::TextInput);
+
+    nav.dispatch(press(KEY_STAR));
+    nav.dispatch(event(EvKind::KeyLong, KEY_STAR));
+    nav.dispatch(press(KEY_HASH));
+    nav.dispatch(event(EvKind::KeyLong, KEY_HASH));
+    REQUIRE(nav.active()->id() == ViewId::TextInput);
+
+    nav.dispatch(press(KEY_2));
+    nav.dispatch(event(EvKind::KeyLong, KEY_2));
+    REQUIRE(nav.active()->id() == ViewId::Picker);
+
+    /* Leaving the picker and then the editor drops the edit. */
+    nav.dispatch(press(KEY_ESC));
+    nav.dispatch(press(KEY_ESC));
+    REQUIRE(nav.active()->id() == ViewId::M17);
+    REQUIRE(strcmp(state.settings.M17_meta_text, "ABC") == 0);
 }

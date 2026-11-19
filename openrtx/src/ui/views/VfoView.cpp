@@ -1064,25 +1064,9 @@ void VfoView::beginDstEdit()
     announceDstChar();
 }
 
-void VfoView::dstCycle(int dir)
-{
-    entry_->input.cycle(dir);
-    renderDstEdit();
-    announceDstChar();
-}
-
-void VfoView::dstMove(int dir)
-{
-    entry_->input.moveCursor(dir);
-    renderDstEdit();
-    announceDstChar();
-}
-
 void VfoView::endDstEdit(bool commit)
 {
     if (commit) {
-        /* Strip trailing spaces, then store the destination. */
-        entry_->input.stripTrailingSpaces();
         strncpy(state.settings.m17_dest, entry_->dst,
                 sizeof(state.settings.m17_dest) - 1);
         state.settings.m17_dest[sizeof(state.settings.m17_dest) - 1] = '\0';
@@ -1098,42 +1082,23 @@ void VfoView::endDstEdit(bool commit)
 
 NavIntent VfoView::onDstEditEvent(const Event &e)
 {
-    if (e.kind == EvKind::Encoder) {
-        /* Knob moves the cursor on arrow-less radios, cycles elsewhere. */
-        if (kbdHasArrows())
-            dstCycle(e.encoder);
-        else
-            dstMove(e.encoder > 0 ? +1 : -1);
-    } else if (e.kind == EvKind::Key) {
-        const uint32_t k = e.keys;
-        if ((k & KEY_ENTER) != 0u)
+    /* An empty destination is stored as is, and shown as @ALL. */
+    switch (entry_->input.handleEvent(e, getTick())) {
+        case TextInput::KeyResult::Committed:
             endDstEdit(true);
-        else if ((k & KEY_ESC) != 0u)
+            break;
+
+        case TextInput::KeyResult::Cancelled:
             endDstEdit(false);
-        else if (!kbdSpaceOnHash() && ((k & KEY_HASH) != 0u)) {
-            /* # clears the field (unified across the text editors); ENTER then
-             * commits an empty destination as @ALL. */
-            entry_->input.clear();
+            break;
+
+        case TextInput::KeyResult::Editing:
             renderDstEdit();
             announceDstChar();
-        } else if ((k & KBD_CHAR_MASK) != 0u) {
-            /* Numeric-keypad multi-tap (# handled above); '*' backspaces. */
-            const uint8_t ki =
-                static_cast<uint8_t>(__builtin_ctz(k & KBD_CHAR_MASK));
-            if (ki == 10u)
-                entry_->input.backspace();
-            else
-                entry_->input.tapKey(ki, getTick());
-            renderDstEdit();
-            announceDstChar();
-        } else if ((k & KEY_UP) != 0u)
-            dstCycle(+1);
-        else if ((k & KEY_DOWN) != 0u)
-            dstCycle(-1);
-        else if ((k & KEY_LEFT) != 0u)
-            dstMove(-1);
-        else if ((k & KEY_RIGHT) != 0u)
-            dstMove(+1);
+            break;
+
+        default:
+            break;
     }
     return NavIntent::none();
 }

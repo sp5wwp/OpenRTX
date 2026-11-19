@@ -8,8 +8,6 @@
 #include "views/TextInputView.hpp"
 #include "core/Event.hpp"
 #include "core/UiMemory.hpp"
-#include "core/Layout.hpp"
-#include "interfaces/keyboard.h"
 #include "interfaces/delays.h"
 #include "core/state.h"
 #include "core/voicePrompts.h"
@@ -156,25 +154,8 @@ void M17View::announceCursorChar()
         vp_announceInputChar(callsign_.cursorChar());
 }
 
-void M17View::callsignCycle(int dir)
-{
-    callsign_.cycle(dir);
-    refreshCustom(RowCallsign);
-    announceCursorChar();
-}
-
-void M17View::callsignMove(int dir)
-{
-    callsign_.moveCursor(dir);
-    refreshCustom(RowCallsign);
-    announceCursorChar();
-}
-
 void M17View::callsignConfirm()
 {
-    /* Strip trailing spaces, then commit. */
-    callsign_.stripTrailingSpaces();
-
     strncpy(state.settings.callsign, callBuf_,
             sizeof(state.settings.callsign) - 1);
     state.settings.callsign[sizeof(state.settings.callsign) - 1] = '\0';
@@ -224,42 +205,22 @@ bool M17View::onEditEvent(const Event &e)
     if (editRow_ != RowCallsign)
         return false;
 
-    if (e.kind == EvKind::Encoder) {
-        /* Knob moves the cursor on arrow-less radios, cycles elsewhere. */
-        if (kbdHasArrows())
-            callsignCycle(e.encoder);
-        else
-            callsignMove(e.encoder > 0 ? +1 : -1);
-    } else if (e.kind == EvKind::Key) {
-        const uint32_t k = e.keys;
-        if ((k & KEY_ENTER) != 0u) {
+    switch (callsign_.handleEvent(e, getTick())) {
+        case TextInput::KeyResult::Committed:
             callsignConfirm();
-        } else if ((k & KEY_ESC) != 0u) {
+            break;
+
+        case TextInput::KeyResult::Cancelled:
             endEdit();
-        } else if (!kbdSpaceOnHash() && ((k & KEY_HASH) != 0u)) {
-            /* # clears the field (unified across the text editors). */
-            callsign_.clear();
+            break;
+
+        case TextInput::KeyResult::Editing:
             refreshCustom(RowCallsign);
             announceCursorChar();
-        } else if ((k & KBD_CHAR_MASK) != 0u) {
-            /* Numeric-keypad multi-tap; '*' backspaces. */
-            const uint8_t ki =
-                static_cast<uint8_t>(__builtin_ctz(k & KBD_CHAR_MASK));
-            if (ki == 10u)
-                callsign_.backspace();
-            else
-                callsign_.tapKey(ki, getTick());
-            refreshCustom(RowCallsign);
-            announceCursorChar();
-        } else if ((k & KEY_UP) != 0u) {
-            callsignCycle(+1);
-        } else if ((k & KEY_DOWN) != 0u) {
-            callsignCycle(-1);
-        } else if ((k & KEY_LEFT) != 0u) {
-            callsignMove(-1);
-        } else if ((k & KEY_RIGHT) != 0u) {
-            callsignMove(+1);
-        }
+            break;
+
+        default:
+            break;
     }
     return true;
 }

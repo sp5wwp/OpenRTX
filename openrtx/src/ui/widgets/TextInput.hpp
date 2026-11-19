@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
+#include "core/Event.hpp"
 #include "core/Object.hpp"
 #include "core/graphics.h"
 #include "style/Charsets.hpp"
@@ -137,21 +138,37 @@ public:
     }
     void clearSlots(); //< reset every slot to the placeholder, cursor to slot 0
 
-    /**
-     * Centralized key contract so every editor behaves identically: '*' =
-     * backspace, '#' = clear the field (text mode only), ENTER = commit,
-     * ESC = cancel, digits = type (multi-tap in text mode, slot fill in
-     * slot mode), LEFT/RIGHT = move cursor, UP/DOWN = cycle the char (text mode).
-     * Keys the widget does not own (UP/DOWN in slot mode, e.g. an RX/TX field
-     * switch) return NotHandled so the host view can act on them.
-     */
+    /** What an event did to the field. */
     enum class KeyResult : uint8_t {
-        NotHandled,
-        Editing,
-        Committed,
-        Cancelled
+        NotHandled, ///< The host may act on the event
+        Editing,    ///< The field changed or its cursor moved
+        Committed,  ///< ENTER: the host stores the text
+        Cancelled,  ///< ESC: the host restores the original
     };
+
+    /**
+     * Apply a key press. ENTER commits, ESC cancels, '*' deletes back, '#'
+     * clears the field (in text mode, where it is not the space key) and digits
+     * type through multi-tap or fill the next slot. LEFT/RIGHT move the cursor;
+     * in text mode UP/DOWN change the character, or move the cursor on a keypad
+     * without LEFT/RIGHT. UP/DOWN in slot mode are left to the host.
+     *
+     * @param keys: keyboard bitmask.
+     * @param nowTick: current tick, for multi-tap.
+     * @return what the key did.
+     */
     KeyResult handleKey(uint32_t keys, long long nowTick);
+
+    /**
+     * Apply an event to a text field: a press as handleKey(), held arrows and
+     * '*' as repeated presses, and the knob as a character change or a cursor
+     * move.
+     *
+     * @param e: event.
+     * @param nowTick: current tick, for multi-tap.
+     * @return what the event did.
+     */
+    KeyResult handleEvent(const Event &e, long long nowTick);
 
     /* ---- Accessors ---- */
     uint16_t cursor() const
@@ -189,6 +206,9 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
+    /** Finish the edit: end multi-tap and drop trailing blanks. */
+    KeyResult commit();
+
     void ensureCursorVisibleV(uint16_t cursorRow, uint16_t rows,
                               uint16_t visRows);
     /* Compose the bracketed buffer restricted to cells [lo, hi) into `out`,

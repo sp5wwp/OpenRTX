@@ -63,10 +63,11 @@ private:
     /** Reopen the callsign edit kept by saveCustom(). */
     void restoreCustom(const ListEdit &e) override;
 
-    void callsignCycle(int dir); //< cycle the char under the cursor
-    void callsignMove(int dir);  //< move the cursor (extend at the end)
-    void callsignConfirm();      //< strip + write to settings.callsign
-    void announceCursorChar();   //< speak the char under the cursor (voice)
+    /** Store the edited callsign and leave the edit. */
+    void callsignConfirm();
+
+    /** Speak the character under the cursor. */
+    void announceCursorChar();
 
     enum Row : uint8_t {
         RowCallsign,
