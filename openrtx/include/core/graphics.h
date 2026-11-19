@@ -285,13 +285,27 @@ void gfx_drawCircle(point_t start, uint16_t r, color_t color);
 uint8_t gfx_getFontHeight(fontSize_t size);
 
 /**
- * Font vertical metrics, in pixels, from the font's own header.
+ * Get the ascent of a font, from the font's own header.
+ *
  * @param size: text font size, defined as enum.
- * @return ascent (above baseline), descent (below baseline, <= 0) or the full
- *         line height (ascent - descent).
+ * @return pixels above the baseline.
  */
 uint8_t gfx_getFontAscent(fontSize_t size);
+
+/**
+ * Get the descent of a font, from the font's own header.
+ *
+ * @param size: text font size, defined as enum.
+ * @return pixels below the baseline, <= 0.
+ */
 int8_t gfx_getFontDescent(fontSize_t size);
+
+/**
+ * Get the line height of a font, from the font's own header.
+ *
+ * @param size: text font size, defined as enum.
+ * @return ascent minus descent, in pixels.
+ */
 uint8_t gfx_getFontLineHeight(fontSize_t size);
 
 /**
