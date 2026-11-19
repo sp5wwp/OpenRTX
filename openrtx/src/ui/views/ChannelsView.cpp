@@ -107,6 +107,9 @@ NavIntent ChannelsView::onEvent(const Event &e)
                 state.channel = ch;
                 state.channel_index = sel;
                 state.tuner_mode = CH; /* memory mode: VFO shows name + index */
+                /* The index is global, so stepping must not map it through
+                 * a bank. */
+                state.bank_enabled = false;
                 requestSyncRtx();
                 return NavIntent::popToRoot();
             }

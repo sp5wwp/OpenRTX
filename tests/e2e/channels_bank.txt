@@ -1,0 +1,30 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+# codeplug: channels.rtxc
+
+# Picking from the channel list leaves an enabled bank, so stepping goes
+# through every channel again. Pin a strong signal so the S-meter saturates
+# identically across the rtx reconfigures (see vfo_tune).
+rssi 0
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Banks (main-menu row idx 0), then "M17 Nets" (idx 2) enables that bank.
+key ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+# Channels (main-menu row idx 1), then "2m Calling" (idx 0).
+key ENTER
+wait_stable
+key DOWN ENTER
+wait_stable
+key ENTER
+wait_stable
+# UP steps to the next channel of the codeplug, 70cm Rptr (446.000, 002).
+key UP
+wait_stable
+screenshot_sync channels_bank_next.bmp
+quit
