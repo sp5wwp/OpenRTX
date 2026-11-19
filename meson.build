@@ -1408,6 +1408,9 @@ ui_key_repeat_test = executable('ui_key_repeat_test',
 ui_list_test = executable('ui_list_test',
                           sources : unit_test_src + ['tests/unit/ui_list.cpp'],
                           kwargs  : unit_test_opts)
+ui_text_input_test = executable('ui_text_input_test',
+                                sources : unit_test_src + ['tests/unit/ui_text_input.cpp'],
+                                kwargs  : unit_test_opts)
 
 m17_packet_test = executable('m17_packet_test',
                               sources : unit_test_src + ['tests/unit/M17_packet.cpp'],
@@ -1541,6 +1544,7 @@ test('UI Strings Test', ui_strings_test)
 test('UI View Slot Test', ui_view_slot_test)
 test('UI Key Repeat Test', ui_key_repeat_test)
 test('UI List Test', ui_list_test)
+test('UI Text Input Test', ui_text_input_test)
 test('M17 Packet Frame Test', m17_packet_test)
 test('C62 Calibration Test', c62_calib_test)
 test('DSP Oversampling Test', dsp_oversampling_test)

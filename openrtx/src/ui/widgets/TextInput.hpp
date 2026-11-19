@@ -102,7 +102,7 @@ public:
     void moveCursor(int dir);       //< move the cursor by one cell
     void putCodePoint(uint32_t cp); //< picker seam: overwrite the cell
     void backspace();               //< delete the cell before the cursor
-    void clear();                   //< empty the buffer
+    void clear();                   //< empty the field to one editable blank
     void stripTrailingSpaces();
 
     /** ETSI multi-tap: press of keypad key `keyIndex` (0-9, *=10, #=11) at tick
@@ -197,6 +197,9 @@ private:
     void composeWindow(char *out, size_t sz, uint16_t lo, uint16_t hi) const;
     void deleteAt(uint16_t pos); //< remove the whole cell at `pos`
     void resolvePendingDelete(); //< apply a cycled-to ⌫ delete at the cursor
+
+    /** Put an editable blank in an empty field, so a cell is under the cursor. */
+    void seedBlank();
 
     /* Slot mode: map a slot ordinal to its buffer position (the ord-th '9' in
      * the mask), or -1; keep the render cursor (cursor_) on the active slot. */

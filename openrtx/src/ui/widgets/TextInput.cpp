@@ -217,15 +217,21 @@ void TextInput::begin()
         return;
     len_ = static_cast<uint16_t>(strnlen(buf_, cap_ - 1));
     buf_[len_] = '\0';
-    if (len_ == 0) { /* always keep one editable blank under the cursor */
-        buf_[0] = ' ';
-        buf_[1] = '\0';
-        len_ = 1;
-    }
     cursor_ = 0;
+    seedBlank();
     topRow_ = 0;
     tapActive_ = false;
     tapKeyIdx_ = -1;
+}
+
+void TextInput::seedBlank()
+{
+    if ((len_ == 0) && (cap_ >= 2)) {
+        buf_[0] = ' ';
+        buf_[1] = '\0';
+        len_ = 1;
+        cursor_ = 0;
+    }
 }
 
 void TextInput::resume(uint16_t cursor, uint16_t topRow)
@@ -286,15 +292,6 @@ void TextInput::cycle(int dir)
 {
     if ((buf_ == nullptr) || (cs_ == nullptr))
         return;
-    /* Cycling on an empty field starts a fresh editable blank. */
-    if (len_ == 0) {
-        if (cap_ < 2)
-            return;
-        buf_[0] = ' ';
-        buf_[1] = '\0';
-        len_ = 1;
-        cursor_ = 0;
-    }
     if (cursor_ >= len_)
         return;
 
@@ -330,8 +327,7 @@ void TextInput::deleteAt(uint16_t pos)
     /* Keep the cursor on a cell. */
     if ((cursor_ >= len_) && (len_ > 0))
         cursor_ = prevCell(len_);
-    if (len_ == 0)
-        cursor_ = 0;
+    seedBlank();
     tapActive_ = false;
 }
 
@@ -345,6 +341,7 @@ void TextInput::moveCursor(int dir)
 {
     if (buf_ == nullptr)
         return;
+    commitPending();
     if (slotMode_) {
         /* Move over editable slots only; separators are skipped by slotToPos. */
         if ((dir < 0) && (slotCursor_ > 0))
@@ -383,14 +380,6 @@ void TextInput::putCodePoint(uint32_t cp)
      * character would. */
     if (buf_ == nullptr)
         return;
-    if (len_ == 0) {
-        if (cap_ < 2)
-            return;
-        buf_[0] = ' ';
-        buf_[1] = '\0';
-        len_ = 1;
-        cursor_ = 0;
-    }
     char enc[4];
     const int n = utf8Encode(cp, enc);
     spliceCell(cursor_, enc, n);
@@ -510,11 +499,7 @@ void TextInput::clear()
     if (buf_ == nullptr)
         return;
     buf_[0] = '\0';
-    len_ = 0;
-    cursor_ = 0;
-    topRow_ = 0;
-    tapActive_ = false;
-    tapKeyIdx_ = -1;
+    begin();
 }
 
 void TextInput::stripTrailingSpaces()
