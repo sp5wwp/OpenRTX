@@ -18,6 +18,8 @@
 #include "emulator.h"
 #include "sdl_engine.h"
 #include "core/ui.h"
+#include "core/utils.h"
+#include "rtx/rtx.h"
 
 /*
  * How long screenshot_sync waits for the SDL thread to write the file. It is
@@ -486,6 +488,49 @@ static int shell_waitStable(void *_self, int _argc, char **_argv)
     return SH_ERR;
 }
 
+/**
+ * Shell command 'wait_rtx': wait until the rtx thread is in an operating
+ * state. Keying up or down takes the rtx some time, longer under load, while
+ * the screen stays as it was, so wait_stable alone may settle before it.
+ *
+ * @param _self: menu option.
+ * @param _argc: number of arguments.
+ * @param _argv: OFF, RX or TX, then an optional timeout in ms.
+ * @return SH_CONTINUE, or SH_ERR on an unknown state or timeout.
+ */
+static int shell_waitRtx(void *_self, int _argc, char **_argv)
+{
+    (void)_self;
+
+    static const char *const names[] = { "OFF", "RX", "TX" };
+    static const uint8_t states[] = { OFF, RX, TX };
+    uint32_t timeout = WAIT_STABLE_TIMEOUT_MS;
+    size_t idx = 0;
+
+    if ((_argc < 1) || (_argv[0] == NULL))
+        return SH_ERR;
+
+    while ((idx < ARRAY_SIZE(names)) && (strcasecmp(_argv[0], names[idx]) != 0))
+        idx++;
+    if (idx == ARRAY_SIZE(names)) {
+        printf("wait_rtx: unknown state %s\n", _argv[0]);
+        return SH_ERR;
+    }
+
+    if ((_argc >= 2) && (_argv[1] != NULL) && (atoi(_argv[1]) > 0))
+        timeout = atoi(_argv[1]);
+
+    for (uint32_t waited = 0; waited < timeout; waited += WAIT_STABLE_POLL_MS) {
+        if (rtx_getStatus()->opStatus == states[idx])
+            return SH_CONTINUE;
+
+        usleep(WAIT_STABLE_POLL_MS * 1000);
+    }
+
+    printf("wait_rtx: rtx not in %s after %u ms\n", names[idx], timeout);
+    return SH_ERR;
+}
+
 static int shell_quit(void *_self, int _argc, char **_argv)
 {
     (void)_self;
@@ -549,6 +594,9 @@ static _climenu_option _options[] = {
     {"sleep",   "Wait some number of ms",           NULL,   shell_sleep },
     {"wait_stable", "[timeout_ms=5000] [frames=3] Wait until the UI has handled all input and the screen stopped changing (that many identical frames, or none for 500 ms)",
                                 NULL,   shell_waitStable
+    },
+    {"wait_rtx", "<OFF|RX|TX> [timeout_ms=5000] Wait until the rtx is in that state, e.g. after ptt",
+                                NULL,   shell_waitRtx
     },
     {"help",    "Print this help",                  NULL,   shell_help },
     {"nop",     "Do nothing (useful for comments)", NULL,   shell_nop},

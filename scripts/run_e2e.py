@@ -107,6 +107,7 @@ SHELL_ERRORS = (
     "Got too many arguments",
     "too many keys!",
     "wait_stable: screen not stable",
+    "wait_rtx: ",
     "screenshot_sync: timed out",
 )
 
