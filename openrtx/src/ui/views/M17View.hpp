@@ -19,12 +19,8 @@ namespace ortxui
 
 /**
  * The Settings > M17 screen (value-row style), mirroring the classic M17 menu:
- *  - Callsign: edited in place with a deterministic cursor cycle — ENTER opens
- *    edit, the cursor character is shown in brackets (e.g. "W1[A]W"), UP/DOWN
- *    cycles it through the callsign charset, LEFT/RIGHT moves the cursor
- *    (extending with a space at the end), ENTER confirms, ESC cancels. (The
- *    classic UI uses T9 multi-tap, which is timing-dependent and not golden-
- *    testable; the cursor cycle is knob-friendly and reproducible.)
+ *  - Callsign: edited in place with the cursor character in brackets
+ *    ("W1[A]W"); ENTER stores it, ESC restores it.
  *  - Meta Txt: shown read-only for now (long free text wants a richer editor).
  *  - CAN: 0-15, cycled with UP/DOWN.
  *  - CAN RX Check: On/Off, toggled with UP/DOWN.
@@ -80,10 +76,8 @@ private:
     std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][24] = {};
 
-    /* Callsign edit state: the buffer is edited through the shared TextInput
-     * widget (inline bracket rendering), which owns the cursor. */
-    char callBuf_[sizeof(settings_t::callsign)] = {};
-    TextInput callsign_;
+    char callBuf_[sizeof(settings_t::callsign)] = {}; ///< Callsign being edited
+    TextInput callsign_; ///< Field editing callBuf_
 
     /* Change-gate mirrors. */
     char lastCall_[10] = { '\1' }; //< force first render

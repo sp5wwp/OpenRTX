@@ -14,9 +14,8 @@ namespace ortxui
 {
 
 /**
- * The grid of pickable code points (a leaf object so the Screen paints it).
- * Holds the selection + vertical scroll and knows how to navigate and paint a
- * grid of glyphs from the custom icon/fallback font.
+ * Grid of pickable code points from the icon font, with the selection and the
+ * scroll row.
  */
 class PickerGrid : public Object
 {
@@ -64,13 +63,15 @@ public:
     /** Cells in a row. */
     uint16_t cols() const;
 
+    /** Paint the visible rows, the selection highlighted. */
     void draw(DrawCtx &d) override;
 
 private:
+    /** Scroll so the selected row is visible. */
     void ensureVisible();
 
-    uint16_t sel_ = 0;
-    uint16_t top_ = 0; //< first visible row
+    uint16_t sel_ = 0; ///< Selected cell
+    uint16_t top_ = 0; ///< First visible row
 };
 
 } // namespace ortxui

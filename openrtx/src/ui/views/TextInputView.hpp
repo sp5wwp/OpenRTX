@@ -18,19 +18,10 @@ namespace ortxui
 {
 
 /**
- * A generic full-screen modal text editor: a title, a scrolling TextInput
- * field, and a key hint. A caller opens it for a destination buffer, the user
- * edits a working copy with the cursor-cycle keys, and ENTER writes it back
- * (ESC discards). It is pushed like any other view (`NavIntent::push`); because
- * the render loop clears to Background and paints only the top view, it fully
- * covers whatever it was opened over.
- *
- * The request and the working copy live in UiMemory, so the editor can be
- * destroyed and rebuilt (character picker, macro menu) without losing the
- * edit. The destination outlives the opener's view: a settings field or a
- * buffer UiMemory owns. On commit the editor writes it and optionally requests
- * an rtx resync, so the opener's change-gated syncFromState picks it up on
- * return.
+ * Full-screen text editor: a title, a scrolling field and a key hint. It edits
+ * a working copy of a destination buffer; ENTER writes it back and ESC drops
+ * it. The request and the working copy live in UiMemory, so the editor can be
+ * destroyed and rebuilt under the character picker or the macro menu.
  */
 class TextInputView : public View
 {
@@ -41,6 +32,7 @@ public:
     /** Destructor. */
     ~TextInputView() = default;
 
+    /** Lay out the editor and bind the field to the open request. */
     void build() override;
 
     /**
@@ -65,11 +57,21 @@ public:
     /** Keep the cursor and scroll of the edit while destroyed. */
     void save(UiMemory &m) const override;
 
-    /** Insert the character picked while the editor was destroyed. */
+    /** Put in the character picked while the editor was destroyed. */
     void onShow() override;
+
+    /** Speak the title. */
     void announce() override;
+
+    /**
+     * Edit the field, open the picker on a long digit, or close the editor.
+     *
+     * @param e: event.
+     * @return the navigation intent.
+     */
     NavIntent onEvent(const Event &e) override;
 
+    /** Screen the editor paints. */
     Screen &screen() override
     {
         return screen_;
@@ -79,15 +81,20 @@ private:
     /** Bind the field to the request in UiMemory, where it left off. */
     void configureField();
 
+    /** Write the working copy to the destination. */
     void commit();
-    void afterEdit();   //< re-render + announce the cursor character
-    void refreshHint(); //< key hint line, reflecting the current edit mode
 
-    Screen screen_;
-    Flex root_;
-    Label title_;
-    TextInput field_;
-    Label hint_;
+    /** Repaint the field and speak the character under the cursor. */
+    void afterEdit();
+
+    /** Show the key hint for the radio's keypad. */
+    void refreshHint();
+
+    Screen screen_;   ///< Screen of the editor
+    Flex root_;       ///< Column of title, field and hint
+    Label title_;     ///< What is being edited
+    TextInput field_; ///< The text
+    Label hint_;      ///< Keys that edit it
 };
 
 } // namespace ortxui

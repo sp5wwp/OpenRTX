@@ -37,7 +37,7 @@ void TextInputView::build()
     title_.setAlign(TEXT_ALIGN_CENTER);
     title_.setBasis(regular ? 14 : 10);
 
-    field_.setGrow(1); /* the scrolling field fills the middle */
+    field_.setGrow(1);
     configureField();
 
     hint_.setColor(Sem::OnSurfaceMuted);
@@ -88,7 +88,7 @@ void TextInputView::save(UiMemory &m) const
 
 void TextInputView::onShow()
 {
-    /* Back from the character picker: insert the chosen code point. */
+    /* The picked character replaces the one under the cursor. */
     EditRequest &r = uiMemory.edit;
     if (r.picked != 0) {
         field_.putCodePoint(r.picked);

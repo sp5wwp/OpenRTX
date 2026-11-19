@@ -31,6 +31,7 @@ public:
     /** Destructor. */
     ~PickerView() = default;
 
+    /** Lay out the grid at the kept selection. */
     void build() override;
 
     /** Start a pick at the first cell. Call before pushing the picker. */
@@ -39,17 +40,26 @@ public:
     /** Keep the selection while destroyed. */
     void save(UiMemory &m) const override;
 
+    /** Speak the picker's title. */
     void announce() override;
+
+    /**
+     * Move the selection, or close the picker with or without a choice.
+     *
+     * @param e: event.
+     * @return the navigation intent.
+     */
     NavIntent onEvent(const Event &e) override;
 
+    /** Screen the picker paints. */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
-    Screen screen_;
-    PickerGrid grid_;
+    Screen screen_;   ///< Screen of the picker
+    PickerGrid grid_; ///< Grid of characters
 };
 
 } // namespace ortxui
