@@ -9,6 +9,7 @@
 #include "core/Layout.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
+#include "widgets/List.hpp"
 #include "core/input.h"
 #include "core/utils.h"
 #include "interfaces/keyboard.h"
@@ -21,10 +22,8 @@ namespace ortxui
 /** Longest wrapped line measured or copied at once. */
 static constexpr uint16_t LINE_BUF = 128;
 
-static constexpr int16_t LINE_GAP = 2;     ///< Pixels between wrapped lines
-static constexpr uint16_t SCROLL_W = 2;    ///< Width of the scroll indicator
-static constexpr uint16_t SCROLL_GAP = 1;  ///< Gap between text and indicator
-static constexpr int16_t SCROLL_MIN_H = 2; ///< Shortest scroll thumb
+static constexpr int16_t LINE_GAP = 2;    ///< Pixels between wrapped lines
+static constexpr uint16_t SCROLL_GAP = 1; ///< Gap between text and scroll bar
 
 /** The delete slot of the cycle: only under the cursor, applied on a move. */
 static constexpr char DELETE_CELL = 0x7F;
@@ -738,7 +737,8 @@ void TextInput::draw(DrawCtx &d)
         return;
     }
 
-    const int maxW = static_cast<int>(area_.w) - SCROLL_W - SCROLL_GAP;
+    const int maxW = static_cast<int>(area_.w) - List::SCROLL_BAR_W
+                   - SCROLL_GAP;
     uint16_t visRows =
         static_cast<uint16_t>(area_.h / static_cast<uint16_t>(lh));
     if (visRows == 0)
@@ -787,21 +787,8 @@ void TextInput::draw(DrawCtx &d)
         pos = end;
     }
 
-    /* Scroll indicator: a track with a thumb. */
-    if (rows > visRows) {
-        const int16_t barX = static_cast<int16_t>(area_.right() - 1);
-        const int trackH = static_cast<int>(area_.h);
-        int thumbH = trackH * visRows / rows;
-        if (thumbH < SCROLL_MIN_H)
-            thumbH = SCROLL_MIN_H;
-        const int16_t thumbY =
-            static_cast<int16_t>(area_.y + trackH * topRow_ / rows);
-        const Rect track = { barX, area_.y, SCROLL_W, area_.h };
-        d.fillRect(track, Sem::Surface);
-        const Rect thumb = { barX, thumbY, SCROLL_W,
-                             static_cast<uint16_t>(thumbH) };
-        d.fillRect(thumb, Sem::OnSurfaceMuted);
-    }
+    if (rows > visRows)
+        List::drawScrollBar(d, area_, topRow_, visRows, rows);
 }
 
 } // namespace ortxui
