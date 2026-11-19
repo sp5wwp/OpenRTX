@@ -745,8 +745,8 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
   retail radio would tell.
 - **Opened** (2026-11-18): the GNSS module is fitted, its ribbon cable
   looked cramped; the ribbon carrying the microphone signal looked intact.
-  Both were realigned. Not retested yet (GNSS data on PA3; FM and M17
-  speech level against `sdr_recordings/dev29.npy`).
+  Both were realigned. The microphone retested by the operator after
+  that: no change. GNSS not retested yet (data on PA3).
 - **Signs pointing at this unit** (to check first on another radio):
   - FM speech: none measurable on air with stock's own firmware either
     (15-22 Hz deviation in the voice band, breath noise only);
@@ -1239,8 +1239,8 @@ Pitfalls met so far:
 1. **Weak FM speech.** The port matches stock on air (3.5, 3.6); speech
    is weak in stock too, also with the chip on A6 (3.7): only breath noise
    modulates. No mic signal reaches PA7 (3.8). The radio was opened: the
-   microphone ribbon looked intact (3.8). Next: retest after the ribbons
-   were realigned, then compare with a retail radio. Then check deviation
+   microphone ribbon looked intact and realigning it changed nothing
+   (3.8). Next: compare with a retail radio. Then check deviation
    (narrow/wide, CTCSS).
 2. ~~Receiver noise floor~~: external. With the antenna the raw RSSI at
    435 MHz was about 250 (S8), flat over +-500 kHz, against about 130 in a
