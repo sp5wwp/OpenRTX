@@ -56,6 +56,9 @@ struct tetraDemodParams {
     float fitHold;   /* Non-zero: no fit adaptation before timing lock */
     float acqEnergy; /* Non-zero: acquire timing at the maximum energy of
                         the integrated signal, and the gain from it */
+    float okHold;    /* Seconds after the last good block decoded
+                        (tetraDemod_signalOk()) without re-acquiring,
+                        however high the phase error; 0: off */
 };
 
 extern struct tetraDemodParams tetraDemodParams;
@@ -99,6 +102,7 @@ struct tetraDemod {
     float errPow;        /* Running mean square phase error, rad^2 */
     float errFast;       /* The same over a few ms: fades, glitches */
     uint32_t badSymbols; /* Consecutive symbols with a high phase error */
+    uint32_t holdLeft;   /* Symbols left without re-acquiring (okHold) */
     uint32_t reacquired; /* Number of re-acquisitions */
     uint32_t slips;      /* Number of timing jumps followed */
 };
@@ -127,6 +131,14 @@ void tetraDemod_setEqualizer(struct tetraDemod *dm, const float *taps);
  */
 size_t tetraDemod_process(struct tetraDemod *dm, const int16_t *in, size_t n,
                           int8_t *soft);
+
+/**
+ * Tell the demodulator that the decoder just decoded a good block (a CRC
+ * passed): the signal is being received, so it must not acquire again
+ * however high its phase error. Near the sensitivity limit the phase error
+ * of a still decodable signal reaches the re-acquisition threshold.
+ */
+void tetraDemod_signalOk(struct tetraDemod *dm);
 
 /**
  * @return RMS phase error, in percent of pi/4 (lower is better: about 20%

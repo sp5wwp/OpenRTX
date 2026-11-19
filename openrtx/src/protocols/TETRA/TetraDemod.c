@@ -67,6 +67,7 @@ struct tetraDemodParams tetraDemodParams = {
     .eqBiasMu = EQ_MU,
     .fitHold = 0,
     .acqEnergy = 1,
+    .okHold = 2.0f,
 };
 #define P tetraDemodParams
 
@@ -149,6 +150,7 @@ static void reacquire(struct tetraDemod *dm)
     dm->errPow = 0;
     dm->errFast = 0;
     dm->badSymbols = 0;
+    dm->holdLeft = 0;
     dm->reacquired++;
 }
 
@@ -279,9 +281,15 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
     dm->errPow += ERR_ALPHA * (e * e - dm->errPow);
     dm->errFast += ERR_FAST_ALPHA * (e * e - dm->errFast);
 
-    /* Lost the signal for long: start again */
+    /*
+     * Lost the signal for long: start again, unless the decoder decoded a
+     * block lately (near the sensitivity limit the phase error of a still
+     * decodable signal reaches BAD_ERROR)
+     */
+    if (dm->holdLeft > 0)
+        dm->holdLeft--;
     if (dm->acquired && !converging && dm->errPow >= BAD_ERROR * BAD_ERROR) {
-        if (++dm->badSymbols >= BAD_SYMBOLS) {
+        if (++dm->badSymbols >= BAD_SYMBOLS && dm->holdLeft == 0) {
             reacquire(dm);
             return 0;
         }
@@ -457,6 +465,13 @@ void tetraDemod_setEqualizer(struct tetraDemod *dm, const float *taps)
 {
     memcpy(dm->eq, taps, sizeof(dm->eq));
     memcpy(dm->eqInit, taps, sizeof(dm->eqInit));
+}
+
+void tetraDemod_signalOk(struct tetraDemod *dm)
+{
+    uint32_t hold = (uint32_t)(P.okHold * SYMBOL_RATE);
+    if (P.okHold > 0 && hold > dm->holdLeft)
+        dm->holdLeft = hold;
 }
 
 uint32_t tetraDemod_reacquisitions(const struct tetraDemod *dm)
