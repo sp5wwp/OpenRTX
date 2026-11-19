@@ -8,6 +8,7 @@
 #include "views/PickerView.hpp"
 #include "core/Event.hpp"
 #include "core/UiMemory.hpp"
+#include "core/Keypad.hpp"
 #include "core/Layout.hpp"
 #include "interfaces/keyboard.h"
 #include "interfaces/delays.h"
