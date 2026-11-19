@@ -31,15 +31,19 @@ enum ObjFlag : uint8_t {
 /**
  * Base class for every retained UI object.
  *
- * The tree is intrusive: each node stores pointers to its parent, first/last
- * child and next sibling, so building a screen allocates no containers. Areas
+ * The tree is intrusive: each node stores pointers to its parent, first child
+ * and next sibling, so building a screen allocates no containers. Areas
  * are in absolute screen coordinates. Objects live in static storage owned by
  * their view (placement-new / direct members), never on the heap.
  */
 class Object
 {
 public:
-    Object() = default;
+    /** Constructor. */
+    Object() : grow_(0), margin_(0), self_(0), flags_(0)
+    {
+    }
+
     virtual ~Object() = default;
 
     Object(const Object &) = delete;
@@ -92,30 +96,42 @@ public:
 
     /* ---- Layout ---- */
 
-    /** Layout hints read by a Flex/Grid parent when placing this child. */
-    LayoutHints &layout()
+    /**
+     * Get the layout hints a Flex parent reads when placing this child.
+     *
+     * @return the hints.
+     */
+    LayoutHints layout() const
     {
-        return layout_;
+        return { grow_, basis_, margin_, static_cast<Align>(self_) };
     }
-    const LayoutHints &layout() const
-    {
-        return layout_;
-    }
+
+    /**
+     * Set the main-axis flex weight.
+     *
+     * @param g: weight, 0 (fixed) to 15.
+     */
     void setGrow(uint8_t g)
     {
-        layout_.grow = g;
+        grow_ = g;
     }
     void setBasis(int16_t b)
     {
-        layout_.basis = b;
+        basis_ = b;
     }
+
+    /**
+     * Set the uniform margin around the child.
+     *
+     * @param m: margin in pixels, 0 to 15.
+     */
     void setMargin(uint8_t m)
     {
-        layout_.margin = m;
+        margin_ = m;
     }
     void setAlignSelf(Align a)
     {
-        layout_.self = a;
+        self_ = static_cast<uint8_t>(a);
     }
 
     /**
@@ -154,8 +170,11 @@ protected:
     Object *firstChild_ = nullptr;
     Object *nextSibling_ = nullptr;
     Rect area_ = { 0, 0, 0, 0 };
-    uint8_t flags_ = 0;
-    LayoutHints layout_ = {};
+
+    /* Layout hints and flags, packed in a word: every widget carries them. */
+    int16_t basis_ = -1; ///< Preferred main-axis extent, -1: natural()
+    uint8_t grow_ : 4, margin_ : 4; ///< Flex weight; uniform margin (px)
+    uint8_t self_ : 3, flags_ : 5;  ///< Cross alignment (Align); ObjFlag set
 };
 
 /**
