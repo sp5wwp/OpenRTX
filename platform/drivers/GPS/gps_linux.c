@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <sys/time.h>
+#include <time.h>
 #include <stdbool.h>
 #include <string.h>
 #include "core/gps.h"
@@ -27,12 +27,16 @@ static long long startTime;
 static bool enabled = true;
 static int currSentence = 0;
 
+/*
+ * Monotonic time, in ms: sentences keep coming when the wall clock is frozen,
+ * as it is in the golden-image tests.
+ */
 static inline long long now()
 {
-    struct timeval te;
-    gettimeofday(&te, NULL);
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
 
-    return (te.tv_sec*1000LL) + (te.tv_usec/1000);
+    return (ts.tv_sec*1000LL) + (ts.tv_nsec/1000000);
 }
 
 static void enable(void *priv)
