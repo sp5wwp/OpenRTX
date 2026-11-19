@@ -85,15 +85,21 @@ private:
     /** Size of the clock text. */
     static constexpr size_t CLOCK_SIZE = 8;
 
-    UiText titleText;        ///< Page title
-    uint16_t middleW = 0;    ///< Width of the centre slot
-    uint8_t textH = 0;       ///< Height of the text slots
-    bool hasTitle = false;   ///< The centre shows the title, not the clock
-    uint8_t hour = 0;        ///< Hour shown by the clock
-    int8_t minute = -1;      ///< Minute shown by the clock, -1 before one
-    uint8_t charge = 0xFF;   ///< Battery charge shown, 0xFF before one
-    uint8_t shownGlyphs = 0; ///< Left glyphs: bit 0 locked, bit 1 unread
-    bool iconShown = false;  ///< The battery shows as an icon
+    /** Minute before the clock is first shown. */
+    static constexpr int8_t NO_MINUTE = -1;
+
+    /** Charge before the battery is first shown. */
+    static constexpr uint8_t NO_CHARGE = UINT8_MAX;
+
+    UiText titleText;           ///< Page title
+    uint16_t middleW = 0;       ///< Width of the centre slot
+    uint8_t textH = 0;          ///< Height of the text slots
+    bool hasTitle = false;      ///< The centre shows the title, not the clock
+    uint8_t hour = 0;           ///< Hour shown by the clock
+    int8_t minute = NO_MINUTE;  ///< Minute shown by the clock
+    uint8_t charge = NO_CHARGE; ///< Battery charge shown
+    uint8_t shownGlyphs = 0;    ///< Left glyphs: bit 0 locked, bit 1 unread
+    bool iconShown = false;     ///< The battery shows as an icon
 };
 
 } // namespace ortxui

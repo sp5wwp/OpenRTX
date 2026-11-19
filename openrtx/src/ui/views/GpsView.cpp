@@ -113,7 +113,7 @@ void GpsView::syncFromState(const state_t &s)
         readout.invalidate();
 
     if (g.tmg_true != lastHeading) {
-        compass.setHeading(g.tmg_true, true);
+        compass.setHeading(g.tmg_true);
         compass.invalidate();
         lastHeading = g.tmg_true;
     }

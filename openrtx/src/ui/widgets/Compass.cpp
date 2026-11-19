@@ -9,20 +9,20 @@
 #include "render/DrawCtx.hpp"
 #include "core/graphics.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 
 namespace ortxui
 {
 
-void Compass::setHeading(int16_t deg, bool valid)
+void Compass::setHeading(int16_t deg)
 {
     /* Normalise to 0-359 so the needle and the readout agree. */
     int16_t d = static_cast<int16_t>(deg % 360);
     if (d < 0)
         d = static_cast<int16_t>(d + 360);
     heading = static_cast<uint16_t>(d);
-    headingValid = valid;
 }
 
 void Compass::draw(DrawCtx &d)
@@ -31,7 +31,7 @@ void Compass::draw(DrawCtx &d)
      * square space above it. */
     const int16_t labelH = 12;
     const int16_t dialH = static_cast<int16_t>(bounds.h - labelH);
-    const int16_t side = (bounds.w < dialH) ? bounds.w : dialH;
+    const int16_t side = std::min(static_cast<int16_t>(bounds.w), dialH);
     const int16_t r =
         static_cast<int16_t>(side / 2 - 8); /* room for cardinals */
     const Point c = { static_cast<int16_t>(bounds.x + bounds.w / 2),
@@ -60,16 +60,12 @@ void Compass::draw(DrawCtx &d)
     }
 
     /* The font has no degree glyph: a plain 3-digit bearing. */
-    char label[6] = "---";
-    if (headingValid)
-        sniprintf(label, sizeof(label), "%03u", static_cast<unsigned>(heading));
+    char label[6];
+    sniprintf(label, sizeof(label), "%03u", static_cast<unsigned>(heading));
     const Rect lblBox = { bounds.x, static_cast<int16_t>(bounds.y + dialH),
                           bounds.w, static_cast<uint16_t>(labelH) };
     d.textInBox(lblBox, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
                 label);
-
-    if (!headingValid)
-        return;
 
     /* Needle: unit vector toward the heading (0 = up/north, clockwise). */
     const float rad = static_cast<float>(heading) * 3.14159265f / 180.0f;

@@ -54,9 +54,10 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
         return;
 
     /* Taller than wide, centred in the assigned width. */
-    const int16_t fit = std::min<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN,
-                                          static_cast<int16_t>(area.w));
-    const int16_t W = std::max(fit, MIN_W);
+    const int16_t W =
+        std::max(std::min(static_cast<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN),
+                          static_cast<int16_t>(area.w)),
+                 MIN_W);
 
     const int16_t bx = static_cast<int16_t>(area.x + (area.w - W) / 2);
     const int16_t byBody = static_cast<int16_t>(area.y + NUB_H);

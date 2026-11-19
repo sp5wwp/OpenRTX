@@ -73,7 +73,7 @@ public:
      *
      * @param padY: inset above and below, in pixels.
      */
-    void setContentPad(int16_t padY)
+    void setContentPad(uint8_t padY)
     {
         insetY = padY;
     }
@@ -227,14 +227,14 @@ private:
     }
 
     /** Space between a row's label and its value line. */
-    static constexpr int16_t VALUE_GAP = 2;
+    static constexpr uint8_t VALUE_GAP = 2;
 
     const ListItem *itemTable = nullptr;  ///< Fixed table, or nullptr
     const ListModel *listModel = nullptr; ///< Model, or nullptr
     uint16_t itemCount = 0;               ///< Rows of the fixed table
     uint16_t selectedRow = 0;             ///< Selected row
     uint16_t topRow = 0;                  ///< First visible row
-    int16_t insetY = 4;                   ///< Vertical inset of each row
+    uint8_t insetY = 4;                   ///< Vertical inset of each row
     bool selectable = true;               ///< The list has a selection
 };
 

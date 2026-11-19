@@ -9,7 +9,6 @@
 #include "base/UiText.hpp"
 
 #include <algorithm>
-#include <climits>
 #include <cmath>
 #include <cstdio>
 
@@ -19,9 +18,9 @@ namespace ortxui
 static constexpr int16_t PAD = 2;        ///< Inset of the rows in the column
 static constexpr size_t VALUE_SIZE = 16; ///< Size of a composed value
 
-/** Unit of each row; a fix puts its hemisphere on the first two. */
-static constexpr UiText UNITS[] = { STR(north), STR(east), STR(locator),
-                                    STR(altitudeShort), STR(speedShort) };
+/** Unit of the rows after the coordinates, which show their hemisphere. */
+static constexpr UiText UNITS[] = { STR(locator), STR(altitudeShort),
+                                    STR(speedShort) };
 
 /**
  * Format a signed coordinate (millionths of a degree) as degrees and decimal
@@ -43,8 +42,8 @@ static const char *formatCoord(int32_t coord, bool isLat, char *val,
     /* minutes * 100, rounded: frac/1e6 * 60 * 100 = frac * 6 / 1000. */
     const int32_t min100 = (frac * 6 + 500) / 1000;
 
-    sniprintf(val, valSize, "%ld %ld.%02ld'", (long)deg, (long)(min100 / 100),
-              (long)(min100 % 100));
+    sniprintf(val, valSize, "%ld %ld.%02ld'", static_cast<long>(deg),
+              static_cast<long>(min100 / 100), static_cast<long>(min100 % 100));
 
     if (isLat)
         return ((coord < 0) ? STR(south) : STR(north)).str();
@@ -83,8 +82,7 @@ static void formatLocator(int32_t lat, int32_t lon, char *out, size_t outSize)
     sniprintf(out, outSize, "%s", loc);
 }
 
-GpsReadout::GpsReadout() :
-    lat(INT32_MIN), lon(INT32_MIN), alt(INT16_MIN), speed(UINT16_MAX), rowH(0)
+GpsReadout::GpsReadout()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
@@ -120,39 +118,23 @@ void GpsReadout::onLayout()
 
 const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
 {
-    const bool fixed = (lat != INT32_MIN) || (lon != INT32_MIN);
-
     switch (row) {
         case RowLat:
-            if (fixed)
-                return formatCoord(lat, true, val, n);
-            break;
+            return formatCoord(lat, true, val, n);
         case RowLon:
-            if (fixed)
-                return formatCoord(lon, false, val, n);
-            break;
+            return formatCoord(lon, false, val, n);
         case RowLoc:
-            if (fixed) {
-                formatLocator(lat, lon, val, n);
-                return UNITS[row].str();
-            }
+            formatLocator(lat, lon, val, n);
             break;
         case RowAlt:
-            if (alt != INT16_MIN) {
-                sniprintf(val, n, "%d%s", alt, STR(metres).str());
-                return UNITS[row].str();
-            }
+            sniprintf(val, n, "%d%s", alt, STR(metres).str());
             break;
         default:
-            if (speed != UINT16_MAX) {
-                sniprintf(val, n, "%u%s", speed, STR(kmPerHour).str());
-                return UNITS[row].str();
-            }
+            sniprintf(val, n, "%u%s", speed, STR(kmPerHour).str());
             break;
     }
 
-    sniprintf(val, n, "--");
-    return UNITS[row].str();
+    return UNITS[row - RowLoc].str();
 }
 
 void GpsReadout::draw(DrawCtx &d)

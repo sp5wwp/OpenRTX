@@ -71,12 +71,12 @@ private:
         RowCount, ///< Number of rows
     };
 
-    TextRow textRow; ///< Paints each row in turn
-    int32_t lat;     ///< Latitude shown, INT32_MIN before a fix
-    int32_t lon;     ///< Longitude shown, INT32_MIN before a fix
-    int16_t alt;     ///< Altitude shown, INT16_MIN before a fix
-    uint16_t speed;  ///< Speed shown, 0xFFFF before a fix
-    uint16_t rowH;   ///< Height of each row, 0 before a layout
+    TextRow textRow;    ///< Paints each row in turn
+    int32_t lat = 0;    ///< Latitude shown
+    int32_t lon = 0;    ///< Longitude shown
+    int16_t alt = 0;    ///< Altitude shown
+    uint16_t speed = 0; ///< Speed shown
+    uint16_t rowH = 0;  ///< Height of each row, 0 before a layout
 };
 
 } // namespace ortxui

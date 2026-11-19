@@ -52,25 +52,10 @@ static constexpr uint8_t METER_BAR_H = 7;
 static constexpr float POWER_SPAN_DB = 10.0f;
 
 /**
- * Clamp a fraction to [0, 1].
- *
- * @param f: fraction.
- * @return the clamped fraction.
- */
-static float clampFrac(float f)
-{
-    if (f < 0.0f)
-        return 0.0f;
-    if (f > 1.0f)
-        return 1.0f;
-    return f;
-}
-
-/**
  * Get the meter fill fraction for a TX power on the dB scale.
  *
  * @param mw: power in mW.
- * @return the fraction, [0, 1].
+ * @return the fraction, below 0 under the scale; the meter clamps it.
  */
 static float powerToFrac(uint32_t mw)
 {
@@ -79,7 +64,7 @@ static float powerToFrac(uint32_t mw)
     const float db =
         10.0f
         * std::log10(static_cast<float>(mw) / static_cast<float>(POWER_MAX_MW));
-    return clampFrac(1.0f + db / POWER_SPAN_DB);
+    return 1.0f + db / POWER_SPAN_DB;
 }
 
 /**
@@ -101,7 +86,7 @@ static float rssiToFrac(float rssi)
         s = (163.0f + rssi) / 10.0f;
     else
         s = 11.0f;
-    return clampFrac(s / 11.0f);
+    return s / 11.0f;
 }
 
 /**
@@ -159,7 +144,7 @@ static freq_t freqFromSlots(const char *digits)
     for (uint16_t o = 0; o < FREQ_SLOTS; o++) {
         const int d = slotDigit(digits, o);
         if (d >= 0)
-            v += (freq_t)d * slotCoeff(o, FREQ_SLOTS);
+            v += static_cast<freq_t>(d) * slotCoeff(o, FREQ_SLOTS);
     }
     return v;
 }
@@ -385,7 +370,8 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
     if (ch.mode == OPMODE_M17) {
         if (txing || state.settings.m17_can_rx) {
             tag = STR(CAN).str();
-            sniprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
+            sniprintf(sub, sizeof(sub), "%u",
+                      static_cast<unsigned>(state.settings.m17_can));
         }
     } else if (ch.mode == OPMODE_FM) {
         const bool showTx = txing && (ch.fm.txToneEn != 0u);
@@ -463,9 +449,10 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
 
         if (level > 9u)
             sniprintf(readout, sizeof(readout), "+%u",
-                      (unsigned)((level - 9u) * 10u));
+                      static_cast<unsigned>((level - 9u) * 10u));
         else
-            sniprintf(readout, sizeof(readout), "S%u", (unsigned)level);
+            sniprintf(readout, sizeof(readout), "S%u",
+                      static_cast<unsigned>(level));
     }
 
     /* Repaint on a change of the readout or of the fill in pixels, not on
@@ -498,10 +485,10 @@ void VfoView::syncFromState(const state_t &s)
         const freq_t shown = (txing && (ch.tx_frequency != ch.rx_frequency)) ?
                                  ch.tx_frequency :
                                  ch.rx_frequency;
-        if ((uint32_t)shown != lastFreq) {
-            hero.setFreq((uint32_t)shown);
+        if (static_cast<uint32_t>(shown) != lastFreq) {
+            hero.setFreq(static_cast<uint32_t>(shown));
             hero.invalidate();
-            lastFreq = (uint32_t)shown;
+            lastFreq = static_cast<uint32_t>(shown);
         }
 
         syncMode(ch, txing);
@@ -590,7 +577,7 @@ NavIntent VfoView::onEvent(const Event &e)
             /* A digit retypes the frequency. */
             const int d = digitFromKeys(k);
             if (d >= 0)
-                beginInput((uint8_t)d);
+                beginInput(static_cast<uint8_t>(d));
         }
         return NavIntent::none();
     }
@@ -664,12 +651,13 @@ void VfoView::stepFreq(int dir)
 
 void VfoView::stepChannel(int dir)
 {
-    if (loadChannel((int16_t)((int)state.channel_index + dir))) {
+    const int32_t index = state.channel_index + dir;
+    if (loadChannel(static_cast<int16_t>(index))) {
         requestSyncRtx();
         if (state.settings.vpLevel >= vpLow)
-            vp_announceChannelName(&state.channel,
-                                   (uint16_t)(state.channel_index + 1),
-                                   vp_getVoiceLevelQueueFlags());
+            vp_announceChannelName(
+                &state.channel, static_cast<uint16_t>(state.channel_index + 1),
+                vp_getVoiceLevelQueueFlags());
     }
 }
 
@@ -678,13 +666,14 @@ void VfoView::toggleVfoMem()
     if (state.tuner_mode == VFO) {
         /* Keep the VFO to come back to. */
         state.vfo_channel = state.channel;
-        if (loadChannel((int16_t)state.channel_index)) {
+        if (loadChannel(static_cast<int16_t>(state.channel_index))) {
             state.tuner_mode = CH;
             requestSyncRtx();
             if (state.settings.vpLevel >= vpLow)
-                vp_announceChannelName(&state.channel,
-                                       (uint16_t)(state.channel_index + 1),
-                                       vp_getVoiceLevelQueueFlags());
+                vp_announceChannelName(
+                    &state.channel,
+                    static_cast<uint16_t>(state.channel_index + 1),
+                    vp_getVoiceLevelQueueFlags());
         }
         /* Without a channel to load, stay in VFO mode. */
     } else {
@@ -703,19 +692,20 @@ bool VfoView::loadChannel(int16_t index)
     if (state.bank_enabled) {
         bankHdr_t bank = {};
         cps_readBankHeader(&bank, state.bank);
-        if ((index < 0) || (index >= (int16_t)bank.ch_count))
+        if ((index < 0) || (index >= static_cast<int16_t>(bank.ch_count)))
             return false;
-        readIndex = (int16_t)cps_readBankData(state.bank, (uint16_t)index);
+        readIndex = static_cast<int16_t>(
+            cps_readBankData(state.bank, static_cast<uint16_t>(index)));
     } else if (index < 0) {
         return false;
     }
 
     channel_t ch;
-    if (cps_readChannel(&ch, (uint16_t)readIndex) != 0)
+    if (cps_readChannel(&ch, static_cast<uint16_t>(readIndex)) != 0)
         return false;
 
     state.channel = ch;
-    state.channel_index = (uint16_t)selected;
+    state.channel_index = static_cast<uint16_t>(selected);
     return true;
 }
 
@@ -1024,7 +1014,8 @@ void VfoView::announce()
     vp_flush();
     if (state.tuner_mode != VFO) {
         vp_announceChannelSummary(
-            &state.channel, (uint16_t)(state.channel_index + 1), 0, vpAllInfo);
+            &state.channel, static_cast<uint16_t>(state.channel_index + 1), 0,
+            vpAllInfo);
     } else {
         vp_announceFrequencies(state.channel.rx_frequency,
                                state.channel.tx_frequency, flags);

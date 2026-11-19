@@ -74,8 +74,8 @@ void TopBar::reset(const UiText &title)
 {
     titleText = title;
     hasTitle = !titleText.empty();
-    minute = -1;
-    charge = 0xFF;
+    minute = NO_MINUTE;
+    charge = NO_CHARGE;
     shownGlyphs = 0;
     iconShown = state.settings.showBatteryIcon;
 }
@@ -86,7 +86,7 @@ const char *TopBar::middleText(char *clock) const
         return titleText.str();
 
     clock[0] = '\0';
-    if (minute >= 0)
+    if (minute != NO_MINUTE)
         sniprintf(clock, CLOCK_SIZE, "%02u:%02u", static_cast<unsigned>(hour),
                   static_cast<unsigned>(minute));
     return clock;
@@ -180,7 +180,7 @@ void TopBar::draw(DrawCtx &d)
 
     if (!iconShown) {
         char pct[8] = "";
-        if (charge != 0xFF)
+        if (charge != NO_CHARGE)
             sniprintf(pct, sizeof(pct), "%u%%", charge);
         paintText(d, { x, textY, static_cast<uint16_t>(rightWidth()), textH },
                   TEXT_ALIGN_RIGHT, Sem::OnSurface, pct);

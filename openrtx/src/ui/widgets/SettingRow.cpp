@@ -17,8 +17,8 @@ SettingRow::SettingRow()
     setAxis(Axis::Column);
     setAlign(Align::Stretch);
     setJustify(Justify::Center);
-    setPadding(PAD_X, static_cast<uint8_t>(insetY));
-    setGap(static_cast<uint8_t>(gutter));
+    setPadding(PAD_X, insetY);
+    setGap(gutter);
 
     nameLabel.setFont(LABEL_FONT);
     nameLabel.setAlign(TEXT_ALIGN_LEFT);
@@ -31,12 +31,12 @@ SettingRow::SettingRow()
     addChild(&valueLabel);
 }
 
-void SettingRow::setPad(int16_t inset, int16_t spacing)
+void SettingRow::setPad(uint8_t inset, uint8_t spacing)
 {
     insetY = inset;
     gutter = spacing;
-    setPadding(PAD_X, static_cast<uint8_t>(insetY));
-    setGap(static_cast<uint8_t>(gutter));
+    setPadding(PAD_X, insetY);
+    setGap(gutter);
 }
 
 void SettingRow::bind(Kind kind, const UiText &label, const UiText &value,

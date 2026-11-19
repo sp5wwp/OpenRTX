@@ -47,7 +47,7 @@ public:
      * @param inset: vertical inset of the content, in pixels.
      * @param spacing: gap between the label and a value under it, in pixels.
      */
-    void setPad(int16_t inset, int16_t spacing);
+    void setPad(uint8_t inset, uint8_t spacing);
 
     /**
      * Bind the row to one item's content and selection state.
@@ -114,8 +114,8 @@ private:
     Kind rowKind = Kind::Plain; ///< Row kind
     bool isChecked = false;     ///< Checkbox state
     bool isSelected = false;    ///< The row is selected
-    int16_t insetY = 4;         ///< Vertical inset
-    int16_t gutter = 2;         ///< Gap between the label and a value below it
+    uint8_t insetY = 4;         ///< Vertical inset
+    uint8_t gutter = 2;         ///< Gap between the label and a value below it
 };
 
 } // namespace ortxui

@@ -258,7 +258,7 @@ private:
         uint8_t row;                  ///< Row being edited
     };
 
-    static constexpr int16_t ROW_PAD = 4;      ///< Vertical inset of each row
+    static constexpr uint8_t ROW_PAD = 4;      ///< Vertical inset of each row
 
     ListItem *rows = nullptr;                  ///< Row table, borrowed
     char valueText[ROWS_MAX][VALUE_SIZE] = {}; ///< Value text of each row
