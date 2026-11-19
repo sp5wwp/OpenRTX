@@ -24,16 +24,9 @@ struct UiMemory;
 class ViewSlot;
 
 /**
- * A depth-bounded stack of screens.
- *
- * ENTER-style actions push a child screen, ESC pops back to the parent, and the
- * top of the stack is the active screen that ui_shim draws and feeds state to.
- * The stack holds ViewIds and only the top one is built, in a ViewSlot: going
- * to another screen saves the current view into UiMemory, destroys it and
- * builds the new one, which restores its own state from UiMemory. Activating a
- * view marks it fully dirty so it repaints cleanly over whatever screen it now
- * covers. The root screen is never popped, so ESC on the home screen is a
- * no-op.
+ * Bounded stack of screens, of which only the top one is built: changing
+ * screen saves the view to UiMemory and destroys it, so one view's memory is
+ * in use at a time. The root screen is never popped.
  */
 class Navigator
 {
@@ -83,10 +76,8 @@ public:
     }
 
     /**
-     * Open a modal screen (e.g. the macro menu) on top of the current one. It
-     * replaces the current view until closeModal() rebuilds it. Public so
-     * ui_shim can open a screen triggered globally (a held key), outside a
-     * view's onEvent intent.
+     * Open a modal screen, such as the macro menu, from outside a view; it
+     * replaces the current view until closeModal().
      *
      * @param id: screen to open.
      */
@@ -102,13 +93,12 @@ public:
     void closeModal();
 
     /**
-     * Show a view over the current screen, which stays built, until
-     * `timeoutMs` pass without it being presented again. Presenting it again
-     * restarts the timeout, so a repeating trigger keeps it up.
+     * Show a view over the current screen, which stays built; presenting it
+     * again restarts the timeout, so a repeating trigger keeps it up.
      *
      * @param v: view to show.
      * @param now: current tick.
-     * @param timeoutMs: time it stays up.
+     * @param timeoutMs: time it stays up, in ms.
      */
     void presentOverlay(View *v, long long now, uint32_t timeoutMs);
 

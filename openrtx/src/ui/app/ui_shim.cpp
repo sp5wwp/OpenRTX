@@ -38,53 +38,54 @@
 
 using namespace ortxui;
 
-/* Event ring: pushed and popped with state_mutex held. */
+/** Event ring, pushed and popped with state_mutex held. */
 static event_t evQueue[UI_EVENT_QUEUE_LEN];
-static uint8_t evQueue_rdPos = 0;
-static uint8_t evQueue_wrPos = 0;
+static uint8_t evQueue_rdPos = 0; ///< Next event to pop
+static uint8_t evQueue_wrPos = 0; ///< Next free slot
 
-/* Snapshot of the radio state the views are drawn from, copied under
- * state_mutex by ui_saveState(). */
+/** Radio state the views draw from, copied under state_mutex. */
 static state_t lastState;
 
-/* The one live view, the screen stack over it, and the volume HUD, which
- * stays built because it draws over the screen without replacing it. */
+/** Storage of the one live view. */
 static ViewSlot viewSlot;
+
+/** Screen stack over the live view. */
 static Navigator nav(viewSlot, uiMemory);
+
+/** Volume HUD, kept built as it draws over the screen without replacing it. */
 static VolumeOverlayView volumeOverlay;
 
-/* Backlight timeout: after settings.display_timer of no activity the backlight
- * is off and nothing is drawn until a key press, RF or the volume knob. */
+/** Backlight off after the display timer: nothing is drawn until a wake-up. */
 static bool standby = false;
+
+/** Tick of the last activity, for the display timer. */
 static long long lastEventTick = 0;
 
-/* Macro menu, opened by a held MONI key rather than by a view. */
-static bool macroOpen = false;
-static bool macroLatched = false;
-static bool moniDown = false; ///< MONI was held in the last key event
+static bool macroOpen = false;    ///< Macro menu open, by a held MONI key
+static bool macroLatched = false; ///< Macro menu stays open on MONI release
+static bool moniDown = false;     ///< MONI was held in the last key event
 
 #if !defined(PLATFORM_TTWRPLUS)
-/* The low-battery warning, drawn instead of the active screen while shown. */
+/** Low-battery warning, drawn instead of the active screen while shown. */
 static LowBatteryScreen lowBattery;
+
+/** The low-battery warning is shown. */
 static bool lowBatteryShown = false;
 #endif
 
-/* How long the volume HUD stays after the knob stops, in ms. */
+/** How long the volume HUD stays after the knob stops, in ms. */
 static constexpr uint32_t VOLUME_HUD_MS = 500;
 
-/* Backlight timeouts, in ms. */
+/* Backlight timer steps, in ms. */
 static constexpr long long TIMER_STEP_S_MS = 5000;     ///< Per 5 s step
 static constexpr long long TIMER_STEP_M_MS = 60000;    ///< Per 1 min step
 static constexpr long long TIMER_STEP_15M_MS = 900000; ///< Per 15 min step
 static constexpr long long TIMER_1H_MS = 3600000;      ///< One hour
 
-/* Splash screen: the logo's centre line above the screen's middle, and the
- * callsign's baseline above the bottom. */
-static constexpr int16_t SPLASH_LOGO_RISE = 6;
-static constexpr int16_t SPLASH_CALL_RISE = 8;
+static constexpr int16_t SPLASH_LOGO_RISE = 6; ///< Logo above middle, px
+static constexpr int16_t SPLASH_CALL_RISE = 8; ///< Callsign above bottom, px
 
-/* Keys that click at the Beep voice level: the keypad, ENTER, ESC, UP and
- * DOWN. */
+/** Keys that click at the Beep voice level. */
 static constexpr uint32_t CLICK_KEYS = KBD_CHAR_MASK | KEY_ENTER | KEY_ESC
                                      | KEY_UP | KEY_DOWN;
 
@@ -134,7 +135,7 @@ static bool exitStandby(long long now)
     standby = false;
     display_setBacklightLevel(state.settings.brightness);
     if (View *v = nav.active())
-        v->screen().markAllDirty(); /* repaint fully on wake */
+        v->screen().markAllDirty();
     return true;
 }
 
@@ -433,9 +434,8 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
  */
 static void handleTick(long long now, bool *sync_rtx)
 {
-    /* RF activity and the volume knob keep the display awake. Checked every
-     * tick, not only on an empty queue: the volume changes with a status
-     * event. */
+    /* RF and the volume knob keep the display awake; checked every tick, as
+     * a volume change comes with a status event. */
     if ((rtx_getStatus()->opStatus == TX) || rtx_rxSquelchOpen()
         || (state.volume != lastState.volume))
         exitStandby(now);
@@ -456,7 +456,6 @@ static void handleTick(long long now, bool *sync_rtx)
 #endif
 
     if (evQueue_rdPos != evQueue_wrPos) {
-        /* Pop one event per tick. */
         const event_t raw = evQueue[evQueue_rdPos];
         evQueue_rdPos =
             static_cast<uint8_t>((evQueue_rdPos + 1) % UI_EVENT_QUEUE_LEN);
@@ -518,7 +517,7 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
 extern "C" void ui_updateGUI()
 {
     if (standby)
-        return; /* backlight off — nothing to draw */
+        return;
 
 #if !defined(PLATFORM_TTWRPLUS)
     if (lowBatteryShown) {
@@ -549,7 +548,7 @@ extern "C" bool ui_pushEvent(const uint8_t type, const uint32_t data)
     const uint8_t newWrPos =
         static_cast<uint8_t>((evQueue_wrPos + 1) % UI_EVENT_QUEUE_LEN);
     if (newWrPos == evQueue_rdPos)
-        return false; /* queue full */
+        return false;
 
     event_t event;
     event.value = 0;

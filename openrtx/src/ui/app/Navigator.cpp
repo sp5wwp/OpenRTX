@@ -47,7 +47,7 @@ void Navigator::push(ViewId id)
 void Navigator::pop()
 {
     if (depth <= 1)
-        return; /* the root view is never popped */
+        return;
 
     depth--;
     rebuild();
