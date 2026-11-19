@@ -7,9 +7,8 @@
 # A long M17 destination shown in DISPLAY mode (VFO, not editing) must stay on
 # one channel-line, prefixed with '@', truncated with an ellipsis instead of
 # wrapping into the meter row. Boot is VFO mode (FM); MONI+5 switches the
-# mode to M17. Then # opens
-# the destination editor; multi-tap a 9-char callsign and ENTER to commit and
-# drop back to the display.
+# mode to M17. Then # opens the destination editor; multi-tap a 9-char
+# callsign and ENTER to commit and drop back to the display.
 rssi 0
 wait_stable 5000 3
 keycombo MONI 5

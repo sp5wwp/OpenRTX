@@ -4,9 +4,9 @@
 # variants: default smallscreen
 
 # ETSI multi-tap keypad entry in the M17 Meta modal: a digit key types a
-# letter; repeating the same key within 700ms cycles it; a different key
-# commits the character and advances. The repeats go in one command so a
-# slow host can't let the 700ms window expire between them.
+# letter; repeating the same key within the long-press timeout cycles it; a
+# different key keeps the character and advances. The repeats go in one
+# command so a slow host can't let the timeout expire between them.
 wait_stable 5000 3
 key ENTER
 wait_stable
