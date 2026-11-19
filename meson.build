@@ -426,20 +426,20 @@ linux_def  += openrtx_def
 linux_def  += {'sniprintf':'snprintf', 'vsniprintf':'vsnprintf'}
 
 #
-# 160x128 colour and 128x64 monochrome emulators, with GPS and RTC
+# 160x128 colour and 128x64 monochrome emulators, with GPS, RTC and 0-9 keys
 #
 linux_default_src = linux_src + ui_src
 linux_default_def = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
-                                 'CONFIG_GPS': '', 'CONFIG_RTC': ''}
+                                 'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
 # Draw in bands as the colour radios do, to test that mode on the emulator
 if get_option('gfx_band_rows') > 0
   linux_default_def += {'CONFIG_GFX_BAND_ROWS': get_option('gfx_band_rows').to_string()}
 endif
 linux_small_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
-                                 'CONFIG_GPS': '', 'CONFIG_RTC': ''}
+                                 'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
 
 #
-# Module17 emulator: 128x64 monochrome, no GPS or RTC
+# Module17 emulator: 128x64 monochrome, no GPS, RTC or 0-9 keys
 #
 linux_mod17_src = linux_src + ui_src
 linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': ''}

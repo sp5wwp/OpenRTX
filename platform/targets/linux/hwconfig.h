@@ -41,8 +41,7 @@ enum Mod17Flags {
 #define CONFIG_MESSAGES
 #define CONFIG_M17_SMS
 
-/* Keypad keys */
+/* Keypad keys; the 0-9 keys come from the build, as the Module17 has none */
 #define CONFIG_KBD_HAS_ARROWS
-#define CONFIG_KBD_HAS_NUMERIC
 
 #endif /* HWCONFIG_H */
