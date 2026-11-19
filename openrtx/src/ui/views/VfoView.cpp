@@ -35,6 +35,10 @@ namespace
  * (FreqHero composes the MHz.kHz layout). Slot 0 = 100 MHz .. slot 6 = 100 Hz. */
 constexpr char kFreqMask[] = "9999999";
 
+/* Slots of a frequency field, and what an empty one shows. */
+constexpr uint16_t kFreqSlots = sizeof(kFreqMask) - 1;
+constexpr char kPlaceholder = '-';
+
 /* How long an out-of-band entry error stays on screen before it self-clears. */
 constexpr long long kInputErrorMs = 1500;
 
@@ -107,35 +111,41 @@ freq_t slotCoeff(uint16_t o, uint16_t n)
     return c;
 }
 
+/* Digit in slot `o` of a field's buffer, or -1 if the slot is empty. The mask
+ * has no separators, so slot `o` is character `o`. */
+int slotDigit(const char *digits, uint16_t o)
+{
+    return (digits[o] != kPlaceholder) ? (digits[o] - '0') : -1;
+}
+
 /* Read a slot field back as a frequency in Hz. Un-entered (placeholder) slots
  * contribute 0, so a partial entry keeps its automatic trailing zeros. */
-freq_t freqFromSlots(const TextInput &f)
+freq_t freqFromSlots(const char *digits)
 {
     freq_t v = 0;
-    const uint16_t n = f.slotCount();
-    for (uint16_t o = 0; o < n; o++) {
-        const int d = f.slotDigit(o);
+    for (uint16_t o = 0; o < kFreqSlots; o++) {
+        const int d = slotDigit(digits, o);
         if (d >= 0)
-            v += (freq_t)d * slotCoeff(o, n);
+            v += (freq_t)d * slotCoeff(o, kFreqSlots);
     }
     return v;
 }
 
 /* Fill a slot field from a frequency, snapping to the field's 100 Hz grid. */
-void slotsFromFreq(TextInput &f, freq_t hz)
+void slotsFromFreq(char *digits, freq_t hz)
 {
-    const uint16_t n = f.slotCount();
-    for (uint16_t o = 0; o < n; o++)
-        f.setSlotDigit(o, static_cast<int>((hz / slotCoeff(o, n)) % 10));
+    for (uint16_t o = 0; o < kFreqSlots; o++)
+        digits[o] =
+            static_cast<char>('0' + (hz / slotCoeff(o, kFreqSlots)) % 10);
 }
 
 /* Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
  * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with '-' for un-entered
  * slots so the operator sees exactly how many digits remain. */
-void composeEntry(const TextInput &f, char *main, char *sub)
+void composeEntry(const char *digits, char *main, char *sub)
 {
     auto sc = [&](uint16_t o) -> char {
-        const int d = f.slotDigit(o);
+        const int d = slotDigit(digits, o);
         return (d >= 0) ? static_cast<char>('0' + d) : '-';
     };
     main[0] = sc(0);
@@ -147,7 +157,7 @@ void composeEntry(const TextInput &f, char *main, char *sub)
     main[6] = sc(5);
     main[7] = '\0';
 
-    const int d6 = f.slotDigit(6);
+    const int d6 = slotDigit(digits, 6);
     sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : '-';
     sub[1] = (d6 >= 0) ? '0' : '-';
     sub[2] = '\0';
@@ -302,12 +312,13 @@ void VfoView::save(UiMemory &m) const
     e.errorAt = inputErrorAt_;
     if (dstEditing_) {
         memcpy(e.text[0], dstBuf_, sizeof(dstBuf_));
-        e.cursor[0] = static_cast<uint8_t>(dst_.cursor());
+        e.cursor[0] = static_cast<uint8_t>(entry_.cursor());
     } else {
+        const uint8_t slot = static_cast<uint8_t>(entry_.cursorSlot());
         memcpy(e.text[0], rxBuf_, sizeof(rxBuf_));
         memcpy(e.text[1], txBuf_, sizeof(txBuf_));
-        e.cursor[0] = static_cast<uint8_t>(rxInput_.cursorSlot());
-        e.cursor[1] = static_cast<uint8_t>(txInput_.cursorSlot());
+        e.cursor[0] = inputTxSet_ ? rxSlot_ : slot;
+        e.cursor[1] = inputTxSet_ ? slot : txSlot_;
     }
     ie.owner = id();
 }
@@ -322,25 +333,21 @@ void VfoView::restore(UiMemory &m)
     const VfoEdit &e = ie.vfo;
     if (e.destination) {
         memcpy(dstBuf_, e.text[0], sizeof(dstBuf_));
-        dst_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
-                       TextInput::Mode::SingleLine,
-                       TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-        dst_.setMultiTap(MTAP_CALLSIGN);
-        dst_.resume(e.cursor[0], 0);
+        entry_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
+                         TextInput::Mode::SingleLine,
+                         TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+        entry_.setMultiTap(MTAP_CALLSIGN);
+        entry_.resume(e.cursor[0], 0);
         dstEditing_ = true;
         renderDstEdit();
         return;
     }
 
-    /* Lay the masks, then put the digits and cursors back over them. */
-    rxInput_.configureSlots(rxBuf_, sizeof(rxBuf_), kFreqMask, '-',
-                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-    txInput_.configureSlots(txBuf_, sizeof(txBuf_), kFreqMask, '-',
-                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
     memcpy(rxBuf_, e.text[0], sizeof(rxBuf_));
     memcpy(txBuf_, e.text[1], sizeof(txBuf_));
-    rxInput_.setCursorSlot(e.cursor[0]);
-    txInput_.setCursorSlot(e.cursor[1]);
+    rxSlot_ = e.cursor[0];
+    txSlot_ = e.cursor[1];
+    bindField(e.txField, e.txField ? txSlot_ : rxSlot_);
     inputActive_ = true;
     inputTxSet_ = e.txField;
     rxPristine_ = e.rxPristine;
@@ -632,7 +639,7 @@ NavIntent VfoView::onInputEvent(const Event &e)
     if (!mutating)
         return NavIntent::none();
 
-    TextInput &f = inputTxSet_ ? txInput_ : rxInput_;
+    TextInput &f = entry_;
     bool &pristine = inputTxSet_ ? txPristine_ : rxPristine_;
     if (pristine) {
         if (digit >= 0)
@@ -737,14 +744,13 @@ void VfoView::openInput()
     const channel_t &ch = state.channel;
     inputShift_ = (int64_t)ch.tx_frequency - (int64_t)ch.rx_frequency;
 
-    rxInput_.configureSlots(rxBuf_, sizeof(rxBuf_), kFreqMask, '-',
-                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-    txInput_.configureSlots(txBuf_, sizeof(txBuf_), kFreqMask, '-',
-                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-
-    slotsFromFreq(rxInput_, ch.rx_frequency);
-    rxInput_.setCursorSlot(
-        rxInput_.slotCount()); /* full pre-fill, cursor at end */
+    /* TX starts empty; RX is fully pre-filled with the cursor at the end. */
+    memset(txBuf_, kPlaceholder, kFreqSlots);
+    txBuf_[kFreqSlots] = '\0';
+    txSlot_ = 0;
+    slotsFromFreq(rxBuf_, ch.rx_frequency);
+    rxBuf_[kFreqSlots] = '\0';
+    bindField(false, kFreqSlots);
     rxPristine_ = true;
     txPristine_ = true; /* TX derived lazily on the first switch / commit */
 }
@@ -754,8 +760,8 @@ void VfoView::beginInput(uint8_t firstDigit)
     openInput();
     /* First digit retypes from the top (the pre-filled RX is pristine). */
     rxPristine_ = false;
-    rxInput_.clearSlots();
-    rxInput_.putDigit(firstDigit);
+    entry_.clearSlots();
+    entry_.putDigit(firstDigit);
     if (state.settings.vpLevel >= vpLow) {
         vp_flush();
         vp_queueInteger(firstDigit);
@@ -777,7 +783,15 @@ void VfoView::switchField()
 {
     if (!inputTxSet_ && txPristine_)
         deriveTx(); /* refresh TX from the latest RX + offset before showing it */
+
+    /* Keep the cursor of the field left, and edit the other one. */
+    const uint8_t slot = static_cast<uint8_t>(entry_.cursorSlot());
+    if (inputTxSet_)
+        txSlot_ = slot;
+    else
+        rxSlot_ = slot;
     inputTxSet_ = !inputTxSet_;
+    bindField(inputTxSet_, inputTxSet_ ? txSlot_ : rxSlot_);
     inputErrorAt_ = 0;
     refreshInput();
     if (state.settings.vpLevel >= vpLow)
@@ -786,12 +800,24 @@ void VfoView::switchField()
 
 void VfoView::deriveTx()
 {
-    const freq_t rx = freqFromSlots(rxInput_);
+    const freq_t rx = freqFromSlots(rxBuf_);
     int64_t tx = (int64_t)rx + inputShift_;
     if (tx < 0)
         tx = 0; /* an underflowing offset is rejected in band at commit */
-    slotsFromFreq(txInput_, (freq_t)tx);
-    txInput_.setCursorSlot(txInput_.slotCount());
+    slotsFromFreq(txBuf_, (freq_t)tx);
+    txSlot_ = kFreqSlots;
+}
+
+void VfoView::bindField(bool tx, uint8_t slot)
+{
+    /* Binding lays the mask over the buffer: put the digits back after. */
+    char *buf = tx ? txBuf_ : rxBuf_;
+    char digits[kFreqDigits + 1];
+    memcpy(digits, buf, sizeof(digits));
+    entry_.configureSlots(buf, kFreqDigits + 1, kFreqMask, kPlaceholder,
+                          TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    memcpy(buf, digits, sizeof(digits));
+    entry_.setCursorSlot(slot);
 }
 
 void VfoView::confirmInput()
@@ -804,8 +830,8 @@ void VfoView::confirmInput()
         return;
     }
 
-    const freq_t rx = freqFromSlots(rxInput_);
-    const freq_t tx = freqFromSlots(txInput_);
+    const freq_t rx = freqFromSlots(rxBuf_);
+    const freq_t tx = freqFromSlots(txBuf_);
     if (freqInBand(rx) && freqInBand(tx)) {
         state.channel.rx_frequency = rx;
         state.channel.tx_frequency = tx;
@@ -839,10 +865,9 @@ void VfoView::exitInput()
 
 void VfoView::refreshInput()
 {
-    const TextInput &f = inputTxSet_ ? txInput_ : rxInput_;
     char main[16];
     char sub[6];
-    composeEntry(f, main, sub);
+    composeEntry(inputTxSet_ ? txBuf_ : rxBuf_, main, sub);
 
     const bool err = (inputErrorAt_ != 0);
     hero_.setEntry(main, sub);
@@ -911,7 +936,7 @@ void VfoView::renderDstEdit()
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;
 
     char body[36];
-    dst_.formatWindow(body, sizeof(body), bodyW, font);
+    entry_.formatWindow(body, sizeof(body), bodyW, font);
     snprintf(nameCache_, sizeof(nameCache_), "@%s", body);
     idxCache_[0] = '\0';
     chanIdx_.setText(idxCache_);
@@ -923,18 +948,18 @@ void VfoView::renderDstEdit()
 void VfoView::announceDstChar()
 {
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputChar(dst_.cursorChar());
+        vp_announceInputChar(entry_.cursorChar());
 }
 
 void VfoView::beginDstEdit()
 {
     strncpy(dstBuf_, state.settings.m17_dest, sizeof(dstBuf_) - 1);
     dstBuf_[sizeof(dstBuf_) - 1] = '\0';
-    dst_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
-                   TextInput::Mode::SingleLine, TextInput::CursorStyle::Bracket,
-                   FONT_SIZE_8PT);
-    dst_.setMultiTap(MTAP_CALLSIGN);
-    dst_.begin();
+    entry_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
+                     TextInput::Mode::SingleLine,
+                     TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    entry_.setMultiTap(MTAP_CALLSIGN);
+    entry_.begin();
     dstEditing_ = true;
     /* The channel-name font stays at its display size: renderDstEdit() scrolls
      * a cursor-visible window of the "@W1[A]W" string within the box instead of
@@ -946,14 +971,14 @@ void VfoView::beginDstEdit()
 
 void VfoView::dstCycle(int dir)
 {
-    dst_.cycle(dir);
+    entry_.cycle(dir);
     renderDstEdit();
     announceDstChar();
 }
 
 void VfoView::dstMove(int dir)
 {
-    dst_.moveCursor(dir);
+    entry_.moveCursor(dir);
     renderDstEdit();
     announceDstChar();
 }
@@ -962,7 +987,7 @@ void VfoView::endDstEdit(bool commit)
 {
     if (commit) {
         /* Strip trailing spaces, then store the destination. */
-        dst_.stripTrailingSpaces();
+        entry_.stripTrailingSpaces();
         strncpy(state.settings.m17_dest, dstBuf_,
                 sizeof(state.settings.m17_dest) - 1);
         state.settings.m17_dest[sizeof(state.settings.m17_dest) - 1] = '\0';
@@ -993,7 +1018,7 @@ NavIntent VfoView::onDstEditEvent(const Event &e)
         else if (!kbdSpaceOnHash() && ((k & KEY_HASH) != 0u)) {
             /* # clears the field (unified across the text editors); ENTER then
              * commits an empty destination as @ALL. */
-            dst_.clear();
+            entry_.clear();
             renderDstEdit();
             announceDstChar();
         } else if ((k & KBD_CHAR_MASK) != 0u) {
@@ -1001,9 +1026,9 @@ NavIntent VfoView::onDstEditEvent(const Event &e)
             const uint8_t ki =
                 static_cast<uint8_t>(__builtin_ctz(k & KBD_CHAR_MASK));
             if (ki == 10u)
-                dst_.backspace();
+                entry_.backspace();
             else
-                dst_.tapKey(ki, getTick());
+                entry_.tapKey(ki, getTick());
             renderDstEdit();
             announceDstChar();
         } else if ((k & KEY_UP) != 0u)

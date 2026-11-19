@@ -79,8 +79,16 @@ private:
     void confirmInput();    //< ENTER: validate + commit both RX and TX in band
     void exitInput();       //< leave keypad entry, restore the readout
     void refreshInput();    //< redraw the hero/label from the entry
-    void announceFreq();    //< speak the current channel frequencies
-    void clearFmTone();     //< drop the momentary FM tone if latched
+
+    /**
+     * Edit the RX or the TX digits, keeping both buffers' digits.
+     *
+     * @param tx: edit TX rather than RX.
+     * @param slot: cursor slot.
+     */
+    void bindField(bool tx, uint8_t slot);
+    void announceFreq(); //< speak the current channel frequencies
+    void clearFmTone();  //< drop the momentary FM tone if latched
 
     /* --- M17 destination (shown in the channel line, edited via #) --- */
     void composeChanLine(const state_t &s, char *idxOut, char *nameOut,
@@ -136,16 +144,18 @@ private:
     int64_t inputShift_ = 0; //< tx - rx captured at open (the repeater offset)
     long long inputErrorAt_ =
         0; //< getTick() of the last out-of-band commit; 0=none
-    TextInput rxInput_;
-    TextInput txInput_;
     char rxBuf_[kFreqDigits + 1] = { 0 };
     char txBuf_[kFreqDigits + 1] = { 0 };
+    uint8_t rxSlot_ = 0; //< RX cursor slot while TX is edited
+    uint8_t txSlot_ = 0; //< TX cursor slot while RX is edited
 
     /* M17 destination editor (classic MAIN_VFO # -> dst input): edited in place
      * through the shared TextInput widget (inline bracket rendering). */
     bool dstEditing_ = false; //< destination editor active
     char dstBuf_[10] = { 0 }; //< settings.m17_dest is char[10]
-    TextInput dst_;
+
+    /* The one field being edited: the RX or TX digits, or the destination. */
+    TextInput entry_;
 };
 
 } // namespace ortxui
