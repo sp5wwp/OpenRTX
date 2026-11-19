@@ -759,20 +759,6 @@ void vp_announceSettingsVoiceLevel(const enum vpQueueFlags flags)
     playIfNeeded(flags);
 }
 
-void vp_announceSettingsOnOffToggle(const char *const *stringTableStringPtr,
-                                    const enum vpQueueFlags flags, bool val)
-{
-    clearCurrPromptIfNeeded(flags);
-
-    if (flags & vpqIncludeDescriptions)
-        vp_queueStringTableEntry(stringTableStringPtr);
-
-    vp_queueStringTableEntry(val ? &currentLanguage->on :
-                                   &currentLanguage->off);
-
-    playIfNeeded(flags);
-}
-
 void vp_announceSettingsInt(const char *const *stringTableStringPtr,
                             const enum vpQueueFlags flags, int val)
 {

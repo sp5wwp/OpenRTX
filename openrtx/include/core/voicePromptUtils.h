@@ -192,12 +192,6 @@ void vp_announceSettingsTimeDate();
 void vp_announceSettingsVoiceLevel(const enum vpQueueFlags flags);
 
 /**
- * This is called to speak generic settings on/off toggles.
- */
-void vp_announceSettingsOnOffToggle(const char *const *stringTableStringPtr,
-                                    const enum vpQueueFlags flags, bool val);
-
-/**
  * This is called to speak generic settings int values.
  */
 void vp_announceSettingsInt(const char *const *stringTableStringPtr,
