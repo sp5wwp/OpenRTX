@@ -42,6 +42,7 @@ using namespace ortxui;
 static event_t evQueue[UI_EVENT_QUEUE_LEN];
 static uint8_t evQueue_rdPos = 0; ///< Next event to pop
 static uint8_t evQueue_wrPos = 0; ///< Next free slot
+static bool statusQueued = false; ///< A status event is in the ring
 
 /** Radio state the views draw from, copied under state_mutex. */
 static state_t lastState;
@@ -187,6 +188,7 @@ extern "C" void ui_init()
 {
     evQueue_rdPos = 0;
     evQueue_wrPos = 0;
+    statusQueued = false;
     lastState = state;
 
     volumeOverlay.build();
@@ -459,6 +461,8 @@ static void handleTick(long long now, bool *sync_rtx)
         const event_t raw = evQueue[evQueue_rdPos];
         evQueue_rdPos =
             static_cast<uint8_t>((evQueue_rdPos + 1) % UI_EVENT_QUEUE_LEN);
+        if (raw.type == EVENT_STATUS)
+            statusQueued = false;
 
         kbd_msg_t msg;
         msg.value = raw.payload;
@@ -545,6 +549,11 @@ extern "C" void ui_updateGUI()
 
 extern "C" bool ui_pushEvent(const uint8_t type, const uint32_t data)
 {
+    /* A status event carries no data, so one in the ring is enough; more
+     * would fill it while the UI runs behind and drop key presses. */
+    if ((type == EVENT_STATUS) && statusQueued)
+        return true;
+
     const uint8_t newWrPos =
         static_cast<uint8_t>((evQueue_wrPos + 1) % UI_EVENT_QUEUE_LEN);
     if (newWrPos == evQueue_rdPos)
@@ -556,6 +565,8 @@ extern "C" bool ui_pushEvent(const uint8_t type, const uint32_t data)
     event.payload = data;
     evQueue[evQueue_wrPos] = event;
     evQueue_wrPos = newWrPos;
+    if (type == EVENT_STATUS)
+        statusQueued = true;
     return true;
 }
 
