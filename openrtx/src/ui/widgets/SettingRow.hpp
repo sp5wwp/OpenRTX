@@ -38,7 +38,7 @@ public:
     ~SettingRow() = default;
 
     /** Per-list geometry: vertical content inset and the label/value gutter. */
-    void setPad(int16_t padY, int16_t gap);
+    void setPad(int16_t inset, int16_t spacing);
 
     /**
      * Bind the flyweight to one row's content and selection state.
@@ -101,13 +101,13 @@ private:
     static constexpr fontSize_t VALUE_FONT =
         (sizeClass() == SizeClass::Regular) ? FONT_SIZE_6PT : FONT_SIZE_5PT;
 
-    Label label_;             ///< Row label
-    Label value_;             ///< Row value, for a value row
-    Kind kind_ = Kind::Plain; ///< Row kind
-    bool checked_ = false;    ///< Checkbox state
-    bool selected_ = false;   ///< The row is selected
-    int16_t padY_ = 4;        ///< Vertical inset
-    int16_t gap_ = 2;         ///< Gap between the label and a value below it
+    Label nameLabel;            ///< Row label
+    Label valueLabel;           ///< Row value, for a value row
+    Kind rowKind = Kind::Plain; ///< Row kind
+    bool isChecked = false;     ///< Checkbox state
+    bool isSelected = false;    ///< The row is selected
+    int16_t insetY = 4;         ///< Vertical inset
+    int16_t gutter = 2;         ///< Gap between the label and a value below it
 };
 
 } // namespace ortxui

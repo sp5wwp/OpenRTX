@@ -61,13 +61,13 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** Number of rows: the messages plus the "New Message" row, if any. */
     uint16_t rowCount() const override
     {
-        return static_cast<uint16_t>(count_ + (canCompose_ ? 1 : 0));
+        return static_cast<uint16_t>(count + (canCompose ? 1 : 0));
     }
 
     /** Fill row `index` from the inbox. */
@@ -89,15 +89,15 @@ private:
     /** Pin value of the "New Message" row. */
     static constexpr uint32_t NEW_ROW = UINT32_MAX;
 
-    Screen screen_;           ///< Widget-tree root
-    Flex root_;               ///< Top bar over the list or the empty line
-    List list_;               ///< Message rows
-    Label empty_;             ///< "No messages" line
-    uint32_t pinned_ = 0;     ///< Selected sequence, NEW_ROW, 0 for newest
-    uint32_t digest_ = 0;     ///< digest() at the last reload
-    uint16_t count_ = 0;      ///< Number of messages at the last reload
-    bool canCompose_ = false; ///< The "New Message" row is shown
-    mutable char label_[MSG_ADDR_MAX_LEN + 8] = {}; ///< Mark and callsign
+    Screen tree;              ///< Widget-tree root
+    Flex root;                ///< Top bar over the list or the empty line
+    List listBox;             ///< Message rows
+    Label emptyLabel;         ///< "No messages" line
+    uint32_t pinned = 0;      ///< Selected sequence, NEW_ROW, 0 for newest
+    uint32_t shownDigest = 0; ///< digest() at the last reload
+    uint16_t count = 0;       ///< Number of messages at the last reload
+    bool canCompose = false;  ///< The "New Message" row is shown
+    mutable char label[MSG_ADDR_MAX_LEN + 8] = {}; ///< Mark and callsign
 };
 
 } // namespace ortxui

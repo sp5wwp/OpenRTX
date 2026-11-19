@@ -50,7 +50,7 @@ public:
      */
     void setAxis(Axis a)
     {
-        axis_ = a;
+        axis = a;
     }
 
     /**
@@ -60,7 +60,7 @@ public:
      */
     void setJustify(Justify j)
     {
-        justify_ = j;
+        justify = j;
     }
 
     /**
@@ -70,7 +70,7 @@ public:
      */
     void setAlign(Align a)
     {
-        align_ = a;
+        align = a;
     }
 
     /**
@@ -80,7 +80,7 @@ public:
      */
     void setGap(uint8_t g)
     {
-        gap_ = g;
+        gap = g;
     }
 
     /**
@@ -90,8 +90,8 @@ public:
      */
     void setPadding(uint8_t p)
     {
-        padX_ = p;
-        padY_ = p;
+        padX = p;
+        padY = p;
     }
 
     /**
@@ -102,8 +102,8 @@ public:
      */
     void setPadding(uint8_t x, uint8_t y)
     {
-        padX_ = x;
-        padY_ = y;
+        padX = x;
+        padY = y;
     }
 
     /**
@@ -113,8 +113,8 @@ public:
      */
     void setBackground(Sem bg)
     {
-        bg_ = bg;
-        hasBg_ = true;
+        background = bg;
+        hasBg = true;
     }
 
     /** Paint the background, if set. */
@@ -133,14 +133,14 @@ private:
      */
     int16_t childBase(const Object &c, const LayoutHints &h) const;
 
-    Axis axis_ = Axis::Row;            ///< Main axis
-    Justify justify_ = Justify::Start; ///< Free space spread, nothing growing
-    Align align_ = Align::Stretch;     ///< Default cross-axis alignment
-    uint8_t gap_ = 0;                  ///< Gap between children
-    uint8_t padX_ = 0;                 ///< Left and right padding
-    uint8_t padY_ = 0;                 ///< Top and bottom padding
-    Sem bg_ = Sem::Surface;            ///< Background colour role
-    bool hasBg_ = false;               ///< The background is painted
+    Axis axis = Axis::Row;            ///< Main axis
+    Justify justify = Justify::Start; ///< Free space spread, nothing growing
+    Align align = Align::Stretch;     ///< Default cross-axis alignment
+    uint8_t gap = 0;                  ///< Gap between children
+    uint8_t padX = 0;                 ///< Left and right padding
+    uint8_t padY = 0;                 ///< Top and bottom padding
+    Sem background = Sem::Surface;    ///< Background colour role
+    bool hasBg = false;               ///< The background is painted
 };
 
 } // namespace ortxui

@@ -75,7 +75,7 @@ public:
      */
     void setContentPad(int16_t padY)
     {
-        padY_ = padY;
+        insetY = padY;
     }
 
     /**
@@ -85,13 +85,13 @@ public:
      */
     void setSelectable(bool s)
     {
-        selectable_ = s;
+        selectable = s;
     }
 
     /** Get the selected row. */
     uint16_t selected() const
     {
-        return selected_;
+        return selectedRow;
     }
 
     /**
@@ -215,19 +215,19 @@ private:
     /** Get the number of rows of the table or the model. */
     uint16_t rows() const
     {
-        return (model_ != nullptr) ? model_->rowCount() : count_;
+        return (listModel != nullptr) ? listModel->rowCount() : itemCount;
     }
 
     /** Space between a row's label and its value line. */
     static constexpr int16_t VALUE_GAP = 2;
 
-    const ListItem *items_ = nullptr;  ///< Fixed table, or nullptr
-    const ListModel *model_ = nullptr; ///< Model, or nullptr
-    uint16_t count_ = 0;               ///< Rows of the fixed table
-    uint16_t selected_ = 0;            ///< Selected row
-    uint16_t top_ = 0;                 ///< First visible row
-    int16_t padY_ = 4;                 ///< Vertical inset of each row
-    bool selectable_ = true;           ///< The list has a selection
+    const ListItem *itemTable = nullptr;  ///< Fixed table, or nullptr
+    const ListModel *listModel = nullptr; ///< Model, or nullptr
+    uint16_t itemCount = 0;               ///< Rows of the fixed table
+    uint16_t selectedRow = 0;             ///< Selected row
+    uint16_t topRow = 0;                  ///< First visible row
+    int16_t insetY = 4;                   ///< Vertical inset of each row
+    bool selectable = true;               ///< The list has a selection
 };
 
 } // namespace ortxui

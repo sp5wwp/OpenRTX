@@ -51,7 +51,7 @@ public:
      */
     void setMode(const char *mode)
     {
-        mode_ = mode;
+        modeText = mode;
     }
 
     /**
@@ -62,17 +62,17 @@ public:
      */
     void setTextColor(Sem c)
     {
-        textColor_ = c;
+        textColor = c;
     }
 
     /** Paint the frequency, the sub-kHz digits and the mode label. */
     void draw(DrawCtx &d) override;
 
 private:
-    const char *mode_ = "";          ///< Mode label
-    char mainBuf_[16] = "0.000";     ///< MHz and kHz
-    char subBuf_[6] = "00";          ///< Sub-kHz digits
-    Sem textColor_ = Sem::OnSurface; ///< Colour of the frequency
+    const char *modeText = "";      ///< Mode label
+    char mainBuf[16] = "0.000";     ///< MHz and kHz
+    char subBuf[6] = "00";          ///< Sub-kHz digits
+    Sem textColor = Sem::OnSurface; ///< Colour of the frequency
 };
 
 } // namespace ortxui

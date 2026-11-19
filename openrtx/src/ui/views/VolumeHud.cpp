@@ -56,9 +56,11 @@ void VolumeHud::draw(DrawCtx &d)
                 TEXT_ALIGN_CENTER, Sem::Accent, text);
     d.popClip();
 
-    const unsigned level = (volume_ < 0) ? 0u : static_cast<unsigned>(volume_);
+    const unsigned level = (shownVolume < 0) ?
+                               0u :
+                               static_cast<unsigned>(shownVolume);
     char readout[8] = "";
-    if (volume_ >= 0)
+    if (shownVolume >= 0)
         sniprintf(readout, sizeof(readout), "%u%%",
                   (level * 100u + 127u) / 255u);
 

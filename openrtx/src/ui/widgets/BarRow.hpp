@@ -45,8 +45,8 @@ public:
      */
     void setLabel(const UiText &l, const char *icon = nullptr)
     {
-        label_ = l;
-        icon_ = icon;
+        caption = l;
+        labelIcon = icon;
     }
 
     /**
@@ -56,7 +56,7 @@ public:
      */
     void setReadout(const char *r)
     {
-        readout_ = (r != nullptr) ? r : "";
+        readout = (r != nullptr) ? r : "";
     }
 
     /**
@@ -66,7 +66,7 @@ public:
      */
     void setValue(float v)
     {
-        value_ = v;
+        value = v;
     }
 
     /**
@@ -76,7 +76,7 @@ public:
      */
     void setMarker(float v)
     {
-        marker_ = v;
+        marker = v;
     }
 
     /**
@@ -86,7 +86,7 @@ public:
      */
     void setShowScale(bool s)
     {
-        showScale_ = s;
+        showScale = s;
     }
 
     /**
@@ -96,7 +96,7 @@ public:
      */
     void setFont(fontSize_t f)
     {
-        font_ = f;
+        textFont = f;
     }
 
     /**
@@ -106,7 +106,7 @@ public:
      */
     void setBarHeight(uint8_t h)
     {
-        barH_ = h;
+        barHeight = h;
     }
 
     /**
@@ -117,8 +117,8 @@ public:
      */
     void setColors(Sem track, Sem fill)
     {
-        track_ = track;
-        fill_ = fill;
+        trackColor = track;
+        fillColor = fill;
     }
 
     /**
@@ -128,7 +128,7 @@ public:
      */
     void setTextColor(Sem c)
     {
-        text_ = c;
+        textColor = c;
     }
 
     /**
@@ -169,17 +169,17 @@ private:
      */
     uint16_t track(int16_t &left) const;
 
-    UiText label_;                    ///< Leading label
-    const char *icon_ = nullptr;      ///< Glyph before the label, if any
-    const char *readout_ = "";        ///< Trailing readout
-    float value_ = 0.0f;              ///< Filled fraction
-    float marker_ = -1.0f;            ///< Mark fraction, negative to hide it
-    fontSize_t font_ = FONT_SIZE_6PT; ///< Text font
-    Sem track_ = Sem::SurfaceHigh;    ///< Track colour role
-    Sem fill_ = Sem::Primary;         ///< Fill colour role
-    Sem text_ = Sem::OnSurface;       ///< Text colour role
-    uint8_t barH_ = 8;                ///< Track thickness
-    bool showScale_ = false;          ///< The S-scale shows
+    UiText caption;                      ///< Leading label
+    const char *labelIcon = nullptr;     ///< Glyph before the label, if any
+    const char *readout = "";            ///< Trailing readout
+    float value = 0.0f;                  ///< Filled fraction
+    float marker = -1.0f;                ///< Mark fraction, negative to hide it
+    fontSize_t textFont = FONT_SIZE_6PT; ///< Text font
+    Sem trackColor = Sem::SurfaceHigh;   ///< Track colour role
+    Sem fillColor = Sem::Primary;        ///< Fill colour role
+    Sem textColor = Sem::OnSurface;      ///< Text colour role
+    uint8_t barHeight = 8;               ///< Track thickness
+    bool showScale = false;              ///< The S-scale shows
 };
 
 } // namespace ortxui

@@ -20,7 +20,7 @@ static constexpr uint16_t MAX_ENTRIES = 0xFFFE;
 
 CodeplugView::CodeplugView(const UiText &title, const UiText &none,
                            const UiText &first) :
-    title_(title), none_(none), first_(first)
+    titleText(title), noneText(none), firstText(first)
 {
 }
 
@@ -29,55 +29,55 @@ void CodeplugView::build()
     const bool regular = (sizeClass() == SizeClass::Regular);
 
     /* The codeplug keeps no count, so probe it, once per opening. */
-    while ((entries_ < MAX_ENTRIES) && (readName(entries_, name_) == 0))
-        entries_++;
+    while ((entries < MAX_ENTRIES) && (readName(entries, nameBuf) == 0))
+        entries++;
 
     const bool empty = (rowCount() == 0);
 
-    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root.setAxis(Axis::Column);
 
-    TopBar &bar = useTopBar(title_);
+    TopBar &bar = useTopBar(titleText);
 
-    list_.setContentPad(1);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setFlag(FLAG_HIDDEN, empty);
-    list_.setGrow(1);
-    list_.setModel(this);
+    listBox.setContentPad(1);
+    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setFlag(FLAG_HIDDEN, empty);
+    listBox.setGrow(1);
+    listBox.setModel(this);
 
-    empty_.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
-    empty_.setAlign(TEXT_ALIGN_CENTER);
-    empty_.setColor(Sem::OnSurfaceMuted);
-    empty_.setText(none_);
-    empty_.setFlag(FLAG_HIDDEN, !empty);
-    empty_.setGrow(1);
+    emptyLabel.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
+    emptyLabel.setAlign(TEXT_ALIGN_CENTER);
+    emptyLabel.setColor(Sem::OnSurfaceMuted);
+    emptyLabel.setText(noneText);
+    emptyLabel.setFlag(FLAG_HIDDEN, !empty);
+    emptyLabel.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    root_.addChild(&empty_);
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.focusFirst();
+    root.addChild(&bar);
+    root.addChild(&listBox);
+    root.addChild(&emptyLabel);
+    tree.addChild(&root);
+    root.onLayout();
+    tree.focusFirst();
 }
 
 uint16_t CodeplugView::rowCount() const
 {
-    return static_cast<uint16_t>(entries_ + (first_.isSet() ? 1 : 0));
+    return static_cast<uint16_t>(entries + (firstText.isSet() ? 1 : 0));
 }
 
 void CodeplugView::rowAt(uint16_t index, ListItem &out) const
 {
-    if (first_.isSet()) {
+    if (firstText.isSet()) {
         if (index == 0) {
-            out.label = first_;
+            out.label = firstText;
             return;
         }
         index--;
     }
 
-    if (readName(index, name_) != 0)
-        name_[0] = '\0';
-    out.label = name_;
+    if (readName(index, nameBuf) != 0)
+        nameBuf[0] = '\0';
+    out.label = nameBuf;
 }
 
 void CodeplugView::copyName(char *dst, const char *src)
@@ -96,7 +96,7 @@ NavIntent CodeplugView::onEvent(const Event &e)
 {
     if ((e.kind == EvKind::Key) && ((e.keys & KEY_ENTER) != 0u)
         && (rowCount() > 0))
-        return pick(list_.selected());
+        return pick(listBox.selected());
 
     return View::onEvent(e);
 }

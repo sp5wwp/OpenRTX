@@ -107,10 +107,10 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
 
 Rect MacroTiles::tileArea(uint8_t tile) const
 {
-    const uint16_t rowH = static_cast<uint16_t>(area_.h / 3);
-    const Rect row = { area_.x,
-                       static_cast<int16_t>(area_.y + (tile / 3) * rowH),
-                       area_.w, rowH };
+    const uint16_t rowH = static_cast<uint16_t>(bounds.h / 3);
+    const Rect row = { bounds.x,
+                       static_cast<int16_t>(bounds.y + (tile / 3) * rowH),
+                       bounds.w, rowH };
     if ((row.w == 0) || (row.h == 0))
         return { 0, 0, 0, 0 };
 
@@ -173,13 +173,13 @@ bool MacroTiles::sync(const state_t &s, bool locked)
     r.brightness = s.settings.brightness;
     r.locked = locked;
 
-    const bool changed = (r.power != shown_.power)
-                      || (memcmp(&r.fm, &shown_.fm, sizeof(r.fm)) != 0)
-                      || (r.mode != shown_.mode)
-                      || (r.bandwidth != shown_.bandwidth)
-                      || (r.brightness != shown_.brightness)
-                      || (r.locked != shown_.locked);
-    shown_ = r;
+    const bool changed = (r.power != shown.power)
+                      || (memcmp(&r.fm, &shown.fm, sizeof(r.fm)) != 0)
+                      || (r.mode != shown.mode)
+                      || (r.bandwidth != shown.bandwidth)
+                      || (r.brightness != shown.brightness)
+                      || (r.locked != shown.locked);
+    shown = r;
     return changed;
 }
 
@@ -194,7 +194,7 @@ void MacroTiles::draw(DrawCtx &d)
             continue;
         ScratchTile &scratch = Scratch::get<ScratchTile>();
 
-        composeValue(static_cast<MacroAction>(i), shown_, value, sizeof(value));
+        composeValue(static_cast<MacroAction>(i), shown, value, sizeof(value));
         setUp(i, keyBuf, value);
         scratch.key.setArea({ 0, 0, 0, 0 });
         scratch.value.setArea({ 0, 0, 0, 0 });
@@ -203,7 +203,7 @@ void MacroTiles::draw(DrawCtx &d)
             scratch.box.onLayout();
         }
 
-        const bool selected = (i == selected_);
+        const bool selected = (i == selectedTile);
         if (selected)
             d.fillRect(tile, Sem::Primary);
         scratch.key.setColor(selected ? Sem::OnPrimary : Sem::Accent);

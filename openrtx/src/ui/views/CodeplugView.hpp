@@ -51,13 +51,13 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** The list, whose position UiMemory keeps. */
     List *list() override
     {
-        return &list_;
+        return &listBox;
     }
 
     /** Get the number of rows: the fixed row, if any, and the entries. */
@@ -99,15 +99,15 @@ protected:
     static void copyName(char *dst, const char *src);
 
 private:
-    UiText title_;                         ///< Screen title
-    UiText none_;                          ///< Text of the empty state
-    UiText first_;                         ///< Fixed first row, unset if none
-    Screen screen_;                        ///< Widget-tree root
-    Flex root_;                            ///< Column: top bar over the list
-    List list_;                            ///< The rows
-    Label empty_;                          ///< Shown instead of an empty list
-    uint16_t entries_ = 0;                 ///< Number of codeplug entries
-    mutable char name_[CPS_STR_SIZE] = {}; ///< Name of the last row read
+    UiText titleText;                        ///< Screen title
+    UiText noneText;                         ///< Text of the empty state
+    UiText firstText;                        ///< Fixed first row, unset if none
+    Screen tree;                             ///< Widget-tree root
+    Flex root;                               ///< Column: top bar over the list
+    List listBox;                            ///< The rows
+    Label emptyLabel;                        ///< Shown instead of an empty list
+    uint16_t entries = 0;                    ///< Number of codeplug entries
+    mutable char nameBuf[CPS_STR_SIZE] = {}; ///< Name of the last row read
 };
 
 } // namespace ortxui

@@ -97,7 +97,7 @@ public:
      */
     void setMultiTap(const MultiTapTable &t)
     {
-        tapTable_ = &t;
+        tapTable = &t;
     }
 
     /**
@@ -159,7 +159,7 @@ public:
     /** Number of slots. */
     uint16_t slotCount() const
     {
-        return slotCount_;
+        return numSlots;
     }
 
     /** Number of filled slots from the first one on. */
@@ -179,7 +179,7 @@ public:
      */
     uint16_t cursorSlot() const
     {
-        return slotCursor_;
+        return slotCursor;
     }
 
     /** Empty every slot and put the cursor on the first. */
@@ -207,7 +207,7 @@ public:
     /** Cursor position in the buffer. */
     uint16_t cursor() const
     {
-        return cursor_;
+        return cursorPos;
     }
 
     /**
@@ -217,7 +217,7 @@ public:
      */
     uint16_t topRow() const
     {
-        return topRow_;
+        return firstVisibleRow;
     }
 
     /**
@@ -227,7 +227,8 @@ public:
      */
     char cursorChar() const
     {
-        return (buf_ != nullptr && cursor_ < len_) ? buf_[cursor_] : ' ';
+        return (textBuf != nullptr && cursorPos < len) ? textBuf[cursorPos] :
+                                                         ' ';
     }
 
     /**
@@ -374,25 +375,25 @@ private:
 
     static constexpr uint16_t MAX_SLOTS = 16; ///< Most slots of a masked field
 
-    long long tapTick_ = 0;                   ///< Tick of the last tap
-    char *buf_ = nullptr;                     ///< Bound buffer
-    const Charset *cs_ = nullptr;             ///< Characters to cycle through
-    const MultiTapTable *tapTable_ = nullptr; ///< Characters digits type
-    fontSize_t font_ = FONT_SIZE_8PT;         ///< Font draw() uses
-    std::array<uint16_t, MAX_SLOTS> slotPos_ = {}; ///< Buffer offset of slots
-    uint16_t cap_ = 0;                             ///< Buffer capacity
-    uint16_t len_ = 0;                             ///< Text length in bytes
-    uint16_t cursor_ = 0;                          ///< Cursor position
-    uint16_t topRow_ = 0;                          ///< First visible row
-    uint16_t slotCount_ = 0;                       ///< Number of slots
-    uint16_t slotCursor_ = 0;                      ///< Active slot
-    Mode mode_ = Mode::SingleLine;                 ///< Layout
-    uint8_t tapSet_ = 0;     ///< Index into the tapped key's characters
-    int8_t tapKeyIdx_ = -1;  ///< Last key tapped
-    bool tapActive_ = false; ///< A character is being tapped
-    bool enterDown_ = false; ///< ENTER went down while the field was bound
-    bool slotMode_ = false;  ///< The field is a slot mask
-    char placeholder_ = '-'; ///< Character of an unfilled slot
+    long long tapTick = 0;                    ///< Tick of the last tap
+    char *textBuf = nullptr;                  ///< Bound buffer
+    const Charset *charset = nullptr;         ///< Characters to cycle through
+    const MultiTapTable *tapTable = nullptr;  ///< Characters digits type
+    fontSize_t textFont = FONT_SIZE_8PT;      ///< Font draw() uses
+    std::array<uint16_t, MAX_SLOTS> slotPos = {}; ///< Buffer offset of slots
+    uint16_t capacity = 0;                        ///< Buffer capacity
+    uint16_t len = 0;                             ///< Text length in bytes
+    uint16_t cursorPos = 0;                       ///< Cursor position
+    uint16_t firstVisibleRow = 0;                 ///< First visible row
+    uint16_t numSlots = 0;                        ///< Number of slots
+    uint16_t slotCursor = 0;                      ///< Active slot
+    Mode editMode = Mode::SingleLine;             ///< Layout
+    uint8_t tapSet = 0;         ///< Index into the tapped key's characters
+    int8_t tapKeyIdx = -1;      ///< Last key tapped
+    bool tapActive = false;     ///< A character is being tapped
+    bool enterDown = false;     ///< ENTER went down while the field was bound
+    bool slotMode = false;      ///< The field is a slot mask
+    char placeholderChar = '-'; ///< Character of an unfilled slot
 };
 
 } // namespace ortxui

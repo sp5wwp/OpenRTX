@@ -110,12 +110,12 @@ public:
      */
     View *view() const
     {
-        return view_;
+        return activeView;
     }
 
 private:
-    alignas(ALIGN) uint8_t storage_[SIZE]; ///< Where the view is built
-    View *view_;                           ///< Current view, or nullptr
+    alignas(ALIGN) uint8_t storage[SIZE]; ///< Where the view is built
+    View *activeView;                     ///< Current view, or nullptr
 };
 
 } // namespace ortxui

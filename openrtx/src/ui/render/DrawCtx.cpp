@@ -14,7 +14,7 @@
 namespace ortxui
 {
 
-DrawCtx::DrawCtx(const Rect &bounds) : clip_(bounds)
+DrawCtx::DrawCtx(const Rect &bounds) : clipRect(bounds)
 {
     gfx_resetClipRect();
 }
@@ -39,15 +39,15 @@ static void clipSpan(int &lo, int &hi, int origin, int first, int last)
 
 void DrawCtx::pushClip(const Rect &r)
 {
-    clipStack_[clipDepth_++] = clip_;
-    clip_ = intersect(clip_, r);
-    gfx_setClipRect(clip_.x, clip_.y, clip_.w, clip_.h);
+    clipStack[clipDepth++] = clipRect;
+    clipRect = intersect(clipRect, r);
+    gfx_setClipRect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
 }
 
 void DrawCtx::popClip()
 {
-    clip_ = clipStack_[--clipDepth_];
-    gfx_setClipRect(clip_.x, clip_.y, clip_.w, clip_.h);
+    clipRect = clipStack[--clipDepth];
+    gfx_setClipRect(clipRect.x, clipRect.y, clipRect.w, clipRect.h);
 }
 
 void DrawCtx::clearScreen(Sem bg)
@@ -123,8 +123,8 @@ void DrawCtx::drawCircle(Point c, uint16_t r, Sem color)
     const float rf = static_cast<float>(r);
     const int R = static_cast<int>(r) + 1;
     int dy0 = -R, dy1 = R, dx0 = -R, dx1 = R;
-    clipSpan(dy0, dy1, c.y, clip_.y, clip_.bottom());
-    clipSpan(dx0, dx1, c.x, clip_.x, clip_.right());
+    clipSpan(dy0, dy1, c.y, clipRect.y, clipRect.bottom());
+    clipSpan(dx0, dx1, c.x, clipRect.x, clipRect.right());
     for (int dy = dy0; dy <= dy1; dy++) {
         for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
@@ -149,8 +149,8 @@ void DrawCtx::fillCircle(Point c, uint16_t r, Sem color)
     const float rf = static_cast<float>(r);
     const int R = static_cast<int>(r) + 1;
     int dy0 = -R, dy1 = R, dx0 = -R, dx1 = R;
-    clipSpan(dy0, dy1, c.y, clip_.y, clip_.bottom());
-    clipSpan(dx0, dx1, c.x, clip_.x, clip_.right());
+    clipSpan(dy0, dy1, c.y, clipRect.y, clipRect.bottom());
+    clipSpan(dx0, dx1, c.x, clipRect.x, clipRect.right());
     for (int dy = dy0; dy <= dy1; dy++) {
         for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
@@ -195,8 +195,8 @@ void DrawCtx::lineAA(Point a, Point b, Sem color, float width)
         static_cast<int>(std::ceil(std::fmax(y0, y1) + half + 1.0f));
 
     int px0 = minx, px1 = maxx, py0 = miny, py1 = maxy;
-    clipSpan(px0, px1, 0, clip_.x, clip_.right());
-    clipSpan(py0, py1, 0, clip_.y, clip_.bottom());
+    clipSpan(px0, px1, 0, clipRect.x, clipRect.right());
+    clipSpan(py0, py1, 0, clipRect.y, clipRect.bottom());
 
     for (int py = py0; py <= py1; py++) {
         for (int px = px0; px <= px1; px++) {

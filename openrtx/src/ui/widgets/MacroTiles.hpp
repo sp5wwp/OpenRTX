@@ -67,7 +67,7 @@ public:
      */
     void select(uint8_t tile)
     {
-        selected_ = tile;
+        selectedTile = tile;
     }
 
     /** Paint the tiles. */
@@ -113,8 +113,8 @@ private:
     static void composeValue(MacroAction action, const Readings &r, char *out,
                              size_t n);
 
-    Readings shown_ = {};      ///< Readings the tiles show
-    uint8_t selected_ = TILES; ///< Highlighted tile, TILES for none
+    Readings shown = {};          ///< Readings the tiles show
+    uint8_t selectedTile = TILES; ///< Highlighted tile, TILES for none
 };
 
 } // namespace ortxui

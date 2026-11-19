@@ -60,14 +60,14 @@ public:
         static_assert(sizeof(T) <= SIZE, "widget larger than the scratch");
         static_assert(alignof(T) <= ALIGN, "widget alignment too strict");
 
-        if (type_ != typeOf<T>()) {
+        if (type != typeOf<T>()) {
             release();
-            new (storage_) T();
-            type_ = typeOf<T>();
-            destroy_ = destroyAs<T>;
+            new (storage) T();
+            type = typeOf<T>();
+            destroy = destroyAs<T>;
         }
 
-        return *reinterpret_cast<T *>(storage_);
+        return *reinterpret_cast<T *>(storage);
     }
 
 private:
@@ -97,9 +97,9 @@ private:
         static_cast<T *>(p)->~T();
     }
 
-    alignas(ALIGN) static uint8_t storage_[SIZE]; ///< Where the widget lives
-    static const void *type_;         ///< Type held, nullptr if none
-    static void (*destroy_)(void *p); ///< Destroys the widget held
+    alignas(ALIGN) static uint8_t storage[SIZE]; ///< Where the widget lives
+    static const void *type;                     ///< Type held, nullptr if none
+    static void (*destroy)(void *p);             ///< Destroys the widget held
 };
 
 } // namespace ortxui

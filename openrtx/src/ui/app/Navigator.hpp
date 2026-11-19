@@ -79,7 +79,7 @@ public:
      */
     ViewId activeId() const
     {
-        return (depth_ > 0) ? stack_[depth_ - 1] : ViewId::Count;
+        return (depth > 0) ? stack[depth - 1] : ViewId::Count;
     }
 
     /**
@@ -129,7 +129,7 @@ public:
      */
     View *overlay() const
     {
-        return overlay_;
+        return overlayView;
     }
 
 private:
@@ -164,14 +164,14 @@ private:
     /** Deepest stack of screens. */
     static constexpr uint8_t MAX_DEPTH = 8;
 
-    ViewSlot &slot_;                      ///< Where the top screen is built
-    UiMemory &mem_;                       ///< What survives a view
-    View *overlay_ = nullptr;             ///< Overlay shown, or nullptr
-    long long overlayShown_ = 0;          ///< Tick it was last presented
-    uint32_t overlayTimeout_ = 0;         ///< Time it stays up, in ms
-    std::array<ViewId, MAX_DEPTH> stack_; ///< Screens, root first
-    ViewId built_ = ViewId::Count;        ///< Screen built in the slot
-    uint8_t depth_ = 0;                   ///< Number of screens on the stack
+    ViewSlot &viewSlot;                  ///< Where the top screen is built
+    UiMemory &memory;                    ///< What survives a view
+    View *overlayView = nullptr;         ///< Overlay shown, or nullptr
+    long long overlayShown = 0;          ///< Tick it was last presented
+    uint32_t overlayTimeout = 0;         ///< Time it stays up, in ms
+    std::array<ViewId, MAX_DEPTH> stack; ///< Screens, root first
+    ViewId built = ViewId::Count;        ///< Screen built in the slot
+    uint8_t depth = 0;                   ///< Number of screens on the stack
 };
 
 } // namespace ortxui

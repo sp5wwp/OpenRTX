@@ -15,9 +15,9 @@ namespace ortxui
 
 void FmView::build()
 {
-    items_[RowTone].label = STR(CTCSSTone);
-    items_[RowEnable].label = STR(CTCSSEn);
-    buildList(STR(fm), items_.data(), RowCount);
+    items[RowTone].label = STR(CTCSSTone);
+    items[RowEnable].label = STR(CTCSSEn);
+    buildList(STR(fm), items.data(), RowCount);
 }
 
 void FmView::formatValue(uint8_t row, char *out, size_t cap)

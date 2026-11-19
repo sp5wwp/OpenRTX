@@ -16,7 +16,7 @@ namespace ortxui
 {
 
 /**
- * Thin, theme-aware drawing surface layered over the gfx_* backend.
+ * Thin, theme-aware drawing surface layered over the gfx* backend.
  *
  * Every colour is supplied as a semantic role and resolved through the active
  * Theme, so drawing code never mentions raw colours. The context also carries
@@ -24,7 +24,7 @@ namespace ortxui
  * whole screen, or one band on targets drawing in bands. Painting skips the
  * objects outside it.
  *
- * The gfx_* backend owns the static framebuffer or band buffer; the toolkit
+ * The gfx* backend owns the static framebuffer or band buffer; the toolkit
  * never allocates one. The UI loop sends what was drawn to the panel.
  */
 class DrawCtx
@@ -43,7 +43,7 @@ public:
     /** Current clip rectangle (screen space). */
     const Rect &clip() const
     {
-        return clip_;
+        return clipRect;
     }
 
     /** Narrow the clip to the intersection of the current clip and `r`, and
@@ -117,9 +117,9 @@ private:
     static constexpr uint8_t CLIP_STACK_MAX = 16; ///< Deepest nesting of clips
     static constexpr float LINE_AA_WIDTH = 1.3f;  ///< Default lineAA() width
 
-    std::array<Rect, CLIP_STACK_MAX> clipStack_;  ///< Clips saved by pushClip()
-    Rect clip_;                                   ///< Current clip
-    uint8_t clipDepth_ = 0;                       ///< Clips on clipStack_
+    std::array<Rect, CLIP_STACK_MAX> clipStack;   ///< Clips saved by pushClip()
+    Rect clipRect;                                ///< Current clip
+    uint8_t clipDepth = 0;                        ///< Clips on clipStack
 };
 
 } // namespace ortxui

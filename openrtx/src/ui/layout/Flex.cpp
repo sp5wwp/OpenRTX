@@ -12,8 +12,8 @@ namespace ortxui
 
 void Flex::draw(DrawCtx &d)
 {
-    if (hasBg_)
-        d.fillRect(area_, bg_);
+    if (hasBg)
+        d.fillRect(bounds, background);
 }
 
 int16_t Flex::childBase(const Object &c, const LayoutHints &h) const
@@ -22,18 +22,18 @@ int16_t Flex::childBase(const Object &c, const LayoutHints &h) const
         return h.basis;
 
     const Size nat = c.natural();
-    return static_cast<int16_t>((axis_ == Axis::Row) ? nat.w : nat.h);
+    return static_cast<int16_t>((axis == Axis::Row) ? nat.w : nat.h);
 }
 
 void Flex::onLayout()
 {
-    const bool row = (axis_ == Axis::Row);
+    const bool row = (axis == Axis::Row);
 
     /* Content box, inside padding. */
-    const int16_t cx = static_cast<int16_t>(area_.x + padX_);
-    const int16_t cy = static_cast<int16_t>(area_.y + padY_);
-    const int32_t cw = static_cast<int32_t>(area_.w) - 2 * padX_;
-    const int32_t ch = static_cast<int32_t>(area_.h) - 2 * padY_;
+    const int16_t cx = static_cast<int16_t>(bounds.x + padX);
+    const int16_t cy = static_cast<int16_t>(bounds.y + padY);
+    const int32_t cw = static_cast<int32_t>(bounds.w) - 2 * padX;
+    const int32_t ch = static_cast<int32_t>(bounds.h) - 2 * padY;
     if ((cw <= 0) || (ch <= 0))
         return;
 
@@ -55,7 +55,7 @@ void Flex::onLayout()
     if (count == 0)
         return;
 
-    const int32_t gaps = gap_ * (count - 1);
+    const int32_t gaps = gap * (count - 1);
     int32_t spare = mainAvail - totalBase - gaps;
     if (spare < 0)
         spare = 0;
@@ -63,9 +63,9 @@ void Flex::onLayout()
     /* Main-axis start cursor and inter-item spacing. A grow weight takes the
      * spare space, so justify only redistributes when nothing grows. */
     int32_t cursor = row ? cx : cy;
-    int32_t spacing = gap_;
+    int32_t spacing = gap;
     if (totalGrow == 0) {
-        switch (justify_) {
+        switch (justify) {
             case Justify::Start:
                 break;
             case Justify::Center:
@@ -98,7 +98,7 @@ void Flex::onLayout()
             mainSize += spare * h.grow / totalGrow;
 
         /* Cross-axis size and offset. */
-        const Align a = (h.self == Align::Auto) ? align_ : h.self;
+        const Align a = (h.self == Align::Auto) ? align : h.self;
         const int32_t crossInner = crossAvail - 2 * h.margin;
         const Size nat = c->natural();
         int32_t crossSize = row ? nat.h : nat.w;

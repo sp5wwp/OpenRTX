@@ -78,11 +78,11 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
-    Screen screen_; ///< Widget-tree root
+    Screen tree; ///< Widget-tree root
 };
 
 TEST_CASE("Every screen builds and is destroyed", "[ui][slot]")

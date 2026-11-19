@@ -137,10 +137,10 @@ static uint32_t splitOf(const channel_t &ch)
 
 void RadioView::build()
 {
-    items_[RowOffset].label = STR(offset);
-    items_[RowDirection].label = STR(direction);
-    items_[RowStep].label = STR(step);
-    buildList(STR(radio), items_.data(), RowCount);
+    items[RowOffset].label = STR(offset);
+    items[RowDirection].label = STR(direction);
+    items[RowStep].label = STR(step);
+    buildList(STR(radio), items.data(), RowCount);
 }
 
 RadioView::RowKind RadioView::rowKind(uint8_t row) const
@@ -161,7 +161,7 @@ void RadioView::formatValue(uint8_t row, char *out, size_t cap)
 void RadioView::refreshCustom(uint8_t row, bool speak)
 {
     (void)row;
-    if (editing_ && (editRow_ == RowOffset)) {
+    if (editing && (editRow == RowOffset)) {
         const uint32_t khz = offsetKhz();
         sniprintf(values(RowOffset), VALUE_SIZE, "<%u kHz>",
                   static_cast<unsigned>(khz));
@@ -171,13 +171,13 @@ void RadioView::refreshCustom(uint8_t row, bool speak)
     } else {
         formatFreq(splitOf(state.channel), values(RowOffset), VALUE_SIZE);
     }
-    list_.invalidate();
+    listBox.invalidate();
 }
 
 void RadioView::bindOffset()
 {
-    offsetInput_.configureSlots(offsetBuf_, sizeof(offsetBuf_), OFFSET_MASK,
-                                '-', FONT_SIZE_8PT);
+    offsetInput.configureSlots(offsetBuf, sizeof(offsetBuf), OFFSET_MASK, '-',
+                               FONT_SIZE_8PT);
 }
 
 void RadioView::onBeginEdit(uint8_t row)
@@ -185,19 +185,19 @@ void RadioView::onBeginEdit(uint8_t row)
     (void)row;
     /* Pre-fill the keypad with the current split, so ENTER keeps it. */
     const channel_t &ch = state.channel;
-    offsetNeg_ = (ch.tx_frequency < ch.rx_frequency);
+    offsetNeg = (ch.tx_frequency < ch.rx_frequency);
     bindOffset();
-    setSlotsDecimal(offsetInput_, splitOf(ch) / 1000u);
-    offsetPristine_ = true;
+    setSlotsDecimal(offsetInput, splitOf(ch) / 1000u);
+    offsetPristine = true;
 }
 
 void RadioView::saveCustom(EditBlob<CUSTOM_EDIT> &e) const
 {
     OffsetEdit o;
-    memcpy(o.digits, offsetBuf_, sizeof(o.digits));
-    o.slot = static_cast<uint8_t>(offsetInput_.cursorSlot());
-    o.negative = offsetNeg_;
-    o.pristine = offsetPristine_;
+    memcpy(o.digits, offsetBuf, sizeof(o.digits));
+    o.slot = static_cast<uint8_t>(offsetInput.cursorSlot());
+    o.negative = offsetNeg;
+    o.pristine = offsetPristine;
     e.put(o);
 }
 
@@ -206,10 +206,10 @@ void RadioView::restoreCustom(const EditBlob<CUSTOM_EDIT> &e)
     OffsetEdit o;
     e.get(o);
     bindOffset();
-    memcpy(offsetBuf_, o.digits, sizeof(offsetBuf_));
-    offsetInput_.setCursorSlot(o.slot);
-    offsetNeg_ = o.negative;
-    offsetPristine_ = o.pristine;
+    memcpy(offsetBuf, o.digits, sizeof(offsetBuf));
+    offsetInput.setCursorSlot(o.slot);
+    offsetNeg = o.negative;
+    offsetPristine = o.pristine;
     refreshCustom(RowOffset, false);
 }
 
@@ -241,9 +241,9 @@ uint32_t RadioView::offsetKhz() const
 {
     /* The filled slots read left-to-right as a decimal kHz value. */
     uint32_t v = 0;
-    const uint16_t n = offsetInput_.filledSlots();
+    const uint16_t n = offsetInput.filledSlots();
     for (uint16_t o = 0; o < n; o++)
-        v = v * 10u + static_cast<uint32_t>(offsetInput_.slotDigit(o));
+        v = v * 10u + static_cast<uint32_t>(offsetInput.slotDigit(o));
     return v;
 }
 
@@ -260,8 +260,8 @@ void RadioView::offsetAdjust(int8_t dir)
     else
         v = (v > stepKhz) ? (v - stepKhz) : 0u;
 
-    setSlotsDecimal(offsetInput_, v);
-    offsetPristine_ = true; /* the nudged value becomes a fresh pre-fill */
+    setSlotsDecimal(offsetInput, v);
+    offsetPristine = true; /* the nudged value becomes a fresh pre-fill */
     refreshCustom(RowOffset, true);
 }
 
@@ -271,7 +271,7 @@ void RadioView::offsetApply()
      * negative); a TX frequency the radio cannot tune keeps the entry open. */
     const int64_t off = static_cast<int64_t>(offsetKhz()) * 1000;
     const int64_t tx = static_cast<int64_t>(state.channel.rx_frequency)
-                     + (offsetNeg_ ? -off : off);
+                     + (offsetNeg ? -off : off);
     if ((tx < 0) || (tx > UINT32_MAX) || !freqInBand(static_cast<freq_t>(tx))) {
         vp_announceError(vp_getVoiceLevelQueueFlags());
         return;
@@ -301,18 +301,18 @@ void RadioView::announceKey(uint32_t keys)
     if (state.settings.vpLevel < vpLow)
         return;
 
-    const uint16_t n = offsetInput_.filledSlots();
+    const uint16_t n = offsetInput.filledSlots();
     if ((keys & KBD_NUM_MASK) != 0u)
         vp_announceInputChar(static_cast<char>('0' + __builtin_ctz(keys)));
     else if (n > 0)
         vp_announceInputChar(
-            static_cast<char>('0' + offsetInput_.slotDigit(n - 1)));
+            static_cast<char>('0' + offsetInput.slotDigit(n - 1)));
 }
 
 bool RadioView::onEditEvent(const Event &e)
 {
     /* Direction and Step are plain Steppers: the base handles them. */
-    if (editRow_ != RowOffset)
+    if (editRow != RowOffset)
         return false;
 
     int8_t dir = 0;
@@ -347,7 +347,7 @@ bool RadioView::onEditEvent(const Event &e)
                 /* Digits retype the value and '*' backspaces. */
                 if ((k & (KBD_NUM_MASK | KEY_STAR)) != 0u) {
                     announceKey(k);
-                    offsetInput_.handlePrefilledKey(k, offsetPristine_, 0);
+                    offsetInput.handlePrefilledKey(k, offsetPristine, 0);
                     refreshCustom(RowOffset, false);
                 }
                 return true;

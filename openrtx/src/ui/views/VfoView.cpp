@@ -204,7 +204,7 @@ static void composeEntry(const char *digits, char *main, char *sub)
 
 VfoView::~VfoView()
 {
-    if (entry_ != nullptr)
+    if (entry != nullptr)
         closeEntry();
 }
 
@@ -212,15 +212,15 @@ void VfoView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
 
     /* Shared top bar with a blank title (VFO shows only the status cluster). */
     TopBar &bar = useTopBar("");
 
     /* Taller than the text on the roomy screen; just clearing it on the
      * compact one, so the channel line and the meter fit in 64 px. */
-    hero_.setBasis(regular ? 40 : 26);
+    hero.setBasis(regular ? 40 : 26);
 
     /* The channel line in one font; rows a full line high, so descenders and
      * the '@' of a destination are not clipped. */
@@ -228,94 +228,94 @@ void VfoView::build()
     const int16_t rowH = gfx_getFontLineHeight(chanFont);
 
     /* "VFO" or the 1-based memory index, wide enough for "VFO". */
-    chanIdx_.setFont(chanFont);
-    chanIdx_.setAlign(TEXT_ALIGN_LEFT);
-    chanIdx_.setColor(Sem::OnSurfaceMuted);
-    chanIdx_.setBasis(regular ? 34 : 26);
+    chanIdx.setFont(chanFont);
+    chanIdx.setAlign(TEXT_ALIGN_LEFT);
+    chanIdx.setColor(Sem::OnSurfaceMuted);
+    chanIdx.setBasis(regular ? 34 : 26);
 
     /* Channel name or M17 destination; on the roomy screen on a line of its
      * own, so a long destination shows in full. */
-    chanName_.setFont(chanFont);
-    chanName_.setAlign(TEXT_ALIGN_LEFT);
-    chanName_.setColor(Sem::Primary);
-    chanName_.setGrow(1);
+    chanName.setFont(chanFont);
+    chanName.setAlign(TEXT_ALIGN_LEFT);
+    chanName.setColor(Sem::Primary);
+    chanName.setGrow(1);
     /* A name wider than the line ellipsizes rather than wrapping. */
-    chanName_.setOverflow(Label::Overflow::Ellipsize);
+    chanName.setOverflow(Label::Overflow::Ellipsize);
 
     /* A small "CAN" or "CTCSS" tag and the value, right-aligned. */
-    chanDetail_.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted); /* tag */
-    chanDetail_.setRun(1, chanFont, Sem::OnSurfaceMuted);      /* value */
-    chanDetail_.setGap(3);
+    chanDetail.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted); /* tag */
+    chanDetail.setRun(1, chanFont, Sem::OnSurfaceMuted);      /* value */
+    chanDetail.setGap(3);
     /* Wide enough for the longest tagged value, "CTCSS 254.1". */
-    chanDetail_.setBasis(regular ? 70 : 48);
+    chanDetail.setBasis(regular ? 70 : 48);
 
     /* The meter sits at the bottom under a growing spacer, tall enough for
      * the label and readout over the S-scale numbers. */
-    meter_.setBasis(regular ? 19 : 15);
-    meter_.setBarHeight(METER_BAR_H);
-    meter_.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
-    meter_.setTextColor(Sem::RxSuccess);
-    meter_.setShowScale(true);
-    meter_.setLabel("RX");
-    spacer_.setGrow(1);
+    meter.setBasis(regular ? 19 : 15);
+    meter.setBarHeight(METER_BAR_H);
+    meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
+    meter.setTextColor(Sem::RxSuccess);
+    meter.setShowScale(true);
+    meter.setLabel("RX");
+    spacer.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&hero_);
+    root.addChild(&bar);
+    root.addChild(&hero);
 
     if (regular) {
         /* Roomy layout: the name on its own line, then the index (left) and
          * the CAN / tone detail (right). */
-        nameRow_.setAxis(Axis::Row);
-        nameRow_.setAlign(Align::Center);
-        nameRow_.setJustify(Justify::Start);
-        nameRow_.setPadding(4, 0);
-        nameRow_.setBasis(rowH);
-        nameRow_.addChild(&chanName_);
+        nameRow.setAxis(Axis::Row);
+        nameRow.setAlign(Align::Center);
+        nameRow.setJustify(Justify::Start);
+        nameRow.setPadding(4, 0);
+        nameRow.setBasis(rowH);
+        nameRow.addChild(&chanName);
 
-        metaRow_.setAxis(Axis::Row);
-        metaRow_.setAlign(Align::Center);
-        metaRow_.setJustify(Justify::SpaceBetween);
-        metaRow_.setPadding(4, 0);
-        metaRow_.setBasis(rowH);
-        metaRow_.addChild(&chanIdx_);
-        metaRow_.addChild(&chanDetail_);
+        metaRow.setAxis(Axis::Row);
+        metaRow.setAlign(Align::Center);
+        metaRow.setJustify(Justify::SpaceBetween);
+        metaRow.setPadding(4, 0);
+        metaRow.setBasis(rowH);
+        metaRow.addChild(&chanIdx);
+        metaRow.addChild(&chanDetail);
 
-        root_.addChild(&nameRow_);
-        root_.addChild(&metaRow_);
+        root.addChild(&nameRow);
+        root.addChild(&metaRow);
     } else {
         /* Compact layout: no room for a second line, so the index, name and
          * detail share one row and the name ellipsizes. */
-        nameRow_.setAxis(Axis::Row);
-        nameRow_.setAlign(Align::Center);
-        nameRow_.setJustify(Justify::Start);
-        nameRow_.setPadding(4, 0);
-        nameRow_.setGap(6);
-        nameRow_.setBasis(rowH);
-        nameRow_.addChild(&chanIdx_);
-        nameRow_.addChild(&chanName_);
-        nameRow_.addChild(&chanDetail_);
+        nameRow.setAxis(Axis::Row);
+        nameRow.setAlign(Align::Center);
+        nameRow.setJustify(Justify::Start);
+        nameRow.setPadding(4, 0);
+        nameRow.setGap(6);
+        nameRow.setBasis(rowH);
+        nameRow.addChild(&chanIdx);
+        nameRow.addChild(&chanName);
+        nameRow.addChild(&chanDetail);
 
-        root_.addChild(&nameRow_);
+        root.addChild(&nameRow);
     }
 
-    root_.addChild(&spacer_);
-    root_.addChild(&meter_);
-    screen_.addChild(&root_);
-    root_.onLayout();
+    root.addChild(&spacer);
+    root.addChild(&meter);
+    tree.addChild(&root);
+    root.onLayout();
 
     invalidateReadout();
 }
 
 void VfoView::save() const
 {
-    if (entry_ == nullptr)
+    if (entry == nullptr)
         return;
 
     /* Fold the live cursor into the state kept. */
-    EntryState s = *entry_;
-    const uint8_t slot = static_cast<uint8_t>(entry_->input.cursorSlot());
+    EntryState s = *entry;
+    const uint8_t slot = static_cast<uint8_t>(entry->input.cursorSlot());
     if (s.destination)
-        s.dstCursor = static_cast<uint8_t>(entry_->input.cursor());
+        s.dstCursor = static_cast<uint8_t>(entry->input.cursor());
     else if (s.txField)
         s.txSlot = slot;
     else
@@ -329,7 +329,7 @@ void VfoView::restore()
     if (!uiMemory.inlineEdit.take(id(), s) || !openEntry(s.destination))
         return;
 
-    Entry &n = *entry_;
+    Entry &n = *entry;
     static_cast<EntryState &>(n) = s;
     if (n.destination) {
         bindDst(n.dstCursor);
@@ -348,16 +348,16 @@ bool VfoView::openEntry(bool destination)
     if (mem == nullptr)
         return false;
 
-    entry_ = new (mem) Entry();
-    entry_->destination = destination;
+    entry = new (mem) Entry();
+    entry->destination = destination;
     return true;
 }
 
 void VfoView::closeEntry()
 {
-    entry_->~Entry();
-    free(entry_);
-    entry_ = nullptr;
+    entry->~Entry();
+    free(entry);
+    entry = nullptr;
 }
 
 void VfoView::syncMode(const channel_t &ch, bool txing)
@@ -386,7 +386,7 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
      * tone), shown only when that direction's tone is enabled. Blank
      * otherwise. */
     const char *tag = "";
-    char sub[sizeof(modeSub_)] = "";
+    char sub[sizeof(modeSub)] = "";
     if (ch.mode == OPMODE_M17) {
         if (txing || state.settings.m17_can_rx) {
             tag = STR(CAN).str();
@@ -405,69 +405,69 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
      * FM tone, and the dynamic M17 CAN (settings + TX/RX). The mode label sits
      * on the frequency baseline (hero); the detail sits under it on the channel
      * row. The texts shown are literals, so their pointers stay valid. */
-    const bool same = (shownMode_ != nullptr) && (strcmp(m1, shownMode_) == 0)
-                   && (strcmp(tag, shownTag_) == 0)
-                   && (strcmp(sub, modeSub_) == 0);
+    const bool same = (shownMode != nullptr) && (strcmp(m1, shownMode) == 0)
+                   && (strcmp(tag, shownTag) == 0)
+                   && (strcmp(sub, modeSub) == 0);
     if (same)
         return;
-    shownMode_ = m1;
-    shownTag_ = tag;
-    memcpy(modeSub_, sub, sizeof(modeSub_));
+    shownMode = m1;
+    shownTag = tag;
+    memcpy(modeSub, sub, sizeof(modeSub));
 
-    hero_.setMode(m1);
-    hero_.invalidate();
-    chanDetail_.setText(0, tag);
-    chanDetail_.setText(1, modeSub_);
-    chanDetail_.invalidate();
+    hero.setMode(m1);
+    hero.invalidate();
+    chanDetail.setText(0, tag);
+    chanDetail.setText(1, modeSub);
+    chanDetail.invalidate();
 }
 
 void VfoView::syncMeter(const state_t &s, uint8_t status)
 {
     const uint8_t sql = s.settings.sqlLevel;
     const uint8_t mode = s.channel.mode;
-    const bool restyle = (status != lastStatus_) || (sql != lastSql_)
-                      || (mode != lastMode_);
-    if (!restyle && (s.rssi == lastRssi_))
+    const bool restyle = (status != lastStatus) || (sql != lastSql)
+                      || (mode != lastMode);
+    if (!restyle && (s.rssi == lastRssi))
         return;
 
-    lastStatus_ = status;
-    lastRssi_ = s.rssi;
-    lastSql_ = sql;
-    lastMode_ = mode;
+    lastStatus = status;
+    lastRssi = s.rssi;
+    lastSql = sql;
+    lastMode = mode;
 
-    char readout[sizeof(readoutBuf_)];
+    char readout[sizeof(readoutBuf)];
     if (status == TX) {
         const uint32_t mw = s.channel.power;
 
         if (restyle) {
-            meter_.setLabel("TX");
-            meter_.setColors(Sem::SurfaceHigh, Sem::TxDanger);
-            meter_.setTextColor(Sem::TxDanger);
-            meter_.setShowScale(false);
-            meter_.setMarker(-1.0f); /* squelch is an RX/FM concept */
+            meter.setLabel("TX");
+            meter.setColors(Sem::SurfaceHigh, Sem::TxDanger);
+            meter.setTextColor(Sem::TxDanger);
+            meter.setShowScale(false);
+            meter.setMarker(-1.0f); /* squelch is an RX/FM concept */
         }
         /* Fill on a dB power scale relative to the radio's max output. */
-        meter_.setValue(powerToFrac(mw));
+        meter.setValue(powerToFrac(mw));
 
         formatPower(mw, readout, sizeof(readout));
     } else {
         const uint8_t level = rssiToSlevel(s.rssi);
 
         if (restyle) {
-            meter_.setLabel("RX");
-            meter_.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
-            meter_.setTextColor(Sem::RxSuccess);
-            meter_.setShowScale(true);
+            meter.setLabel("RX");
+            meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
+            meter.setTextColor(Sem::RxSuccess);
+            meter.setShowScale(true);
 
             /* Map the squelch threshold like the fill, so the mark sits
              * where the signal has to reach. Only FM gates on RSSI. */
             if (mode == OPMODE_FM)
-                meter_.setMarker(
+                meter.setMarker(
                     rssiToFrac(static_cast<float>(squelchToRssi(sql))));
             else
-                meter_.setMarker(-1.0f);
+                meter.setMarker(-1.0f);
         }
-        meter_.setValue(rssiToFrac(static_cast<float>(s.rssi)));
+        meter.setValue(rssiToFrac(static_cast<float>(s.rssi)));
 
         if (level > 9u)
             sniprintf(readout, sizeof(readout), "+%u",
@@ -478,15 +478,15 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
 
     /* Repaint only when what the meter draws changes, the readout or the
      * fill's width in pixels, not on every dBm of RSSI. */
-    const bool text = (strcmp(readout, readoutBuf_) != 0);
+    const bool text = (strcmp(readout, readoutBuf) != 0);
     if (text) {
-        memcpy(readoutBuf_, readout, sizeof(readoutBuf_));
-        meter_.setReadout(readoutBuf_);
+        memcpy(readoutBuf, readout, sizeof(readoutBuf));
+        meter.setReadout(readoutBuf);
     }
-    const uint16_t fill = meter_.fillWidth();
-    if (restyle || text || (fill != lastFill_))
-        meter_.invalidate();
-    lastFill_ = fill;
+    const uint16_t fill = meter.fillWidth();
+    if (restyle || text || (fill != lastFill))
+        meter.invalidate();
+    lastFill = fill;
 }
 
 void VfoView::syncFromState(const state_t &s)
@@ -500,7 +500,7 @@ void VfoView::syncFromState(const state_t &s)
 
     /* While entering a frequency, the hero and channel line show the keypad
      * buffer (driven by refreshInput()); don't let live state overwrite them. */
-    const bool input = (entry_ != nullptr) && !entry_->destination;
+    const bool input = (entry != nullptr) && !entry->destination;
     if (!input) {
         const channel_t &ch = s.channel;
 
@@ -511,10 +511,10 @@ void VfoView::syncFromState(const state_t &s)
         const freq_t shown = (txing && (ch.tx_frequency != ch.rx_frequency)) ?
                                  ch.tx_frequency :
                                  ch.rx_frequency;
-        if ((uint32_t)shown != lastFreq_) {
-            hero_.setFreq((uint32_t)shown);
-            hero_.invalidate();
-            lastFreq_ = (uint32_t)shown;
+        if ((uint32_t)shown != lastFreq) {
+            hero.setFreq((uint32_t)shown);
+            hero.invalidate();
+            lastFreq = (uint32_t)shown;
         }
 
         syncMode(ch, txing);
@@ -523,28 +523,28 @@ void VfoView::syncFromState(const state_t &s)
          * directly): VFO mode shows "VFO" (or the M17 destination) with no
          * index; memory mode shows the 1-based index + channel name. Compose
          * the slot text and repaint only on a string change. */
-        if (entry_ == nullptr) {
-            char idxText[sizeof(idxCache_)];
-            char nameText[sizeof(nameCache_)];
+        if (entry == nullptr) {
+            char idxText[sizeof(idxCache)];
+            char nameText[sizeof(nameCache)];
             composeChanLine(s, idxText, nameText, sizeof(nameText));
 
-            if (strncmp(idxText, idxCache_, sizeof(idxCache_)) != 0) {
-                strncpy(idxCache_, idxText, sizeof(idxCache_) - 1);
-                idxCache_[sizeof(idxCache_) - 1] = '\0';
-                chanIdx_.setText(idxCache_);
-                chanIdx_.invalidate();
+            if (strncmp(idxText, idxCache, sizeof(idxCache)) != 0) {
+                strncpy(idxCache, idxText, sizeof(idxCache) - 1);
+                idxCache[sizeof(idxCache) - 1] = '\0';
+                chanIdx.setText(idxCache);
+                chanIdx.invalidate();
             }
-            if (strncmp(nameText, nameCache_, sizeof(nameCache_)) != 0) {
-                strncpy(nameCache_, nameText, sizeof(nameCache_) - 1);
-                nameCache_[sizeof(nameCache_) - 1] = '\0';
-                chanName_.setText(nameCache_);
-                chanName_.invalidate();
+            if (strncmp(nameText, nameCache, sizeof(nameCache)) != 0) {
+                strncpy(nameCache, nameText, sizeof(nameCache) - 1);
+                nameCache[sizeof(nameCache) - 1] = '\0';
+                chanName.setText(nameCache);
+                chanName.invalidate();
             }
         }
-    } else if (entry_->errorAt != 0) {
+    } else if (entry->errorAt != 0) {
         /* Expire a transient out-of-band error (this runs every GUI frame). */
-        if ((getTick() - entry_->errorAt) >= kInputErrorMs) {
-            entry_->errorAt = 0;
+        if ((getTick() - entry->errorAt) >= kInputErrorMs) {
+            entry->errorAt = 0;
             refreshInput();
         }
     }
@@ -554,8 +554,8 @@ void VfoView::syncFromState(const state_t &s)
 
 NavIntent VfoView::onEvent(const Event &e)
 {
-    if (entry_ != nullptr)
-        return entry_->destination ? onDstEditEvent(e) : onInputEvent(e);
+    if (entry != nullptr)
+        return entry->destination ? onDstEditEvent(e) : onInputEvent(e);
 
     /* The knob tunes in VFO mode and steps channels in memory mode. */
     if (e.kind == EvKind::Encoder) {
@@ -612,7 +612,7 @@ NavIntent VfoView::onEvent(const Event &e)
         return NavIntent::none();
     }
 
-    screen_.dispatch(e);
+    tree.dispatch(e);
     return NavIntent::none();
 }
 
@@ -646,7 +646,7 @@ NavIntent VfoView::onInputEvent(const Event &e)
     if (!mutating)
         return NavIntent::none();
 
-    Entry &n = *entry_;
+    Entry &n = *entry;
     n.input.handlePrefilledKey(k, n.txField ? n.txPristine : n.rxPristine,
                                getTick());
 
@@ -747,7 +747,7 @@ bool VfoView::openInput()
     if (!openEntry(false))
         return false;
 
-    Entry &n = *entry_;
+    Entry &n = *entry;
     const channel_t &ch = state.channel;
     n.shift = static_cast<int32_t>(static_cast<int64_t>(ch.tx_frequency)
                                    - static_cast<int64_t>(ch.rx_frequency));
@@ -768,9 +768,9 @@ void VfoView::beginInput(uint8_t firstDigit)
         return;
 
     /* First digit retypes from the top (the pre-filled RX is pristine). */
-    entry_->rxPristine = false;
-    entry_->input.clearSlots();
-    entry_->input.putDigit(firstDigit);
+    entry->rxPristine = false;
+    entry->input.clearSlots();
+    entry->input.putDigit(firstDigit);
     announceDigit(firstDigit);
     refreshInput();
 }
@@ -786,7 +786,7 @@ void VfoView::beginInputTweak()
 
 void VfoView::switchField()
 {
-    Entry &n = *entry_;
+    Entry &n = *entry;
     if (!n.txField && n.txPristine)
         deriveTx(); /* refresh TX from the latest RX + offset before showing it */
 
@@ -806,7 +806,7 @@ void VfoView::switchField()
 
 void VfoView::deriveTx()
 {
-    Entry &n = *entry_;
+    Entry &n = *entry;
     const freq_t rx = freqFromSlots(n.rx);
     int64_t tx = (int64_t)rx + n.shift;
     if (tx < 0)
@@ -818,7 +818,7 @@ void VfoView::deriveTx()
 void VfoView::bindField(bool tx, uint8_t slot)
 {
     /* Binding lays the mask over the buffer: put the digits back after. */
-    Entry &n = *entry_;
+    Entry &n = *entry;
     char *buf = tx ? n.tx : n.rx;
     char digits[kFreqDigits + 1];
     memcpy(digits, buf, sizeof(digits));
@@ -832,7 +832,7 @@ void VfoView::confirmInput()
 {
     /* ENTER on RX advances to TX, derived from the offset, so the TX frequency
      * is seen before anything is applied; ENTER on TX commits. */
-    Entry &n = *entry_;
+    Entry &n = *entry;
     if (!n.txField) {
         switchField();
         return;
@@ -867,34 +867,34 @@ void VfoView::exitInput()
 void VfoView::invalidateReadout()
 {
     /* No shown text starts with \1, so the next sync repaints them all. */
-    lastFreq_ = UINT32_MAX;
-    shownMode_ = nullptr;
-    idxCache_[0] = '\1';
-    nameCache_[0] = '\1';
-    screen_.markAllDirty();
+    lastFreq = UINT32_MAX;
+    shownMode = nullptr;
+    idxCache[0] = '\1';
+    nameCache[0] = '\1';
+    tree.markAllDirty();
 }
 
 void VfoView::refreshInput()
 {
-    const Entry &n = *entry_;
+    const Entry &n = *entry;
     char main[16];
     char sub[6];
     composeEntry(n.txField ? n.tx : n.rx, main, sub);
 
     const bool err = (n.errorAt != 0);
-    hero_.setEntry(main, sub);
-    hero_.setMode(n.txField ? "TX" : "RX");
-    hero_.setTextColor(err ? Sem::Mark : Sem::Accent);
-    hero_.invalidate();
+    hero.setEntry(main, sub);
+    hero.setMode(n.txField ? "TX" : "RX");
+    hero.setTextColor(err ? Sem::Mark : Sem::Accent);
+    hero.invalidate();
 
-    chanIdx_.setText("");
-    chanName_.setText(err ? STR(outOfBand) :
-                            (n.txField ? STR(enterTx) : STR(enterRx)));
-    chanDetail_.setText(0, "");
-    chanDetail_.setText(1, "");
-    chanIdx_.invalidate();
-    chanName_.invalidate();
-    chanDetail_.invalidate();
+    chanIdx.setText("");
+    chanName.setText(err ? STR(outOfBand) :
+                           (n.txField ? STR(enterTx) : STR(enterRx)));
+    chanDetail.setText(0, "");
+    chanDetail.setText(1, "");
+    chanIdx.invalidate();
+    chanName.invalidate();
+    chanDetail.invalidate();
 }
 
 void VfoView::clearFmTone()
@@ -923,13 +923,13 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
         /* Far-left is the "where am I" slot: "VFO" here, the memory index in
          * memory mode. In M17 the destination fills the name slot; FM has no
          * name (just the frequency). The CAN lives in the mode stack, not here. */
-        sniprintf(idxOut, sizeof(idxCache_), "VFO");
+        sniprintf(idxOut, sizeof(idxCache), "VFO");
         if (ch.mode == OPMODE_M17)
             m17DstLabel(nameOut, nameSz);
         else
             nameOut[0] = '\0';
     } else {
-        sniprintf(idxOut, sizeof(idxCache_), "%03u", s.channel_index + 1);
+        sniprintf(idxOut, sizeof(idxCache), "%03u", s.channel_index + 1);
         sniprintf(nameOut, nameSz, "%s",
                   (ch.name[0] != '\0') ? ch.name : "---");
     }
@@ -939,19 +939,19 @@ void VfoView::renderDstEdit()
 {
     /* The '@' stays pinned while the rest scrolls to keep the cursor in view,
      * so a full-length destination keeps the channel line's font. */
-    const fontSize_t font = chanName_.font();
+    const fontSize_t font = chanName.font();
     const uint16_t atW = gfx_getTextWidth(font, "@");
-    const uint16_t boxW = chanName_.area().w;
+    const uint16_t boxW = chanName.area().w;
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;
 
     char body[36];
-    entry_->input.formatWindow(body, sizeof(body), bodyW, font);
-    sniprintf(nameCache_, sizeof(nameCache_), "@%s", body);
-    idxCache_[0] = '\0';
-    chanIdx_.setText(idxCache_);
-    chanName_.setText(nameCache_);
-    chanIdx_.invalidate();
-    chanName_.invalidate();
+    entry->input.formatWindow(body, sizeof(body), bodyW, font);
+    sniprintf(nameCache, sizeof(nameCache), "@%s", body);
+    idxCache[0] = '\0';
+    chanIdx.setText(idxCache);
+    chanName.setText(nameCache);
+    chanIdx.invalidate();
+    chanName.invalidate();
 }
 
 void VfoView::showDstEdit(bool editing)
@@ -959,13 +959,13 @@ void VfoView::showDstEdit(bool editing)
     if (sizeClass() == SizeClass::Regular)
         return;
 
-    chanIdx_.setFlag(FLAG_HIDDEN, editing);
-    nameRow_.onLayout();
+    chanIdx.setFlag(FLAG_HIDDEN, editing);
+    nameRow.onLayout();
 }
 
 void VfoView::bindDst(uint16_t cursor)
 {
-    Entry &n = *entry_;
+    Entry &n = *entry;
     n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
                       TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     n.input.setMultiTap(MTAP_CALLSIGN);
@@ -981,7 +981,7 @@ void VfoView::announceDigit(uint8_t d)
 void VfoView::announceDstChar()
 {
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputChar(entry_->input.cursorChar());
+        vp_announceInputChar(entry->input.cursorChar());
 }
 
 void VfoView::beginDstEdit()
@@ -989,20 +989,20 @@ void VfoView::beginDstEdit()
     if (!openEntry(true))
         return;
 
-    Entry &n = *entry_;
+    Entry &n = *entry;
     strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
     n.dst[sizeof(n.dst) - 1] = '\0';
     bindDst(0);
     showDstEdit(true);
     renderDstEdit();
-    screen_.markAllDirty();
+    tree.markAllDirty();
     announceDstChar();
 }
 
 void VfoView::endDstEdit(bool commit)
 {
     if (commit) {
-        strncpy(state.settings.m17_dest, entry_->dst,
+        strncpy(state.settings.m17_dest, entry->dst,
                 sizeof(state.settings.m17_dest) - 1);
         state.settings.m17_dest[sizeof(state.settings.m17_dest) - 1] = '\0';
         requestSyncRtx(); /* the destination feeds the M17 LSF */
@@ -1016,7 +1016,7 @@ void VfoView::endDstEdit(bool commit)
 NavIntent VfoView::onDstEditEvent(const Event &e)
 {
     /* An empty destination is stored as is, and shown as @ALL. */
-    switch (entry_->input.handleEvent(e, getTick())) {
+    switch (entry->input.handleEvent(e, getTick())) {
         case TextInput::KeyResult::Committed:
             endDstEdit(true);
             break;

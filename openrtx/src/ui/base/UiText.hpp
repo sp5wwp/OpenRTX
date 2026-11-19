@@ -38,7 +38,7 @@ public:
      *
      * @param raw: text, may be NULL.
      */
-    constexpr UiText(const char *raw) : raw_(raw)
+    constexpr UiText(const char *raw) : rawText(raw)
     {
     }
 
@@ -51,7 +51,7 @@ public:
     static constexpr UiText entry(uint8_t id)
     {
         UiText t;
-        t.id_ = id;
+        t.entryId = id;
         return t;
     }
 
@@ -70,7 +70,7 @@ public:
      */
     bool isEntry() const
     {
-        return id_ != NO_ID;
+        return entryId != NO_ID;
     }
 
     /**
@@ -81,7 +81,7 @@ public:
      */
     bool isSet() const
     {
-        return isEntry() || (raw_ != nullptr);
+        return isEntry() || (rawText != nullptr);
     }
 
     /**
@@ -113,8 +113,8 @@ public:
 private:
     static constexpr uint8_t NO_ID = 0xFF; ///< Marks plain text
 
-    const char *raw_ = nullptr;            ///< Plain text, when not an entry
-    uint8_t id_ = NO_ID;                   ///< Entry index in stringsTable_t
+    const char *rawText = nullptr;         ///< Plain text, when not an entry
+    uint8_t entryId = NO_ID;               ///< Entry index in stringsTable_t
 };
 
 } // namespace ortxui

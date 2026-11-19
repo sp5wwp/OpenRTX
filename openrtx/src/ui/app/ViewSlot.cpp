@@ -101,7 +101,7 @@ static constexpr bool buildersInOrder()
 static_assert(ARRAY_SIZE(BUILDERS) == VIEW_COUNT, "a screen has no builder");
 static_assert(buildersInOrder(), "a builder is not at its ViewId");
 
-ViewSlot::ViewSlot() : view_(nullptr)
+ViewSlot::ViewSlot() : activeView(nullptr)
 {
 }
 
@@ -113,19 +113,19 @@ ViewSlot::~ViewSlot()
 View *ViewSlot::build(ViewId id)
 {
     destroy();
-    view_ = BUILDERS[static_cast<uint8_t>(id)].make(storage_);
-    view_->id_ = id;
-    view_->build();
-    return view_;
+    activeView = BUILDERS[static_cast<uint8_t>(id)].make(storage);
+    activeView->viewId = id;
+    activeView->build();
+    return activeView;
 }
 
 void ViewSlot::destroy()
 {
-    if (view_ == nullptr)
+    if (activeView == nullptr)
         return;
 
-    view_->~View();
-    view_ = nullptr;
+    activeView->~View();
+    activeView = nullptr;
 }
 
 } // namespace ortxui

@@ -83,43 +83,43 @@ void MacroView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(macroMenu));
-    root_.addChild(&bar);
+    root.addChild(&bar);
 
-    tiles_.setGrow(1);
-    root_.addChild(&tiles_);
+    tiles.setGrow(1);
+    root.addChild(&tiles);
 
-    footer_.setAxis(Axis::Row);
-    footer_.setAlign(Align::Center);
-    footer_.setBasis(regular ? FOOTER_H_REGULAR : FOOTER_H_COMPACT);
-    sqlBar_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
-    sqlBar_.setLabel(STR(squelch), SYMBOL_VOLUME);
+    footer.setAxis(Axis::Row);
+    footer.setAlign(Align::Center);
+    footer.setBasis(regular ? FOOTER_H_REGULAR : FOOTER_H_COMPACT);
+    sqlBar.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
+    sqlBar.setLabel(STR(squelch), SYMBOL_VOLUME);
     /* Red, like the squelch mark on the VFO meter. */
-    sqlBar_.setColors(Sem::SurfaceHigh, Sem::TxDanger);
-    sqlBar_.setTextColor(Sem::OnSurface);
-    sqlBar_.setReadout(sqlBuf_);
-    sqlBar_.setGrow(1);
-    footer_.addChild(&sqlBar_);
-    root_.addChild(&footer_);
+    sqlBar.setColors(Sem::SurfaceHigh, Sem::TxDanger);
+    sqlBar.setTextColor(Sem::OnSurface);
+    sqlBar.setReadout(sqlBuf);
+    sqlBar.setGrow(1);
+    footer.addChild(&sqlBar);
+    root.addChild(&footer);
 
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.markAllDirty();
+    tree.addChild(&root);
+    root.onLayout();
+    tree.markAllDirty();
 }
 
 void MacroView::save() const
 {
-    uiMemory.macroTile = selected_;
+    uiMemory.macroTile = selectedTile;
 }
 
 void MacroView::restore()
 {
-    selected_ = uiMemory.macroTile;
+    selectedTile = uiMemory.macroTile;
 #if defined(CONFIG_UI_NO_KEYBOARD)
-    tiles_.select(selected_);
+    tiles.select(selectedTile);
 #endif
 }
 
@@ -127,8 +127,8 @@ void MacroView::syncFromState(const state_t &s)
 {
     View::syncFromState(s);
 
-    if (tiles_.sync(s, uiMemory.keypadLocked))
-        tiles_.invalidate();
+    if (tiles.sync(s, uiMemory.keypadLocked))
+        tiles.invalidate();
 
     /* Squelch is an FM-only RF gate (OpMode_FM); in the digital modes it does
      * nothing, so show it greyed and inert rather than letting it be set. */
@@ -139,15 +139,15 @@ void MacroView::syncFromState(const state_t &s)
                   static_cast<unsigned>(s.settings.sqlLevel));
     else
         sniprintf(sq, sizeof(sq), "--");
-    if (strncmp(sq, sqlBuf_, sizeof(sqlBuf_)) != 0) {
-        strncpy(sqlBuf_, sq, sizeof(sqlBuf_) - 1);
-        sqlBuf_[sizeof(sqlBuf_) - 1] = '\0';
-        sqlBar_.setValue(
+    if (strncmp(sq, sqlBuf, sizeof(sqlBuf)) != 0) {
+        strncpy(sqlBuf, sq, sizeof(sqlBuf) - 1);
+        sqlBuf[sizeof(sqlBuf) - 1] = '\0';
+        sqlBar.setValue(
             fmSql ? s.settings.sqlLevel / static_cast<float>(SQL_MAX) : 0.0f);
-        sqlBar_.setColors(Sem::SurfaceHigh,
-                          fmSql ? Sem::TxDanger : Sem::OnSurfaceMuted);
-        sqlBar_.setTextColor(fmSql ? Sem::OnSurface : Sem::OnSurfaceMuted);
-        sqlBar_.invalidate();
+        sqlBar.setColors(Sem::SurfaceHigh,
+                         fmSql ? Sem::TxDanger : Sem::OnSurfaceMuted);
+        sqlBar.setTextColor(fmSql ? Sem::OnSurface : Sem::OnSurfaceMuted);
+        sqlBar.invalidate();
     }
 }
 
@@ -279,13 +279,13 @@ void MacroView::onKeypadEvent(const Event &e)
 void MacroView::onKnobEvent(const Event &e)
 {
     if (e.kind == EvKind::Encoder) {
-        selected_ = static_cast<uint8_t>(
-            (selected_ + MacroTiles::TILES + e.encoder) % MacroTiles::TILES);
-        tiles_.select(selected_);
-        tiles_.invalidate();
+        selectedTile = static_cast<uint8_t>(
+            (selectedTile + MacroTiles::TILES + e.encoder) % MacroTiles::TILES);
+        tiles.select(selectedTile);
+        tiles.invalidate();
     } else if (e.kind == EvKind::Key) {
         if ((e.keys & KEY_ENTER) != 0u)
-            doAction(static_cast<MacroAction>(selected_));
+            doAction(static_cast<MacroAction>(selectedTile));
         else if ((e.keys & KEY_VOLDOWN) != 0u)
             stepSquelch(-1);
         else if ((e.keys & KEY_VOLUP) != 0u)

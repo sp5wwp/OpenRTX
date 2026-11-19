@@ -75,7 +75,7 @@ public:
      */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /**
@@ -85,7 +85,7 @@ public:
      */
     bool freqEntryOpen() const
     {
-        return (entry_ != nullptr) && !entry_->destination;
+        return (entry != nullptr) && !entry->destination;
     }
 
 private:
@@ -210,7 +210,7 @@ private:
      * name or the M17 destination.
      *
      * @param s: state snapshot.
-     * @param idxOut: index text, sizeof(idxCache_) bytes.
+     * @param idxOut: index text, sizeof(idxCache) bytes.
      * @param nameOut: name text.
      * @param nameSz: size of nameOut.
      */
@@ -300,34 +300,34 @@ private:
         TextInput input; ///< The RX or TX digits, or the destination
     };
 
-    Screen screen_;      ///< Widget tree
-    Flex root_;          ///< Column of the rows
-    FreqHero hero_;      ///< Frequency and mode label
-    Flex nameRow_;       ///< Name headline; compact: index + name + detail
-    Flex metaRow_;       ///< Regular only: index (left) + CAN / tone (right)
-    Label chanIdx_;      ///< "VFO" or the memory index
-    Label chanName_;     ///< Channel name or M17 destination
-    TextRow chanDetail_; ///< CAN (M17) or CTCSS tone (FM), right-aligned
-    BarRow meter_;       ///< RSSI or TX power
-    Flex spacer_;        ///< Pushes the meter to the bottom
+    Screen tree;        ///< Widget tree
+    Flex root;          ///< Column of the rows
+    FreqHero hero;      ///< Frequency and mode label
+    Flex nameRow;       ///< Name headline; compact: index + name + detail
+    Flex metaRow;       ///< Regular only: index (left) + CAN / tone (right)
+    Label chanIdx;      ///< "VFO" or the memory index
+    Label chanName;     ///< Channel name or M17 destination
+    TextRow chanDetail; ///< CAN (M17) or CTCSS tone (FM), right-aligned
+    BarRow meter;       ///< RSSI or TX power
+    Flex spacer;        ///< Pushes the meter to the bottom
 
     /* The channel line, change-gated by string compare: it depends on the
      * tuner mode, the channel name, the mode and the M17 destination. */
-    char idxCache_[8] = { 0 };        ///< Index shown
-    char nameCache_[40] = { 0 };      ///< Name or destination shown
-    char readoutBuf_[12] = { 0 };     ///< Meter readout
-    char modeSub_[8] = { 0 };         ///< Detail value: CAN (M17) or tone (FM)
-    const char *shownMode_ = nullptr; ///< Mode label shown, nullptr to repaint
-    const char *shownTag_ = "";       ///< CAN / CTCSS tag shown
+    char idxCache[8] = { 0 };        ///< Index shown
+    char nameCache[40] = { 0 };      ///< Name or destination shown
+    char readoutBuf[12] = { 0 };     ///< Meter readout
+    char modeSub[8] = { 0 };         ///< Detail value: CAN (M17) or tone (FM)
+    const char *shownMode = nullptr; ///< Mode label shown, nullptr to repaint
+    const char *shownTag = "";       ///< CAN / CTCSS tag shown
 
-    uint32_t lastFreq_ = UINT32_MAX;  ///< Frequency shown
-    uint8_t lastStatus_ = 0xFFu;      ///< TX/RX status on the meter
-    int32_t lastRssi_ = INT32_MIN;    ///< RSSI on the meter
-    uint8_t lastSql_ = 0xFFu;         ///< Squelch level on the meter mark
-    uint8_t lastMode_ = 0xFFu;        ///< Mode on the meter: FM shows the mark
-    uint16_t lastFill_ = UINT16_MAX;  ///< Meter fill width shown
+    uint32_t lastFreq = UINT32_MAX;  ///< Frequency shown
+    uint8_t lastStatus = 0xFFu;      ///< TX/RX status on the meter
+    int32_t lastRssi = INT32_MIN;    ///< RSSI on the meter
+    uint8_t lastSql = 0xFFu;         ///< Squelch level on the meter mark
+    uint8_t lastMode = 0xFFu;        ///< Mode on the meter: FM shows the mark
+    uint16_t lastFill = UINT16_MAX;  ///< Meter fill width shown
 
-    Entry *entry_ = nullptr; ///< Open entry, on the heap; nullptr if none
+    Entry *entry = nullptr; ///< Open entry, on the heap; nullptr if none
 };
 
 } // namespace ortxui

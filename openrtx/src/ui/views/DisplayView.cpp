@@ -55,8 +55,8 @@ void DisplayView::build()
                   "a timer has no label");
 
     for (uint8_t i = 0; i < RowCount; i++)
-        items_[i].label = ROWS[i].label;
-    buildList(STR(display), items_.data(), RowCount);
+        items[i].label = ROWS[i].label;
+    buildList(STR(display), items.data(), RowCount);
 }
 
 uint8_t DisplayView::curValue(uint8_t row) const
@@ -117,14 +117,14 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
         case RowTheme:
             /* themeColor() reads this live: repaint in the new palette. */
             state.settings.highContrast = (v != 0u);
-            screen_.markAllDirty();
+            tree.markAllDirty();
             break;
         case RowText:
             state.settings.crispText = (v != 0u);
             gfx_setFontMono(v != 0u);
             /* The other font has other metrics: lay the screen out again. */
-            root_.onLayout();
-            screen_.markAllDirty();
+            root.onLayout();
+            tree.markAllDirty();
             break;
 #endif
         default:

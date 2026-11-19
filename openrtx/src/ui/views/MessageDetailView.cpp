@@ -39,45 +39,45 @@ void MessageDetailView::build()
     const fontSize_t text = REGULAR ? FONT_SIZE_8PT : FONT_SIZE_6PT;
     const fontSize_t small = REGULAR ? FONT_SIZE_6PT : FONT_SIZE_5PT;
 
-    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(message));
 
-    header_.setFont(text);
-    header_.setColor(Sem::Accent);
-    header_.setAlign(TEXT_ALIGN_CENTER);
-    header_.setOverflow(Label::Overflow::Ellipsize);
-    header_.setText(headerBuf_);
-    header_.setBasis(HEADER_H);
+    header.setFont(text);
+    header.setColor(Sem::Accent);
+    header.setAlign(TEXT_ALIGN_CENTER);
+    header.setOverflow(Label::Overflow::Ellipsize);
+    header.setText(headerBuf);
+    header.setBasis(HEADER_H);
 
-    body_.setFont(text);
-    body_.setGrow(1);
-    body_.setMargin(BODY_MARGIN);
+    body.setFont(text);
+    body.setGrow(1);
+    body.setMargin(BODY_MARGIN);
 
-    reply_.setFont(small);
-    reply_.setColor(Sem::Accent);
-    reply_.setGrow(1);
+    replyLabel.setFont(small);
+    replyLabel.setColor(Sem::Accent);
+    replyLabel.setGrow(1);
 
-    position_.setFont(small);
-    position_.setColor(Sem::OnSurfaceMuted);
-    position_.setAlign(TEXT_ALIGN_RIGHT);
-    position_.setText(positionBuf_);
-    position_.setGrow(1);
+    position.setFont(small);
+    position.setColor(Sem::OnSurfaceMuted);
+    position.setAlign(TEXT_ALIGN_RIGHT);
+    position.setText(positionBuf);
+    position.setGrow(1);
 
-    footer_.setAxis(Axis::Row);
-    footer_.setBackground(Sem::Surface);
-    footer_.setPadding(FOOTER_PAD_X, 0);
-    footer_.setBasis(FOOTER_H);
-    footer_.addChild(&reply_);
-    footer_.addChild(&position_);
+    footer.setAxis(Axis::Row);
+    footer.setBackground(Sem::Surface);
+    footer.setPadding(FOOTER_PAD_X, 0);
+    footer.setBasis(FOOTER_H);
+    footer.addChild(&replyLabel);
+    footer.addChild(&position);
 
-    root_.addChild(&bar);
-    root_.addChild(&header_);
-    root_.addChild(&body_);
-    root_.addChild(&footer_);
-    screen_.addChild(&root_);
-    root_.onLayout();
+    root.addChild(&bar);
+    root.addChild(&header);
+    root.addChild(&body);
+    root.addChild(&footer);
+    tree.addChild(&root);
+    root.onLayout();
 }
 
 void MessageDetailView::open(uint32_t sequence)
@@ -89,16 +89,16 @@ void MessageDetailView::open(uint32_t sequence)
 
 void MessageDetailView::save() const
 {
-    uiMemory.messageSeq = seq_;
-    uiMemory.messageScroll = body_.scrollOffset();
+    uiMemory.messageSeq = seq;
+    uiMemory.messageScroll = body.scrollOffset();
     /* The inbox follows the message this view ended on. */
-    uiMemory.inboxPinned = seq_;
+    uiMemory.inboxPinned = seq;
 }
 
 void MessageDetailView::restore()
 {
-    seq_ = uiMemory.messageSeq;
-    body_.setScrollOffset(uiMemory.messageScroll);
+    seq = uiMemory.messageSeq;
+    body.setScrollOffset(uiMemory.messageScroll);
 }
 
 bool MessageDetailView::canReply(const struct message *msg, uint8_t mode)
@@ -109,9 +109,9 @@ bool MessageDetailView::canReply(const struct message *msg, uint8_t mode)
 
 const struct message *MessageDetailView::current(size_t &idx)
 {
-    idx = messages_findBySequence(seq_);
+    idx = messages_findBySequence(seq);
     const struct message *msg = messages_get(idx);
-    body_.setText((msg != nullptr) ? msg->body : "");
+    body.setText((msg != nullptr) ? msg->body : "");
     return msg;
 }
 
@@ -136,18 +136,18 @@ void MessageDetailView::announce()
 
 void MessageDetailView::show(size_t idx, bool tail)
 {
-    seq_ = messages_get(idx)->sequence;
+    seq = messages_get(idx)->sequence;
     if (tail)
-        body_.scrollToEnd();
+        body.scrollToEnd();
     else
-        body_.scrollToTop();
+        body.scrollToTop();
     messages_markRead(idx, true);
     announce();
 }
 
 void MessageDetailView::scrollOrStep(size_t idx, int dir)
 {
-    if (body_.scroll(dir))
+    if (body.scroll(dir))
         return;
 
     /* Newest first: stepping up opens the newer message at its end. */
@@ -162,12 +162,12 @@ void MessageDetailView::refresh(const struct message *msg, size_t idx,
 {
     const char *rcpt = (msg->recipient[0] != '\0') ? msg->recipient :
                                                      STR(broadcast).str();
-    sniprintf(headerBuf_, sizeof(headerBuf_), "%s > %s", msg->sender, rcpt);
-    sniprintf(positionBuf_, sizeof(positionBuf_), "%u/%u",
+    sniprintf(headerBuf, sizeof(headerBuf), "%s > %s", msg->sender, rcpt);
+    sniprintf(positionBuf, sizeof(positionBuf), "%u/%u",
               static_cast<unsigned>(idx + 1),
               static_cast<unsigned>(messages_count()));
-    reply_.setText(reply ? STR(reply) : UiText(""));
-    screen_.markAllDirty();
+    replyLabel.setText(reply ? STR(reply) : UiText(""));
+    tree.markAllDirty();
 }
 
 void MessageDetailView::syncFromState(const state_t &s)
@@ -179,28 +179,28 @@ void MessageDetailView::syncFromState(const state_t &s)
     if (msg == nullptr) {
         /* Evicted or the inbox closed: keep a placeholder until the next
          * key goes back to the list. */
-        if (shownSeq_ != 0) {
-            sniprintf(headerBuf_, sizeof(headerBuf_), "%s",
+        if (shownSeq != 0) {
+            sniprintf(headerBuf, sizeof(headerBuf), "%s",
                       STR(noMessages).str());
-            positionBuf_[0] = '\0';
-            reply_.setText("");
-            shownSeq_ = 0;
-            screen_.markAllDirty();
+            positionBuf[0] = '\0';
+            replyLabel.setText("");
+            shownSeq = 0;
+            tree.markAllDirty();
         }
         return;
     }
 
     const size_t count = messages_count();
     const bool reply = canReply(msg, s.channel.mode);
-    if ((seq_ == shownSeq_) && (idx == shownIdx_) && (count == shownCount_)
-        && (reply == shownReply_))
+    if ((seq == shownSeq) && (idx == shownIdx) && (count == shownCount)
+        && (reply == shownReply))
         return;
 
     refresh(msg, idx, reply);
-    shownSeq_ = seq_;
-    shownIdx_ = idx;
-    shownCount_ = count;
-    shownReply_ = reply;
+    shownSeq = seq;
+    shownIdx = idx;
+    shownCount = count;
+    shownReply = reply;
 }
 
 NavIntent MessageDetailView::onEvent(const Event &e)

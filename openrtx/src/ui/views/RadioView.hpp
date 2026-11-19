@@ -116,11 +116,11 @@ private:
         bool pristine;            ///< The digits are still the pre-fill
     };
 
-    std::array<ListItem, RowCount> items_ = {}; ///< Rows
-    TextInput offsetInput_;                     ///< Offset keypad entry
-    char offsetBuf_[OFFSET_SIZE] = { 0 };       ///< Offset digits, in kHz
-    bool offsetNeg_ = false;     ///< The split is negative (tx < rx)
-    bool offsetPristine_ = true; ///< Pre-filled: the first digit retypes it
+    std::array<ListItem, RowCount> items = {}; ///< Rows
+    TextInput offsetInput;                     ///< Offset keypad entry
+    char offsetBuf[OFFSET_SIZE] = { 0 };       ///< Offset digits, in kHz
+    bool offsetNeg = false;     ///< The split is negative (tx < rx)
+    bool offsetPristine = true; ///< Pre-filled: the first digit retypes it
 };
 
 } // namespace ortxui

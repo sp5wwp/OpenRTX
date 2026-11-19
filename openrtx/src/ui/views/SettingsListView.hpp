@@ -46,7 +46,7 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** Edit, toggle or open the selected row, or go back on ESC. */
@@ -55,7 +55,7 @@ public:
     /** The settings list, whose position UiMemory keeps. */
     List *list() override
     {
-        return &list_;
+        return &listBox;
     }
 
     /** Keep the row being edited while destroyed. */
@@ -232,7 +232,7 @@ protected:
      */
     char *values(uint8_t row)
     {
-        return values_[row];
+        return valueText[row];
     }
 
     /** Start editing the selected row. */
@@ -241,11 +241,11 @@ protected:
     /** Stop editing and show the row's value unbracketed. */
     void endEdit();
 
-    Screen screen_;        ///< Widget tree root
-    Flex root_;            ///< Top bar over the list
-    List list_;            ///< The rows
-    bool editing_ = false; ///< A row is being edited
-    uint8_t editRow_ = 0;  ///< Row being edited
+    Screen tree;          ///< Widget tree root
+    Flex root;            ///< Top bar over the list
+    List listBox;         ///< The rows
+    bool editing = false; ///< A row is being edited
+    uint8_t editRow = 0;  ///< Row being edited
 
 private:
     /** A row edit kept while the view is destroyed. */
@@ -254,10 +254,10 @@ private:
         uint8_t row;                  ///< Row being edited
     };
 
-    static constexpr int16_t ROW_PAD = 4;    ///< Vertical inset of each row
+    static constexpr int16_t ROW_PAD = 4;      ///< Vertical inset of each row
 
-    ListItem *rows_ = nullptr;               ///< Row table, borrowed
-    char values_[ROWS_MAX][VALUE_SIZE] = {}; ///< Value text of each row
+    ListItem *rows = nullptr;                  ///< Row table, borrowed
+    char valueText[ROWS_MAX][VALUE_SIZE] = {}; ///< Value text of each row
 };
 
 } // namespace ortxui

@@ -51,7 +51,7 @@ private:
         RowCount,
     };
 
-    std::array<ListItem, RowCount> items_ = {}; ///< Rows
+    std::array<ListItem, RowCount> items = {}; ///< Rows
 };
 
 } // namespace ortxui

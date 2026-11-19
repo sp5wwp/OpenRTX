@@ -35,46 +35,46 @@ void TimeDateView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(timeAndDate));
 
     /* Centred date-over-time stack with a small hint below. */
-    body_.setAxis(Axis::Column);
-    body_.setAlign(Align::Stretch);
-    body_.setJustify(Justify::Center);
-    body_.setGap(regular ? 6 : 2);
-    body_.setGrow(1);
+    body.setAxis(Axis::Column);
+    body.setAlign(Align::Stretch);
+    body.setJustify(Justify::Center);
+    body.setGap(regular ? 6 : 2);
+    body.setGrow(1);
 
     const fontSize_t big = regular ? FONT_SIZE_12PT : FONT_SIZE_8PT;
-    dateLabel_.setFont(big);
-    dateLabel_.setAlign(TEXT_ALIGN_CENTER);
-    dateLabel_.setColor(Sem::OnSurface);
-    dateLabel_.setBasis(regular ? 26 : 16);
+    dateLabel.setFont(big);
+    dateLabel.setAlign(TEXT_ALIGN_CENTER);
+    dateLabel.setColor(Sem::OnSurface);
+    dateLabel.setBasis(regular ? 26 : 16);
 
-    timeLabel_.setFont(big);
-    timeLabel_.setAlign(TEXT_ALIGN_CENTER);
-    timeLabel_.setColor(Sem::OnSurface);
-    timeLabel_.setBasis(regular ? 26 : 16);
+    timeLabel.setFont(big);
+    timeLabel.setAlign(TEXT_ALIGN_CENTER);
+    timeLabel.setColor(Sem::OnSurface);
+    timeLabel.setBasis(regular ? 26 : 16);
 
-    hint_.setFont(FONT_SIZE_6PT);
-    hint_.setAlign(TEXT_ALIGN_CENTER);
-    hint_.setColor(Sem::OnSurfaceMuted);
-    hint_.setText(STR(hintSet));
-    hint_.setBasis(12);
+    hint.setFont(FONT_SIZE_6PT);
+    hint.setAlign(TEXT_ALIGN_CENTER);
+    hint.setColor(Sem::OnSurfaceMuted);
+    hint.setText(STR(hintSet));
+    hint.setBasis(12);
 
-    body_.addChild(&dateLabel_);
-    body_.addChild(&timeLabel_);
-    body_.addChild(&hint_);
+    body.addChild(&dateLabel);
+    body.addChild(&timeLabel);
+    body.addChild(&hint);
 
-    root_.addChild(&bar);
-    root_.addChild(&body_);
-    screen_.addChild(&root_);
-    root_.onLayout();
+    root.addChild(&bar);
+    root.addChild(&body);
+    tree.addChild(&root);
+    root.onLayout();
 
     showDisplay(state);
-    screen_.markAllDirty();
+    tree.markAllDirty();
 }
 
 void TimeDateView::showText(Label &label, char *buf, const char *text)
@@ -92,15 +92,15 @@ void TimeDateView::showDisplay(const state_t &s)
 
     char text[TEXT_SIZE];
     sniprintf(text, sizeof(text), "%02d/%02d/%02d", t.date, t.month, t.year);
-    showText(dateLabel_, dateBuf_, text);
+    showText(dateLabel, dateBuf, text);
     sniprintf(text, sizeof(text), "%02d:%02d:%02d", t.hour, t.minute, t.second);
-    showText(timeLabel_, timeBuf_, text);
+    showText(timeLabel, timeBuf, text);
 }
 
 void TimeDateView::syncFromState(const state_t &s)
 {
     View::syncFromState(s); /* refresh the shared top bar */
-    if (!editing_)
+    if (!editing)
         showDisplay(s);
 }
 
@@ -114,12 +114,12 @@ void TimeDateView::announce()
 
 void TimeDateView::save() const
 {
-    if (!editing_)
+    if (!editing)
         return;
 
     DateEdit e;
-    memcpy(e.digits, inputBuf_, sizeof(e.digits));
-    e.slot = input_.cursorSlot();
+    memcpy(e.digits, inputBuf, sizeof(e.digits));
+    e.slot = input.cursorSlot();
     uiMemory.inlineEdit.keep(id(), e);
 }
 
@@ -130,18 +130,18 @@ void TimeDateView::restore()
         return;
 
     openEntry();
-    memcpy(inputBuf_, e.digits, sizeof(inputBuf_));
-    input_.setCursorSlot(e.slot);
+    memcpy(inputBuf, e.digits, sizeof(inputBuf));
+    input.setCursorSlot(e.slot);
     refreshEdit();
 }
 
 void TimeDateView::openEntry()
 {
-    editing_ = true;
-    input_.configureSlots(inputBuf_, sizeof(inputBuf_), ENTRY_MASK, '_',
-                          FONT_SIZE_8PT);
-    hint_.setText(STR(hintDateTime));
-    hint_.invalidate();
+    editing = true;
+    input.configureSlots(inputBuf, sizeof(inputBuf), ENTRY_MASK, '_',
+                         FONT_SIZE_8PT);
+    hint.setText(STR(hintDateTime));
+    hint.invalidate();
     refreshEdit();
 }
 
@@ -155,23 +155,23 @@ void TimeDateView::beginEdit()
 
 void TimeDateView::endEdit()
 {
-    editing_ = false;
-    hint_.setText(STR(hintSet));
-    hint_.invalidate();
+    editing = false;
+    hint.setText(STR(hintSet));
+    hint.invalidate();
     showDisplay(state);
 }
 
 void TimeDateView::refreshEdit()
 {
-    const TextInput &f = input_;
+    const TextInput &f = input;
     char text[TEXT_SIZE];
     sniprintf(text, sizeof(text), "%c%c/%c%c/%c%c", f.slotChar(0),
               f.slotChar(1), f.slotChar(2), f.slotChar(3), f.slotChar(4),
               f.slotChar(5));
-    showText(dateLabel_, dateBuf_, text);
+    showText(dateLabel, dateBuf, text);
     sniprintf(text, sizeof(text), "%c%c:%c%c:00", f.slotChar(6), f.slotChar(7),
               f.slotChar(8), f.slotChar(9));
-    showText(timeLabel_, timeBuf_, text);
+    showText(timeLabel, timeBuf, text);
 }
 
 void TimeDateView::announceDigit() const
@@ -180,9 +180,9 @@ void TimeDateView::announceDigit() const
         return;
 
     /* Digits typed so far, the last one included. */
-    const uint16_t n = input_.filledSlots();
+    const uint16_t n = input.filledSlots();
     vp_flush();
-    vp_queueInteger(input_.slotDigit(n - 1));
+    vp_queueInteger(input.slotDigit(n - 1));
     if ((n == FIELD_MONTH) || (n == FIELD_YEAR))
         vp_queuePrompt(PROMPT_SLASH);
     if (n == FIELD_HOUR)
@@ -196,8 +196,8 @@ void TimeDateView::announceDigit() const
 
 int8_t TimeDateView::field(uint8_t first) const
 {
-    return static_cast<int8_t>(input_.slotDigit(first) * 10
-                               + input_.slotDigit(first + 1));
+    return static_cast<int8_t>(input.slotDigit(first) * 10
+                               + input.slotDigit(first + 1));
 }
 
 void TimeDateView::commit()
@@ -233,7 +233,7 @@ NavIntent TimeDateView::onEvent(const Event &e)
         return NavIntent::none();
 
     const uint32_t k = e.keys;
-    if (!editing_) {
+    if (!editing) {
         if ((k & KEY_ESC) != 0u)
             return NavIntent::pop();
         if ((k & KEY_ENTER) != 0u)
@@ -244,14 +244,14 @@ NavIntent TimeDateView::onEvent(const Event &e)
     if ((k & KEY_ESC) != 0u) {
         endEdit();
     } else if ((k & KEY_ENTER) != 0u) {
-        if (input_.filledSlots() == input_.slotCount())
+        if (input.filledSlots() == input.slotCount())
             commit();
     } else if ((k & (KBD_NUM_MASK | KEY_STAR)) != 0u) {
         /* A digit fills the next slot, '*' backspaces. */
-        const uint16_t filled = input_.filledSlots();
-        input_.handleKey(k, 0);
+        const uint16_t filled = input.filledSlots();
+        input.handleKey(k, 0);
         refreshEdit();
-        if (input_.filledSlots() > filled)
+        if (input.filledSlots() > filled)
             announceDigit();
     }
     return NavIntent::none();

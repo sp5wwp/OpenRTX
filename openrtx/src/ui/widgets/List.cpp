@@ -18,44 +18,44 @@ namespace ortxui
 
 void List::setItems(const ListItem *items, uint16_t count)
 {
-    items_ = items;
-    model_ = nullptr;
-    count_ = count;
-    selected_ = 0;
-    top_ = 0;
+    itemTable = items;
+    listModel = nullptr;
+    itemCount = count;
+    selectedRow = 0;
+    topRow = 0;
     invalidate();
 }
 
 void List::setModel(const ListModel *model)
 {
-    model_ = model;
-    items_ = nullptr;
-    count_ = 0;
-    selected_ = 0;
-    top_ = 0;
+    listModel = model;
+    itemTable = nullptr;
+    itemCount = 0;
+    selectedRow = 0;
+    topRow = 0;
     invalidate();
 }
 
 ListPos List::position() const
 {
-    return { selected_, top_ };
+    return { selectedRow, topRow };
 }
 
 void List::setPosition(const ListPos &p)
 {
     const uint16_t n = rows();
-    selected_ = (p.selected < n) ? p.selected : 0;
-    const uint16_t last = selectable_ ? selected_ : maxTop();
-    top_ = (p.top <= last) ? p.top : last;
+    selectedRow = (p.selected < n) ? p.selected : 0;
+    const uint16_t last = selectable ? selectedRow : maxTop();
+    topRow = (p.top <= last) ? p.top : last;
     invalidate();
 }
 
 void List::getItem(uint16_t i, ListItem &out) const
 {
-    if (model_ != nullptr)
-        model_->rowAt(i, out);
-    else if (items_ != nullptr)
-        out = items_[i];
+    if (listModel != nullptr)
+        listModel->rowAt(i, out);
+    else if (itemTable != nullptr)
+        out = itemTable[i];
 }
 
 SettingRow::Kind List::kindOf(const ListItem &it)
@@ -69,43 +69,43 @@ SettingRow::Kind List::kindOf(const ListItem &it)
 
 bool List::plainRows() const
 {
-    return (model_ != nullptr) && model_->plainRows();
+    return (listModel != nullptr) && listModel->plainRows();
 }
 
 int16_t List::rowHeight(uint16_t i) const
 {
     SettingRow &row = Scratch::get<SettingRow>();
-    row.setPad(padY_, VALUE_GAP);
+    row.setPad(insetY, VALUE_GAP);
     if (plainRows())
         return row.heightFor(SettingRow::Kind::Plain, UiText(), UiText(),
-                             area_.w);
+                             bounds.w);
 
     ListItem it;
     getItem(i, it);
-    return row.heightFor(kindOf(it), it.label, it.value, area_.w);
+    return row.heightFor(kindOf(it), it.label, it.value, bounds.w);
 }
 
 void List::scrollToSelected()
 {
-    if (selected_ < top_) {
-        top_ = selected_;
+    if (selectedRow < topRow) {
+        topRow = selectedRow;
         return;
     }
 
     /* Find the first row from which the rows down to the selection fit,
      * walking up from the selection: only the rows of one window are read. */
-    uint16_t first = selected_;
-    int32_t sum = rowHeight(selected_);
-    while (first > top_) {
+    uint16_t first = selectedRow;
+    int32_t sum = rowHeight(selectedRow);
+    while (first > topRow) {
         const int32_t h = rowHeight(static_cast<uint16_t>(first - 1));
-        if ((sum + h) > area_.h)
+        if ((sum + h) > bounds.h)
             break;
 
         sum += h;
         first--;
     }
 
-    top_ = first;
+    topRow = first;
 }
 
 void List::setSelected(uint16_t i, bool announce)
@@ -115,10 +115,10 @@ void List::setSelected(uint16_t i, bool announce)
         return;
     if (i >= n)
         i = static_cast<uint16_t>(n - 1);
-    if (i == selected_)
+    if (i == selectedRow)
         return;
 
-    selected_ = i;
+    selectedRow = i;
     scrollToSelected();
     invalidate();
     if (announce)
@@ -131,31 +131,31 @@ void List::moveSelection(int8_t dir)
     if (n == 0)
         return;
 
-    int32_t idx = selected_ + ((dir >= 0) ? 1 : -1);
+    int32_t idx = selectedRow + ((dir >= 0) ? 1 : -1);
     if (idx < 0)
         idx = n - 1;
     else if (idx >= n)
         idx = 0;
 
-    selected_ = static_cast<uint16_t>(idx);
+    selectedRow = static_cast<uint16_t>(idx);
     scrollToSelected();
     invalidate();
-    vp_playMenuBeepIfNeeded(selected_ == 0);
+    vp_playMenuBeepIfNeeded(selectedRow == 0);
     announceSelection();
 }
 
 void List::scroll(int8_t dir)
 {
     const uint16_t last = maxTop();
-    uint16_t top = top_;
+    uint16_t top = topRow;
     if ((dir > 0) && (top < last))
         top++;
     else if ((dir < 0) && (top > 0))
         top--;
 
-    if (top == top_)
+    if (top == topRow)
         return;
-    top_ = top;
+    topRow = top;
     invalidate();
 }
 
@@ -167,7 +167,7 @@ uint16_t List::maxTop() const
     int32_t sum = 0;
     while (top > 0) {
         sum += rowHeight(static_cast<uint16_t>(top - 1));
-        if (sum > area_.h)
+        if (sum > bounds.h)
             break;
         top--;
     }
@@ -184,8 +184,8 @@ void List::announceSelection(const UiText &title) const
         return;
 
     ListItem it;
-    if (selectable_ && (selected_ < rows()))
-        getItem(selected_, it);
+    if (selectable && (selectedRow < rows()))
+        getItem(selectedRow, it);
     if (title.empty() && it.label.empty())
         return;
 
@@ -222,7 +222,7 @@ bool List::onEvent(const Event &e)
         return false;
 
     /* Without a selection there is nothing to move but the window. */
-    if (selectable_)
+    if (selectable)
         moveSelection(dir);
     else
         scroll(dir);
@@ -240,13 +240,13 @@ void List::draw(DrawCtx &d)
      * Rows stack by their own heights, so a two-line value row is taller than
      * a plain / checkbox row while keeping the same padding. */
     const bool plain = plainRows();
-    const int16_t plainH = plain ? rowHeight(top_) : 0;
+    const int16_t plainH = plain ? rowHeight(topRow) : 0;
     SettingRow &scratchRow = Scratch::get<SettingRow>();
-    scratchRow.setPad(padY_, VALUE_GAP);
+    scratchRow.setPad(insetY, VALUE_GAP);
 
-    int16_t y = area_.y;
-    uint16_t i = top_;
-    for (; (i < n) && (y <= area_.bottom()); i++) {
+    int16_t y = bounds.y;
+    uint16_t i = topRow;
+    for (; (i < n) && (y <= bounds.bottom()); i++) {
         /* Plain rows are placed without reading them, so a row outside the
          * clip, as in another band, is never read. */
         ListItem it;
@@ -256,18 +256,18 @@ void List::draw(DrawCtx &d)
                                               kindOf(it);
         const int16_t h = plain ? plainH :
                                   scratchRow.heightFor(kind, it.label, it.value,
-                                                       area_.w);
+                                                       bounds.w);
 
         /* A row outside the clip draws nothing, but still moves the next rows
          * down and counts as shown. */
-        const Rect row = { area_.x, y, area_.w, static_cast<uint16_t>(h) };
+        const Rect row = { bounds.x, y, bounds.w, static_cast<uint16_t>(h) };
         y = static_cast<int16_t>(y + h);
         if (intersect(d.clip(), row).empty())
             continue;
 
         if (plain)
             getItem(i, it);
-        const bool selected = selectable_ && (i == selected_);
+        const bool selected = selectable && (i == selectedRow);
         scratchRow.bind(kind, it.label, it.value, it.checked, selected);
         scratchRow.setArea(row);
         scratchRow.onLayout();
@@ -275,8 +275,8 @@ void List::draw(DrawCtx &d)
     }
 
     /* The thumb is sized by rows, which is exact when they share a height. */
-    if ((top_ > 0) || (i < n))
-        drawScrollBar(d, area_, top_, i - top_, n);
+    if ((topRow > 0) || (i < n))
+        drawScrollBar(d, bounds, topRow, i - topRow, n);
 }
 
 void List::drawScrollBar(DrawCtx &d, const Rect &area, int32_t offset,

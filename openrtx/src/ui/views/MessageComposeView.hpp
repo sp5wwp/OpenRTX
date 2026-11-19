@@ -56,13 +56,13 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** The form rows, whose position UiMemory keeps. */
     List *list() override
     {
-        return &list_;
+        return &listBox;
     }
 
 private:
@@ -83,10 +83,10 @@ private:
         ROW_COUNT,
     };
 
-    Screen screen_;                              ///< Widget-tree root
-    Flex root_;                                  ///< Top bar over the rows
-    List list_;                                  ///< To, Message, Send rows
-    std::array<ListItem, ROW_COUNT> items_ = {}; ///< Rows, on the draft
+    Screen tree;                                ///< Widget-tree root
+    Flex root;                                  ///< Top bar over the rows
+    List listBox;                               ///< To, Message, Send rows
+    std::array<ListItem, ROW_COUNT> items = {}; ///< Rows, on the draft
 };
 
 } // namespace ortxui

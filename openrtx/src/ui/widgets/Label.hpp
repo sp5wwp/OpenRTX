@@ -42,7 +42,7 @@ public:
      */
     void setText(const UiText &t)
     {
-        text_ = t;
+        labelText = t;
     }
 
     /**
@@ -52,36 +52,36 @@ public:
      */
     const UiText &text() const
     {
-        return text_;
+        return labelText;
     }
 
     /** Set the text colour role. */
     void setColor(Sem c)
     {
-        color_ = c;
+        color = c;
     }
 
     /** Set the text font. */
     void setFont(fontSize_t f)
     {
-        font_ = f;
+        textFont = f;
     }
 
     /** Font the text is drawn in. */
     fontSize_t font() const
     {
-        return font_;
+        return textFont;
     }
     /** Set the horizontal alignment in the box. */
     void setAlign(textAlign_t a)
     {
-        align_ = a;
+        align = a;
     }
 
     /** Set how text wider than the box is handled. */
     void setOverflow(Overflow o)
     {
-        overflow_ = o;
+        overflow = o;
     }
 
     /** The text's width by the font's line height. */
@@ -91,11 +91,11 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
-    UiText text_;                         ///< Text shown
-    Sem color_ = Sem::OnSurface;          ///< Text colour role
-    fontSize_t font_ = FONT_SIZE_8PT;     ///< Text font
-    textAlign_t align_ = TEXT_ALIGN_LEFT; ///< Horizontal alignment
-    Overflow overflow_ = Overflow::Clip;  ///< Handling of wide text
+    UiText labelText;                    ///< Text shown
+    Sem color = Sem::OnSurface;          ///< Text colour role
+    fontSize_t textFont = FONT_SIZE_8PT; ///< Text font
+    textAlign_t align = TEXT_ALIGN_LEFT; ///< Horizontal alignment
+    Overflow overflow = Overflow::Clip;  ///< Handling of wide text
 };
 
 } // namespace ortxui

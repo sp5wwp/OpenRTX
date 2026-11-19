@@ -61,13 +61,13 @@ public:
     /** Get the focused object, nullptr if none. */
     Object *focused() const
     {
-        return focused_;
+        return focus;
     }
 
     /** Check whether the screen needs a repaint. */
     bool dirty() const
     {
-        return dirty_;
+        return needsRepaint;
     }
 
     /** Ask for a repaint. */
@@ -88,8 +88,8 @@ private:
      */
     void setFocus(Object *obj);
 
-    Object *focused_ = nullptr; ///< Focused object, nullptr if none
-    bool dirty_ = true;         ///< The screen needs a repaint
+    Object *focus = nullptr;  ///< Focused object, nullptr if none
+    bool needsRepaint = true; ///< The screen needs a repaint
 };
 
 } // namespace ortxui

@@ -38,22 +38,22 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** The credits list, whose scroll UiMemory keeps. */
     List *list() override
     {
-        return &authors_;
+        return &authors;
     }
 
 private:
-    Screen screen_; ///< Widget tree root
-    Flex root_;     ///< Top bar, header and credits
-    Flex header_;   ///< Name over version
-    Label brand_;   ///< "OpenRTX"
-    Label version_; ///< Firmware version
-    List authors_;  ///< Credits
+    Screen tree;   ///< Widget tree root
+    Flex root;     ///< Top bar, header and credits
+    Flex header;   ///< Name over version
+    Label brand;   ///< "OpenRTX"
+    Label version; ///< Firmware version
+    List authors;  ///< Credits
 };
 
 } // namespace ortxui

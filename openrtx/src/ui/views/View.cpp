@@ -33,19 +33,19 @@ TopBar &View::topBar()
 TopBar &View::useTopBar(const UiText &title)
 {
     sharedTopBar.reset(title);
-    hasTopBar_ = true;
+    hasTopBar = true;
     return sharedTopBar;
 }
 
 void View::syncFromState(const state_t &s)
 {
-    if (hasTopBar_)
+    if (hasTopBar)
         sharedTopBar.update(s, uiMemory.keypadLocked);
 }
 
 void View::announce()
 {
-    const UiText title = hasTopBar_ ? sharedTopBar.title() : UiText();
+    const UiText title = hasTopBar ? sharedTopBar.title() : UiText();
     if (const List *l = list())
         l->announceSelection(title);
     else

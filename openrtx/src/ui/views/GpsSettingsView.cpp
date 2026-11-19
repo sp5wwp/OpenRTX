@@ -14,17 +14,17 @@ namespace ortxui
 
 void GpsSettingsView::build()
 {
-    items_[RowEnabled].label = STR(gpsEnabled);
-    items_[RowEnabled].checkbox = true;
-    items_[RowEnabled].checked = state.settings.gps_enabled;
+    items[RowEnabled].label = STR(gpsEnabled);
+    items[RowEnabled].checkbox = true;
+    items[RowEnabled].checked = state.settings.gps_enabled;
 #ifdef CONFIG_RTC
-    items_[RowSetTime].label = STR(gpsSetTime);
-    items_[RowSetTime].checkbox = true;
-    items_[RowSetTime].checked = state.settings.gpsSetTime;
-    items_[RowTimezone].label = STR(UTCTimeZone);
+    items[RowSetTime].label = STR(gpsSetTime);
+    items[RowSetTime].checkbox = true;
+    items[RowSetTime].checked = state.settings.gpsSetTime;
+    items[RowTimezone].label = STR(UTCTimeZone);
 #endif
 
-    buildList(STR(gps), items_.data(), RowCount);
+    buildList(STR(gps), items.data(), RowCount);
 }
 
 GpsSettingsView::RowKind GpsSettingsView::rowKind(uint8_t row) const

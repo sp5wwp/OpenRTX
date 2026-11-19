@@ -61,10 +61,10 @@ private:
         RowCount,
     };
 
-    static constexpr int8_t TZ_MIN = -24;       ///< Westmost timezone, -12:00
-    static constexpr int8_t TZ_MAX = 28;        ///< Eastmost timezone, +14:00
+    static constexpr int8_t TZ_MIN = -24;      ///< Westmost timezone, -12:00
+    static constexpr int8_t TZ_MAX = 28;       ///< Eastmost timezone, +14:00
 
-    std::array<ListItem, RowCount> items_ = {}; ///< Rows
+    std::array<ListItem, RowCount> items = {}; ///< Rows
 };
 
 } // namespace ortxui

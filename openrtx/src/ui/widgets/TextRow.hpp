@@ -45,7 +45,7 @@ public:
      */
     void setGap(int16_t px)
     {
-        gap_ = px;
+        gap = px;
     }
 
     /**
@@ -112,9 +112,9 @@ private:
     /** Get the shared baseline, from the fonts and not the text. */
     int16_t baselineY() const;
 
-    std::array<Run, MAX_RUNS> runs_; ///< The runs, left to right
-    uint8_t count_ = 0;              ///< Runs defined
-    int16_t gap_ = 3;                ///< Space between runs
+    std::array<Run, MAX_RUNS> runs; ///< The runs, left to right
+    uint8_t count = 0;              ///< Runs defined
+    int16_t gap = 3;                ///< Space between runs
 };
 
 } // namespace ortxui

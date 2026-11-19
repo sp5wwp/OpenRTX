@@ -14,7 +14,7 @@ namespace ortxui
 {
 
 Navigator::Navigator(ViewSlot &slot, UiMemory &mem) :
-    slot_(slot), mem_(mem), stack_()
+    viewSlot(slot), memory(mem), stack()
 {
 }
 
@@ -24,69 +24,69 @@ Navigator::~Navigator()
 
 void Navigator::setRoot(ViewId root)
 {
-    overlay_ = nullptr;
-    stack_[0] = root;
-    depth_ = 1;
+    overlayView = nullptr;
+    stack[0] = root;
+    depth = 1;
     rebuild();
 }
 
 View *Navigator::active() const
 {
-    return (overlay_ != nullptr) ? overlay_ : slot_.view();
+    return (overlayView != nullptr) ? overlayView : viewSlot.view();
 }
 
 void Navigator::push(ViewId id)
 {
-    if ((id == ViewId::Count) || (depth_ >= MAX_DEPTH))
+    if ((id == ViewId::Count) || (depth >= MAX_DEPTH))
         return;
 
-    stack_[depth_++] = id;
+    stack[depth++] = id;
     rebuild();
 }
 
 void Navigator::pop()
 {
-    if (depth_ <= 1)
+    if (depth <= 1)
         return; /* the root view is never popped */
 
-    depth_--;
+    depth--;
     rebuild();
 }
 
 void Navigator::popToRoot()
 {
-    if (depth_ <= 1)
+    if (depth <= 1)
         return;
 
-    depth_ = 1;
+    depth = 1;
     rebuild();
 }
 
 void Navigator::closeOverlay()
 {
-    if (depth_ <= 1)
+    if (depth <= 1)
         return;
 
-    depth_--;
+    depth--;
     rebuild(false);
 }
 
 void Navigator::rebuild(bool announce)
 {
-    View *old = slot_.view();
+    View *old = viewSlot.view();
     if (old != nullptr) {
         const List *l = old->list();
         if (l != nullptr)
-            mem_.lists[static_cast<uint8_t>(built_)] = l->position();
+            memory.lists[static_cast<uint8_t>(built)] = l->position();
         old->save();
     }
 
-    built_ = stack_[depth_ - 1];
-    View *v = slot_.build(built_);
+    built = stack[depth - 1];
+    View *v = viewSlot.build(built);
 
     List *l = v->list();
     if (l != nullptr)
-        l->setPosition(mem_.lists[static_cast<uint8_t>(built_)]);
+        l->setPosition(memory.lists[static_cast<uint8_t>(built)]);
     v->restore();
 
     activate(v, announce);
@@ -130,30 +130,30 @@ bool Navigator::dispatch(const Event &e)
 
 void Navigator::presentOverlay(View *v, long long now, uint32_t timeoutMs)
 {
-    overlayShown_ = now;
-    overlayTimeout_ = timeoutMs;
-    if (overlay_ == v)
+    overlayShown = now;
+    overlayTimeout = timeoutMs;
+    if (overlayView == v)
         return;
 
     dismissOverlay();
-    overlay_ = v;
+    overlayView = v;
     activate(v, true);
 }
 
 void Navigator::dismissOverlay()
 {
-    if (overlay_ == nullptr)
+    if (overlayView == nullptr)
         return;
 
-    overlay_ = nullptr;
+    overlayView = nullptr;
 
     /* The screen below stayed built and active: only repaint it. */
-    slot_.view()->screen().markAllDirty();
+    viewSlot.view()->screen().markAllDirty();
 }
 
 void Navigator::tickOverlay(long long now)
 {
-    if ((overlay_ != nullptr) && ((now - overlayShown_) >= overlayTimeout_))
+    if ((overlayView != nullptr) && ((now - overlayShown) >= overlayTimeout))
         dismissOverlay();
 }
 

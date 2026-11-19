@@ -34,20 +34,20 @@ public:
      */
     void setPosition(uint16_t sel, uint16_t top)
     {
-        sel_ = sel;
-        top_ = top;
+        selectedCell = sel;
+        topRow = top;
     }
 
     /** Selected cell. */
     uint16_t selected() const
     {
-        return sel_;
+        return selectedCell;
     }
 
     /** First visible row. */
     uint16_t top() const
     {
-        return top_;
+        return topRow;
     }
 
     /**
@@ -70,8 +70,8 @@ private:
     /** Scroll so the selected row is visible. */
     void ensureVisible();
 
-    uint16_t sel_ = 0; ///< Selected cell
-    uint16_t top_ = 0; ///< First visible row
+    uint16_t selectedCell = 0; ///< Selected cell
+    uint16_t topRow = 0;       ///< First visible row
 };
 
 } // namespace ortxui

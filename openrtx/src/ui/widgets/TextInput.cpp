@@ -88,21 +88,21 @@ static uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
 void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
                           fontSize_t font)
 {
-    buf_ = buf;
-    cap_ = cap;
-    cs_ = &cs;
-    mode_ = mode;
-    font_ = font;
-    len_ = 0;
-    cursor_ = 0;
-    topRow_ = 0;
-    tapActive_ = false;
-    tapKeyIdx_ = -1;
-    enterDown_ = false;
+    textBuf = buf;
+    capacity = cap;
+    charset = &cs;
+    editMode = mode;
+    textFont = font;
+    len = 0;
+    cursorPos = 0;
+    firstVisibleRow = 0;
+    tapActive = false;
+    tapKeyIdx = -1;
+    enterDown = false;
     /* Leave any prior slot-mode state behind so a reused widget accepts text. */
-    slotMode_ = false;
-    slotCount_ = 0;
-    slotCursor_ = 0;
+    slotMode = false;
+    numSlots = 0;
+    slotCursor = 0;
 }
 
 void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
@@ -111,149 +111,150 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     if ((buf == nullptr) || (cap == 0) || (mask == nullptr))
         return;
 
-    buf_ = buf;
-    cap_ = cap;
-    cs_ = nullptr;
-    mode_ = Mode::SingleLine;
-    font_ = font;
-    slotMode_ = true;
-    placeholder_ = placeholder;
-    tapActive_ = false;
-    tapKeyIdx_ = -1;
-    enterDown_ = false;
+    textBuf = buf;
+    capacity = cap;
+    charset = nullptr;
+    editMode = Mode::SingleLine;
+    textFont = font;
+    slotMode = true;
+    placeholderChar = placeholder;
+    tapActive = false;
+    tapKeyIdx = -1;
+    enterDown = false;
 
     /* Lay the mask into the buffer and note each slot's offset. A mask longer
      * than the buffer or MAX_SLOTS is cut short, which slotCount() shows. */
-    slotCount_ = 0;
+    numSlots = 0;
     uint16_t i = 0;
-    for (; (mask[i] != '\0') && (i + 1 < cap_); i++) {
+    for (; (mask[i] != '\0') && (i + 1 < capacity); i++) {
         if (mask[i] == '9') {
-            if (slotCount_ >= MAX_SLOTS)
+            if (numSlots >= MAX_SLOTS)
                 break; /* mask has more slots than we can track */
-            buf_[i] = placeholder_;
-            slotPos_[slotCount_++] = i;
+            textBuf[i] = placeholderChar;
+            slotPos[numSlots++] = i;
         } else {
-            buf_[i] = mask[i];
+            textBuf[i] = mask[i];
         }
     }
-    buf_[i] = '\0';
-    len_ = i;
-    slotCursor_ = 0;
+    textBuf[i] = '\0';
+    len = i;
+    slotCursor = 0;
     syncSlotCursor();
 }
 
 int TextInput::slotToPos(uint16_t ordinal) const
 {
-    return (ordinal < slotCount_) ? static_cast<int>(slotPos_[ordinal]) : -1;
+    return (ordinal < numSlots) ? static_cast<int>(slotPos[ordinal]) : -1;
 }
 
 void TextInput::syncSlotCursor()
 {
     /* Keep the render cursor on the active slot; when the cursor has run off the
      * end (all slots filled) rest the bracket on the last slot. */
-    uint16_t ord = slotCursor_;
-    if (ord >= slotCount_)
-        ord = (slotCount_ > 0) ? static_cast<uint16_t>(slotCount_ - 1) : 0;
+    uint16_t ord = slotCursor;
+    if (ord >= numSlots)
+        ord = (numSlots > 0) ? static_cast<uint16_t>(numSlots - 1) : 0;
     const int p = slotToPos(ord);
-    cursor_ = (p >= 0) ? static_cast<uint16_t>(p) : 0;
+    cursorPos = (p >= 0) ? static_cast<uint16_t>(p) : 0;
 }
 
 void TextInput::putDigit(uint8_t d)
 {
-    if (!slotMode_ || (d > 9) || (slotCursor_ >= slotCount_))
+    if (!slotMode || (d > 9) || (slotCursor >= numSlots))
         return;
-    const int p = slotToPos(slotCursor_);
+    const int p = slotToPos(slotCursor);
     if (p < 0)
         return;
-    buf_[p] = static_cast<char>('0' + d);
-    slotCursor_++;
+    textBuf[p] = static_cast<char>('0' + d);
+    slotCursor++;
     syncSlotCursor();
 }
 
 void TextInput::setSlotDigit(uint16_t ordinal, int d)
 {
-    if (!slotMode_ || (ordinal >= slotCount_))
+    if (!slotMode || (ordinal >= numSlots))
         return;
     const int p = slotToPos(ordinal);
     if (p < 0)
         return;
     /* Out-of-range digits fall back to the placeholder rather than wrapping to a
      * wrong digit (e.g. 15 must not become '5'). */
-    buf_[p] = ((d < 0) || (d > 9)) ? placeholder_ : static_cast<char>('0' + d);
+    textBuf[p] = ((d < 0) || (d > 9)) ? placeholderChar :
+                                        static_cast<char>('0' + d);
 }
 
 int TextInput::slotDigit(uint16_t ordinal) const
 {
-    if (!slotMode_ || (ordinal >= slotCount_))
+    if (!slotMode || (ordinal >= numSlots))
         return -1;
     const int p = slotToPos(ordinal);
     if (p < 0)
         return -1;
-    const char c = buf_[p];
+    const char c = textBuf[p];
     return ((c >= '0') && (c <= '9')) ? (c - '0') : -1;
 }
 
 uint16_t TextInput::filledSlots() const
 {
     uint16_t n = 0;
-    while ((n < slotCount_) && (slotDigit(n) >= 0))
+    while ((n < numSlots) && (slotDigit(n) >= 0))
         n++;
     return n;
 }
 
 void TextInput::setCursorSlot(uint16_t ordinal)
 {
-    if (!slotMode_)
+    if (!slotMode)
         return;
-    slotCursor_ = (ordinal <= slotCount_) ? ordinal : slotCount_;
+    slotCursor = (ordinal <= numSlots) ? ordinal : numSlots;
     syncSlotCursor();
 }
 
 void TextInput::clearSlots()
 {
-    if (!slotMode_)
+    if (!slotMode)
         return;
-    for (uint16_t o = 0; o < slotCount_; o++)
-        buf_[slotPos_[o]] = placeholder_;
-    slotCursor_ = 0;
+    for (uint16_t o = 0; o < numSlots; o++)
+        textBuf[slotPos[o]] = placeholderChar;
+    slotCursor = 0;
     syncSlotCursor();
 }
 
 void TextInput::begin()
 {
-    if ((buf_ == nullptr) || (cap_ == 0))
+    if ((textBuf == nullptr) || (capacity == 0))
         return;
-    len_ = static_cast<uint16_t>(strnlen(buf_, cap_ - 1));
-    buf_[len_] = '\0';
-    cursor_ = 0;
+    len = static_cast<uint16_t>(strnlen(textBuf, capacity - 1));
+    textBuf[len] = '\0';
+    cursorPos = 0;
     seedBlank();
-    topRow_ = 0;
-    tapActive_ = false;
-    tapKeyIdx_ = -1;
+    firstVisibleRow = 0;
+    tapActive = false;
+    tapKeyIdx = -1;
 }
 
 void TextInput::seedBlank()
 {
-    if ((len_ == 0) && (cap_ >= 2)) {
-        buf_[0] = ' ';
-        buf_[1] = '\0';
-        len_ = 1;
-        cursor_ = 0;
+    if ((len == 0) && (capacity >= 2)) {
+        textBuf[0] = ' ';
+        textBuf[1] = '\0';
+        len = 1;
+        cursorPos = 0;
     }
 }
 
 void TextInput::resume(uint16_t cursor, uint16_t topRow)
 {
     begin();
-    cursor_ = (cursor <= len_) ? cursor : len_;
-    topRow_ = topRow;
+    cursorPos = (cursor <= len) ? cursor : len;
+    firstVisibleRow = topRow;
 }
 
 uint16_t TextInput::cellLen(uint16_t pos) const
 {
-    if ((buf_ == nullptr) || (pos >= len_))
+    if ((textBuf == nullptr) || (pos >= len))
         return 0;
-    const uint8_t b = static_cast<uint8_t>(buf_[pos]);
+    const uint8_t b = static_cast<uint8_t>(textBuf[pos]);
     if ((b & 0x80u) == 0x00u)
         return 1; /* ASCII / DELETE_CELL */
     if ((b & 0xE0u) == 0xC0u)
@@ -266,7 +267,7 @@ uint16_t TextInput::cellLen(uint16_t pos) const
 uint16_t TextInput::nextCell(uint16_t pos) const
 {
     const uint16_t n = static_cast<uint16_t>(pos + cellLen(pos));
-    return (n < len_) ? n : len_;
+    return (n < len) ? n : len;
 }
 
 uint16_t TextInput::prevCell(uint16_t pos) const
@@ -275,7 +276,7 @@ uint16_t TextInput::prevCell(uint16_t pos) const
         return 0;
     uint16_t i = static_cast<uint16_t>(pos - 1);
     /* Walk back over UTF-8 continuation bytes to the lead byte. */
-    while ((i > 0) && ((static_cast<uint8_t>(buf_[i]) & 0xC0u) == 0x80u))
+    while ((i > 0) && ((static_cast<uint8_t>(textBuf[i]) & 0xC0u) == 0x80u))
         i--;
     return i;
 }
@@ -283,99 +284,100 @@ uint16_t TextInput::prevCell(uint16_t pos) const
 void TextInput::spliceCell(uint16_t pos, const char *enc, int n)
 {
     /* Replace the cell at pos (its cellLen bytes) with the n bytes at enc,
-     * shifting the tail and adjusting len_. No-op if it would not fit. */
-    if ((buf_ == nullptr) || (pos > len_))
+     * shifting the tail and adjusting len. No-op if it would not fit. */
+    if ((textBuf == nullptr) || (pos > len))
         return;
     const uint16_t old = cellLen(pos);
-    if (static_cast<int>(len_) - old + n + 1 > cap_)
+    if (static_cast<int>(len) - old + n + 1 > capacity)
         return;
-    memmove(buf_ + pos + n, buf_ + pos + old,
-            static_cast<size_t>(len_ - pos - old) + 1); /* include NUL */
+    memmove(textBuf + pos + n, textBuf + pos + old,
+            static_cast<size_t>(len - pos - old) + 1); /* include NUL */
     for (int i = 0; i < n; i++)
-        buf_[pos + i] = enc[i];
-    len_ = static_cast<uint16_t>(len_ - old + n);
+        textBuf[pos + i] = enc[i];
+    len = static_cast<uint16_t>(len - old + n);
 }
 
 void TextInput::cycle(int dir)
 {
-    if ((buf_ == nullptr) || (cs_ == nullptr))
+    if ((textBuf == nullptr) || (charset == nullptr))
         return;
-    if (cursor_ >= len_)
+    if (cursorPos >= len)
         return;
 
     /* The cycle is the character set plus a delete slot, reached from either
      * end, so every radio can delete; a move or commit applies it. */
-    const int n = static_cast<int>(cs_->len);
+    const int n = static_cast<int>(charset->len);
     const int total = n + 1;
-    const uint16_t clen = cellLen(cursor_);
-    int idx = (buf_[cursor_] == DELETE_CELL) ? n :
-              (clen == 1)                    ? cs_->indexOf(buf_[cursor_]) :
+    const uint16_t clen = cellLen(cursorPos);
+    int idx = (textBuf[cursorPos] == DELETE_CELL) ? n :
+              (clen == 1) ? charset->indexOf(textBuf[cursorPos]) :
                             -1; /* multibyte cell: start fresh */
     idx = ((idx + dir) % total + total) % total;
-    const char rep = (idx == n) ? DELETE_CELL : cs_->at(idx);
+    const char rep = (idx == n) ? DELETE_CELL : charset->at(idx);
     if (clen == 1)
-        buf_[cursor_] = rep; /* fast path, no length change */
+        textBuf[cursorPos] = rep; /* fast path, no length change */
     else
-        spliceCell(cursor_, &rep,
+        spliceCell(cursorPos, &rep,
                    1); /* collapse a multibyte cell to one byte */
 }
 
 void TextInput::deleteAt(uint16_t pos)
 {
-    if ((buf_ == nullptr) || (pos >= len_))
+    if ((textBuf == nullptr) || (pos >= len))
         return;
     const uint16_t clen = cellLen(pos);
-    memmove(buf_ + pos, buf_ + pos + clen,
-            static_cast<size_t>(len_ - pos - clen) + 1); /* incl NUL */
-    len_ = static_cast<uint16_t>(len_ - clen);
-    if (cursor_ > len_)
-        cursor_ = len_;
+    memmove(textBuf + pos, textBuf + pos + clen,
+            static_cast<size_t>(len - pos - clen) + 1); /* incl NUL */
+    len = static_cast<uint16_t>(len - clen);
+    if (cursorPos > len)
+        cursorPos = len;
     /* Keep the cursor on a cell. */
-    if ((cursor_ >= len_) && (len_ > 0))
-        cursor_ = prevCell(len_);
+    if ((cursorPos >= len) && (len > 0))
+        cursorPos = prevCell(len);
     seedBlank();
-    tapActive_ = false;
+    tapActive = false;
 }
 
 void TextInput::resolvePendingDelete()
 {
-    if ((buf_ != nullptr) && (cursor_ < len_) && (buf_[cursor_] == DELETE_CELL))
-        deleteAt(cursor_);
+    if ((textBuf != nullptr) && (cursorPos < len)
+        && (textBuf[cursorPos] == DELETE_CELL))
+        deleteAt(cursorPos);
 }
 
 void TextInput::moveCursor(int dir)
 {
-    if (buf_ == nullptr)
+    if (textBuf == nullptr)
         return;
     commitPending();
-    if (slotMode_) {
+    if (slotMode) {
         /* Move over editable slots only; separators are skipped by slotToPos. */
-        if ((dir < 0) && (slotCursor_ > 0))
-            slotCursor_--;
-        else if ((dir > 0) && (slotCursor_ + 1 < slotCount_))
-            slotCursor_++;
+        if ((dir < 0) && (slotCursor > 0))
+            slotCursor--;
+        else if ((dir > 0) && (slotCursor + 1 < numSlots))
+            slotCursor++;
         syncSlotCursor();
         return;
     }
     /* A move key applied while sitting on the ⌫ slot performs the delete
      * (consuming the keypress) rather than moving. */
-    if ((cursor_ < len_) && (buf_[cursor_] == DELETE_CELL)) {
-        deleteAt(cursor_);
+    if ((cursorPos < len) && (textBuf[cursorPos] == DELETE_CELL)) {
+        deleteAt(cursorPos);
         return;
     }
     if (dir < 0) {
-        if (cursor_ > 0)
-            cursor_ = prevCell(cursor_);
+        if (cursorPos > 0)
+            cursorPos = prevCell(cursorPos);
     } else {
-        const uint16_t nxt = nextCell(cursor_);
-        if (nxt < len_) {
-            cursor_ = nxt;
-        } else if (len_ + 1 < cap_) {
+        const uint16_t nxt = nextCell(cursorPos);
+        if (nxt < len) {
+            cursorPos = nxt;
+        } else if (len + 1 < capacity) {
             /* Extend with a blank and step onto it. */
-            buf_[len_] = ' ';
-            buf_[len_ + 1] = '\0';
-            len_++;
-            cursor_ = static_cast<uint16_t>(len_ - 1);
+            textBuf[len] = ' ';
+            textBuf[len + 1] = '\0';
+            len++;
+            cursorPos = static_cast<uint16_t>(len - 1);
         }
     }
 }
@@ -384,83 +386,82 @@ void TextInput::putCodePoint(uint32_t cp)
 {
     /* Replace the cell under the cursor and leave the cursor on it, as a typed
      * character would. */
-    if (buf_ == nullptr)
+    if (textBuf == nullptr)
         return;
     char enc[3];
     const size_t n = utf8Encode(cp, enc);
-    spliceCell(cursor_, enc, static_cast<int>(n));
+    spliceCell(cursorPos, enc, static_cast<int>(n));
 }
 
 void TextInput::backspace()
 {
-    if (buf_ == nullptr)
+    if (textBuf == nullptr)
         return;
-    if (slotMode_) {
+    if (slotMode) {
         /* Clear the last filled slot and step back onto it. */
-        if (slotCursor_ == 0)
+        if (slotCursor == 0)
             return;
-        slotCursor_--;
-        const int p = slotToPos(slotCursor_);
+        slotCursor--;
+        const int p = slotToPos(slotCursor);
         if (p >= 0)
-            buf_[p] = placeholder_;
+            textBuf[p] = placeholderChar;
         syncSlotCursor();
         return;
     }
     /* On the ⌫ slot, '*' deletes that slot; otherwise it backspaces. */
-    if ((cursor_ < len_) && (buf_[cursor_] == DELETE_CELL)) {
-        deleteAt(cursor_);
+    if ((cursorPos < len) && (textBuf[cursorPos] == DELETE_CELL)) {
+        deleteAt(cursorPos);
         return;
     }
-    if ((cursor_ == 0) || (len_ == 0))
+    if ((cursorPos == 0) || (len == 0))
         return;
-    const uint16_t prev = prevCell(cursor_);
-    const uint16_t clen = static_cast<uint16_t>(cursor_ - prev);
-    memmove(buf_ + prev, buf_ + cursor_,
-            static_cast<size_t>(len_ - cursor_) + 1); /* include NUL */
-    len_ = static_cast<uint16_t>(len_ - clen);
-    cursor_ = prev;
-    tapActive_ = false;
+    const uint16_t prev = prevCell(cursorPos);
+    const uint16_t clen = static_cast<uint16_t>(cursorPos - prev);
+    memmove(textBuf + prev, textBuf + cursorPos,
+            static_cast<size_t>(len - cursorPos) + 1); /* include NUL */
+    len = static_cast<uint16_t>(len - clen);
+    cursorPos = prev;
+    tapActive = false;
 }
 
 void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
 {
-    if ((buf_ == nullptr) || (tapTable_ == nullptr)
-        || (keyIndex >= ARRAY_SIZE(tapTable_->keys)))
+    if ((textBuf == nullptr) || (tapTable == nullptr)
+        || (keyIndex >= ARRAY_SIZE(tapTable->keys)))
         return;
-    const char *str = tapTable_->keys[keyIndex];
+    const char *str = tapTable->keys[keyIndex];
     if ((str == nullptr) || (str[0] == '\0'))
         return; /* action / unused key — nothing to type */
 
     const size_t n = strlen(str);
-    const bool cont = tapActive_
-                   && (tapKeyIdx_ == static_cast<int8_t>(keyIndex))
-                   && ((nowTick - tapTick_) < input_longPressTimeout);
+    const bool cont = tapActive && (tapKeyIdx == static_cast<int8_t>(keyIndex))
+                   && ((nowTick - tapTick) < input_longPressTimeout);
     if (cont) {
         /* Same key within the window: cycle the character in place. */
-        tapSet_ = static_cast<uint8_t>((tapSet_ + 1) % n);
+        tapSet = static_cast<uint8_t>((tapSet + 1) % n);
     } else {
         /* The previous character is committed; advance to a fresh slot
          * (moveCursor extends at the end) and overwrite it. */
-        if (tapActive_)
+        if (tapActive)
             moveCursor(+1);
-        tapSet_ = 0;
+        tapSet = 0;
     }
-    buf_[cursor_] = str[tapSet_]; /* set the character under the cursor */
-    tapActive_ = true;
-    tapKeyIdx_ = static_cast<int8_t>(keyIndex);
-    tapTick_ = nowTick;
+    textBuf[cursorPos] = str[tapSet]; /* set the character under the cursor */
+    tapActive = true;
+    tapKeyIdx = static_cast<int8_t>(keyIndex);
+    tapTick = nowTick;
 }
 
 void TextInput::commitPending()
 {
-    tapActive_ = false;
-    tapKeyIdx_ = -1;
+    tapActive = false;
+    tapKeyIdx = -1;
 }
 
 TextInput::KeyResult TextInput::commit()
 {
     commitPending();
-    if (!slotMode_)
+    if (!slotMode)
         stripTrailingSpaces();
     return KeyResult::Committed;
 }
@@ -468,7 +469,7 @@ TextInput::KeyResult TextInput::commit()
 char TextInput::slotChar(uint16_t ordinal) const
 {
     const int d = slotDigit(ordinal);
-    return (d >= 0) ? static_cast<char>('0' + d) : placeholder_;
+    return (d >= 0) ? static_cast<char>('0' + d) : placeholderChar;
 }
 
 void TextInput::handlePrefilledKey(uint32_t keys, bool &pristine,
@@ -493,7 +494,7 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
         return KeyResult::Editing;
     }
     if ((keys & KEY_HASH) != 0u) {
-        if (slotMode_)
+        if (slotMode)
             return KeyResult::NotHandled; /* '#' is not a slot command */
         if (!kbdSpaceOnHash()) {
             clear();
@@ -504,9 +505,9 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
     const uint32_t chars = keys & (KBD_NUM_MASK | KEY_HASH);
     if (chars != 0u) {
         const uint8_t k = static_cast<uint8_t>(__builtin_ctz(chars));
-        if (slotMode_)
+        if (slotMode)
             putDigit(k);
-        else if (tapTable_ != nullptr)
+        else if (tapTable != nullptr)
             tapKey(k, nowTick);
         else
             return KeyResult::NotHandled;
@@ -517,7 +518,7 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
         return KeyResult::Editing;
     }
     if ((keys & (KEY_UP | KEY_DOWN)) != 0u) {
-        if (slotMode_)
+        if (slotMode)
             return KeyResult::NotHandled; /* host owns UP/DOWN (e.g. field swap) */
         /* Without LEFT/RIGHT, UP/DOWN are what moves the cursor. */
         const int dir = ((keys & KEY_UP) != 0u) ? +1 : -1;
@@ -549,13 +550,13 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
 
         case EvKind::KeyLong:
             /* The press that opened the editor is not this field's to commit. */
-            if (knobOnly() && enterDown_ && ((e.keys & KEY_ENTER) != 0u))
+            if (knobOnly() && enterDown && ((e.keys & KEY_ENTER) != 0u))
                 return commit();
             return KeyResult::NotHandled;
 
         case EvKind::Key:
-            enterDown_ = ((e.keys & KEY_ENTER) != 0u);
-            if (knobOnly() && enterDown_) {
+            enterDown = ((e.keys & KEY_ENTER) != 0u);
+            if (knobOnly() && enterDown) {
                 moveCursor(+1);
                 return KeyResult::Editing;
             }
@@ -568,26 +569,26 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
 
 void TextInput::clear()
 {
-    if (buf_ == nullptr)
+    if (textBuf == nullptr)
         return;
-    buf_[0] = '\0';
+    textBuf[0] = '\0';
     begin();
 }
 
 void TextInput::stripTrailingSpaces()
 {
-    if (buf_ == nullptr)
+    if (textBuf == nullptr)
         return;
     resolvePendingDelete(); /* a pending ⌫ at commit deletes its slot */
-    while ((len_ > 0) && (buf_[len_ - 1] == ' '))
-        buf_[--len_] = '\0';
-    if (cursor_ > len_)
-        cursor_ = len_;
+    while ((len > 0) && (textBuf[len - 1] == ' '))
+        textBuf[--len] = '\0';
+    if (cursorPos > len)
+        cursorPos = len;
 }
 
 void TextInput::formatBracketed(char *out, size_t sz) const
 {
-    composeWindow(out, sz, 0, len_);
+    composeWindow(out, sz, 0, len);
 }
 
 void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
@@ -601,15 +602,15 @@ void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
     if (lo > 0)
         append(o, rem, SYMBOL_ELLIPSIS, ELLIPSIS_LEN);
     for (uint16_t i = lo; i < hi; i = nextCell(i)) {
-        const bool del = (buf_[i] == DELETE_CELL);
-        const char *cell = del ? DELETE_GLYPH : (buf_ + i);
+        const bool del = (textBuf[i] == DELETE_CELL);
+        const char *cell = del ? DELETE_GLYPH : (textBuf + i);
         const size_t n = del ? (sizeof(DELETE_GLYPH) - 1) : cellLen(i);
-        const bool here = (i == cursor_);
+        const bool here = (i == cursorPos);
         if ((here && !append(o, rem, "[", 1)) || !append(o, rem, cell, n)
             || (here && !append(o, rem, "]", 1)))
             return;
     }
-    if (hi < len_)
+    if (hi < len)
         append(o, rem, SYMBOL_ELLIPSIS, ELLIPSIS_LEN);
 }
 
@@ -623,7 +624,7 @@ void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
     /* Grow a [lo, hi) cell window outward from the cursor, alternately left and
      * right, while the composed window (with its ellipses) still fits, so the
      * cursor cell stays visible and the field scrolls with it. */
-    uint16_t lo = cursor_;
+    uint16_t lo = cursorPos;
     uint16_t hi = nextCell(lo);
     char cand[LINE_BUF];
     bool grew = true;
@@ -637,7 +638,7 @@ void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
                 grew = true;
             }
         }
-        if (hi < len_) {
+        if (hi < len) {
             const uint16_t h = nextCell(hi);
             composeWindow(cand, sizeof(cand), lo, h);
             if (gfx_getTextWidth(font, cand) <= maxW) {
@@ -689,71 +690,75 @@ static uint16_t lineEnd(const char *buf, uint16_t start, uint16_t len, int maxW,
 void TextInput::ensureCursorVisibleV(uint16_t cursorRow, uint16_t rows,
                                      uint16_t visRows)
 {
-    if (cursorRow < topRow_)
-        topRow_ = cursorRow;
-    else if (cursorRow >= topRow_ + visRows)
-        topRow_ = static_cast<uint16_t>(cursorRow - visRows + 1);
-    if (topRow_ + visRows > rows)
-        topRow_ = (rows > visRows) ? static_cast<uint16_t>(rows - visRows) : 0;
+    if (cursorRow < firstVisibleRow)
+        firstVisibleRow = cursorRow;
+    else if (cursorRow >= firstVisibleRow + visRows)
+        firstVisibleRow = static_cast<uint16_t>(cursorRow - visRows + 1);
+    if (firstVisibleRow + visRows > rows)
+        firstVisibleRow = (rows > visRows) ?
+                              static_cast<uint16_t>(rows - visRows) :
+                              0;
 }
 
 void TextInput::draw(DrawCtx &d)
 {
-    if ((buf_ == nullptr) || area_.empty())
+    if ((textBuf == nullptr) || bounds.empty())
         return;
 
-    const int16_t fh = static_cast<int16_t>(gfx_getFontHeight(font_));
+    const int16_t fh = static_cast<int16_t>(gfx_getFontHeight(textFont));
     const int16_t lh = static_cast<int16_t>(fh + LINE_GAP);
 
     auto drawCursor = [&](const Rect &lineBox, uint16_t lineStart) {
-        const uint16_t preW = spanWidth(buf_, lineStart, cursor_, font_);
-        const int16_t cx = static_cast<int16_t>(area_.x + preW);
+        const uint16_t preW = spanWidth(textBuf, lineStart, cursorPos,
+                                        textFont);
+        const int16_t cx = static_cast<int16_t>(bounds.x + preW);
 
         /* Block over the whole cell (a picker-inserted accent is one cell). */
-        const uint16_t clen = cellLen(cursor_);
-        const bool isDel = (cursor_ < len_) && (buf_[cursor_] == DELETE_CELL);
+        const uint16_t clen = cellLen(cursorPos);
+        const bool isDel = (cursorPos < len)
+                        && (textBuf[cursorPos] == DELETE_CELL);
         char t[5];
         uint16_t tn = (clen < sizeof(t)) ? clen : 0u;
         for (uint16_t i = 0; i < tn; i++)
-            t[i] = buf_[cursor_ + i];
+            t[i] = textBuf[cursorPos + i];
         t[tn] = '\0';
-        const bool onChar = (cursor_ < len_) && !isDel
-                         && !((clen == 1) && (buf_[cursor_] == ' '));
+        const bool onChar = (cursorPos < len) && !isDel
+                         && !((clen == 1) && (textBuf[cursorPos] == ' '));
         const char *glyph = isDel ? DELETE_GLYPH : t;
         const bool visible = isDel || onChar;
-        uint16_t cw = visible ? gfx_getTextWidth(font_, glyph) : 3u;
+        uint16_t cw = visible ? gfx_getTextWidth(textFont, glyph) : 3u;
         if (cw < 2u)
             cw = 2u;
         const Rect cell = { cx, lineBox.y, cw, lineBox.h };
         d.fillRect(cell, Sem::Primary);
         if (visible)
-            d.textInBox(cell, font_, TEXT_ALIGN_LEFT, Sem::OnPrimary, glyph);
+            d.textInBox(cell, textFont, TEXT_ALIGN_LEFT, Sem::OnPrimary, glyph);
     };
 
-    if (mode_ == Mode::SingleLine) {
+    if (editMode == Mode::SingleLine) {
         /* A SingleLine field is as wide as its text; long text is MultiLine. */
-        d.textInBox(area_, font_, TEXT_ALIGN_LEFT, Sem::OnSurface, buf_);
-        drawCursor(area_, 0);
+        d.textInBox(bounds, textFont, TEXT_ALIGN_LEFT, Sem::OnSurface, textBuf);
+        drawCursor(bounds, 0);
         return;
     }
 
-    const int maxW = static_cast<int>(area_.w) - List::SCROLL_BAR_W
+    const int maxW = static_cast<int>(bounds.w) - List::SCROLL_BAR_W
                    - SCROLL_GAP;
     uint16_t visRows =
-        static_cast<uint16_t>(area_.h / static_cast<uint16_t>(lh));
+        static_cast<uint16_t>(bounds.h / static_cast<uint16_t>(lh));
     if (visRows == 0)
         visRows = 1;
 
     /* Pass 1: count wrapped rows and locate the cursor's row. */
     uint16_t rows = 0, cursorRow = 0, pos = 0;
     while (true) {
-        const uint16_t end = lineEnd(buf_, pos, len_, maxW, font_);
-        if ((cursor_ >= pos) && (cursor_ < end))
+        const uint16_t end = lineEnd(textBuf, pos, len, maxW, textFont);
+        if ((cursorPos >= pos) && (cursorPos < end))
             cursorRow = rows;
-        else if ((end >= len_) && (cursor_ == len_))
+        else if ((end >= len) && (cursorPos == len))
             cursorRow = rows;
         rows++;
-        if (end >= len_)
+        if (end >= len)
             break;
         pos = end;
     }
@@ -762,33 +767,34 @@ void TextInput::draw(DrawCtx &d)
     /* Pass 2: draw the visible rows and the cursor. */
     pos = 0;
     for (uint16_t r = 0;; r++) {
-        const uint16_t end = lineEnd(buf_, pos, len_, maxW, font_);
-        if ((r >= topRow_) && (r < topRow_ + visRows)) {
+        const uint16_t end = lineEnd(textBuf, pos, len, maxW, textFont);
+        if ((r >= firstVisibleRow) && (r < firstVisibleRow + visRows)) {
             const int16_t rowY =
-                static_cast<int16_t>(area_.y + (r - topRow_) * lh);
-            const Rect lineBox = { area_.x, rowY, area_.w,
+                static_cast<int16_t>(bounds.y + (r - firstVisibleRow) * lh);
+            const Rect lineBox = { bounds.x, rowY, bounds.w,
                                    static_cast<uint16_t>(lh) };
             char tmp[LINE_BUF];
             uint16_t n = static_cast<uint16_t>(end - pos);
             if (n >= sizeof(tmp))
                 n = sizeof(tmp) - 1;
-            memcpy(tmp, buf_ + pos, n);
+            memcpy(tmp, textBuf + pos, n);
             tmp[n] = '\0';
             for (uint16_t j = 0; j < n; j++)
                 if (tmp[j]
                     == DELETE_CELL) /* the ⌫ slot is drawn by the cursor */
                     tmp[j] = ' ';
-            d.textInBox(lineBox, font_, TEXT_ALIGN_LEFT, Sem::OnSurface, tmp);
+            d.textInBox(lineBox, textFont, TEXT_ALIGN_LEFT, Sem::OnSurface,
+                        tmp);
             if (r == cursorRow)
                 drawCursor(lineBox, pos);
         }
-        if (end >= len_)
+        if (end >= len)
             break;
         pos = end;
     }
 
     if (rows > visRows)
-        List::drawScrollBar(d, area_, topRow_, visRows, rows);
+        List::drawScrollBar(d, bounds, firstVisibleRow, visRows, rows);
 }
 
 } // namespace ortxui

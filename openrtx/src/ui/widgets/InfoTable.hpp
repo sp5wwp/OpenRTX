@@ -76,10 +76,10 @@ private:
      */
     void composeValue(uint8_t row, char *out, size_t n) const;
 
-    uint32_t heapUsed_; ///< Heap in use shown
-    int32_t rssi_;      ///< RSSI shown
-    uint16_t vbat_;     ///< Battery voltage shown
-    uint8_t charge_;    ///< Battery charge shown
+    uint32_t heapUsed; ///< Heap in use shown
+    int32_t rssi;      ///< RSSI shown
+    uint16_t vbat;     ///< Battery voltage shown
+    uint8_t charge;    ///< Battery charge shown
 };
 
 } // namespace ortxui

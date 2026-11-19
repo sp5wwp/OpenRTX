@@ -69,7 +69,7 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
@@ -94,20 +94,20 @@ private:
     /** Whether `msg` can be answered while operating in `mode`. */
     static bool canReply(const struct message *msg, uint8_t mode);
 
-    Screen screen_;              ///< Widget-tree root
-    Flex root_;                  ///< Top bar, header, body, footer
-    Label header_;               ///< "sender > recipient" line
-    TextBlock body_;             ///< Scrollable message body
-    Flex footer_;                ///< Reply hint left, position right
-    Label reply_;                ///< Reply hint, blank if it cannot be answered
-    Label position_;             ///< "n/m" position in the inbox
-    uint32_t seq_ = 0;           ///< Sequence number of the pinned message
-    uint32_t shownSeq_ = 0;      ///< Sequence number shown, 0 when none
-    size_t shownIdx_ = SIZE_MAX; ///< Index the position label shows
-    size_t shownCount_ = 0;      ///< Inbox size the position label shows
-    bool shownReply_ = false;    ///< The Reply hint is shown
-    char headerBuf_[2 * MSG_ADDR_MAX_LEN + 4] = {}; ///< Header text
-    char positionBuf_[12] = {};                     ///< Position text
+    Screen tree;                ///< Widget-tree root
+    Flex root;                  ///< Top bar, header, body, footer
+    Label header;               ///< "sender > recipient" line
+    TextBlock body;             ///< Scrollable message body
+    Flex footer;                ///< Reply hint left, position right
+    Label replyLabel;           ///< Reply hint, blank if it cannot be answered
+    Label position;             ///< "n/m" position in the inbox
+    uint32_t seq = 0;           ///< Sequence number of the pinned message
+    uint32_t shownSeq = 0;      ///< Sequence number shown, 0 when none
+    size_t shownIdx = SIZE_MAX; ///< Index the position label shows
+    size_t shownCount = 0;      ///< Inbox size the position label shows
+    bool shownReply = false;    ///< The Reply hint is shown
+    char headerBuf[2 * MSG_ADDR_MAX_LEN + 4] = {}; ///< Header text
+    char positionBuf[12] = {};                     ///< Position text
 };
 
 } // namespace ortxui

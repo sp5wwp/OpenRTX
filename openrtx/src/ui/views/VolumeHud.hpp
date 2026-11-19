@@ -40,7 +40,7 @@ public:
      */
     int16_t volume() const
     {
-        return volume_;
+        return shownVolume;
     }
 
     /**
@@ -50,11 +50,11 @@ public:
      */
     void setVolume(int16_t v)
     {
-        volume_ = v;
+        shownVolume = v;
     }
 
 private:
-    int16_t volume_ = -1; ///< Level shown, -1 forces the first paint
+    int16_t shownVolume = -1; ///< Level shown, -1 forces the first paint
 };
 
 } // namespace ortxui

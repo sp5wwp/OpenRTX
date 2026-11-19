@@ -49,30 +49,30 @@ static constexpr MenuRow SETTINGS_MENU[] = {
 void MenuView::build()
 {
     const bool settings = (id() == ViewId::SettingsMenu);
-    rows_ = settings ? SETTINGS_MENU : MAIN_MENU;
-    count_ = settings ? ARRAY_SIZE(SETTINGS_MENU) : ARRAY_SIZE(MAIN_MENU);
+    rows = settings ? SETTINGS_MENU : MAIN_MENU;
+    count = settings ? ARRAY_SIZE(SETTINGS_MENU) : ARRAY_SIZE(MAIN_MENU);
 
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
 
     /* The list of plain label rows fills the space below the top bar. */
     TopBar &bar = useTopBar(settings ? STR(settings) : STR(menu));
-    list_.setContentPad(1);
-    list_.setModel(this);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setGrow(1);
+    listBox.setContentPad(1);
+    listBox.setModel(this);
+    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.focusFirst();
-    screen_.markAllDirty();
+    root.addChild(&bar);
+    root.addChild(&listBox);
+    tree.addChild(&root);
+    root.onLayout();
+    tree.focusFirst();
+    tree.markAllDirty();
 }
 
 void MenuView::rowAt(uint16_t index, ListItem &out) const
 {
-    out.label = rows_[index].label;
+    out.label = rows[index].label;
 }
 
 NavIntent MenuView::onEvent(const Event &e)
@@ -82,11 +82,11 @@ NavIntent MenuView::onEvent(const Event &e)
             return NavIntent::pop();
 
         if ((e.keys & KEY_ENTER) != 0u)
-            return NavIntent::push(rows_[list_.selected()].target);
+            return NavIntent::push(rows[listBox.selected()].target);
     }
 
     /* Encoder / UP / DOWN reach the focused List and move the selection. */
-    screen_.dispatch(e);
+    tree.dispatch(e);
     return NavIntent::none();
 }
 

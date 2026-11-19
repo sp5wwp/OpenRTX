@@ -50,11 +50,11 @@ public:
      */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
-    VolumeHud screen_; ///< Screen, painting the HUD
+    VolumeHud tree; ///< Screen, painting the HUD
 };
 
 } // namespace ortxui

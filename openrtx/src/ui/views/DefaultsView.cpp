@@ -26,55 +26,55 @@ void DefaultsView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(defaultSettings));
 
     /* Two single-line labels, centred as one block. */
-    body_.setAxis(Axis::Column);
-    body_.setAlign(Align::Stretch);
-    body_.setJustify(Justify::Center);
-    body_.setGap(LINE_GAP);
-    body_.setGrow(1);
+    body.setAxis(Axis::Column);
+    body.setAlign(Align::Stretch);
+    body.setJustify(Justify::Center);
+    body.setGap(LINE_GAP);
+    body.setGrow(1);
 
-    prompt_.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
-    prompt_.setAlign(TEXT_ALIGN_CENTER);
-    prompt_.setColor(Sem::OnSurface);
-    prompt_.setBasis(PROMPT_H);
+    prompt.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
+    prompt.setAlign(TEXT_ALIGN_CENTER);
+    prompt.setColor(Sem::OnSurface);
+    prompt.setBasis(PROMPT_H);
 
-    hint_.setFont(FONT_SIZE_6PT);
-    hint_.setAlign(TEXT_ALIGN_CENTER);
-    hint_.setColor(Sem::OnSurfaceMuted);
-    hint_.setBasis(HINT_H);
+    hint.setFont(FONT_SIZE_6PT);
+    hint.setAlign(TEXT_ALIGN_CENTER);
+    hint.setColor(Sem::OnSurfaceMuted);
+    hint.setBasis(HINT_H);
 
     updateText();
 
-    body_.addChild(&prompt_);
-    body_.addChild(&hint_);
+    body.addChild(&prompt);
+    body.addChild(&hint);
 
-    root_.addChild(&bar);
-    root_.addChild(&body_);
-    screen_.addChild(&root_);
-    root_.onLayout();
+    root.addChild(&bar);
+    root.addChild(&body);
+    tree.addChild(&root);
+    root.onLayout();
 }
 
 void DefaultsView::updateText()
 {
-    if (armed_) {
-        prompt_.setText(STR(areYouSure));
-        hint_.setText(STR(hintConfirmReset));
+    if (armed) {
+        prompt.setText(STR(areYouSure));
+        hint.setText(STR(hintConfirmReset));
     } else {
-        prompt_.setText(STR(resetSettings));
-        hint_.setText(STR(hintOkCancel));
+        prompt.setText(STR(resetSettings));
+        hint.setText(STR(hintOkCancel));
     }
-    prompt_.invalidate();
-    hint_.invalidate();
+    prompt.invalidate();
+    hint.invalidate();
 }
 
 void DefaultsView::announce()
 {
-    vpSay(prompt_.text());
+    vpSay(prompt.text());
 }
 
 NavIntent DefaultsView::onEvent(const Event &e)
@@ -83,8 +83,8 @@ NavIntent DefaultsView::onEvent(const Event &e)
         if ((e.keys & KEY_ESC) != 0u)
             return NavIntent::pop();
         if ((e.keys & KEY_ENTER) != 0u) {
-            if (!armed_) {
-                armed_ = true;
+            if (!armed) {
+                armed = true;
                 updateText();
                 vpSay(STR(areYouSure));
                 return NavIntent::none();

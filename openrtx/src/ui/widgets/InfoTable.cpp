@@ -56,8 +56,7 @@ static void paintText(DrawCtx &d, const Rect &box, textAlign_t align, Sem color,
 }
 
 InfoTable::InfoTable() :
-    heapUsed_(UINT32_MAX), rssi_(INT32_MIN), vbat_(UINT16_MAX),
-    charge_(UINT8_MAX)
+    heapUsed(UINT32_MAX), rssi(INT32_MIN), vbat(UINT16_MAX), charge(UINT8_MAX)
 {
 }
 
@@ -68,19 +67,19 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
     switch (row) {
         case ROW_BATTERY: {
             /* Integer volts + one decimal, rounding the mantissa to nearest. */
-            const uint16_t volt = (vbat_ + 50) / 1000;
-            const uint16_t mv = ((vbat_ - volt * 1000) + 50) / 100;
+            const uint16_t volt = (vbat + 50) / 1000;
+            const uint16_t mv = ((vbat - volt * 1000) + 50) / 100;
             sniprintf(out, n, "%u.%uV", volt, mv);
             break;
         }
         case ROW_CHARGE:
-            sniprintf(out, n, "%u%%", charge_);
+            sniprintf(out, n, "%u%%", charge);
             break;
         case ROW_RSSI:
-            sniprintf(out, n, "%ld dBm", static_cast<long>(rssi_));
+            sniprintf(out, n, "%ld dBm", static_cast<long>(rssi));
             break;
         case ROW_HEAP:
-            sniprintf(out, n, "%lu B", static_cast<unsigned long>(heapUsed_));
+            sniprintf(out, n, "%lu B", static_cast<unsigned long>(heapUsed));
             break;
         case ROW_BAND:
             sniprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
@@ -95,23 +94,23 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
 bool InfoTable::sync(const state_t &s)
 {
     const uint32_t used = getHeapSize() - getCurrentFreeHeap();
-    const bool changed = (s.v_bat != vbat_) || (s.charge != charge_)
-                      || (s.rssi != rssi_) || (used != heapUsed_);
+    const bool changed = (s.v_bat != vbat) || (s.charge != charge)
+                      || (s.rssi != rssi) || (used != heapUsed);
 
-    vbat_ = s.v_bat;
-    charge_ = s.charge;
-    rssi_ = s.rssi;
-    heapUsed_ = used;
+    vbat = s.v_bat;
+    charge = s.charge;
+    rssi = s.rssi;
+    heapUsed = used;
     return changed;
 }
 
 void InfoTable::draw(DrawCtx &d)
 {
     /* The rows split the height evenly. */
-    const uint16_t rowH = static_cast<uint16_t>(area_.h / ROW_COUNT);
+    const uint16_t rowH = static_cast<uint16_t>(bounds.h / ROW_COUNT);
     for (uint8_t i = 0; i < ROW_COUNT; i++) {
-        const Rect row = { area_.x, static_cast<int16_t>(area_.y + i * rowH),
-                           area_.w, rowH };
+        const Rect row = { bounds.x, static_cast<int16_t>(bounds.y + i * rowH),
+                           bounds.w, rowH };
         /* A row outside the clip, as in another band, draws nothing. */
         if (!row.empty() && intersect(d.clip(), row).empty())
             continue;

@@ -54,12 +54,12 @@ public:
     /** Screen the picker paints. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
-    Screen screen_;   ///< Screen of the picker
-    PickerGrid grid_; ///< Grid of characters
+    Screen tree;     ///< Screen of the picker
+    PickerGrid grid; ///< Grid of characters
 };
 
 } // namespace ortxui

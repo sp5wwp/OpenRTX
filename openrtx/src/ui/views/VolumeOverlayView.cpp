@@ -11,18 +11,18 @@ namespace ortxui
 
 void VolumeOverlayView::build()
 {
-    screen_.markAllDirty();
+    tree.markAllDirty();
 }
 
 void VolumeOverlayView::syncFromState(const state_t &s)
 {
     /* The HUD has no top bar, so the base refresh is not needed. */
     const int16_t volume = static_cast<int16_t>(s.volume);
-    if (volume == screen_.volume())
+    if (volume == tree.volume())
         return;
 
-    screen_.setVolume(volume);
-    screen_.invalidate();
+    tree.setVolume(volume);
+    tree.invalidate();
 }
 
 } // namespace ortxui

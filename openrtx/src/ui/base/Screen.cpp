@@ -25,31 +25,31 @@ void Screen::draw(DrawCtx &d)
 
 void Screen::onInvalidated()
 {
-    dirty_ = true;
+    needsRepaint = true;
 }
 
 void Screen::markAllDirty()
 {
-    dirty_ = true;
+    needsRepaint = true;
 }
 
 void Screen::clearDirty()
 {
-    dirty_ = false;
+    needsRepaint = false;
 }
 
 void Screen::setFocus(Object *obj)
 {
-    if (focused_ == obj)
+    if (focus == obj)
         return;
 
-    if (focused_ != nullptr)
-        focused_->invalidate();
+    if (focus != nullptr)
+        focus->invalidate();
 
-    focused_ = obj;
+    focus = obj;
 
-    if (focused_ != nullptr)
-        focused_->invalidate();
+    if (focus != nullptr)
+        focus->invalidate();
 }
 
 /**
@@ -92,7 +92,7 @@ void Screen::moveFocus(int8_t dir)
     /* With nothing focused yet, the first step lands on either end. */
     uint8_t next = (dir >= 0) ? 0 : static_cast<uint8_t>(n - 1);
     for (uint8_t i = 0; i < n; i++) {
-        if (items[i] == focused_) {
+        if (items[i] == focus) {
             next = static_cast<uint8_t>((i + ((dir >= 0) ? 1 : n - 1)) % n);
             break;
         }
@@ -103,7 +103,7 @@ void Screen::moveFocus(int8_t dir)
 
 bool Screen::dispatch(const Event &e)
 {
-    if ((focused_ != nullptr) && focused_->onEvent(e))
+    if ((focus != nullptr) && focus->onEvent(e))
         return true;
 
     if (e.kind == EvKind::Encoder) {

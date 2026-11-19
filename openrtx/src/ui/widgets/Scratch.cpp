@@ -12,17 +12,17 @@ namespace ortxui
 constexpr size_t Scratch::SIZE;
 constexpr size_t Scratch::ALIGN;
 
-alignas(Scratch::ALIGN) uint8_t Scratch::storage_[Scratch::SIZE];
-const void *Scratch::type_ = nullptr;
-void (*Scratch::destroy_)(void *p) = nullptr;
+alignas(Scratch::ALIGN) uint8_t Scratch::storage[Scratch::SIZE];
+const void *Scratch::type = nullptr;
+void (*Scratch::destroy)(void *p) = nullptr;
 
 void Scratch::release()
 {
-    if (destroy_ != nullptr)
-        destroy_(storage_);
+    if (destroy != nullptr)
+        destroy(storage);
 
-    type_ = nullptr;
-    destroy_ = nullptr;
+    type = nullptr;
+    destroy = nullptr;
 }
 
 } // namespace ortxui

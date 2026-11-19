@@ -41,7 +41,7 @@ class Object
 {
 public:
     /** Constructor. */
-    Object() : grow_(0), margin_(0), self_(0), flags_(0)
+    Object() : grow(0), margin(0), self(0), objFlags(0)
     {
     }
 
@@ -77,19 +77,19 @@ public:
     /** Get the parent, nullptr for a root. */
     Object *parent() const
     {
-        return parent_;
+        return parentLink;
     }
 
     /** Get the first child, nullptr if none. */
     Object *firstChild() const
     {
-        return firstChild_;
+        return firstChildLink;
     }
 
     /** Get the next sibling, nullptr if none. */
     Object *nextSibling() const
     {
-        return nextSibling_;
+        return nextSiblingLink;
     }
 
     /**
@@ -99,13 +99,13 @@ public:
      */
     void setArea(const Rect &r)
     {
-        area_ = r;
+        bounds = r;
     }
 
     /** Get the area, in absolute screen coordinates. */
     const Rect &area() const
     {
-        return area_;
+        return bounds;
     }
 
     /**
@@ -124,7 +124,7 @@ public:
      */
     bool hasFlag(ObjFlag f) const
     {
-        return (flags_ & f) != 0u;
+        return (objFlags & f) != 0u;
     }
 
     /**
@@ -134,7 +134,7 @@ public:
      */
     LayoutHints layout() const
     {
-        return { grow_, basis_, margin_, static_cast<Align>(self_) };
+        return { grow, basis, margin, static_cast<Align>(self) };
     }
 
     /**
@@ -144,7 +144,7 @@ public:
      */
     void setGrow(uint8_t g)
     {
-        grow_ = g;
+        grow = g;
     }
 
     /**
@@ -154,7 +154,7 @@ public:
      */
     void setBasis(int16_t b)
     {
-        basis_ = b;
+        basis = b;
     }
 
     /**
@@ -164,7 +164,7 @@ public:
      */
     void setMargin(uint8_t m)
     {
-        margin_ = m;
+        margin = m;
     }
 
     /**
@@ -174,7 +174,7 @@ public:
      */
     void setAlignSelf(Align a)
     {
-        self_ = static_cast<uint8_t>(a);
+        self = static_cast<uint8_t>(a);
     }
 
     /**
@@ -184,7 +184,7 @@ public:
      */
     virtual Size natural() const
     {
-        return { area_.w, area_.h };
+        return { bounds.w, bounds.h };
     }
 
     /**
@@ -212,15 +212,15 @@ protected:
     {
     }
 
-    Object *parent_ = nullptr;      ///< Parent, nullptr for a root
-    Object *firstChild_ = nullptr;  ///< First child
-    Object *nextSibling_ = nullptr; ///< Next child of the parent
-    Rect area_ = { 0, 0, 0, 0 };    ///< Area in screen coordinates
+    Object *parentLink = nullptr;      ///< Parent, nullptr for a root
+    Object *firstChildLink = nullptr;  ///< First child
+    Object *nextSiblingLink = nullptr; ///< Next child of the parent
+    Rect bounds = { 0, 0, 0, 0 };      ///< Area in screen coordinates
 
     /* Layout hints and flags, packed in a word: every widget carries them. */
-    int16_t basis_ = -1; ///< Preferred main-axis extent, -1: natural()
-    uint8_t grow_ : 4, margin_ : 4; ///< Flex weight; uniform margin (px)
-    uint8_t self_ : 3, flags_ : 5;  ///< Cross alignment (Align); ObjFlag set
+    int16_t basis = -1;           ///< Preferred main-axis extent, -1: natural()
+    uint8_t grow : 4, margin : 4; ///< Flex weight; uniform margin (px)
+    uint8_t self : 3, objFlags : 5; ///< Cross alignment (Align); ObjFlag set
 };
 
 } // namespace ortxui

@@ -33,19 +33,19 @@ public:
     /** Point at new text, keeping the scroll position. */
     void setText(const char *t)
     {
-        text_ = (t != nullptr) ? t : "";
+        text = (t != nullptr) ? t : "";
     }
 
     /** Set the text font. */
     void setFont(fontSize_t f)
     {
-        font_ = f;
+        textFont = f;
     }
 
     /** Set the text colour role. */
     void setColor(Sem c)
     {
-        color_ = c;
+        color = c;
     }
 
     /** Scroll by `lines` rows; returns false if already at that end. */
@@ -64,7 +64,7 @@ public:
      */
     int16_t scrollOffset() const
     {
-        return scroll_;
+        return scrollPos;
     }
 
     /**
@@ -74,7 +74,7 @@ public:
      */
     void setScrollOffset(int16_t offset)
     {
-        scroll_ = offset;
+        scrollPos = offset;
     }
 
     /** Draw the visible lines and, when the text overflows, the indicator. */
@@ -93,10 +93,10 @@ private:
     /** Current scroll offset, clamped to the current text. */
     int16_t offset() const;
 
-    const char *text_ = "";           ///< Borrowed text
-    fontSize_t font_ = FONT_SIZE_8PT; ///< Text font
-    Sem color_ = Sem::OnSurface;      ///< Text colour role
-    int16_t scroll_ = 0;              ///< Scroll offset in pixels, clamped
+    const char *text = "";               ///< Borrowed text
+    fontSize_t textFont = FONT_SIZE_8PT; ///< Text font
+    Sem color = Sem::OnSurface;          ///< Text colour role
+    int16_t scrollPos = 0;               ///< Scroll offset in pixels, clamped
 };
 
 } // namespace ortxui

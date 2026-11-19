@@ -53,29 +53,29 @@ uint16_t PickerGrid::cols() const
 
 uint32_t PickerGrid::selectedCodePoint() const
 {
-    return codePointAt(sel_);
+    return codePointAt(selectedCell);
 }
 
 void PickerGrid::ensureVisible()
 {
     const uint16_t c = cols();
-    const uint16_t row = static_cast<uint16_t>(sel_ / c);
+    const uint16_t row = static_cast<uint16_t>(selectedCell / c);
     const uint16_t visRows =
-        static_cast<uint16_t>(area_.h / static_cast<uint16_t>(cellH()));
-    if (row < top_)
-        top_ = row;
-    else if ((visRows > 0) && (row >= top_ + visRows))
-        top_ = static_cast<uint16_t>(row - visRows + 1);
+        static_cast<uint16_t>(bounds.h / static_cast<uint16_t>(cellH()));
+    if (row < topRow)
+        topRow = row;
+    else if ((visRows > 0) && (row >= topRow + visRows))
+        topRow = static_cast<uint16_t>(row - visRows + 1);
 }
 
 void PickerGrid::move(int delta)
 {
-    int idx = static_cast<int>(sel_) + delta;
+    int idx = static_cast<int>(selectedCell) + delta;
     if (idx < 0)
         idx = 0;
     if (idx >= static_cast<int>(CELL_COUNT))
         idx = CELL_COUNT - 1;
-    sel_ = static_cast<uint16_t>(idx);
+    selectedCell = static_cast<uint16_t>(idx);
     ensureVisible();
     invalidate();
 }
@@ -83,25 +83,25 @@ void PickerGrid::move(int delta)
 void PickerGrid::draw(DrawCtx &d)
 {
     const uint16_t c = cols();
-    const int16_t cw = static_cast<int16_t>(area_.w / c);
+    const int16_t cw = static_cast<int16_t>(bounds.w / c);
     const int16_t ch = cellH();
     const fontSize_t font = (sizeClass() == SizeClass::Regular) ?
                                 FONT_SIZE_12PT :
                                 FONT_SIZE_8PT;
     const uint16_t visRows =
-        static_cast<uint16_t>(area_.h / static_cast<uint16_t>(ch));
+        static_cast<uint16_t>(bounds.h / static_cast<uint16_t>(ch));
 
     for (uint16_t vr = 0; vr < visRows; vr++) {
-        const uint16_t row = static_cast<uint16_t>(top_ + vr);
+        const uint16_t row = static_cast<uint16_t>(topRow + vr);
         for (uint16_t col = 0; col < c; col++) {
             const uint16_t idx = static_cast<uint16_t>(row * c + col);
             if (idx >= CELL_COUNT)
                 return;
-            const Rect cell = { static_cast<int16_t>(area_.x + col * cw),
-                                static_cast<int16_t>(area_.y + vr * ch),
+            const Rect cell = { static_cast<int16_t>(bounds.x + col * cw),
+                                static_cast<int16_t>(bounds.y + vr * ch),
                                 static_cast<uint16_t>(cw),
                                 static_cast<uint16_t>(ch) };
-            const bool selected = (idx == sel_);
+            const bool selected = (idx == selectedCell);
             if (selected)
                 d.fillRect(cell, Sem::Primary);
             char g[4];

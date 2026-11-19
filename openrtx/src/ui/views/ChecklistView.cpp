@@ -16,15 +16,15 @@ void ChecklistView::build()
 {
     const settings_t &st = state.settings;
 
-    items_[RowLatch].label = STR(macroLatching);
-    items_[RowLatch].checkbox = true;
-    items_[RowLatch].checked = (st.macroMenuLatch != 0u);
-    items_[RowVoice].label = STR(voice);
-    items_[RowPhonetic].label = STR(phonetic);
-    items_[RowPhonetic].checkbox = true;
-    items_[RowPhonetic].checked = (st.vpPhoneticSpell != 0u);
+    items[RowLatch].label = STR(macroLatching);
+    items[RowLatch].checkbox = true;
+    items[RowLatch].checked = (st.macroMenuLatch != 0u);
+    items[RowVoice].label = STR(voice);
+    items[RowPhonetic].label = STR(phonetic);
+    items[RowPhonetic].checkbox = true;
+    items[RowPhonetic].checked = (st.vpPhoneticSpell != 0u);
 
-    buildList(STR(accessibility), items_.data(), RowCount);
+    buildList(STR(accessibility), items.data(), RowCount);
 }
 
 ChecklistView::RowKind ChecklistView::rowKind(uint8_t row) const

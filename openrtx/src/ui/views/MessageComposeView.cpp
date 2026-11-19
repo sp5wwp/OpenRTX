@@ -22,26 +22,26 @@ namespace ortxui
 
 void MessageComposeView::build()
 {
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(uiMemory.draftReply ? STR(reply) : STR(newMessage));
 
-    items_[ROW_TO].label = STR(to);
-    items_[ROW_BODY].label = STR(message);
-    items_[ROW_SEND].label = STR(send);
+    items[ROW_TO].label = STR(to);
+    items[ROW_BODY].label = STR(message);
+    items[ROW_SEND].label = STR(send);
     refresh();
 
-    list_.setContentPad(1);
-    list_.setItems(items_.data(), ROW_COUNT);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setGrow(1);
+    listBox.setContentPad(1);
+    listBox.setItems(items.data(), ROW_COUNT);
+    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.focusFirst();
+    root.addChild(&bar);
+    root.addChild(&listBox);
+    tree.addChild(&root);
+    root.onLayout();
+    tree.focusFirst();
 }
 
 bool MessageComposeView::open(const char *recipient, bool reply)
@@ -60,8 +60,8 @@ void MessageComposeView::refresh()
     /* An empty recipient is a broadcast. */
     const ComposeDraft *d = uiMemory.draft;
     const bool to = (d != nullptr) && (d->recipient[0] != '\0');
-    items_[ROW_TO].value = to ? UiText(d->recipient) : STR(broadcast);
-    items_[ROW_BODY].value = (d != nullptr) ? d->body : "";
+    items[ROW_TO].value = to ? UiText(d->recipient) : STR(broadcast);
+    items[ROW_BODY].value = (d != nullptr) ? d->body : "";
 }
 
 bool MessageComposeView::send()
@@ -106,7 +106,7 @@ NavIntent MessageComposeView::close()
 NavIntent MessageComposeView::onEvent(const Event &e)
 {
     if (e.kind != EvKind::Key) {
-        screen_.dispatch(e);
+        tree.dispatch(e);
         return NavIntent::none();
     }
 
@@ -114,12 +114,12 @@ NavIntent MessageComposeView::onEvent(const Event &e)
         return close();
 
     if ((e.keys & KEY_ENTER) == 0u) {
-        screen_.dispatch(e);
+        tree.dispatch(e);
         return NavIntent::none();
     }
 
     ComposeDraft *d = uiMemory.draft;
-    switch (list_.selected()) {
+    switch (listBox.selected()) {
         case ROW_TO:
             if (TextInputView::open(STR(to), d->recipient, sizeof(d->recipient),
                                     CHARSET_CALLSIGN, MTAP_CALLSIGN,

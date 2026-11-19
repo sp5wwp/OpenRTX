@@ -46,7 +46,7 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
@@ -74,14 +74,14 @@ private:
      */
     void showFixed(bool fixed);
 
-    Screen screen_;                     ///< Widget tree root
-    Flex root_;                         ///< Top bar over the body
-    Flex body_;                         ///< Compass beside the readouts
-    Compass compass_;                   ///< Course over ground
-    GpsReadout readout_;                ///< Position, locator, altitude, speed
-    Label status_;                      ///< Why there is no fix
-    FixKind lastKind_ = FixKind::NoGps; ///< Fix kind shown
-    int16_t lastHeading_ = INT16_MIN;   ///< Course shown
+    Screen tree;                       ///< Widget tree root
+    Flex root;                         ///< Top bar over the body
+    Flex body;                         ///< Compass beside the readouts
+    Compass compass;                   ///< Course over ground
+    GpsReadout readout;                ///< Position, locator, altitude, speed
+    Label status;                      ///< Why there is no fix
+    FixKind lastKind = FixKind::NoGps; ///< Fix kind shown
+    int16_t lastHeading = INT16_MIN;   ///< Course shown
 };
 
 } // namespace ortxui

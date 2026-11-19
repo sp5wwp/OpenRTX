@@ -54,7 +54,7 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
@@ -109,17 +109,17 @@ private:
         uint16_t slot;           ///< Cursor slot
     };
 
-    Screen screen_;                  ///< Widget tree root
-    Flex root_;                      ///< Top bar over the body
-    Flex body_;                      ///< Date over time over the hint
-    Label dateLabel_;                ///< Date, or its entry
-    Label timeLabel_;                ///< Time, or its entry
-    Label hint_;                     ///< Key hint
-    TextInput input_;                ///< Digit entry: dd mm yy hh mm
-    char inputBuf_[ENTRY_SIZE] = {}; ///< Entry digits
-    char dateBuf_[TEXT_SIZE] = {};   ///< Date text shown
-    char timeBuf_[TEXT_SIZE] = {};   ///< Time text shown
-    bool editing_ = false;           ///< The entry is open
+    Screen tree;                    ///< Widget tree root
+    Flex root;                      ///< Top bar over the body
+    Flex body;                      ///< Date over time over the hint
+    Label dateLabel;                ///< Date, or its entry
+    Label timeLabel;                ///< Time, or its entry
+    Label hint;                     ///< Key hint
+    TextInput input;                ///< Digit entry: dd mm yy hh mm
+    char inputBuf[ENTRY_SIZE] = {}; ///< Entry digits
+    char dateBuf[TEXT_SIZE] = {};   ///< Date text shown
+    char timeBuf[TEXT_SIZE] = {};   ///< Time text shown
+    bool editing = false;           ///< The entry is open
 };
 
 } // namespace ortxui

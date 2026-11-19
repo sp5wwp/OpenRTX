@@ -25,32 +25,32 @@ void TextInputView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
-    root_.setPadding(regular ? 4 : 2);
-    root_.setGap(regular ? 3 : 2);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
+    root.setPadding(regular ? 4 : 2);
+    root.setGap(regular ? 3 : 2);
 
-    title_.setColor(Sem::Accent);
-    title_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
-    title_.setAlign(TEXT_ALIGN_CENTER);
-    title_.setBasis(regular ? 14 : 10);
+    titleLabel.setColor(Sem::Accent);
+    titleLabel.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
+    titleLabel.setAlign(TEXT_ALIGN_CENTER);
+    titleLabel.setBasis(regular ? 14 : 10);
 
-    field_.setGrow(1);
+    field.setGrow(1);
     configureField();
 
-    hint_.setColor(Sem::OnSurfaceMuted);
-    hint_.setFont(regular ? FONT_SIZE_6PT : FONT_SIZE_5PT);
-    hint_.setAlign(TEXT_ALIGN_CENTER);
-    hint_.setBasis(regular ? 10 : 8);
+    hint.setColor(Sem::OnSurfaceMuted);
+    hint.setFont(regular ? FONT_SIZE_6PT : FONT_SIZE_5PT);
+    hint.setAlign(TEXT_ALIGN_CENTER);
+    hint.setBasis(regular ? 10 : 8);
     refreshHint();
 
-    root_.addChild(&title_);
-    root_.addChild(&field_);
-    root_.addChild(&hint_);
-    screen_.addChild(&root_);
-    root_.onLayout();
+    root.addChild(&titleLabel);
+    root.addChild(&field);
+    root.addChild(&hint);
+    tree.addChild(&root);
+    root.onLayout();
 
-    screen_.markAllDirty();
+    tree.markAllDirty();
 }
 
 bool TextInputView::open(const UiText &title, char *dst, uint16_t cap,
@@ -66,22 +66,22 @@ void TextInputView::configureField()
     if (r.work == nullptr)
         return;
 
-    title_.setText(r.title);
+    titleLabel.setText(r.title);
 
     const bool regular = (sizeClass() == SizeClass::Regular);
     const fontSize_t f = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
-    field_.configure(r.work, r.cap, *r.charset,
-                     r.multiline ? TextInput::Mode::MultiLine :
-                                   TextInput::Mode::SingleLine,
-                     f);
-    field_.setMultiTap(*r.tap);
-    field_.resume(r.cursor, r.topRow);
+    field.configure(r.work, r.cap, *r.charset,
+                    r.multiline ? TextInput::Mode::MultiLine :
+                                  TextInput::Mode::SingleLine,
+                    f);
+    field.setMultiTap(*r.tap);
+    field.resume(r.cursor, r.topRow);
 }
 
 void TextInputView::save() const
 {
-    uiMemory.edit.cursor = field_.cursor();
-    uiMemory.edit.topRow = field_.topRow();
+    uiMemory.edit.cursor = field.cursor();
+    uiMemory.edit.topRow = field.topRow();
 }
 
 void TextInputView::onShow()
@@ -89,22 +89,22 @@ void TextInputView::onShow()
     /* The picked character replaces the one under the cursor. */
     EditRequest &r = uiMemory.edit;
     if (r.picked != 0) {
-        field_.putCodePoint(r.picked);
-        field_.invalidate();
+        field.putCodePoint(r.picked);
+        field.invalidate();
         r.picked = 0;
     }
 }
 
 void TextInputView::announce()
 {
-    vpSay(title_.text());
+    vpSay(titleLabel.text());
 }
 
 void TextInputView::afterEdit()
 {
-    field_.invalidate();
+    field.invalidate();
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputChar(field_.cursorChar());
+        vp_announceInputChar(field.cursorChar());
 }
 
 void TextInputView::refreshHint()
@@ -112,15 +112,15 @@ void TextInputView::refreshHint()
     const bool regular = (sizeClass() == SizeClass::Regular);
 
     if (kbdHasNumeric() && kbdSpaceOnHash())
-        hint_.setText(regular ? STR(hintKeypadSpace) :
-                                STR(hintKeypadSpaceShort));
+        hint.setText(regular ? STR(hintKeypadSpace) :
+                               STR(hintKeypadSpaceShort));
     else if (kbdHasNumeric())
-        hint_.setText(regular ? STR(hintKeypadClear) :
-                                STR(hintKeypadClearShort));
+        hint.setText(regular ? STR(hintKeypadClear) :
+                               STR(hintKeypadClearShort));
     else if (kbdHasArrows())
-        hint_.setText(regular ? STR(hintArrows) : STR(hintArrowsShort));
+        hint.setText(regular ? STR(hintArrows) : STR(hintArrowsShort));
     else
-        hint_.setText(STR(hintKnob));
+        hint.setText(STR(hintKnob));
 }
 
 void TextInputView::commit()
@@ -141,7 +141,7 @@ NavIntent TextInputView::onEvent(const Event &e)
         return NavIntent::push(ViewId::Picker);
     }
 
-    switch (field_.handleEvent(e, getTick())) {
+    switch (field.handleEvent(e, getTick())) {
         case TextInput::KeyResult::Committed:
             commit();
             uiMemory.closeEdit();

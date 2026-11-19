@@ -20,8 +20,8 @@ void Compass::setHeading(int16_t deg, bool valid)
     int16_t d = static_cast<int16_t>(deg % 360);
     if (d < 0)
         d = static_cast<int16_t>(d + 360);
-    heading_ = d;
-    valid_ = valid;
+    heading = d;
+    headingValid = valid;
 }
 
 void Compass::draw(DrawCtx &d)
@@ -29,12 +29,12 @@ void Compass::draw(DrawCtx &d)
     /* Reserve a strip at the bottom for the heading readout; the dial fills the
      * square space above it. */
     const int16_t labelH = 12;
-    const int16_t dialH = static_cast<int16_t>(area_.h - labelH);
-    const int16_t side = (area_.w < dialH) ? area_.w : dialH;
+    const int16_t dialH = static_cast<int16_t>(bounds.h - labelH);
+    const int16_t side = (bounds.w < dialH) ? bounds.w : dialH;
     const int16_t r =
         static_cast<int16_t>(side / 2 - 8); /* room for cardinals */
-    const Point c = { static_cast<int16_t>(area_.x + area_.w / 2),
-                      static_cast<int16_t>(area_.y + dialH / 2) };
+    const Point c = { static_cast<int16_t>(bounds.x + bounds.w / 2),
+                      static_cast<int16_t>(bounds.y + dialH / 2) };
 
     if (r <= 4)
         return;
@@ -62,18 +62,18 @@ void Compass::draw(DrawCtx &d)
      * heading reads as a plain 3-digit bearing; the dial supplies the
      * "degrees" context. */
     char label[6] = "---";
-    if (valid_)
-        sniprintf(label, sizeof(label), "%03d", heading_);
-    const Rect lblBox = { area_.x, static_cast<int16_t>(area_.y + dialH),
-                          area_.w, static_cast<uint16_t>(labelH) };
+    if (headingValid)
+        sniprintf(label, sizeof(label), "%03d", heading);
+    const Rect lblBox = { bounds.x, static_cast<int16_t>(bounds.y + dialH),
+                          bounds.w, static_cast<uint16_t>(labelH) };
     d.textInBox(lblBox, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
                 label);
 
-    if (!valid_)
+    if (!headingValid)
         return;
 
     /* Needle: unit vector toward the heading (0 = up/north, clockwise). */
-    const float rad = static_cast<float>(heading_) * 3.14159265f / 180.0f;
+    const float rad = static_cast<float>(heading) * 3.14159265f / 180.0f;
     const float ux = sinf(rad);
     const float uy = -cosf(rad);
     const float px = -uy; /* perpendicular for the arrowhead */

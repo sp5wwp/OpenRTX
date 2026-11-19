@@ -114,7 +114,7 @@ public:
      */
     ViewId id() const
     {
-        return id_;
+        return viewId;
     }
 
     /**
@@ -178,8 +178,8 @@ public:
      */
     bool takeSyncRtx()
     {
-        const bool v = syncRtx_;
-        syncRtx_ = false;
+        const bool v = syncRtx;
+        syncRtx = false;
         return v;
     }
 
@@ -211,7 +211,7 @@ protected:
     /** Ask for the radio to be reconfigured from state.channel. */
     void requestSyncRtx()
     {
-        syncRtx_ = true;
+        syncRtx = true;
     }
 
     /**
@@ -225,9 +225,9 @@ protected:
 private:
     friend class ViewSlot;
 
-    bool hasTopBar_ = false;    ///< The screen shows the shared top bar
-    bool syncRtx_ = false;      ///< The radio is to be reconfigured
-    ViewId id_ = ViewId::Count; ///< Screen this view was built as
+    bool hasTopBar = false;        ///< The screen shows the shared top bar
+    bool syncRtx = false;          ///< The radio is to be reconfigured
+    ViewId viewId = ViewId::Count; ///< Screen this view was built as
 };
 
 } // namespace ortxui

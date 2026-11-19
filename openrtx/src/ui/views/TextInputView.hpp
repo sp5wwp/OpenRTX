@@ -74,7 +74,7 @@ public:
     /** Screen the editor paints. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
@@ -90,11 +90,11 @@ private:
     /** Show the key hint for the radio's keypad. */
     void refreshHint();
 
-    Screen screen_;   ///< Screen of the editor
-    Flex root_;       ///< Column of title, field and hint
-    Label title_;     ///< What is being edited
-    TextInput field_; ///< The text
-    Label hint_;      ///< Keys that edit it
+    Screen tree;      ///< Screen of the editor
+    Flex root;        ///< Column of title, field and hint
+    Label titleLabel; ///< What is being edited
+    TextInput field;  ///< The text
+    Label hint;       ///< Keys that edit it
 };
 
 } // namespace ortxui

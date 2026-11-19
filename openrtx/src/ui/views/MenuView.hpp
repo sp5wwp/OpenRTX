@@ -49,31 +49,31 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** The menu list, whose position UiMemory keeps. */
     List *list() override
     {
-        return &list_;
+        return &listBox;
     }
 
     /** Number of rows. */
     uint16_t rowCount() const override
     {
-        return count_;
+        return count;
     }
 
     /** Fill a row from the menu table. */
     void rowAt(uint16_t index, ListItem &out) const override;
 
 private:
-    Screen screen_;                 ///< Widget tree root
-    Flex root_;                     ///< Top bar over the list
-    List list_;                     ///< Menu rows
+    Screen tree;                   ///< Widget tree root
+    Flex root;                     ///< Top bar over the list
+    List listBox;                  ///< Menu rows
 
-    const MenuRow *rows_ = nullptr; ///< Static row table
-    uint8_t count_ = 0;             ///< Number of rows
+    const MenuRow *rows = nullptr; ///< Static row table
+    uint8_t count = 0;             ///< Number of rows
 };
 
 } // namespace ortxui

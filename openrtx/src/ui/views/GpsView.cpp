@@ -17,39 +17,39 @@ void GpsView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
-                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                   static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(gps));
-    root_.addChild(&bar);
+    root.addChild(&bar);
 
     /* Body: compass on the left, the readout column on the right. */
-    body_.setAxis(Axis::Row);
-    body_.setAlign(Align::Stretch);
-    body_.setGrow(1);
+    body.setAxis(Axis::Row);
+    body.setAlign(Align::Stretch);
+    body.setGrow(1);
 
-    compass_.setBasis(regular ? 64 : 52);
-    readout_.setGrow(1);
+    compass.setBasis(regular ? 64 : 52);
+    readout.setGrow(1);
 
-    body_.addChild(&compass_);
-    body_.addChild(&readout_);
-    /* Start collapsed: the default presentation is "no fix" (see lastKind_),
+    body.addChild(&compass);
+    body.addChild(&readout);
+    /* Start collapsed: the default presentation is "no fix" (see lastKind),
      * so the body is hidden until a fix arrives and showFixed() reveals it. */
-    body_.setFlag(FLAG_HIDDEN, true);
-    root_.addChild(&body_);
+    body.setFlag(FLAG_HIDDEN, true);
+    root.addChild(&body);
 
     /* No-fix status line (shown instead of the body when there is no fix). */
-    status_.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
-    status_.setAlign(TEXT_ALIGN_CENTER);
-    status_.setColor(Sem::OnSurfaceMuted);
-    status_.setText(STR(noGps));
-    status_.setGrow(1);
-    root_.addChild(&status_);
+    status.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
+    status.setAlign(TEXT_ALIGN_CENTER);
+    status.setColor(Sem::OnSurfaceMuted);
+    status.setText(STR(noGps));
+    status.setGrow(1);
+    root.addChild(&status);
 
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.markAllDirty();
+    tree.addChild(&root);
+    root.onLayout();
+    tree.markAllDirty();
 }
 
 GpsView::FixKind GpsView::classify(const state_t &s) const
@@ -67,10 +67,10 @@ GpsView::FixKind GpsView::classify(const state_t &s) const
 
 void GpsView::showFixed(bool fixed)
 {
-    body_.setFlag(FLAG_HIDDEN, !fixed);
-    status_.setFlag(FLAG_HIDDEN, fixed);
-    root_.onLayout(); /* re-flow now that one branch collapsed */
-    screen_.markAllDirty();
+    body.setFlag(FLAG_HIDDEN, !fixed);
+    status.setFlag(FLAG_HIDDEN, fixed);
+    root.onLayout(); /* re-flow now that one branch collapsed */
+    tree.markAllDirty();
 }
 
 void GpsView::syncFromState(const state_t &s)
@@ -80,7 +80,7 @@ void GpsView::syncFromState(const state_t &s)
     const FixKind kind = classify(s);
     const bool fixed = (kind == FixKind::Fixed);
 
-    if (kind != lastKind_) {
+    if (kind != lastKind) {
         if (!fixed) {
             UiText msg = STR(noFix);
             switch (kind) {
@@ -96,13 +96,13 @@ void GpsView::syncFromState(const state_t &s)
                 default:
                     break;
             }
-            status_.setText(msg);
-            status_.invalidate();
+            status.setText(msg);
+            status.invalidate();
         }
         /* Toggle only when crossing the fixed/not-fixed boundary. */
-        if (fixed != (lastKind_ == FixKind::Fixed))
+        if (fixed != (lastKind == FixKind::Fixed))
             showFixed(fixed);
-        lastKind_ = kind;
+        lastKind = kind;
     }
 
     if (!fixed)
@@ -110,13 +110,13 @@ void GpsView::syncFromState(const state_t &s)
 
     const gps_t &g = s.gps_data;
 
-    if (readout_.sync(g))
-        readout_.invalidate();
+    if (readout.sync(g))
+        readout.invalidate();
 
-    if (g.tmg_true != lastHeading_) {
-        compass_.setHeading(g.tmg_true, true);
-        compass_.invalidate();
-        lastHeading_ = g.tmg_true;
+    if (g.tmg_true != lastHeading) {
+        compass.setHeading(g.tmg_true, true);
+        compass.invalidate();
+        lastHeading = g.tmg_true;
     }
 }
 

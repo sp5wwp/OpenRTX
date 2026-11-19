@@ -21,28 +21,28 @@ void Object::addChild(Object *child)
     if (child == nullptr)
         return;
 
-    child->parent_ = this;
-    child->nextSibling_ = nullptr;
+    child->parentLink = this;
+    child->nextSiblingLink = nullptr;
 
-    Object **link = &firstChild_;
+    Object **link = &firstChildLink;
     while (*link != nullptr)
-        link = &(*link)->nextSibling_;
+        link = &(*link)->nextSiblingLink;
     *link = child;
 }
 
 void Object::setFlag(ObjFlag f, bool on)
 {
     if (on)
-        flags_ |= f;
+        objFlags |= f;
     else
-        flags_ = static_cast<uint8_t>(flags_ & ~f);
+        objFlags = static_cast<uint8_t>(objFlags & ~f);
 }
 
 void Object::invalidate()
 {
     Object *root = this;
-    while (root->parent_ != nullptr)
-        root = root->parent_;
+    while (root->parentLink != nullptr)
+        root = root->parentLink;
 
     root->onInvalidated();
 }
@@ -56,14 +56,14 @@ void Object::paintTree(DrawCtx &d)
      * past its bounds. The root Screen has no area set, so it inherits the
      * full-screen clip. A box wholly outside the clip, such as outside the
      * band being drawn, draws nothing: skip the subtree. */
-    const bool clip = !area_.empty();
-    if (clip && intersect(d.clip(), area_).empty())
+    const bool clip = !bounds.empty();
+    if (clip && intersect(d.clip(), bounds).empty())
         return;
     if (clip)
-        d.pushClip(area_);
+        d.pushClip(bounds);
 
     draw(d);
-    for (Object *c = firstChild_; c != nullptr; c = c->nextSibling_)
+    for (Object *c = firstChildLink; c != nullptr; c = c->nextSiblingLink)
         c->paintTree(d);
 
     if (clip)

@@ -14,10 +14,10 @@ namespace ortxui
 
 void PickerView::build()
 {
-    grid_.setArea(screenArea());
-    grid_.setPosition(uiMemory.edit.pickerSelected, uiMemory.edit.pickerTop);
-    screen_.addChild(&grid_);
-    screen_.markAllDirty();
+    grid.setArea(screenArea());
+    grid.setPosition(uiMemory.edit.pickerSelected, uiMemory.edit.pickerTop);
+    tree.addChild(&grid);
+    tree.markAllDirty();
 }
 
 void PickerView::open()
@@ -29,8 +29,8 @@ void PickerView::open()
 
 void PickerView::save() const
 {
-    uiMemory.edit.pickerSelected = static_cast<uint8_t>(grid_.selected());
-    uiMemory.edit.pickerTop = static_cast<uint8_t>(grid_.top());
+    uiMemory.edit.pickerSelected = static_cast<uint8_t>(grid.selected());
+    uiMemory.edit.pickerTop = static_cast<uint8_t>(grid.top());
 }
 
 void PickerView::announce()
@@ -41,7 +41,7 @@ void PickerView::announce()
 NavIntent PickerView::onEvent(const Event &e)
 {
     if (e.kind == EvKind::Encoder) {
-        grid_.move(e.encoder);
+        grid.move(e.encoder);
         return NavIntent::none();
     }
     /* A held arrow keeps moving; ENTER and ESC act once. */
@@ -50,21 +50,21 @@ NavIntent PickerView::onEvent(const Event &e)
         return NavIntent::none();
 
     const uint32_t k = e.keys;
-    const int c = static_cast<int>(grid_.cols());
+    const int c = static_cast<int>(grid.cols());
     if (!repeat && ((k & KEY_ENTER) != 0u)) {
-        uiMemory.edit.picked = grid_.selectedCodePoint();
+        uiMemory.edit.picked = grid.selectedCodePoint();
         return NavIntent::pop();
     }
     if (!repeat && ((k & KEY_ESC) != 0u))
         return NavIntent::pop();
     if ((k & KEY_LEFT) != 0u)
-        grid_.move(-1);
+        grid.move(-1);
     else if ((k & KEY_RIGHT) != 0u)
-        grid_.move(+1);
+        grid.move(+1);
     else if ((k & KEY_UP) != 0u)
-        grid_.move(-c);
+        grid.move(-c);
     else if ((k & KEY_DOWN) != 0u)
-        grid_.move(+c);
+        grid.move(+c);
 
     return NavIntent::none();
 }

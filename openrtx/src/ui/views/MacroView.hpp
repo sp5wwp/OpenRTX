@@ -63,7 +63,7 @@ public:
      */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
     /** Keep the tile the knob picked for the next time the menu opens. */
@@ -103,14 +103,14 @@ private:
      */
     void onKnobEvent(const Event &e);
 
-    Screen screen_;          ///< Widget tree
-    Flex root_;              ///< Column of the bar, grid and footer
-    MacroTiles tiles_;       ///< The action tiles
-    Flex footer_;            ///< Row of the squelch bar
-    BarRow sqlBar_;          ///< Squelch level
+    Screen tree;              ///< Widget tree
+    Flex root;                ///< Column of the bar, grid and footer
+    MacroTiles tiles;         ///< The action tiles
+    Flex footer;              ///< Row of the squelch bar
+    BarRow sqlBar;            ///< Squelch level
 
-    char sqlBuf_[8] = { 0 }; ///< Squelch readout
-    uint8_t selected_ = 0;   ///< Tile the knob picked, without number keys
+    char sqlBuf[8] = { 0 };   ///< Squelch readout
+    uint8_t selectedTile = 0; ///< Tile the knob picked, without number keys
 };
 
 } // namespace ortxui

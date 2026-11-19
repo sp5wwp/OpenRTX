@@ -75,7 +75,7 @@ private:
     /** Reopen the callsign edit kept by saveCustom(). */
     void restoreCustom(const EditBlob<CUSTOM_EDIT> &e) override;
 
-    /** Bind the callsign editor to callBuf_. */
+    /** Bind the callsign editor to callBuf. */
     void bindCallsign();
 
     /** Store the edited callsign and leave the edit. */
@@ -99,10 +99,10 @@ private:
         uint16_t cursor;                         ///< Cursor position
     };
 
-    std::array<ListItem, RowCount> items_ = {};       ///< Rows
+    std::array<ListItem, RowCount> items = {};       ///< Rows
 
-    char callBuf_[sizeof(settings_t::callsign)] = {}; ///< Callsign being edited
-    TextInput callsign_; ///< Field editing callBuf_
+    char callBuf[sizeof(settings_t::callsign)] = {}; ///< Callsign being edited
+    TextInput callsign;                              ///< Field editing callBuf
 };
 
 } // namespace ortxui

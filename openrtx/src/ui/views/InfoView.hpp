@@ -40,13 +40,13 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
-    Screen screen_;   ///< Widget tree root
-    Flex root_;       ///< Top bar over the table
-    InfoTable table_; ///< Striped rows of keys and values
+    Screen tree;     ///< Widget tree root
+    Flex root;       ///< Top bar over the table
+    InfoTable table; ///< Striped rows of keys and values
 };
 
 } // namespace ortxui

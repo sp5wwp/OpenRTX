@@ -94,25 +94,24 @@ static void formatLocator(int32_t lat, int32_t lon, char *out, size_t outSize)
 }
 
 GpsReadout::GpsReadout() :
-    lat_(INT32_MIN), lon_(INT32_MIN), alt_(INT16_MIN), speed_(UINT16_MAX),
-    rowH_(0)
+    lat(INT32_MIN), lon(INT32_MIN), alt(INT16_MIN), speed(UINT16_MAX), rowH(0)
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
     /* A value and a small unit, right-aligned and sharing one baseline. */
-    row_.setRun(0, regular ? FONT_SIZE_8PT : FONT_SIZE_6PT, Sem::OnSurface);
-    row_.setRun(1, FONT_SIZE_6PT, Sem::OnSurfaceMuted);
+    textRow.setRun(0, regular ? FONT_SIZE_8PT : FONT_SIZE_6PT, Sem::OnSurface);
+    textRow.setRun(1, FONT_SIZE_6PT, Sem::OnSurfaceMuted);
 }
 
 bool GpsReadout::sync(const gps_t &g)
 {
-    const bool changed = (g.latitude != lat_) || (g.longitude != lon_)
-                      || (g.altitude != alt_) || (g.speed != speed_);
+    const bool changed = (g.latitude != lat) || (g.longitude != lon)
+                      || (g.altitude != alt) || (g.speed != speed);
 
-    lat_ = g.latitude;
-    lon_ = g.longitude;
-    alt_ = g.altitude;
-    speed_ = g.speed;
+    lat = g.latitude;
+    lon = g.longitude;
+    alt = g.altitude;
+    speed = g.speed;
     return changed;
 }
 
@@ -120,46 +119,46 @@ void GpsReadout::onLayout()
 {
     /* A padded column whose rows grow equally from their line height. A
      * column with no room keeps the rows it had. */
-    const int cw = static_cast<int>(area_.w) - 2 * PAD;
-    const int ch = static_cast<int>(area_.h) - 2 * PAD;
+    const int cw = static_cast<int>(bounds.w) - 2 * PAD;
+    const int ch = static_cast<int>(bounds.h) - 2 * PAD;
     if ((cw <= 0) || (ch <= 0))
         return;
 
-    const int lineH = row_.natural().h;
+    const int lineH = textRow.natural().h;
     int free = ch - ROW_COUNT * lineH;
     if (free < 0)
         free = 0;
-    rowH_ = static_cast<uint16_t>(lineH + free / ROW_COUNT);
+    rowH = static_cast<uint16_t>(lineH + free / ROW_COUNT);
 }
 
 const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
 {
-    const bool fixed = (lat_ != INT32_MIN) || (lon_ != INT32_MIN);
+    const bool fixed = (lat != INT32_MIN) || (lon != INT32_MIN);
 
     switch (row) {
         case ROW_LAT:
             if (fixed)
-                return formatCoord(lat_, true, val, n);
+                return formatCoord(lat, true, val, n);
             break;
         case ROW_LON:
             if (fixed)
-                return formatCoord(lon_, false, val, n);
+                return formatCoord(lon, false, val, n);
             break;
         case ROW_LOC:
             if (fixed) {
-                formatLocator(lat_, lon_, val, n);
+                formatLocator(lat, lon, val, n);
                 return UNITS[row].str();
             }
             break;
         case ROW_ALT:
-            if (alt_ != INT16_MIN) {
-                sniprintf(val, n, "%d%s", alt_, STR(metres).str());
+            if (alt != INT16_MIN) {
+                sniprintf(val, n, "%d%s", alt, STR(metres).str());
                 return UNITS[row].str();
             }
             break;
         default:
-            if (speed_ != UINT16_MAX) {
-                sniprintf(val, n, "%u%s", speed_, STR(kmPerHour).str());
+            if (speed != UINT16_MAX) {
+                sniprintf(val, n, "%u%s", speed, STR(kmPerHour).str());
                 return UNITS[row].str();
             }
             break;
@@ -171,21 +170,21 @@ const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
 
 void GpsReadout::draw(DrawCtx &d)
 {
-    const int16_t x = static_cast<int16_t>(area_.x + PAD);
-    const uint16_t w = static_cast<uint16_t>(area_.w - 2 * PAD);
+    const int16_t x = static_cast<int16_t>(bounds.x + PAD);
+    const uint16_t w = static_cast<uint16_t>(bounds.w - 2 * PAD);
 
     for (uint8_t i = 0; i < ROW_COUNT; i++) {
         char val[VALUE_SIZE];
-        row_.setText(1, composeRow(i, val, sizeof(val)));
-        row_.setText(0, val);
-        row_.setArea(
-            { x, static_cast<int16_t>(area_.y + PAD + i * rowH_), w, rowH_ });
-        row_.paintTree(d);
+        textRow.setText(1, composeRow(i, val, sizeof(val)));
+        textRow.setText(0, val);
+        textRow.setArea(
+            { x, static_cast<int16_t>(bounds.y + PAD + i * rowH), w, rowH });
+        textRow.paintTree(d);
     }
 
     /* The value lived on this stack frame: do not leave the row pointing at
      * it for the next layout to measure. */
-    row_.setText(0, "");
+    textRow.setText(0, "");
 }
 
 } // namespace ortxui

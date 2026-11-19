@@ -15,16 +15,16 @@ Size Label::natural() const
     /* Reserve the full line height (ascent + descent), not just the ascent, so
      * a layout that centres the label leaves room for descenders below the
      * baseline instead of clipping them at the frame edge. */
-    return { gfx_getTextWidth(font_, text_.str()),
-             gfx_getFontLineHeight(font_) };
+    return { gfx_getTextWidth(textFont, labelText.str()),
+             gfx_getFontLineHeight(textFont) };
 }
 
 void Label::draw(DrawCtx &d)
 {
-    if (overflow_ == Overflow::Ellipsize)
-        d.textInBoxEllipsized(area_, font_, align_, color_, text_.str());
+    if (overflow == Overflow::Ellipsize)
+        d.textInBoxEllipsized(bounds, textFont, align, color, labelText.str());
     else
-        d.textInBox(area_, font_, align_, color_, text_.str());
+        d.textInBox(bounds, textFont, align, color, labelText.str());
 }
 
 } // namespace ortxui

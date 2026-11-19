@@ -26,32 +26,32 @@ void MessagesView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
-    root_.setAxis(Axis::Column);
+    root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(messages));
 
-    list_.setContentPad(1);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setGrow(1);
+    listBox.setContentPad(1);
+    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setGrow(1);
 
-    empty_.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
-    empty_.setAlign(TEXT_ALIGN_CENTER);
-    empty_.setColor(Sem::OnSurfaceMuted);
-    empty_.setText(STR(noMessages));
-    empty_.setGrow(1);
+    emptyLabel.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
+    emptyLabel.setAlign(TEXT_ALIGN_CENTER);
+    emptyLabel.setColor(Sem::OnSurfaceMuted);
+    emptyLabel.setText(STR(noMessages));
+    emptyLabel.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    root_.addChild(&empty_);
-    screen_.addChild(&root_);
+    root.addChild(&bar);
+    root.addChild(&listBox);
+    root.addChild(&emptyLabel);
+    tree.addChild(&root);
 }
 
 void MessagesView::rowAt(uint16_t index, ListItem &out) const
 {
     const struct message *msg = messages_get(index);
     if (msg == nullptr) {
-        out.label = (index == count_) ? STR(newMessage) : UiText("");
+        out.label = (index == count) ? STR(newMessage) : UiText("");
         return;
     }
 
@@ -63,8 +63,8 @@ void MessagesView::rowAt(uint16_t index, ListItem &out) const
     else if (msg->unread)
         mark = SYMBOL_ENVELOPE " ";
 
-    sniprintf(label_, sizeof(label_), "%s%s", mark, other);
-    out.label = label_;
+    sniprintf(label, sizeof(label), "%s%s", mark, other);
+    out.label = label;
     out.value = msg->body;
 }
 
@@ -88,50 +88,50 @@ uint32_t MessagesView::digest(uint8_t mode) const
 
 uint16_t MessagesView::pinnedRow() const
 {
-    if (pinned_ == NEW_ROW)
-        return canCompose_ ? count_ : 0;
+    if (pinned == NEW_ROW)
+        return canCompose ? count : 0;
 
-    const size_t idx = messages_findBySequence(pinned_);
-    return (idx < count_) ? static_cast<uint16_t>(idx) : 0;
+    const size_t idx = messages_findBySequence(pinned);
+    return (idx < count) ? static_cast<uint16_t>(idx) : 0;
 }
 
 void MessagesView::pin()
 {
-    const uint16_t sel = list_.selected();
+    const uint16_t sel = listBox.selected();
     const struct message *msg = messages_get(sel);
     if (msg != nullptr)
-        pinned_ = msg->sequence;
+        pinned = msg->sequence;
     else
-        pinned_ = (canCompose_ && (sel == count_)) ? NEW_ROW : 0;
+        pinned = (canCompose && (sel == count)) ? NEW_ROW : 0;
 }
 
 void MessagesView::reload(uint8_t mode)
 {
-    count_ = static_cast<uint16_t>(messages_count());
-    canCompose_ = messages_canCompose(mode);
-    digest_ = digest(mode);
+    count = static_cast<uint16_t>(messages_count());
+    canCompose = messages_canCompose(mode);
+    shownDigest = digest(mode);
 
     const bool empty = (rowCount() == 0);
-    list_.setModel(this);
-    list_.setSelected(pinnedRow(), false);
-    list_.setFlag(FLAG_HIDDEN, empty);
-    empty_.setFlag(FLAG_HIDDEN, !empty);
+    listBox.setModel(this);
+    listBox.setSelected(pinnedRow(), false);
+    listBox.setFlag(FLAG_HIDDEN, empty);
+    emptyLabel.setFlag(FLAG_HIDDEN, !empty);
 
-    root_.onLayout();
+    root.onLayout();
     if (!empty)
-        screen_.focusFirst();
-    screen_.markAllDirty();
+        tree.focusFirst();
+    tree.markAllDirty();
 }
 
 void MessagesView::save() const
 {
-    uiMemory.inboxPinned = pinned_;
+    uiMemory.inboxPinned = pinned;
 }
 
 void MessagesView::restore()
 {
     /* Back from the detail view this is the message it ended on. */
-    pinned_ = uiMemory.inboxPinned;
+    pinned = uiMemory.inboxPinned;
 }
 
 void MessagesView::onShow()
@@ -143,7 +143,7 @@ void MessagesView::syncFromState(const state_t &s)
 {
     View::syncFromState(s);
 
-    if (digest(s.channel.mode) != digest_)
+    if (digest(s.channel.mode) != shownDigest)
         reload(s.channel.mode);
 }
 
@@ -152,20 +152,20 @@ NavIntent MessagesView::onEvent(const Event &e)
     if (e.kind == EvKind::Key) {
         if ((e.keys & KEY_ESC) != 0u) {
             /* Unpin, so the next visit starts at the newest message. */
-            pinned_ = 0;
+            pinned = 0;
             return NavIntent::pop();
         }
 
         if ((e.keys & KEY_ENTER) != 0u) {
-            const uint16_t sel = list_.selected();
+            const uint16_t sel = listBox.selected();
             const struct message *msg = messages_get(sel);
             if (msg != nullptr) {
-                pinned_ = msg->sequence;
+                pinned = msg->sequence;
                 MessageDetailView::open(msg->sequence);
                 return NavIntent::push(ViewId::MessageDetail);
             }
 
-            if (canCompose_ && (sel == count_)) {
+            if (canCompose && (sel == count)) {
                 /* On M17 the channel destination is the natural default. */
                 const char *dest = (state.channel.mode == OPMODE_M17) ?
                                        state.settings.m17_dest :
@@ -177,7 +177,7 @@ NavIntent MessagesView::onEvent(const Event &e)
         }
     }
 
-    screen_.dispatch(e);
+    tree.dispatch(e);
     pin();
     return NavIntent::none();
 }

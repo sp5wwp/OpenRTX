@@ -34,8 +34,8 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
-    int16_t heading_ = 0;
-    bool valid_ = false;
+    int16_t heading = 0;
+    bool headingValid = false;
 };
 
 } // namespace ortxui

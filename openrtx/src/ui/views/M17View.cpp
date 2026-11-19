@@ -22,17 +22,17 @@ namespace ortxui
 
 void M17View::build()
 {
-    items_[RowCallsign].label = STR(callsign);
+    items[RowCallsign].label = STR(callsign);
     /* Meta text is longer than a value buffer: show the live settings text,
      * ellipsized by the list. */
-    items_[RowMeta].label = STR(metaText);
-    items_[RowMeta].value = state.settings.M17_meta_text;
-    items_[RowCan].label = STR(CAN);
-    items_[RowCanRx].label = STR(canRxCheck);
-    items_[RowCanRx].checkbox = true;
-    items_[RowCanRx].checked = state.settings.m17_can_rx;
+    items[RowMeta].label = STR(metaText);
+    items[RowMeta].value = state.settings.M17_meta_text;
+    items[RowCan].label = STR(CAN);
+    items[RowCanRx].label = STR(canRxCheck);
+    items[RowCanRx].checkbox = true;
+    items[RowCanRx].checked = state.settings.m17_can_rx;
 
-    buildList(STR(m17), items_.data(), RowCount);
+    buildList(STR(m17), items.data(), RowCount);
 }
 
 M17View::RowKind M17View::rowKind(uint8_t row) const
@@ -60,36 +60,36 @@ void M17View::refreshCustom(uint8_t row, bool speak)
 {
     (void)row;
     (void)speak;
-    if (editing_ && (editRow_ == RowCallsign))
-        callsign_.formatBracketed(values(RowCallsign), VALUE_SIZE);
+    if (editing && (editRow == RowCallsign))
+        callsign.formatBracketed(values(RowCallsign), VALUE_SIZE);
     else
         sniprintf(values(RowCallsign), VALUE_SIZE, "%s",
                   state.settings.callsign);
-    list_.invalidate();
+    listBox.invalidate();
 }
 
 void M17View::onBeginEdit(uint8_t row)
 {
     if (row != RowCallsign)
         return;
-    strncpy(callBuf_, state.settings.callsign, sizeof(callBuf_) - 1);
-    callBuf_[sizeof(callBuf_) - 1] = '\0';
+    strncpy(callBuf, state.settings.callsign, sizeof(callBuf) - 1);
+    callBuf[sizeof(callBuf) - 1] = '\0';
     bindCallsign();
-    callsign_.begin();
+    callsign.begin();
 }
 
 void M17View::bindCallsign()
 {
-    callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
-                        TextInput::Mode::SingleLine, FONT_SIZE_8PT);
-    callsign_.setMultiTap(MTAP_CALLSIGN);
+    callsign.configure(callBuf, sizeof(callBuf), CHARSET_CALLSIGN,
+                       TextInput::Mode::SingleLine, FONT_SIZE_8PT);
+    callsign.setMultiTap(MTAP_CALLSIGN);
 }
 
 void M17View::saveCustom(EditBlob<CUSTOM_EDIT> &e) const
 {
     CallsignEdit c;
-    memcpy(c.text, callBuf_, sizeof(c.text));
-    c.cursor = callsign_.cursor();
+    memcpy(c.text, callBuf, sizeof(c.text));
+    c.cursor = callsign.cursor();
     e.put(c);
 }
 
@@ -97,9 +97,9 @@ void M17View::restoreCustom(const EditBlob<CUSTOM_EDIT> &e)
 {
     CallsignEdit c;
     e.get(c);
-    memcpy(callBuf_, c.text, sizeof(callBuf_));
+    memcpy(callBuf, c.text, sizeof(callBuf));
     bindCallsign();
-    callsign_.resume(c.cursor, 0);
+    callsign.resume(c.cursor, 0);
     refreshCustom(RowCallsign, false);
 }
 
@@ -147,12 +147,12 @@ void M17View::announceCursorChar()
     /* Speak the character under the cursor (phonetically at higher verbosity)
      * so a callsign can be edited by ear. */
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputChar(callsign_.cursorChar());
+        vp_announceInputChar(callsign.cursorChar());
 }
 
 void M17View::callsignConfirm()
 {
-    strncpy(state.settings.callsign, callBuf_,
+    strncpy(state.settings.callsign, callBuf,
             sizeof(state.settings.callsign) - 1);
     state.settings.callsign[sizeof(state.settings.callsign) - 1] = '\0';
     requestSyncRtx();
@@ -164,10 +164,10 @@ bool M17View::onEditEvent(const Event &e)
 {
     /* Only the Callsign (Custom) row owns its editing stream; CAN falls through
      * to the base's generic stepper handling. */
-    if (editRow_ != RowCallsign)
+    if (editRow != RowCallsign)
         return false;
 
-    switch (callsign_.handleEvent(e, getTick())) {
+    switch (callsign.handleEvent(e, getTick())) {
         case TextInput::KeyResult::Committed:
             callsignConfirm();
             break;

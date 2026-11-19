@@ -28,12 +28,12 @@ static const char *const *entries(const stringsTable_t *table)
 const char *UiText::str() const
 {
     if (!isEntry())
-        return (raw_ != nullptr) ? raw_ : "";
+        return (rawText != nullptr) ? rawText : "";
 
     /* A language pack may leave an entry untranslated. */
-    const char *s = entries(currentLanguage)[id_];
+    const char *s = entries(currentLanguage)[entryId];
     if ((s == nullptr) || (s[0] == '\0'))
-        s = entries(&englishStrings)[id_];
+        s = entries(&englishStrings)[entryId];
 
     return (s != nullptr) ? s : "";
 }
@@ -41,7 +41,7 @@ const char *UiText::str() const
 void UiText::announce(vpQueueFlags flags) const
 {
     if (isEntry())
-        vp_announceStringTableEntry(&entries(currentLanguage)[id_], flags);
+        vp_announceStringTableEntry(&entries(currentLanguage)[entryId], flags);
     else
         vp_announceText(str(), flags);
 }
@@ -49,7 +49,7 @@ void UiText::announce(vpQueueFlags flags) const
 bool UiText::operator==(const UiText &other) const
 {
     if (isEntry() || other.isEntry())
-        return id_ == other.id_;
+        return entryId == other.entryId;
 
     return strcmp(str(), other.str()) == 0;
 }

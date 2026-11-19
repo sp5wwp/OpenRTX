@@ -47,19 +47,19 @@ public:
     /** The view's widget-tree root. */
     Screen &screen() override
     {
-        return screen_;
+        return tree;
     }
 
 private:
     /** Show the prompt and hint of the current step. */
     void updateText();
 
-    Screen screen_;      ///< Widget-tree root
-    Flex root_;          ///< Column: top bar over the body
-    Flex body_;          ///< Centred prompt over the hint
-    Label prompt_;       ///< What a confirmation does
-    Label hint_;         ///< Keys to press
-    bool armed_ = false; ///< The next ENTER resets
+    Screen tree;        ///< Widget-tree root
+    Flex root;          ///< Column: top bar over the body
+    Flex body;          ///< Centred prompt over the hint
+    Label prompt;       ///< What a confirmation does
+    Label hint;         ///< Keys to press
+    bool armed = false; ///< The next ENTER resets
 };
 
 } // namespace ortxui

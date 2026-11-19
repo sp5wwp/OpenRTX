@@ -19,45 +19,45 @@ namespace ortxui
 void SettingsListView::buildList(const UiText &title, ListItem *items,
                                  uint8_t count)
 {
-    rows_ = items;
+    rows = items;
     for (uint8_t i = 0; i < count; i++) {
         if (!items[i].checkbox && !items[i].value.isSet())
-            items[i].value = values_[i];
+            items[i].value = valueText[i];
     }
 
-    root_.setArea(screenArea());
-    root_.setAxis(Axis::Column);
+    root.setArea(screenArea());
+    root.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(title);
 
-    list_.setItems(items, count);
-    list_.setContentPad(ROW_PAD);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setGrow(1);
+    listBox.setItems(items, count);
+    listBox.setContentPad(ROW_PAD);
+    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setGrow(1);
 
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.focusFirst();
-    screen_.markAllDirty();
+    root.addChild(&bar);
+    root.addChild(&listBox);
+    tree.addChild(&root);
+    root.onLayout();
+    tree.focusFirst();
+    tree.markAllDirty();
 
     for (uint8_t i = 0; i < count; i++) {
         if (rowKind(i) == RowKind::Custom)
             refreshCustom(i, false);
-        else if (items[i].value.str() == values_[i])
+        else if (items[i].value.str() == valueText[i])
             refreshValue(i, false);
     }
 }
 
 void SettingsListView::save() const
 {
-    if (!editing_)
+    if (!editing)
         return;
 
     RowEdit e = {};
-    e.row = editRow_;
-    if (rowKind(editRow_) == RowKind::Custom)
+    e.row = editRow;
+    if (rowKind(editRow) == RowKind::Custom)
         saveCustom(e.custom);
     uiMemory.inlineEdit.keep(id(), e);
 }
@@ -68,19 +68,19 @@ void SettingsListView::restore()
     if (!uiMemory.inlineEdit.take(id(), e))
         return;
 
-    editRow_ = e.row;
-    editing_ = true;
-    if (rowKind(editRow_) == RowKind::Custom)
+    editRow = e.row;
+    editing = true;
+    if (rowKind(editRow) == RowKind::Custom)
         restoreCustom(e.custom);
     else
-        refreshValue(editRow_, false);
+        refreshValue(editRow, false);
 }
 
 void SettingsListView::announceValue(uint8_t row, const UiText &value,
                                      vpQueueFlags flags)
 {
     if ((flags & vpqIncludeDescriptions) != 0) {
-        rows_[row].label.announce(static_cast<vpQueueFlags>(flags & vpqInit));
+        rows[row].label.announce(static_cast<vpQueueFlags>(flags & vpqInit));
         flags = static_cast<vpQueueFlags>(flags & ~vpqInit);
     }
     value.announce(flags);
@@ -97,39 +97,39 @@ void SettingsListView::refreshValue(uint8_t row, bool speak)
     char inner[VALUE_SIZE - 2];
     formatValue(row, inner, sizeof(inner));
 
-    if (editing_ && (row == editRow_)) {
-        sniprintf(values_[row], VALUE_SIZE, "<%s>", inner);
+    if (editing && (row == editRow)) {
+        sniprintf(valueText[row], VALUE_SIZE, "<%s>", inner);
         if (speak)
             speakValue(row, inner);
     } else {
-        sniprintf(values_[row], VALUE_SIZE, "%s", inner);
+        sniprintf(valueText[row], VALUE_SIZE, "%s", inner);
     }
-    list_.invalidate();
+    listBox.invalidate();
 }
 
 void SettingsListView::beginEdit()
 {
-    editRow_ = static_cast<uint8_t>(list_.selected());
-    editing_ = true;
-    onBeginEdit(editRow_);
-    if (rowKind(editRow_) == RowKind::Custom)
-        refreshCustom(editRow_, true);
+    editRow = static_cast<uint8_t>(listBox.selected());
+    editing = true;
+    onBeginEdit(editRow);
+    if (rowKind(editRow) == RowKind::Custom)
+        refreshCustom(editRow, true);
     else
-        refreshValue(editRow_);
+        refreshValue(editRow);
 }
 
 void SettingsListView::endEdit()
 {
-    editing_ = false;
-    if (rowKind(editRow_) == RowKind::Custom)
-        refreshCustom(editRow_, false);
+    editing = false;
+    if (rowKind(editRow) == RowKind::Custom)
+        refreshCustom(editRow, false);
     else
-        refreshValue(editRow_, false);
+        refreshValue(editRow, false);
 }
 
 NavIntent SettingsListView::onEvent(const Event &e)
 {
-    if (editing_) {
+    if (editing) {
         /* Custom rows own their whole editing key stream. */
         if (onEditEvent(e))
             return NavIntent::none();
@@ -150,8 +150,8 @@ NavIntent SettingsListView::onEvent(const Event &e)
                 dir = -1;
         }
         if (dir != 0) {
-            onAdjust(editRow_, dir);
-            refreshValue(editRow_);
+            onAdjust(editRow, dir);
+            refreshValue(editRow);
         }
         return NavIntent::none(); /* swallow all input while editing */
     }
@@ -160,13 +160,13 @@ NavIntent SettingsListView::onEvent(const Event &e)
         if ((e.keys & KEY_ESC) != 0u)
             return NavIntent::pop();
         if ((e.keys & KEY_ENTER) != 0u) {
-            const uint8_t sel = static_cast<uint8_t>(list_.selected());
+            const uint8_t sel = static_cast<uint8_t>(listBox.selected());
             switch (rowKind(sel)) {
                 case RowKind::Checkbox: {
-                    ListItem &it = rows_[sel];
+                    ListItem &it = rows[sel];
                     it.checked = !it.checked;
                     onToggle(sel, it.checked);
-                    list_.invalidate();
+                    listBox.invalidate();
                     speakValue(sel, it.checked ? STR(on) : STR(off));
                     return NavIntent::none();
                 }
@@ -179,7 +179,7 @@ NavIntent SettingsListView::onEvent(const Event &e)
         }
     }
 
-    screen_.dispatch(e);
+    tree.dispatch(e);
     return NavIntent::none();
 }
 

@@ -28,14 +28,14 @@ public:
      * @param rows: number of rows.
      * @param plain: whether the model says its rows are plain labels.
      */
-    RowsModel(uint16_t rows, bool plain) : rows_(rows), plain_(plain)
+    RowsModel(uint16_t rows, bool plain) : numRows(rows), allPlain(plain)
     {
     }
 
     /** Get the number of rows. */
     uint16_t rowCount() const override
     {
-        return rows_;
+        return numRows;
     }
 
     /** Fill a row with a fixed label and count the read. */
@@ -49,14 +49,14 @@ public:
     /** Whether every row is a plain label. */
     bool plainRows() const override
     {
-        return plain_;
+        return allPlain;
     }
 
     mutable uint32_t reads = 0; ///< Rows read so far
 
 private:
-    uint16_t rows_; ///< Number of rows
-    bool plain_;    ///< Rows are plain labels
+    uint16_t numRows; ///< Number of rows
+    bool allPlain;    ///< Rows are plain labels
 };
 
 /**
