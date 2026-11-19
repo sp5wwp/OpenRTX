@@ -2,8 +2,7 @@
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
 
-# Main screen after boot. The Module17 emulator boots in FM mode, where its
-# main screen shows only the callsign.
+# The home screen after boot.
 wait_stable 5000 3
 screenshot_sync vfo.bmp
 quit
