@@ -124,7 +124,7 @@ struct InlineEdit {
     static constexpr size_t SIZE = 48; ///< Largest edit state a view keeps
 
     EditBlob<SIZE> state;              ///< Edit state of the owner
-    ViewId owner; ///< View that kept it, ViewId::Count if none
+    ViewId owner;                      ///< Its keeper, ViewId::Count if none
 };
 
 /**

@@ -101,7 +101,7 @@ private:
     int8_t field(uint8_t first) const;
 
     static constexpr size_t TEXT_SIZE = 16;  ///< Size of a shown text
-    static constexpr size_t ENTRY_SIZE = 12; ///< Entry digits and the NUL
+    static constexpr size_t ENTRY_SIZE = 11; ///< Entry digits and the NUL
 
     /** An entry kept while the view is destroyed. */
     struct DateEdit {
