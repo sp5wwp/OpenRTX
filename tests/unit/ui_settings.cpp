@@ -12,6 +12,7 @@
 #include "core/settings.h"
 #include "core/state.h"
 #include "interfaces/keyboard.h"
+#include "interfaces/platform.h"
 #include "views/ViewSlot.hpp"
 
 using namespace ortxui;
@@ -148,6 +149,48 @@ TEST_CASE("Settings that reach the radio request an rtx sync", "[ui][settings]")
         press(v, KEY_ENTER);
         REQUIRE(state.settings.m17_can_rx);
         REQUIRE(v->takeSyncRtx());
+    }
+
+    slot.destroy();
+}
+
+TEST_CASE("Time and date sets only a valid entry", "[ui][settings]")
+{
+    resetState();
+    state.time = {};
+    ViewSlot slot;
+    View *v = slot.build(ViewId::TimeDate);
+    press(v, KEY_ENTER);
+
+    SECTION("a day past the end of its month is refused")
+    {
+        type(v, "3002241345");
+        press(v, KEY_ENTER);
+        REQUIRE(state.time.month == 0);
+    }
+
+    SECTION("an hour past 23 is refused")
+    {
+        type(v, "2902242445");
+        press(v, KEY_ENTER);
+        REQUIRE(state.time.month == 0);
+    }
+
+    SECTION("a leap day is set, on the clock too")
+    {
+        type(v, "2902241345");
+        press(v, KEY_ENTER);
+        REQUIRE(state.time.date == 29);
+        REQUIRE(state.time.month == 2);
+        REQUIRE(state.time.year == 24);
+        REQUIRE(state.time.hour == 13);
+        REQUIRE(state.time.minute == 45);
+
+        const datetime_t rtc = platform_getCurrentTime();
+        REQUIRE(rtc.date == 29);
+        REQUIRE(rtc.month == 2);
+        REQUIRE(rtc.year == 24);
+        REQUIRE(rtc.hour == 13);
     }
 
     slot.destroy();

@@ -158,5 +158,7 @@ const stringsTable_t englishStrings =
     // i18n: key hint for a radio with only a knob, ENTER and ESC; keep the
     // key name ENTER; one line on a 128 px screen
     .hintKnob          = N_("Knob:char ENTER:next hold:OK"),
+    // i18n: time and date entry fields, in this fixed order
+    .hintDateTime      = N_("dd/mm/yy hh:mm"),
 };
 #endif  // ENGLISHSTRINGS_H

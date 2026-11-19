@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRTX\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
-"POT-Creation-Date: 2026-11-19 10:38-0600\n"
+"POT-Creation-Date: 2026-11-19 11:19-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -531,4 +531,9 @@ msgstr ""
 #. key name ENTER; one line on a 128 px screen
 #: openrtx/include/ui/EnglishStrings.h
 msgid "Knob:char ENTER:next hold:OK"
+msgstr ""
+
+#. i18n: time and date entry fields, in this fixed order
+#: openrtx/include/ui/EnglishStrings.h
+msgid "dd/mm/yy hh:mm"
 msgstr ""

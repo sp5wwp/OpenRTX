@@ -144,6 +144,7 @@ typedef struct
     const char* enterTx;
     const char* hintArrowsShort;
     const char* hintKnob;
+    const char* hintDateTime;
 }
 stringsTable_t;
 

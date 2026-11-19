@@ -19,12 +19,10 @@ namespace ortxui
 {
 
 /**
- * The Settings > Time & Date screen (guarded by CONFIG_RTC). Displays the
- * current local date/time; ENTER opens a keypad digit editor (dd/mm/yy hh:mm,
- * seconds fixed at 00, ported from the classic SETTINGS_TIMEDATE_SET flow).
- * Digits fill the fields left to right; a full entry committed with ENTER is
- * converted back to UTC and applied via platform_setTime. ESC cancels the edit
- * (or pops the view when not editing).
+ * The Settings > Time & Date screen (CONFIG_RTC). Shows the local date and
+ * time; ENTER opens a keypad entry of dd/mm/yy hh:mm, seconds at 00. Digits
+ * fill the fields left to right and '*' backspaces; ENTER sets the clock to a
+ * complete, valid entry, converted to UTC, and ESC cancels.
  */
 class TimeDateView : public View
 {
@@ -35,39 +33,77 @@ public:
     /** Destructor. */
     ~TimeDateView() = default;
 
+    /** Build the clock display. */
     void build() override;
-    void onShow() override;
+
+    /** Speak the title, date and time. */
     void announce() override;
+
+    /** Follow the clock while not editing. */
     void syncFromState(const state_t &s) override;
 
+    /** Edit, commit or cancel the entry, or go back on ESC. */
     NavIntent onEvent(const Event &e) override;
 
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
-    void showDisplay(const state_t &s, bool force);
+    /**
+     * Show a time as local date and time.
+     *
+     * @param s: state snapshot.
+     */
+    void showDisplay(const state_t &s);
+
+    /**
+     * Show a text in a label if it changed.
+     *
+     * @param label: label.
+     * @param buf: the label's text buffer, TEXT_SIZE bytes.
+     * @param text: text to show.
+     */
+    static void showText(Label &label, char *buf, const char *text);
+
+    /** Open the entry, empty. */
     void beginEdit();
+
+    /** Close the entry and show the clock. */
+    void endEdit();
+
+    /** Set the clock to the entry, if it is a valid date and time. */
     void commit();
+
+    /** Show the entry, '_' for each digit not typed yet. */
     void refreshEdit();
 
-    Screen screen_;
-    Flex root_;
-    Flex body_;
-    Label dateLabel_;
-    Label timeLabel_;
-    Label hint_;
+    /** Speak the digit just typed, with the separator after it. */
+    void announceDigit() const;
 
-    bool editing_ = false;
-    /* Digit entry on the shared TextInput slot engine: 10 slots (dd mm yy hh mm),
-     * seconds fixed at 00. Gains '*' backspace over the old positional filler. */
-    TextInput input_;
-    char inputBuf_[12] = { 0 };
-    char dateBuf_[16] = { 0 };   //< "dd/mm/yy" with '_' placeholders
-    char timeBuf_[16] = { 0 };   //< "hh:mm:00" with '_' placeholders
-    char dispCache_[32] = { 1 }; //< change-gate for the display-mode strings
+    /**
+     * Get a two-digit field of the entry.
+     *
+     * @param first: slot of the field's first digit.
+     * @return the field's value.
+     */
+    int8_t field(uint8_t first) const;
+
+    static constexpr size_t TEXT_SIZE = 16; ///< Size of a shown text
+
+    Screen screen_;                         ///< Widget tree root
+    Flex root_;                             ///< Top bar over the body
+    Flex body_;                             ///< Date over time over the hint
+    Label dateLabel_;                       ///< Date, or its entry
+    Label timeLabel_;                       ///< Time, or its entry
+    Label hint_;                            ///< Key hint
+    TextInput input_;                       ///< Digit entry: dd mm yy hh mm
+    char inputBuf_[12] = {};                ///< Entry digits
+    char dateBuf_[TEXT_SIZE] = {};          ///< Date text shown
+    char timeBuf_[TEXT_SIZE] = {};          ///< Time text shown
+    bool editing_ = false;                  ///< The entry is open
 };
 
 } // namespace ortxui
