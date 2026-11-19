@@ -11,14 +11,10 @@
 #include "core/state.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
+#include "widgets/Scratch.hpp"
 
 namespace ortxui
 {
-
-/* One row widget, bound and painted per row, serves every list: only one view
- * exists at a time, so lists never paint concurrently. Static rather than on
- * the stack, which the 2 KB UI thread cannot spare. */
-static SettingRow scratchRow;
 
 void List::setItems(const ListItem *items, uint16_t count)
 {
@@ -84,8 +80,9 @@ int16_t List::rowHeight(uint16_t i) const
 {
     ListItem it;
     getItem(i, it);
-    scratchRow.setPad(padY_, gap_);
-    return scratchRow.heightFor(kindOf(it), it.label, it.value, area_.w);
+    SettingRow &row = Scratch::get<SettingRow>();
+    row.setPad(padY_, gap_);
+    return row.heightFor(kindOf(it), it.label, it.value, area_.w);
 }
 
 void List::scrollToSelected()
@@ -199,10 +196,11 @@ void List::draw(DrawCtx &d)
     if ((n == 0) || ((items_ == nullptr) && (model_ == nullptr)))
         return;
 
-    /* Paint each visible row through the shared SettingRow flyweight: bind it to
-     * the item, size it to the item's content, lay it out and paint its
-     * subtree. Rows stack by their own heights, so a two-line value row is
-     * taller than a plain / checkbox row while keeping the same padding. */
+    /* Paint each visible row through the scratch SettingRow: bind it to the
+     * item, size it to the item's content, lay it out and paint its subtree.
+     * Rows stack by their own heights, so a two-line value row is taller than
+     * a plain / checkbox row while keeping the same padding. */
+    SettingRow &scratchRow = Scratch::get<SettingRow>();
     scratchRow.setPad(padY_, gap_);
 
     int16_t y = area_.y;

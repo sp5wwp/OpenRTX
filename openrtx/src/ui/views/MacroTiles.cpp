@@ -11,6 +11,7 @@
 #include "layout/Flex.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
+#include "widgets/Scratch.hpp"
 #include "widgets/Widgets.hpp"
 #include "hwconfig.h"
 
@@ -61,7 +62,7 @@ static constexpr uint32_t FNV_PRIME = 16777619u;
 
 /**
  * One tile: a key label over (or, on the compact screen, beside) the value.
- * Every tile is laid out and painted through this one.
+ * Every tile is laid out and painted through this one, in the scratch.
  */
 struct ScratchTile {
     /** Constructor. */
@@ -76,8 +77,6 @@ struct ScratchTile {
     Label value; ///< Live value
 };
 
-static ScratchTile scratch;
-
 MacroTiles::MacroTiles() : tile_(), key_(), value_()
 {
 }
@@ -89,6 +88,7 @@ MacroTiles::~MacroTiles()
 void MacroTiles::setUp(uint8_t tile, char *keyBuf)
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
+    ScratchTile &scratch = Scratch::get<ScratchTile>();
 
     /* Regular: a 2-line tile (number + icon over the value). Compact (mono):
      * a single row "N value" — icons and a second line don't fit on 128x64. */
@@ -140,6 +140,7 @@ void MacroTiles::place(const Rect *rows)
 
             /* The labels are laid out with an empty value, as when built. */
             setUp(i, keyBuf);
+            ScratchTile &scratch = Scratch::get<ScratchTile>();
             scratch.key.setArea({ 0, 0, 0, 0 });
             scratch.value.setArea({ 0, 0, 0, 0 });
             scratch.box.setArea(tile_[i]);
@@ -235,6 +236,7 @@ void MacroTiles::draw(DrawCtx &d)
         char value[VALUE_SIZE];
         setUp(i, keyBuf);
         composeValue(i, *state_, value, sizeof(value));
+        ScratchTile &scratch = Scratch::get<ScratchTile>();
         scratch.value.setText(value);
         scratch.key.setArea(key_[i]);
         scratch.value.setArea(value_[i]);
