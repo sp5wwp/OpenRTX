@@ -20,4 +20,5 @@ screenshot_sync defaults_armed.bmp
 # ESC cancels without resetting
 key ESC
 wait_stable
+screenshot_sync defaults_cancelled.bmp
 quit

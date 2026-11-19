@@ -14,7 +14,7 @@ screenshot_sync m17_settings.bmp
 # Edit the callsign, which is selected
 key ENTER
 wait_stable
-screenshot_sync callsign_edit_empty.bmp
+screenshot_sync callsign_edit_open.bmp
 # Type a character: UP cycles through the symbols
 key UP
 wait_stable

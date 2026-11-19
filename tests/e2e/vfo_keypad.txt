@@ -4,7 +4,7 @@
 # variants: default smallscreen mduv3x0
 
 # VFO frequency keypad entry. Digits fill the RX frequency most-significant
-# first; the seventh digit auto-advances to the TX set. Pin a strong signal so
+# first; ENTER moves on to TX, and ENTER again applies both. Pin a strong signal so
 # the S-meter saturates identically before and after the rtx reconfigure that
 # applying a frequency triggers (see vfo_tune).
 rssi 0
@@ -13,9 +13,14 @@ wait_stable 5000 3
 key 1 4 5
 wait_stable
 screenshot_sync vfo_keypad_rx.bmp
-# Finish RX (5 0 0 0 -> 145.500), then ENTER mirrors TX=RX and applies it.
+# Finish RX (5 0 0 0 -> 145.500); ENTER shows TX, derived from RX and the
+# offset.
 key 5 0 0 0
 wait_stable
+key ENTER
+wait_stable
+screenshot_sync vfo_keypad_tx.bmp
+# ENTER applies the pair: the VFO tunes to 145.500.
 key ENTER
 wait_stable
 screenshot_sync vfo_keypad_applied.bmp

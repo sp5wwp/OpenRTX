@@ -10,13 +10,7 @@
 # both, keeping the frame deterministic.
 rssi 0
 wait_stable 5000 3
-# Space the three steps so each is processed before the screenshot even when
-# the UI thread is loaded (parallel suite runs), landing deterministically.
-key UP
-wait_stable
-key UP
-wait_stable
-key UP
+key UP UP UP
 wait_stable
 screenshot_sync vfo_tune.bmp
 quit

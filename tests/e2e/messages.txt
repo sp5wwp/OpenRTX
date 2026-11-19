@@ -27,7 +27,7 @@ screenshot_sync messages_m17.bmp
 key ENTER
 wait_stable
 screenshot_sync compose.bmp
-# Open the body editor, type "A" and confirm it
+# Open the body editor, type "a" and confirm it
 key ENTER
 wait_stable
 key 2

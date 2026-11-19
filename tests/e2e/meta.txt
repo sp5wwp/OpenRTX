@@ -18,7 +18,7 @@ key DOWN
 wait_stable
 key ENTER
 wait_stable
-# Cursor-cycle a few characters, extending the field with RIGHT.
+# Cycle a few characters with UP, moving right with RIGHT: "RrfnRTX".
 key UP UP UP
 wait_stable
 key RIGHT

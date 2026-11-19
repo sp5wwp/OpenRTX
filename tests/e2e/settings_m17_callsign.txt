@@ -15,7 +15,7 @@ screenshot_sync m17_settings.bmp
 # Edit the callsign, which is selected
 key ENTER
 wait_stable
-screenshot_sync callsign_edit_empty.bmp
+screenshot_sync callsign_edit_open.bmp
 # Type "A"
 key 2
 wait_stable
