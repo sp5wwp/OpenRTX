@@ -41,8 +41,7 @@ public:
 private:
     Screen screen_;
     Flex root_;
-    Flex rows_[InfoTable::ROW_COUNT]; //< zebra-striped rows of the table
-    InfoTable table_;                 //< keys and values over the rows
+    InfoTable table_; //< zebra-striped rows of keys and values
 };
 
 } // namespace ortxui

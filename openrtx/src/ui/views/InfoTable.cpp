@@ -6,6 +6,7 @@
 
 #include "views/InfoTable.hpp"
 #include "core/Layout.hpp"
+#include "core/LayoutFonts.hpp"
 #include "core/UiText.hpp"
 #include "core/memory_profiling.h"
 #include "interfaces/platform.h"
@@ -56,45 +57,13 @@ static void paintText(DrawCtx &d, const Rect &box, textAlign_t align, Sem color,
 }
 
 InfoTable::InfoTable() :
-    row_(), key_(), value_(), heapUsed_(UINT32_MAX), rssi_(INT32_MIN),
-    vbat_(UINT16_MAX), charge_(UINT8_MAX)
+    heapUsed_(UINT32_MAX), rssi_(INT32_MIN), vbat_(UINT16_MAX),
+    charge_(UINT8_MAX)
 {
 }
 
 InfoTable::~InfoTable()
 {
-}
-
-void InfoTable::place(const Rect *rows)
-{
-    for (uint8_t i = 0; i < ROW_COUNT; i++) {
-        const Rect &r = rows[i];
-        row_[i] = r;
-
-        /* A padded row: the key at its natural width, the value growing into
-         * the rest. Only the static values have text at this point. */
-        char value[VALUE_SIZE] = "";
-        if (i >= ROW_BAND)
-            composeValue(i, value, sizeof(value));
-        const int16_t keyW =
-            static_cast<int16_t>(gfx_getTextWidth(FONT, KEYS[i].str()));
-        const int16_t valueW =
-            static_cast<int16_t>(gfx_getTextWidth(FONT, value));
-        const int cw = static_cast<int>(r.w) - 2 * PAD_X;
-        if ((cw <= 0) || (r.h == 0)) {
-            key_[i] = { 0, 0, 0, 0 };
-            value_[i] = { 0, 0, 0, 0 };
-            continue;
-        }
-
-        int free = cw - keyW - valueW;
-        if (free < 0)
-            free = 0;
-        const int16_t x = static_cast<int16_t>(r.x + PAD_X);
-        key_[i] = { x, r.y, static_cast<uint16_t>(keyW), r.h };
-        value_[i] = { static_cast<int16_t>(x + keyW), r.y,
-                      static_cast<uint16_t>(valueW + free), r.h };
-    }
 }
 
 void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
@@ -143,20 +112,57 @@ bool InfoTable::sync(const state_t &s)
 
 void InfoTable::draw(DrawCtx &d)
 {
+    /* The rows grew equally from nothing, so they split the height evenly. */
+    const uint16_t rowH = static_cast<uint16_t>(area_.h / ROW_COUNT);
     for (uint8_t i = 0; i < ROW_COUNT; i++) {
-        char value[VALUE_SIZE];
-        composeValue(i, value, sizeof(value));
-
-        /* Clip to the row as its container would. */
-        const bool clip = !row_[i].empty();
-        if (clip)
-            d.pushClip(row_[i]);
-        paintText(d, key_[i], TEXT_ALIGN_LEFT, Sem::OnSurfaceMuted,
-                  KEYS[i].str());
-        paintText(d, value_[i], TEXT_ALIGN_RIGHT, Sem::OnSurface, value);
-        if (clip)
-            d.popClip();
+        const Rect row = { area_.x, static_cast<int16_t>(area_.y + i * rowH),
+                           area_.w, rowH };
+        drawRow(d, i, row);
     }
+}
+
+void InfoTable::drawRow(DrawCtx &d, uint8_t i, const Rect &row) const
+{
+    /* A padded row: the key at its natural width, the value growing into the
+     * rest, measured with the metrics the screen was built with. Only the
+     * static values had text when it was. */
+    char value[VALUE_SIZE] = "";
+    int16_t keyW;
+    int16_t valueW;
+    {
+        LayoutFonts fonts;
+        if (i >= ROW_BAND)
+            composeValue(i, value, sizeof(value));
+        keyW = static_cast<int16_t>(gfx_getTextWidth(FONT, KEYS[i].str()));
+        valueW = static_cast<int16_t>(gfx_getTextWidth(FONT, value));
+    }
+
+    Rect key = { 0, 0, 0, 0 };
+    Rect val = { 0, 0, 0, 0 };
+    const int cw = static_cast<int>(row.w) - 2 * PAD_X;
+    if ((cw > 0) && (row.h != 0)) {
+        int free = cw - keyW - valueW;
+        if (free < 0)
+            free = 0;
+        const int16_t x = static_cast<int16_t>(row.x + PAD_X);
+        key = { x, row.y, static_cast<uint16_t>(keyW), row.h };
+        val = { static_cast<int16_t>(x + keyW), row.y,
+                static_cast<uint16_t>(valueW + free), row.h };
+    }
+
+    composeValue(i, value, sizeof(value));
+
+    /* Clip to the row as its container would, striping every other row to
+     * keep the dense table readable. */
+    const bool clip = !row.empty();
+    if (clip)
+        d.pushClip(row);
+    if ((i & 1u) != 0u)
+        d.fillRect(row, Sem::Surface);
+    paintText(d, key, TEXT_ALIGN_LEFT, Sem::OnSurfaceMuted, KEYS[i].str());
+    paintText(d, val, TEXT_ALIGN_RIGHT, Sem::OnSurface, value);
+    if (clip)
+        d.popClip();
 }
 
 } // namespace ortxui

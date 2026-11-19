@@ -20,11 +20,12 @@ namespace ortxui
 {
 
 /**
- * The key/value text of the Info screen: battery, charge, RSSI, heap, bands
- * and hardware version, one row each. The rows are laid out like a padded
- * row of a key at its natural width and a value filling the rest, and the
- * values are composed when drawn, so the table stores only where each text
- * goes and the live readings it shows.
+ * The key/value table of the Info screen: battery, charge, RSSI, heap, bands
+ * and hardware version, one row each, every other row striped. The rows share
+ * the table's height, and each is laid out when drawn like a padded row of a
+ * key at its natural width and a value filling the rest, with the metrics the
+ * screen was built with. The values are composed when drawn too, so the table
+ * stores only the live readings it shows.
  */
 class InfoTable : public Object
 {
@@ -47,13 +48,6 @@ public:
     ~InfoTable();
 
     /**
-     * Place the key and value of each row.
-     *
-     * @param rows: area of each row.
-     */
-    void place(const Rect *rows);
-
-    /**
      * Follow a state snapshot.
      *
      * @param s: state snapshot.
@@ -61,10 +55,19 @@ public:
      */
     bool sync(const state_t &s);
 
-    /** Paint the keys and values. */
+    /** Paint the stripes, keys and values. */
     void draw(DrawCtx &d) override;
 
 private:
+    /**
+     * Paint one row.
+     *
+     * @param d: drawing context.
+     * @param i: row.
+     * @param row: area of the row.
+     */
+    void drawRow(DrawCtx &d, uint8_t i, const Rect &row) const;
+
     /**
      * Compose a row's value.
      *
@@ -74,13 +77,10 @@ private:
      */
     void composeValue(uint8_t row, char *out, size_t n) const;
 
-    Rect row_[ROW_COUNT];   ///< Area of each row
-    Rect key_[ROW_COUNT];   ///< Area of each key
-    Rect value_[ROW_COUNT]; ///< Area of each value
-    uint32_t heapUsed_;     ///< Heap in use shown
-    int32_t rssi_;          ///< RSSI shown
-    uint16_t vbat_;         ///< Battery voltage shown
-    uint8_t charge_;        ///< Battery charge shown
+    uint32_t heapUsed_; ///< Heap in use shown
+    int32_t rssi_;      ///< RSSI shown
+    uint16_t vbat_;     ///< Battery voltage shown
+    uint8_t charge_;    ///< Battery charge shown
 };
 
 } // namespace ortxui
