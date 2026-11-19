@@ -9,23 +9,17 @@
 
 #include <array>
 #include <cstdint>
-#include "core/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/TopBar.hpp"
-#include "widgets/List.hpp"
+#include "core/SettingsListView.hpp"
 #include "core/state.h"
 
 namespace ortxui
 {
 
 /**
- * A multi-toggle settings screen in the "checklist" style (mockup 4): a
- * selectable list of labelled checkboxes. ENTER toggles the selected row's
- * tick and writes the matching state.settings flag (persisted to flash at
- * shutdown, as in the classic UI). The boxes are seeded from settings on first
- * sync. The base View handles ESC/scroll.
+ * The Settings > Accessibility screen: a list of checkboxes, each toggled by
+ * ENTER into its state.settings flag.
  */
-class ChecklistView : public View
+class ChecklistView : public SettingsListView
 {
 public:
     /** Constructor. */
@@ -34,37 +28,28 @@ public:
     /** Destructor. */
     ~ChecklistView() = default;
 
+    /** Build the checkboxes from the live settings. */
     void build() override;
-    void syncFromState(const state_t &s) override;
-    NavIntent onEvent(const Event &e) override;
-
-    Screen &screen() override
-    {
-        return screen_;
-    }
-
-    /** The checklist, whose position UiMemory keeps. */
-    List *list() override
-    {
-        return &list_;
-    }
 
 private:
-    /** Persist the toggled row into the matching state.settings flag. */
-    void applyToggle(uint16_t row, bool on);
+    /** Every row is a checkbox. */
+    RowKind rowKind(uint8_t row) const override
+    {
+        (void)row;
+        return RowKind::Checkbox;
+    }
 
+    /** Write a toggled row into its settings flag. */
+    void onToggle(uint8_t row, bool on) override;
+
+    /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowPhonetic,
-        RowLatch,
+        RowPhonetic, ///< Spell callsigns and text phonetically
+        RowLatch,    ///< Keep the macro menu open after MONI
         RowCount,
     };
 
-    Screen screen_;
-    Flex root_;
-    List list_;
-
-    std::array<ListItem, RowCount> items_ = {};
-    bool seeded_ = false;
+    std::array<ListItem, RowCount> items_ = {}; ///< Rows
 };
 
 } // namespace ortxui

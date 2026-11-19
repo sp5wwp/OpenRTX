@@ -18,18 +18,16 @@ namespace ortxui
 {
 
 /**
- * The Settings > Radio screen (value-row style), mirroring the classic Radio
- * menu for the current channel:
- *  - Offset: the TX/RX split. ENTER opens a keypad entry (value shown as
- *    <N kHz>), pre-filled with the current offset so re-selecting preserves it;
- *    digit keys retype it, '*' backspaces, UP/DOWN or the knob nudge it by the
- *    tuning step (like Step), ENTER applies it as tx = rx +/- offset (keeping the
- *    current direction), ESC cancels.
- *  - Direction: '+' or '-'. ENTER opens edit; UP/DOWN flips the split sign.
- *  - Step: the tuning step; ENTER opens edit; UP/DOWN cycles freq_steps.
+ * The Settings > Radio screen, for the current channel:
+ *  - Offset: the TX/RX split. ENTER opens a keypad entry (shown as <N kHz>)
+ *    pre-filled with the current split; digits retype it, '*' backspaces,
+ *    UP/DOWN or the knob nudge it by the tuning step, ENTER applies it as
+ *    tx = rx +/- offset in the current direction, ESC cancels.
+ *  - Direction: '+' or '-', flipped by UP/DOWN.
+ *  - Step: the tuning step, cycled through freq_steps.
  *
- * Offset and Direction change tx_frequency, so they request an rtx resync;
- * Step only changes the tuning increment (state.step_index) and does not.
+ * Offset and Direction change tx_frequency, so they request an rtx sync; Step
+ * only changes the VFO increment.
  */
 class RadioView : public SettingsListView
 {
@@ -40,19 +38,27 @@ public:
     /** Destructor. */
     ~RadioView() = default;
 
+    /** Build the rows from the current channel. */
     void build() override;
-    void syncFromState(const state_t &s) override;
 
 private:
-    /* SettingsListView hooks: Direction/Step are Steppers; Offset is a Custom
-     * (TextInput keypad) row the view drives itself. */
+    /** Offset is a Custom row, Direction and Step are Steppers. */
     RowKind rowKind(uint8_t row) const override;
+
+    /** Render Direction or Step. */
     void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
+
+    /** Flip Direction or cycle Step. */
+    void onAdjust(uint8_t row, int8_t dir) override;
+
+    /** Pre-fill the offset entry. */
     void onBeginEdit(uint8_t row) override;
+
+    /** Drive the offset entry. */
     bool onEditEvent(const Event &e) override;
-    void refreshCustom(uint8_t row) override;
+
+    /** Render the offset, or the entry while it is open. */
+    void refreshCustom(uint8_t row, bool speak) override;
 
     /** Keep the offset being entered. */
     void saveCustom(ListEdit &e) const override;
@@ -60,33 +66,39 @@ private:
     /** Reopen the offset entry kept by saveCustom(). */
     void restoreCustom(const ListEdit &e) override;
 
-    void
-    offsetAdjust(int dir); //< nudge the offset by the tuning step (knob/UP)
-    void offsetApply();    //< commit tx = rx +/- the entered offset
-    uint32_t offsetKhz() const; //< the entered offset (filled slots as decimal)
+    /** Bind the offset entry to its buffer, emptied. */
+    void bindOffset();
 
+    /**
+     * Nudge the entered offset by the tuning step.
+     *
+     * @param dir: +1 up, -1 down.
+     */
+    void offsetAdjust(int8_t dir);
+
+    /** Apply tx = rx +/- the entered offset, if the radio can tune it. */
+    void offsetApply();
+
+    /**
+     * Get the entered offset.
+     *
+     * @return the filled slots read as a decimal, in kHz.
+     */
+    uint32_t offsetKhz() const;
+
+    /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowOffset,
-        RowDirection,
-        RowStep,
+        RowOffset,    ///< TX/RX split
+        RowDirection, ///< Sign of the split
+        RowStep,      ///< VFO tuning step
         RowCount,
     };
 
-    std::array<ListItem, RowCount> items_ = {};
-    char bufs_[RowCount][20] = {};
-
-    /* Offset keypad entry on the shared TextInput slot engine (6-digit kHz).
-     * Pre-filled from the current offset magnitude so re-selecting preserves it;
-     * offsetNeg_ keeps the current +/- direction across an edit. */
-    TextInput offsetInput_;
-    char offsetBuf_[8] = { 0 };
-    bool offsetNeg_ = false;     //< current split direction (tx < rx)
-    bool offsetPristine_ = true; //< pre-filled/untouched -> first digit retypes
-
-    /* Change-gate mirrors. */
-    uint32_t lastTx_ = 0xFFFFFFFFu;
-    uint32_t lastRx_ = 0xFFFFFFFFu;
-    uint8_t lastStep_ = 0xFFu;
+    std::array<ListItem, RowCount> items_ = {}; ///< Rows
+    TextInput offsetInput_;                     ///< Offset keypad entry
+    char offsetBuf_[8] = { 0 };                 ///< Offset digits, in kHz
+    bool offsetNeg_ = false;     ///< The split is negative (tx < rx)
+    bool offsetPristine_ = true; ///< Pre-filled: the first digit retypes it
 };
 
 } // namespace ortxui

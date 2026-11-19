@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <cstddef>
 #include "core/View.hpp"
+#include "core/voicePrompts.h"
 #include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/List.hpp"
@@ -20,23 +21,11 @@ namespace ortxui
 struct ListEdit;
 
 /**
- * Base for the Settings value-list screens (Display, Radio, FM, M17, GPS).
- *
- * These all share one interaction: a List of rows where ENTER either opens a
- * value for editing (UP/DOWN or the knob step it, ENTER/ESC close), toggles a
- * checkbox, or activates an action; and the value of the row being edited is
- * shown wrapped in <angle brackets>. This class owns that state machine and the
- * screen/root/top-bar/list scaffolding; each derived view supplies only its
- * rows and the per-row format/adjust logic through the hooks below.
- *
- * Row kinds:
- *  - Stepper  : ENTER edits; onAdjust() changes the value; formatValue() renders
- *               the bare text and the base adds the <..> marker while editing.
- *  - Checkbox : ENTER toggles items_[row].checked and calls onToggle().
- *  - Action   : ENTER returns onActivate()'s NavIntent (e.g. push a sub-editor).
- *  - Custom   : ENTER opens an in-place editor the view fully owns -- the base
- *               calls onBeginEdit() then routes every editing event to
- *               onEditEvent() and re-renders via refreshCustom().
+ * Base for the settings screens: a titled list of rows where ENTER edits a
+ * value (the arrows or the knob step it, ENTER or ESC close), toggles a
+ * checkbox or opens a screen. The value being edited shows in <brackets>, and
+ * a change speaks the row's label, then its value. Derived views supply the
+ * rows and the per-row format and adjust hooks.
  */
 class SettingsListView : public View
 {
@@ -55,10 +44,13 @@ public:
     /** Destructor. */
     ~SettingsListView() = default;
 
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
+
+    /** Edit, toggle or open the selected row, or go back on ESC. */
     NavIntent onEvent(const Event &e) override;
 
     /** The settings list, whose position UiMemory keeps. */
@@ -74,47 +66,114 @@ public:
     void restore(UiMemory &m) override;
 
 protected:
+    static constexpr uint8_t ROWS_MAX = 8;   ///< Most rows a screen has
+    static constexpr size_t VALUE_SIZE = 24; ///< Value text with its brackets
+
     /**
-     * Wire the shared scaffolding: derived build() seeds items_ (labels and
-     * values) first, then calls this with the title and its item array.
+     * Build the screen around the rows. Derived build() sets the labels, and
+     * the checkbox or value of rows that do not show the base's value text,
+     * then calls this; every other row shows values()[row].
      *
      * @param title: screen title.
      * @param items: row table, borrowed.
-     * @param count: number of rows.
+     * @param count: number of rows, at most ROWS_MAX.
      */
     void buildList(const UiText &title, ListItem *items, uint8_t count);
 
-    /* ---- required hooks ---- */
-    /** Render row's BARE value (no <> marker) into out. */
-    virtual void formatValue(uint8_t row, char *out, size_t cap) = 0;
-    /** Store a composed value string into the view's bufs_[row]. */
-    virtual void setValueText(uint8_t row, const char *s) = 0;
-    /** Step a Stepper row's value by dir (+1/-1) and apply it to state. */
-    virtual void onAdjust(uint8_t row, int dir) = 0;
-
-    /* ---- optional hooks (defaults suit a pure-stepper view) ---- */
-    virtual RowKind rowKind(uint8_t) const
+    /**
+     * Render a row's value without the edit brackets.
+     *
+     * @param row: row.
+     * @param out: output buffer.
+     * @param cap: output buffer size.
+     */
+    virtual void formatValue(uint8_t row, char *out, size_t cap)
     {
+        (void)row;
+        (void)cap;
+        out[0] = '\0';
+    }
+
+    /**
+     * Step a Stepper row's value and apply it to state.
+     *
+     * @param row: row.
+     * @param dir: +1 up, -1 down.
+     */
+    virtual void onAdjust(uint8_t row, int8_t dir)
+    {
+        (void)row;
+        (void)dir;
+    }
+
+    /**
+     * Get how a row is edited.
+     *
+     * @param row: row.
+     * @return the row kind.
+     */
+    virtual RowKind rowKind(uint8_t row) const
+    {
+        (void)row;
         return RowKind::Stepper;
     }
-    virtual void onToggle(uint8_t /*row*/, bool /*on*/)
+
+    /**
+     * Apply a Checkbox row's new state.
+     *
+     * @param row: row.
+     * @param on: new state.
+     */
+    virtual void onToggle(uint8_t row, bool on)
     {
+        (void)row;
+        (void)on;
     }
-    virtual NavIntent onActivate(uint8_t /*row*/)
+
+    /**
+     * Act on an Action row.
+     *
+     * @param row: row.
+     * @return where to navigate.
+     */
+    virtual NavIntent onActivate(uint8_t row)
     {
+        (void)row;
         return NavIntent::none();
     }
-    virtual void onBeginEdit(uint8_t /*row*/)
+
+    /**
+     * Prepare the editor of a row about to be edited.
+     *
+     * @param row: row.
+     */
+    virtual void onBeginEdit(uint8_t row)
     {
+        (void)row;
     }
-    /** A Custom row consumes its editing events here; return true if handled. */
-    virtual bool onEditEvent(const Event & /*e*/)
+
+    /**
+     * Handle an event while a Custom row is edited.
+     *
+     * @param e: event.
+     * @return true if handled.
+     */
+    virtual bool onEditEvent(const Event &e)
     {
+        (void)e;
         return false;
     }
-    /** Re-render a Custom row's (bracketed) value string. */
-    virtual void refreshCustom(uint8_t /*row*/)
+
+    /**
+     * Render a Custom row's value, bracketed while it is edited.
+     *
+     * @param row: row.
+     * @param speak: speak the value of the row being edited.
+     */
+    virtual void refreshCustom(uint8_t row, bool speak)
     {
+        (void)row;
+        (void)speak;
     }
 
     /**
@@ -128,8 +187,7 @@ protected:
     }
 
     /**
-     * Reopen the Custom row editor from saveCustom() and render its value
-     * without speaking it.
+     * Reopen the Custom row editor from saveCustom().
      *
      * @param e: stored editor state.
      */
@@ -138,23 +196,62 @@ protected:
         (void)e;
     }
 
-    /* ---- helpers the derived views call ---- */
+    /**
+     * Speak a row's value after it changed: the label at the descriptive
+     * level, then the value. Views override it for values with their own
+     * voice prompt helper.
+     *
+     * @param row: row.
+     * @param value: value as shown.
+     * @param flags: voice prompt queue flags of the current level.
+     */
+    virtual void announceValue(uint8_t row, const UiText &value,
+                               vpQueueFlags flags);
 
     /**
-     * Render a row's value, wrapped in <> while it is edited, and repaint.
+     * Render a row's value, bracketed while it is edited, and repaint.
      *
-     * @param row: row to render.
+     * @param row: row.
      * @param speak: speak the value of the row being edited.
      */
     void refreshValue(uint8_t row, bool speak = true);
+
+    /**
+     * Speak a row's value through announceValue() at the current level.
+     *
+     * @param row: row.
+     * @param value: value as shown.
+     */
+    void speakValue(uint8_t row, const UiText &value);
+
+    /**
+     * Get the value text buffer of a row.
+     *
+     * @param row: row.
+     * @return the buffer, VALUE_SIZE bytes.
+     */
+    char *values(uint8_t row)
+    {
+        return values_[row];
+    }
+
+    /** Start editing the selected row. */
     void beginEdit();
+
+    /** Stop editing and show the row's value unbracketed. */
     void endEdit();
 
-    Screen screen_;
-    Flex root_;
-    List list_;
-    bool editing_ = false;
-    uint8_t editRow_ = 0;
+    Screen screen_;        ///< Widget tree root
+    Flex root_;            ///< Top bar over the list
+    List list_;            ///< The rows
+    bool editing_ = false; ///< A row is being edited
+    uint8_t editRow_ = 0;  ///< Row being edited
+
+private:
+    static constexpr int16_t ROW_PAD = 4;    ///< Vertical inset of each row
+
+    ListItem *rows_ = nullptr;               ///< Row table, borrowed
+    char values_[ROWS_MAX][VALUE_SIZE] = {}; ///< Value text of each row
 };
 
 } // namespace ortxui

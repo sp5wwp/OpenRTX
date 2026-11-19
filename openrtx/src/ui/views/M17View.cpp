@@ -23,30 +23,17 @@ namespace ortxui
 
 void M17View::build()
 {
-    static constexpr UiText kLabels[RowCount] = {
-        STR(callsign),
-        STR(metaText),
-        STR(CAN),
-        STR(canRxCheck),
-    };
-
-    for (uint8_t i = 0; i < RowCount; i++) {
-        items_[i].label = kLabels[i];
-        items_[i].value = bufs_[i];
-    }
-    /* Meta Txt can be up to 52 chars — too long for the per-row scratch — so
-     * point it straight at the live settings buffer and let the List ellipsize
-     * it to fit the value column. */
+    items_[RowCallsign].label = STR(callsign);
+    /* Meta text is longer than a value buffer: show the live settings text,
+     * ellipsized by the list. */
+    items_[RowMeta].label = STR(metaText);
     items_[RowMeta].value = state.settings.M17_meta_text;
-
-    /* CAN RX (check the CAN on receive) is a boolean -> checkbox, not a value. */
+    items_[RowCan].label = STR(CAN);
+    items_[RowCanRx].label = STR(canRxCheck);
     items_[RowCanRx].checkbox = true;
     items_[RowCanRx].checked = state.settings.m17_can_rx;
-    items_[RowCanRx].value = nullptr;
 
     buildList(STR(m17), items_.data(), RowCount);
-    refreshCustom(RowCallsign);
-    refreshValue(RowCan);
 }
 
 M17View::RowKind M17View::rowKind(uint8_t row) const
@@ -65,27 +52,19 @@ M17View::RowKind M17View::rowKind(uint8_t row) const
 
 void M17View::formatValue(uint8_t row, char *out, size_t cap)
 {
-    /* Only CAN is a Stepper value row. */
-    if ((row == RowCan) && (cap > 0u))
-        sniprintf(out, cap, "%u", (unsigned)state.settings.m17_can);
-    else if (cap > 0u)
-        out[0] = '\0';
+    /* CAN is the only Stepper row. */
+    (void)row;
+    sniprintf(out, cap, "%u", static_cast<unsigned>(state.settings.m17_can));
 }
 
-void M17View::setValueText(uint8_t row, const char *s)
+void M17View::refreshCustom(uint8_t row, bool speak)
 {
-    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
-}
-
-void M17View::refreshCustom(uint8_t row)
-{
-    if (row != RowCallsign)
-        return;
+    (void)row;
+    (void)speak;
     if (editing_ && (editRow_ == RowCallsign))
-        callsign_.formatBracketed(bufs_[RowCallsign],
-                                  sizeof(bufs_[RowCallsign]));
+        callsign_.formatBracketed(values(RowCallsign), VALUE_SIZE);
     else
-        sniprintf(bufs_[RowCallsign], sizeof(bufs_[RowCallsign]), "%s",
+        sniprintf(values(RowCallsign), VALUE_SIZE, "%s",
                   state.settings.callsign);
     list_.invalidate();
 }
@@ -115,23 +94,22 @@ void M17View::restoreCustom(const ListEdit &e)
                         TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     callsign_.setMultiTap(MTAP_CALLSIGN);
     callsign_.resume(e.cursor, 0);
-    refreshCustom(RowCallsign);
+    refreshCustom(RowCallsign, false);
 }
 
-void M17View::onAdjust(uint8_t /*row*/, int dir)
+void M17View::onAdjust(uint8_t row, int8_t dir)
 {
-    /* Only CAN is an adjustable value (CAN RX is a checkbox). */
+    /* CAN is the only Stepper row. */
+    (void)row;
     settings_t &st = state.settings;
-    st.m17_can = (uint8_t)((st.m17_can + dir + 16) % 16);
-    lastCan_ = st.m17_can;
+    st.m17_can = static_cast<uint8_t>((st.m17_can + dir + 16) % 16);
 }
 
 void M17View::onToggle(uint8_t row, bool on)
 {
-    if (row == RowCanRx) {
-        state.settings.m17_can_rx = on;
-        lastCanRx_ = on;
-    }
+    /* CAN RX is the only Checkbox row. */
+    (void)row;
+    state.settings.m17_can_rx = on;
 }
 
 NavIntent M17View::onActivate(uint8_t row)
@@ -159,43 +137,8 @@ void M17View::callsignConfirm()
     strncpy(state.settings.callsign, callBuf_,
             sizeof(state.settings.callsign) - 1);
     state.settings.callsign[sizeof(state.settings.callsign) - 1] = '\0';
-    memcpy(lastCall_, state.settings.callsign, sizeof(lastCall_));
 
     endEdit();
-}
-
-void M17View::syncFromState(const state_t &s)
-{
-    View::syncFromState(s); /* top bar */
-
-    const settings_t &st = s.settings;
-    bool changed = false;
-
-    if (!(editing_ && editRow_ == RowCallsign)
-        && (strncmp(st.callsign, lastCall_, sizeof(lastCall_)) != 0)) {
-        memcpy(lastCall_, st.callsign, sizeof(lastCall_));
-        refreshCustom(RowCallsign);
-        changed = true;
-    }
-    /* Meta Txt is edited by the modal editor; its value points at the live
-     * settings buffer, so just repaint when it changes on return. */
-    if (strncmp(st.M17_meta_text, lastMeta_, sizeof(lastMeta_)) != 0) {
-        memcpy(lastMeta_, st.M17_meta_text, sizeof(lastMeta_));
-        changed = true;
-    }
-    if (!(editing_ && editRow_ == RowCan) && (st.m17_can != lastCan_)) {
-        lastCan_ = st.m17_can;
-        refreshValue(RowCan);
-        changed = true;
-    }
-    if (st.m17_can_rx != lastCanRx_) {
-        lastCanRx_ = st.m17_can_rx;
-        items_[RowCanRx].checked = st.m17_can_rx;
-        changed = true;
-    }
-
-    if (changed)
-        list_.invalidate();
 }
 
 bool M17View::onEditEvent(const Event &e)
@@ -215,7 +158,7 @@ bool M17View::onEditEvent(const Event &e)
             break;
 
         case TextInput::KeyResult::Editing:
-            refreshCustom(RowCallsign);
+            refreshCustom(RowCallsign, false);
             announceCursorChar();
             break;
 

@@ -5,102 +5,31 @@
  */
 
 #include "views/ChecklistView.hpp"
-#include "core/Event.hpp"
-#include "interfaces/keyboard.h"
-#include "hwconfig.h"
 
 namespace ortxui
 {
 
 void ChecklistView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
+    const settings_t &st = state.settings;
 
-    static constexpr UiText kLabels[RowCount] = {
-        STR(phonetic),
-        STR(macroLatching),
-    };
-
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
-    root_.setAxis(Axis::Column);
-
-    TopBar &bar = useTopBar(STR(accessibility));
-
-    for (uint8_t i = 0; i < RowCount; i++) {
-        items_[i].label = kLabels[i];
-        items_[i].checkbox = true;
-    }
-
-    list_.setItems(items_.data(), RowCount);
-    list_.setContentPad(4);
-    list_.setFlag(FLAG_FOCUSABLE, true);
-    list_.setGrow(1);
-
-    root_.addChild(&bar);
-    root_.addChild(&list_);
-    screen_.addChild(&root_);
-    root_.onLayout();
-    screen_.focusFirst();
-
-    screen_.markAllDirty();
-}
-
-void ChecklistView::syncFromState(const state_t &s)
-{
-    View::syncFromState(s); /* top bar */
-
-    if (seeded_)
-        return;
-
-    /* Seed the ticks from the matching settings flags (once). */
-    const settings_t &st = s.settings;
+    items_[RowPhonetic].label = STR(phonetic);
     items_[RowPhonetic].checked = (st.vpPhoneticSpell != 0u);
+    items_[RowLatch].label = STR(macroLatching);
     items_[RowLatch].checked = (st.macroMenuLatch != 0u);
+    for (ListItem &it : items_)
+        it.checkbox = true;
 
-    seeded_ = true;
-    list_.invalidate();
+    buildList(STR(accessibility), items_.data(), RowCount);
 }
 
-NavIntent ChecklistView::onEvent(const Event &e)
+void ChecklistView::onToggle(uint8_t row, bool on)
 {
-    if (e.kind == EvKind::Key) {
-        if ((e.keys & KEY_ESC) != 0u)
-            return NavIntent::pop();
-
-        if ((e.keys & KEY_ENTER) != 0u) {
-            ListItem *it = list_.selectedItem();
-            if ((it != nullptr) && it->checkbox) {
-                it->checked = !it->checked;
-                applyToggle(list_.selected(), it->checked);
-                list_.invalidate();
-                /* toggle: no nav change */
-                vpSay(it->checked ? STR(on) : STR(off));
-            }
-            return NavIntent::none();
-        }
-    }
-
-    screen_.dispatch(e);
-    return NavIntent::none();
-}
-
-void ChecklistView::applyToggle(uint16_t row, bool on)
-{
-    /* Write straight into the live settings, matching how the classic UI
-     * mutates state.settings in the FSM (same UI thread; persisted to flash at
-     * shutdown by state_terminate()). syncFromState only seeds once, so it
-     * won't fight these edits. */
-    switch (row) {
-        case RowPhonetic:
-            state.settings.vpPhoneticSpell = on ? 1u : 0u;
-            break;
-        case RowLatch:
-            state.settings.macroMenuLatch = on ? 1u : 0u;
-            break;
-        default:
-            break;
-    }
+    /* Settings reach flash at shutdown. */
+    if (row == RowPhonetic)
+        state.settings.vpPhoneticSpell = on ? 1u : 0u;
+    else
+        state.settings.macroMenuLatch = on ? 1u : 0u;
 }
 
 } // namespace ortxui

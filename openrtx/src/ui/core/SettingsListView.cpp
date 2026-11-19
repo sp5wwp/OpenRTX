@@ -7,6 +7,8 @@
 #include "core/SettingsListView.hpp"
 #include "core/Event.hpp"
 #include "core/UiMemory.hpp"
+#include "core/state.h"
+#include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"
 #include "hwconfig.h"
 
@@ -18,14 +20,20 @@ namespace ortxui
 void SettingsListView::buildList(const UiText &title, ListItem *items,
                                  uint8_t count)
 {
-    root_.setArea({ 0, 0, (uint16_t)CONFIG_SCREEN_WIDTH,
-                    (uint16_t)CONFIG_SCREEN_HEIGHT });
+    rows_ = items;
+    for (uint8_t i = 0; i < count; i++) {
+        if (!items[i].checkbox && !items[i].value.isSet())
+            items[i].value = values_[i];
+    }
+
+    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(title);
 
     list_.setItems(items, count);
-    list_.setContentPad(4);
+    list_.setContentPad(ROW_PAD);
     list_.setFlag(FLAG_FOCUSABLE, true);
     list_.setGrow(1);
 
@@ -35,6 +43,13 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
     root_.onLayout();
     screen_.focusFirst();
     screen_.markAllDirty();
+
+    for (uint8_t i = 0; i < count; i++) {
+        if (rowKind(i) == RowKind::Custom)
+            refreshCustom(i, false);
+        else if (items[i].value.str() == values_[i])
+            refreshValue(i, false);
+    }
 }
 
 void SettingsListView::save(UiMemory &m) const
@@ -67,45 +82,55 @@ void SettingsListView::restore(UiMemory &m)
         refreshValue(editRow_, false);
 }
 
+void SettingsListView::announceValue(uint8_t row, const UiText &value,
+                                     vpQueueFlags flags)
+{
+    if ((flags & vpqIncludeDescriptions) != 0) {
+        rows_[row].label.announce(static_cast<vpQueueFlags>(flags & vpqInit));
+        flags = static_cast<vpQueueFlags>(flags & ~vpqInit);
+    }
+    value.announce(flags);
+}
+
+void SettingsListView::speakValue(uint8_t row, const UiText &value)
+{
+    if (state.settings.vpLevel >= vpLow)
+        announceValue(row, value, vp_getVoiceLevelQueueFlags());
+}
+
 void SettingsListView::refreshValue(uint8_t row, bool speak)
 {
-    char inner[32];
+    char inner[VALUE_SIZE - 2];
     formatValue(row, inner, sizeof(inner));
 
-    /* The row being edited shows its value in <angle brackets> and speaks it per
-     * step (the label was announced on navigation). */
     if (editing_ && (row == editRow_)) {
-        char wrapped[40];
-        sniprintf(wrapped, sizeof(wrapped), "<%s>", inner);
-        setValueText(row, wrapped);
+        sniprintf(values_[row], VALUE_SIZE, "<%s>", inner);
         if (speak)
-            vpSay(inner);
+            speakValue(row, inner);
     } else {
-        setValueText(row, inner);
+        sniprintf(values_[row], VALUE_SIZE, "%s", inner);
     }
     list_.invalidate();
 }
 
 void SettingsListView::beginEdit()
 {
-    editRow_ = (uint8_t)list_.selected();
+    editRow_ = static_cast<uint8_t>(list_.selected());
     editing_ = true;
     onBeginEdit(editRow_);
     if (rowKind(editRow_) == RowKind::Custom)
-        refreshCustom(editRow_);
+        refreshCustom(editRow_, true);
     else
         refreshValue(editRow_);
-    list_.invalidate();
 }
 
 void SettingsListView::endEdit()
 {
     editing_ = false;
     if (rowKind(editRow_) == RowKind::Custom)
-        refreshCustom(editRow_);
+        refreshCustom(editRow_, false);
     else
-        refreshValue(editRow_);
-    list_.invalidate();
+        refreshValue(editRow_, false);
 }
 
 NavIntent SettingsListView::onEvent(const Event &e)
@@ -115,7 +140,7 @@ NavIntent SettingsListView::onEvent(const Event &e)
         if (onEditEvent(e))
             return NavIntent::none();
 
-        int dir = 0;
+        int8_t dir = 0;
         if (e.kind == EvKind::Encoder) {
             dir = e.encoder;
         } else if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
@@ -141,16 +166,14 @@ NavIntent SettingsListView::onEvent(const Event &e)
         if ((e.keys & KEY_ESC) != 0u)
             return NavIntent::pop();
         if ((e.keys & KEY_ENTER) != 0u) {
-            const uint8_t sel = (uint8_t)list_.selected();
+            const uint8_t sel = static_cast<uint8_t>(list_.selected());
             switch (rowKind(sel)) {
                 case RowKind::Checkbox: {
-                    ListItem *it = list_.selectedItem();
-                    if (it != nullptr) {
-                        it->checked = !it->checked;
-                        onToggle(sel, it->checked);
-                        list_.invalidate();
-                        vpSay(it->checked ? STR(on) : STR(off));
-                    }
+                    ListItem &it = rows_[sel];
+                    it.checked = !it.checked;
+                    onToggle(sel, it.checked);
+                    list_.invalidate();
+                    speakValue(sel, it.checked ? STR(on) : STR(off));
                     return NavIntent::none();
                 }
                 case RowKind::Action:

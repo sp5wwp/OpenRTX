@@ -17,14 +17,9 @@ namespace ortxui
 {
 
 /**
- * A settings screen in the "value row" style (mockup 2): a selectable list
- * where each row shows a setting label with its current value low-right.
- * syncFromState() keeps the values live from the state snapshot. ENTER on a row
- * enters an edit mode (the value is wrapped in <...>); UP/right raises it,
- * DOWN/left lowers it, and ENTER/ESC commits. Edits are written straight into
- * state.settings (with the display side-effect applied immediately) and
- * persisted to flash at shutdown, mirroring the classic UI. The base View
- * handles ESC/scroll when not editing.
+ * The Settings > Display screen: display, squelch and battery readout
+ * settings, each stepped in place. A change is written to state.settings and
+ * applied to the display at once; settings reach flash at shutdown.
  */
 class DisplayView : public SettingsListView
 {
@@ -35,44 +30,55 @@ public:
     /** Destructor. */
     ~DisplayView() = default;
 
+    /** Build the rows from the live settings. */
     void build() override;
-    void syncFromState(const state_t &s) override;
 
 private:
+    /**
+     * Get a row's setting.
+     *
+     * @param row: row.
+     * @return the value.
+     */
     uint8_t curValue(uint8_t row) const;
-    void applyValue(uint8_t row, uint8_t v); //< write settings + side-effect
 
-    /* SettingsListView hooks. */
+    /**
+     * Write a row's setting and apply it.
+     *
+     * @param row: row.
+     * @param v: new value.
+     */
+    void applyValue(uint8_t row, uint8_t v);
+
+    /** Render a row's value. */
     void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
 
+    /** Step a row's value within its range. */
+    void onAdjust(uint8_t row, int8_t dir) override;
+
+    /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowBrightness,
-        RowContrast,
-        RowSquelch,
-        RowVox,
-        RowTimer,   //< display standby timeout (settings.display_timer)
-        RowBattery, //< battery readout: percentage or icon (showBatteryIcon)
+        RowBrightness, ///< Backlight level
+        RowContrast,   ///< Display contrast
+        RowSquelch,    ///< FM squelch level
+        RowVox,        ///< Vox level
+        RowTimer,      ///< Standby timeout
+        RowBattery,    ///< Battery readout: percentage or icon
 #ifdef CONFIG_PIX_FMT_RGB565
-        RowTheme, //< Instrument vs High Contrast palette (settings.highContrast)
-        RowText,  //< Smooth (AA) vs Crisp (1bpp) text (settings.crispText)
+        RowTheme,      ///< Standard or high contrast palette
+        RowText,       ///< Smooth or crisp text
 #endif
         RowCount,
     };
 
-    /** Inclusive value range and step per row. */
+    /** Inclusive value range and step of a row. */
     struct Range {
-        uint8_t min;
-        uint8_t max;
-        uint8_t step;
+        uint8_t min;  ///< Lowest value
+        uint8_t max;  ///< Highest value
+        uint8_t step; ///< Step of one key press
     };
 
-    std::array<ListItem, RowCount> items_ = {};
-    char bufs_[RowCount][20] = {};
-    /* build() seeds last_ with the live value of every row before any sync, so a
-     * zero start never aliases a real value into a skipped first paint. */
-    std::array<uint8_t, RowCount> last_ = {};
+    std::array<ListItem, RowCount> items_ = {}; ///< Rows
 };
 
 } // namespace ortxui

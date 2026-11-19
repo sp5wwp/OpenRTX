@@ -17,12 +17,9 @@ namespace ortxui
 {
 
 /**
- * The Settings > FM screen in the "value row" style: the current channel's
- * CTCSS tone and its encode/decode enable, each edited by ENTER (value shown
- * as <..>) then UP/right / DOWN/left to cycle, ENTER/ESC to commit. Both edit
- * state.channel.fm directly and request an rtx resync so the change is applied
- * to the radio immediately, mirroring the classic FM settings menu. The base
- * View handles ESC/scroll when not editing.
+ * The Settings > FM screen: the current channel's CTCSS tone and whether it
+ * is encoded, decoded or both. Both edit state.channel.fm and reconfigure the
+ * radio at once.
  */
 class FmView : public SettingsListView
 {
@@ -33,26 +30,24 @@ public:
     /** Destructor. */
     ~FmView() = default;
 
+    /** Build the rows from the current channel. */
     void build() override;
-    void syncFromState(const state_t &s) override;
 
 private:
+    /** Render a row's value. */
     void formatValue(uint8_t row, char *out, size_t cap) override;
-    void setValueText(uint8_t row, const char *s) override;
-    void onAdjust(uint8_t row, int dir) override;
 
+    /** Step the tone or the tone enable. */
+    void onAdjust(uint8_t row, int8_t dir) override;
+
+    /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowTone,   //< CTCSS tone frequency (cycles the ctcss_tone table)
-        RowEnable, //< None / Encode / Decode / Both
+        RowTone,   ///< CTCSS tone frequency
+        RowEnable, ///< None, Encode, Decode or Both
         RowCount,
     };
 
-    std::array<ListItem, RowCount> items_ = {};
-    char bufs_[RowCount][12] = {};
-
-    /* Change-gate mirrors of the fields we render. */
-    uint8_t lastTone_ = 0xFFu;
-    uint8_t lastEnFlags_ = 0xFFu;
+    std::array<ListItem, RowCount> items_ = {}; ///< Rows
 };
 
 } // namespace ortxui

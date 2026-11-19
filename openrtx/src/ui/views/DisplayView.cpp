@@ -5,9 +5,8 @@
  */
 
 #include "views/DisplayView.hpp"
-#include "core/Event.hpp"
 #include "core/graphics.h"
-#include "interfaces/keyboard.h"
+#include "core/utils.h"
 #include "interfaces/display.h"
 #include "hwconfig.h"
 
@@ -16,29 +15,28 @@
 namespace ortxui
 {
 
+/** Row labels, in row order. */
+static constexpr UiText LABELS[] = {
+    STR(brightness), STR(contrast),  STR(squelch),
+    STR(vox),        STR(timer),     STR(battery),
+#ifdef CONFIG_PIX_FMT_RGB565
+    STR(theme),      STR(textStyle),
+#endif
+};
+
+/** Standby timer labels from TIMER_5S on; TIMER_OFF shows Off. */
+static constexpr const char *TIMER_LABELS[] = {
+    "5 s",   "10 s",  "15 s",  "20 s",   "25 s",   "30 s",   "1 min",  "2 min",
+    "3 min", "4 min", "5 min", "15 min", "30 min", "45 min", "1 hour",
+};
+
 void DisplayView::build()
 {
-    static constexpr UiText kLabels[RowCount] = {
-        STR(brightness), STR(contrast),  STR(squelch),
-        STR(vox),        STR(timer),     STR(battery),
-#ifdef CONFIG_PIX_FMT_RGB565
-        STR(theme),      STR(textStyle),
-#endif
-    };
+    static_assert(ARRAY_SIZE(LABELS) == RowCount, "a row has no label");
 
-    for (uint8_t i = 0; i < RowCount; i++) {
-        items_[i].label = kLabels[i];
-        items_[i].value = bufs_[i];
-    }
+    for (uint8_t i = 0; i < RowCount; i++)
+        items_[i].label = LABELS[i];
     buildList(STR(display), items_.data(), RowCount);
-
-    /* Seed the value strings and the change-gate from the live settings so no
-     * row starts blank (last_'s 0xFF sentinel would otherwise alias a real value
-     * like contrast = 255). */
-    for (uint8_t i = 0; i < RowCount; i++) {
-        refreshValue(i);
-        last_[i] = curValue(i);
-    }
 }
 
 uint8_t DisplayView::curValue(uint8_t row) const
@@ -69,8 +67,6 @@ uint8_t DisplayView::curValue(uint8_t row) const
 
 void DisplayView::applyValue(uint8_t row, uint8_t v)
 {
-    /* Write straight into the live settings and apply the display change now,
-     * as the classic UI does; flash persistence happens at shutdown. */
     switch (row) {
         case RowBrightness:
             state.settings.brightness = v;
@@ -87,8 +83,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
             state.settings.voxLevel = v;
             break;
         case RowTimer:
-            /* No immediate side-effect: the standby loop reads display_timer
-             * live each tick. */
+            /* The standby loop reads display_timer on every tick. */
             state.settings.display_timer = v;
             break;
         case RowBattery:
@@ -96,8 +91,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
             break;
 #ifdef CONFIG_PIX_FMT_RGB565
         case RowTheme:
-            /* themeColor() reads this live; repaint the whole screen so the new
-             * palette takes effect immediately. */
+            /* themeColor() reads this live: repaint in the new palette. */
             state.settings.highContrast = (v != 0u);
             screen_.markAllDirty();
             break;
@@ -114,14 +108,6 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
 
 void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
-    /* Standby-timer labels from 5 s on, mirroring the classic
-     * display_timer_values table; 0 is Off. */
-    static constexpr const char *kTimerLabels[] = {
-        "5 s",   "10 s",   "15 s",   "20 s",   "25 s",
-        "30 s",  "1 min",  "2 min",  "3 min",  "4 min",
-        "5 min", "15 min", "30 min", "45 min", "1 hour",
-    };
-
     const uint8_t v = curValue(row);
     if ((row == RowVox) && (v == 0u))
         sniprintf(out, cap, "%s", STR(off).str());
@@ -129,8 +115,8 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
         sniprintf(out, cap, "S%u", v);
     else if (row == RowTimer)
         sniprintf(out, cap, "%s",
-                  ((v == 0u) || (v >= 16u)) ? STR(off).str() :
-                                              kTimerLabels[v - 1u]);
+                  ((v == TIMER_OFF) || (v > TIMER_1H)) ? STR(off).str() :
+                                                         TIMER_LABELS[v - 1u]);
     else if (row == RowBattery)
         sniprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
 #ifdef CONFIG_PIX_FMT_RGB565
@@ -144,70 +130,29 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
         sniprintf(out, cap, "%u", v);
 }
 
-void DisplayView::setValueText(uint8_t row, const char *s)
+void DisplayView::onAdjust(uint8_t row, int8_t dir)
 {
-    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
-}
-
-void DisplayView::onAdjust(uint8_t row, int dir)
-{
-    static constexpr Range kRanges[RowCount] = {
-        { 5u, 100u, 5u }, //< Brightness
-        { 0u, 255u, 4u }, //< Contrast
-        { 0u, 15u, 1u },  //< Squelch
-        { 0u, 10u, 1u },  //< Vox
-        { 0u, 15u, 1u },  //< Timer (TIMER_OFF..TIMER_1H)
-        { 0u, 1u, 1u },   //< Battery (Percent / Icon)
+    static constexpr Range RANGES[RowCount] = {
+        { 5u, 100u, 5u },            // Brightness
+        { 0u, 255u, 4u },            // Contrast
+        { 0u, 15u, 1u },             // Squelch
+        { 0u, 10u, 1u },             // Vox
+        { TIMER_OFF, TIMER_1H, 1u }, // Timer
+        { 0u, 1u, 1u },              // Battery: percent or icon
 #ifdef CONFIG_PIX_FMT_RGB565
-        { 0u, 1u, 1u },   //< Theme (Standard / High Contrast)
-        { 0u, 1u, 1u },   //< Text (Smooth / Crisp)
+        { 0u, 1u, 1u },              // Theme: standard or high contrast
+        { 0u, 1u, 1u },              // Text: smooth or crisp
 #endif
     };
-    const Range &r = kRanges[row];
+    const Range &r = RANGES[row];
 
-    int v = (int)curValue(row) + dir * (int)r.step;
-    if (v < (int)r.min)
+    int v = curValue(row) + dir * r.step;
+    if (v < r.min)
         v = r.min;
-    if (v > (int)r.max)
+    if (v > r.max)
         v = r.max;
 
-    applyValue(row, (uint8_t)v);
-    last_[row] = (uint8_t)v; /* keep syncFromState from reformatting */
-}
-
-void DisplayView::syncFromState(const state_t &s)
-{
-    View::syncFromState(s); /* top bar */
-
-    const settings_t &st = s.settings;
-    const uint8_t vals[RowCount] = {
-        st.brightness,
-        st.contrast,
-        st.sqlLevel,
-        st.voxLevel,
-        (uint8_t)st.display_timer,
-        (uint8_t)(st.showBatteryIcon ? 1u : 0u),
-#ifdef CONFIG_PIX_FMT_RGB565
-        (uint8_t)(st.highContrast ? 1u : 0u),
-        (uint8_t)(st.crispText ? 1u : 0u),
-#endif
-    };
-    bool changed = false;
-
-    for (uint8_t i = 0; i < RowCount; i++) {
-        /* Don't clobber the row the user is actively editing. */
-        if (editing_ && (i == editRow_))
-            continue;
-        if (vals[i] == last_[i])
-            continue;
-
-        refreshValue(i);
-        last_[i] = vals[i];
-        changed = true;
-    }
-
-    if (changed)
-        list_.invalidate();
+    applyValue(row, static_cast<uint8_t>(v));
 }
 
 } // namespace ortxui
