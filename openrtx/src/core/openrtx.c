@@ -34,7 +34,6 @@ void openrtx_init()
 
     gfx_init();         // Initialize display and graphics driver
     kbd_init();         // Initialize keyboard driver
-    ui_init();          // Initialize user interface
     vp_init();          // Initialize voice prompts
     #ifdef CONFIG_SCREEN_CONTRAST
     display_setContrast(state.settings.contrast);
@@ -55,6 +54,9 @@ void openrtx_init()
             #endif
         }
     }
+
+    // The home screen reads the codeplug and speaks through voice prompts
+    ui_init();
 
     // Display splash screen, turn on backlight after a suitable time to
     // hide random pixels during render process
