@@ -9,7 +9,7 @@
 
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 #include "widgets/TextRow.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/FreqHero.hpp"

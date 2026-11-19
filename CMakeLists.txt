@@ -156,7 +156,9 @@ target_sources(app
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp
-    openrtx/src/ui/widgets/Widgets.cpp
+    openrtx/src/ui/widgets/Label.cpp
+    openrtx/src/ui/widgets/Panel.cpp
+    openrtx/src/ui/widgets/Bar.cpp
     openrtx/src/ui/widgets/List.cpp
     openrtx/src/ui/widgets/BatteryIcon.cpp
     openrtx/src/ui/widgets/TopBar.cpp

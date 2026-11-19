@@ -11,7 +11,7 @@
 #include "core/View.hpp"
 #include "views/InfoTable.hpp"
 #include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"
 #include "core/state.h"
 

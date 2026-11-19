@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#ifndef ORTX_UI_WIDGETS_HPP
-#define ORTX_UI_WIDGETS_HPP
+#ifndef ORTX_UI_LABEL_HPP
+#define ORTX_UI_LABEL_HPP
 
 #include "core/Object.hpp"
 #include "core/UiText.hpp"
@@ -78,47 +78,6 @@ private:
     Overflow overflow_ = Overflow::Wrap;
 };
 
-/**
- * A solid filled rectangle in a role colour (status/action bars, surfaces).
- */
-class Panel : public Object
-{
-public:
-    void setColor(Sem c)
-    {
-        color_ = c;
-    }
-
-    void draw(DrawCtx &d) override;
-
-private:
-    Sem color_ = Sem::Surface;
-};
-
-/**
- * A horizontal level/progress bar. `value` is clamped to [0, 1].
- */
-class Bar : public Object
-{
-public:
-    void setValue(float v)
-    {
-        value_ = v;
-    }
-    void setColors(Sem track, Sem fill)
-    {
-        track_ = track;
-        fill_ = fill;
-    }
-
-    void draw(DrawCtx &d) override;
-
-private:
-    float value_ = 0.0f;
-    Sem track_ = Sem::SurfaceHigh;
-    Sem fill_ = Sem::RxSuccess;
-};
-
 } // namespace ortxui
 
-#endif /* ORTX_UI_WIDGETS_HPP */
+#endif /* ORTX_UI_LABEL_HPP */

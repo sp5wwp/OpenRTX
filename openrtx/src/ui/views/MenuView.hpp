@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include "core/View.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/List.hpp"
 

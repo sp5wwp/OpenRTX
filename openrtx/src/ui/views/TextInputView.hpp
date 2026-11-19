@@ -10,7 +10,7 @@
 #include <cstdint>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 #include "widgets/TextInput.hpp"
 #include "style/Charsets.hpp"
 

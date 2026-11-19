@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 
 namespace ortxui
 {

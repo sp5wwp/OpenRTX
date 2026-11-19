@@ -13,7 +13,7 @@
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
 #include "widgets/Scratch.hpp"
-#include "widgets/Widgets.hpp"
+#include "widgets/Label.hpp"
 #include "hwconfig.h"
 
 #include <cstdio>
