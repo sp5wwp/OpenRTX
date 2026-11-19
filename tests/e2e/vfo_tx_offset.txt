@@ -18,10 +18,12 @@ wait_stable
 screenshot_sync tx_offset_rx.bmp
 # PTT engages TX: the hero shows the 446.600 TX frequency + orange meter.
 ptt
+wait_rtx TX
 wait_stable
 screenshot_sync tx_offset_tx.bmp
 # Release PTT: back to the 446.000 RX frequency.
 ptt
+wait_rtx RX
 wait_stable
 screenshot_sync tx_offset_rx2.bmp
 quit

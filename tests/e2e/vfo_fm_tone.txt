@@ -36,8 +36,10 @@ wait_stable
 screenshot_sync fm_tone_rx.bmp
 # PTT: the decode tone hides (no encode tone enabled).
 ptt
+wait_rtx TX
 wait_stable
 screenshot_sync fm_tone_tx.bmp
 ptt
+wait_rtx RX
 wait_stable
 quit
