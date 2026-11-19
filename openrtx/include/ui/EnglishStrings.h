@@ -153,5 +153,7 @@ const stringsTable_t englishStrings =
     .enterRx           = N_("ENTER RX"),
     // i18n: asks for the transmit frequency to be typed
     .enterTx           = N_("ENTER TX"),
+    // i18n: key hint, keep the key names; one line on a 128 px screen
+    .hintArrowsShort   = N_("Up/Dn L/R"),
 };
 #endif  // ENGLISHSTRINGS_H

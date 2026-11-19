@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRTX\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
-"POT-Creation-Date: 2026-11-18 16:43-0600\n"
+"POT-Creation-Date: 2026-11-19 10:37-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -520,4 +520,9 @@ msgstr ""
 #. i18n: asks for the transmit frequency to be typed
 #: openrtx/include/ui/EnglishStrings.h
 msgid "ENTER TX"
+msgstr ""
+
+#. i18n: key hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Up/Dn L/R"
 msgstr ""

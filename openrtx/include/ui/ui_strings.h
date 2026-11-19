@@ -142,6 +142,7 @@ typedef struct
     const char* outOfBand;
     const char* enterRx;
     const char* enterTx;
+    const char* hintArrowsShort;
 }
 stringsTable_t;
 

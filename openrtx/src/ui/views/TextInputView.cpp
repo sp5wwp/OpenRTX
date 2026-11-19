@@ -112,20 +112,15 @@ void TextInputView::afterEdit()
 void TextInputView::refreshHint()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
-    /* Where '#' is a command key (not the space key) it clears the field. */
-    const bool canClear = kbdHasNumeric() && !kbdSpaceOnHash();
 
-    if (kbdHasNumeric()) {
-        if (canClear)
-            hint_.setText(regular ? STR(hintKeypadClear) :
-                                    STR(hintKeypadClearShort));
-        else
-            hint_.setText(regular ? STR(hintKeypadSpace) :
-                                    STR(hintKeypadSpaceShort));
-    } else {
-        /* Key names only on the compact screen: nothing to translate. */
-        hint_.setText(regular ? STR(hintArrows) : UiText("Up/Dn L/R"));
-    }
+    if (kbdHasNumeric() && kbdSpaceOnHash())
+        hint_.setText(regular ? STR(hintKeypadSpace) :
+                                STR(hintKeypadSpaceShort));
+    else if (kbdHasNumeric())
+        hint_.setText(regular ? STR(hintKeypadClear) :
+                                STR(hintKeypadClearShort));
+    else
+        hint_.setText(regular ? STR(hintArrows) : STR(hintArrowsShort));
 }
 
 void TextInputView::commit()
