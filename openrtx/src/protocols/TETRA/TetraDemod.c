@@ -39,6 +39,16 @@
 #define ERR_FAST_ALPHA (1.0f / 64)
 #define SOFT_SCALE 40.0f /* Soft value at pi/4 from the decision boundary */
 /*
+ * Equalizer protection. A disturbance (lost samples, a timing jump, a burst
+ * of interference) feeds the equalizer garbage for a few symbols before the
+ * error averages notice; it can then sit where nothing converges any more.
+ * Keep the last taps found with a low error and go back to them when the
+ * loops stop adapting, and skip the update for a symbol whose own error is
+ * huge.
+ */
+#define EQ_GOOD_ERROR (0.30f * PI_F / 4)
+#define EQ_SKIP_ERROR (0.70f * PI_F / 4)
+/*
  * Losing the signal: random phases give an RMS error of 58% of pi/4, a
  * clean signal 10 to 20%. Above BAD_ERROR the loops stop adapting, and after
  * BAD_SYMBOLS (0.45 s) of it the demodulator acquires again from scratch.
@@ -141,6 +151,7 @@ void tetraDemod_init(struct tetraDemod *dm)
     dm->gain = 1.0f;
     dm->eq[EQ_HALF] = 1.0f;
     dm->eqInit[EQ_HALF] = 1.0f;
+    dm->eqGood[EQ_HALF] = 1.0f;
 }
 
 /**
@@ -166,6 +177,9 @@ static void reacquire(struct tetraDemod *dm)
     memset(dm->energy, 0, sizeof(dm->energy));
     memcpy(dm->eq, dm->eqInit, sizeof(dm->eq));
     dm->eqBias = 0;
+    memcpy(dm->eqGood, dm->eqInit, sizeof(dm->eqGood));
+    dm->eqBiasGood = 0;
+    dm->eqHeld = false;
     dm->errPow = 0;
     dm->errFast = 0;
     dm->badSymbols = 0;
@@ -291,12 +305,25 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
         pow += dm->eqIn[i] * dm->eqIn[i];
     }
     float e = decisionError(y);
-    if (dm->acquired && adapt) {
+    if (dm->acquired && adapt && fabsf(e) < EQ_SKIP_ERROR) {
         float mu = P.eqMu * e / pow;
         for (int i = 0; i < TETRA_DEMOD_EQ_TAPS; i++)
             dm->eq[i] -= mu * dm->eqIn[i];
         dm->eqBias -= P.eqBiasMu * e;
     }
+
+    if (dm->acquired) {
+        if (dm->errFast < EQ_GOOD_ERROR * EQ_GOOD_ERROR) {
+            memcpy(dm->eqGood, dm->eq, sizeof(dm->eq));
+            dm->eqBiasGood = dm->eqBias;
+            dm->eqHeld = false;
+        } else if (!adapt && !dm->eqHeld) {
+            memcpy(dm->eq, dm->eqGood, sizeof(dm->eq));
+            dm->eqBias = dm->eqBiasGood;
+            dm->eqHeld = true;
+        }
+    }
+
     dm->errPow += ERR_ALPHA * (e * e - dm->errPow);
     dm->errFast += ERR_FAST_ALPHA * (e * e - dm->errFast);
 
@@ -492,6 +519,7 @@ int tetraDemod_clockOffset(const struct tetraDemod *dm)
 void tetraDemod_setEqualizer(struct tetraDemod *dm, const float *taps)
 {
     memcpy(dm->eq, taps, sizeof(dm->eq));
+    memcpy(dm->eqGood, taps, sizeof(dm->eqGood));
     memcpy(dm->eqInit, taps, sizeof(dm->eqInit));
 }
 

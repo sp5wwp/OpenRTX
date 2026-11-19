@@ -90,6 +90,9 @@ struct tetraDemod {
     float eq[TETRA_DEMOD_EQ_TAPS];
     float eqBias;
     float eqInit[TETRA_DEMOD_EQ_TAPS]; /* Restored when re-acquiring */
+    float eqGood[TETRA_DEMOD_EQ_TAPS]; /* Last taps with a low error */
+    float eqBiasGood;
+    bool eqHeld;                       /* Restored since the error rose */
     /* Polarity */
     uint64_t srNorm;
     uint64_t srInv;
