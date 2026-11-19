@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <cstddef>
+#include "core/UiMemory.hpp"
 #include "core/View.hpp"
 #include "core/voicePrompts.h"
 #include "layout/Flex.hpp"
@@ -17,8 +18,6 @@
 
 namespace ortxui
 {
-
-struct ListEdit;
 
 /**
  * Base for the settings screens: a titled list of rows where ENTER edits a
@@ -66,8 +65,9 @@ public:
     void restore() override;
 
 protected:
-    static constexpr uint8_t ROWS_MAX = 8;   ///< Most rows a screen has
-    static constexpr size_t VALUE_SIZE = 24; ///< Value text with its brackets
+    static constexpr uint8_t ROWS_MAX = 8;    ///< Most rows a screen has
+    static constexpr size_t VALUE_SIZE = 24;  ///< Value text with its brackets
+    static constexpr size_t CUSTOM_EDIT = 16; ///< Largest Custom row edit state
 
     /**
      * Build the screen around the rows. Derived build() sets the labels, and
@@ -179,9 +179,9 @@ protected:
     /**
      * Store the editor state of the Custom row being edited.
      *
-     * @param e: where to store it.
+     * @param e: where to put() it.
      */
-    virtual void saveCustom(ListEdit &e) const
+    virtual void saveCustom(EditBlob<CUSTOM_EDIT> &e) const
     {
         (void)e;
     }
@@ -189,9 +189,9 @@ protected:
     /**
      * Reopen the Custom row editor from saveCustom().
      *
-     * @param e: stored editor state.
+     * @param e: what saveCustom() stored.
      */
-    virtual void restoreCustom(const ListEdit &e)
+    virtual void restoreCustom(const EditBlob<CUSTOM_EDIT> &e)
     {
         (void)e;
     }
@@ -248,6 +248,12 @@ protected:
     uint8_t editRow_ = 0;  ///< Row being edited
 
 private:
+    /** A row edit kept while the view is destroyed. */
+    struct RowEdit {
+        EditBlob<CUSTOM_EDIT> custom; ///< Editor state of a Custom row
+        uint8_t row;                  ///< Row being edited
+    };
+
     static constexpr int16_t ROW_PAD = 4;    ///< Vertical inset of each row
 
     ListItem *rows_ = nullptr;               ///< Row table, borrowed

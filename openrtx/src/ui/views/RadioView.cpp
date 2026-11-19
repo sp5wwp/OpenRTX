@@ -191,21 +191,25 @@ void RadioView::onBeginEdit(uint8_t row)
     offsetPristine_ = true;
 }
 
-void RadioView::saveCustom(ListEdit &e) const
+void RadioView::saveCustom(EditBlob<CUSTOM_EDIT> &e) const
 {
-    memcpy(e.text, offsetBuf_, sizeof(offsetBuf_));
-    e.cursor = static_cast<uint8_t>(offsetInput_.cursorSlot());
-    e.negative = offsetNeg_;
-    e.pristine = offsetPristine_;
+    OffsetEdit o;
+    memcpy(o.digits, offsetBuf_, sizeof(o.digits));
+    o.slot = static_cast<uint8_t>(offsetInput_.cursorSlot());
+    o.negative = offsetNeg_;
+    o.pristine = offsetPristine_;
+    e.put(o);
 }
 
-void RadioView::restoreCustom(const ListEdit &e)
+void RadioView::restoreCustom(const EditBlob<CUSTOM_EDIT> &e)
 {
+    OffsetEdit o;
+    e.get(o);
     bindOffset();
-    memcpy(offsetBuf_, e.text, sizeof(offsetBuf_));
-    offsetInput_.setCursorSlot(e.cursor);
-    offsetNeg_ = e.negative;
-    offsetPristine_ = e.pristine;
+    memcpy(offsetBuf_, o.digits, sizeof(offsetBuf_));
+    offsetInput_.setCursorSlot(o.slot);
+    offsetNeg_ = o.negative;
+    offsetPristine_ = o.pristine;
     refreshCustom(RowOffset, false);
 }
 

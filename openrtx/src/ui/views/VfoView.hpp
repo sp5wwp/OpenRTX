@@ -265,24 +265,29 @@ private:
      * current frequency; TX derives from RX plus the channel's offset. */
     static constexpr uint8_t kFreqDigits = 7;
 
-    /**
-     * A frequency or M17 destination entry, edited in place through one
-     * TextInput. It exists only while open, so
-     * the screen does not carry it the rest of the time.
-     */
-    struct Entry {
-        TextInput input;               ///< The RX or TX digits, or the dest
+    /** The part of an entry that save() keeps while the view is destroyed. */
+    struct EntryState {
         long long errorAt = 0;         ///< getTick() of an out-of-band commit
-        int64_t shift = 0;             ///< TX - RX at open (repeater offset)
+        int32_t shift = 0;             ///< TX - RX at open (repeater offset)
         char rx[kFreqDigits + 1] = {}; ///< RX digits
         char tx[kFreqDigits + 1] = {}; ///< TX digits
-        char dst[10] = {};             ///< Destination, as settings.m17_dest
-        uint8_t rxSlot = 0;            ///< RX cursor slot while TX is edited
-        uint8_t txSlot = 0;            ///< TX cursor slot while RX is edited
-        bool destination = false;      ///< Editing the dest, not the freq
-        bool txField = false;          ///< Editing TX rather than RX
-        bool rxPristine = true;        ///< RX untouched: a digit retypes it
-        bool txPristine = true;        ///< TX still derived from RX + offset
+        char dst[sizeof(settings_t::m17_dest)] = {}; ///< Destination
+        uint8_t rxSlot = 0;       ///< RX cursor slot while TX is edited
+        uint8_t txSlot = 0;       ///< TX cursor slot while RX is edited
+        uint8_t dstCursor = 0;    ///< Destination cursor, set by save()
+        bool destination = false; ///< Editing the dest, not the freq
+        bool txField = false;     ///< Editing TX rather than RX
+        bool rxPristine = true;   ///< RX untouched: a digit retypes it
+        bool txPristine = true;   ///< TX still derived from RX + offset
+    };
+
+    /**
+     * A frequency or M17 destination entry, edited in place through one
+     * TextInput. It exists only while open, so the screen does not carry it
+     * the rest of the time.
+     */
+    struct Entry : EntryState {
+        TextInput input; ///< The RX or TX digits, or the destination
     };
 
     Screen screen_;      ///< Widget tree

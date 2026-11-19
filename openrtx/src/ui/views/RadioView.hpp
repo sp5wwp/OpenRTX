@@ -73,10 +73,10 @@ private:
     void announceKey(uint32_t keys);
 
     /** Keep the offset being entered. */
-    void saveCustom(ListEdit &e) const override;
+    void saveCustom(EditBlob<CUSTOM_EDIT> &e) const override;
 
     /** Reopen the offset entry kept by saveCustom(). */
-    void restoreCustom(const ListEdit &e) override;
+    void restoreCustom(const EditBlob<CUSTOM_EDIT> &e) override;
 
     /** Bind the offset entry to its buffer, emptied. */
     void bindOffset();
@@ -106,9 +106,19 @@ private:
         RowCount,
     };
 
+    static constexpr size_t OFFSET_SIZE = 8; ///< Offset digits and the NUL
+
+    /** An offset entry kept while the view is destroyed. */
+    struct OffsetEdit {
+        char digits[OFFSET_SIZE]; ///< Offset digits
+        uint8_t slot;             ///< Cursor slot
+        bool negative;            ///< The split is negative
+        bool pristine;            ///< The digits are still the pre-fill
+    };
+
     std::array<ListItem, RowCount> items_ = {}; ///< Rows
     TextInput offsetInput_;                     ///< Offset keypad entry
-    char offsetBuf_[8] = { 0 };                 ///< Offset digits, in kHz
+    char offsetBuf_[OFFSET_SIZE] = { 0 };       ///< Offset digits, in kHz
     bool offsetNeg_ = false;     ///< The split is negative (tx < rx)
     bool offsetPristine_ = true; ///< Pre-filled: the first digit retypes it
 };

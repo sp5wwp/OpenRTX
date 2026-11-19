@@ -307,65 +307,37 @@ void VfoView::build()
 
 void VfoView::save() const
 {
-    InlineEdit &ie = uiMemory.inlineEdit;
-    if (entry_ == nullptr) {
-        if (ie.owner == id())
-            ie.owner = ViewId::Count;
+    if (entry_ == nullptr)
         return;
-    }
 
-    const Entry &n = *entry_;
-    VfoEdit &e = ie.vfo;
-    e.input = !n.destination;
-    e.destination = n.destination;
-    e.txField = n.txField;
-    e.rxPristine = n.rxPristine;
-    e.txPristine = n.txPristine;
-    e.shift = static_cast<int32_t>(n.shift);
-    e.errorAt = n.errorAt;
-    if (n.destination) {
-        memcpy(e.text[0], n.dst, sizeof(n.dst));
-        e.cursor[0] = static_cast<uint8_t>(n.input.cursor());
-    } else {
-        const uint8_t slot = static_cast<uint8_t>(n.input.cursorSlot());
-        memcpy(e.text[0], n.rx, sizeof(n.rx));
-        memcpy(e.text[1], n.tx, sizeof(n.tx));
-        e.cursor[0] = n.txField ? n.rxSlot : slot;
-        e.cursor[1] = n.txField ? slot : n.txSlot;
-    }
-    ie.owner = id();
+    /* Fold the live cursor into the state kept. */
+    EntryState s = *entry_;
+    const uint8_t slot = static_cast<uint8_t>(entry_->input.cursorSlot());
+    if (s.destination)
+        s.dstCursor = static_cast<uint8_t>(entry_->input.cursor());
+    else if (s.txField)
+        s.txSlot = slot;
+    else
+        s.rxSlot = slot;
+    uiMemory.inlineEdit.keep(id(), s);
 }
 
 void VfoView::restore()
 {
-    InlineEdit &ie = uiMemory.inlineEdit;
-    if (ie.owner != id())
-        return;
-    ie.owner = ViewId::Count;
-
-    const VfoEdit &e = ie.vfo;
-    if (!openEntry(e.destination))
+    EntryState s;
+    if (!uiMemory.inlineEdit.take(id(), s) || !openEntry(s.destination))
         return;
 
     Entry &n = *entry_;
-    if (e.destination) {
-        memcpy(n.dst, e.text[0], sizeof(n.dst));
-        bindDst(e.cursor[0]);
+    static_cast<EntryState &>(n) = s;
+    if (n.destination) {
+        bindDst(n.dstCursor);
         showDstEdit(true);
         renderDstEdit();
         return;
     }
 
-    memcpy(n.rx, e.text[0], sizeof(n.rx));
-    memcpy(n.tx, e.text[1], sizeof(n.tx));
-    n.rxSlot = e.cursor[0];
-    n.txSlot = e.cursor[1];
-    bindField(e.txField, e.txField ? n.txSlot : n.rxSlot);
-    n.txField = e.txField;
-    n.rxPristine = e.rxPristine;
-    n.txPristine = e.txPristine;
-    n.shift = e.shift;
-    n.errorAt = e.errorAt;
+    bindField(n.txField, n.txField ? n.txSlot : n.rxSlot);
     refreshInput();
 }
 
@@ -777,7 +749,8 @@ bool VfoView::openInput()
 
     Entry &n = *entry_;
     const channel_t &ch = state.channel;
-    n.shift = (int64_t)ch.tx_frequency - (int64_t)ch.rx_frequency;
+    n.shift = static_cast<int32_t>(static_cast<int64_t>(ch.tx_frequency)
+                                   - static_cast<int64_t>(ch.rx_frequency));
 
     /* TX starts empty; RX is fully pre-filled with the cursor at the end. TX
      * is derived lazily on the first switch / commit. */

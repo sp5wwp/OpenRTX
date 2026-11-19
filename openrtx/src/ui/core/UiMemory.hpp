@@ -12,7 +12,10 @@
 #endif
 
 #include <array>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 #include "core/ViewId.hpp"
 #include "core/UiText.hpp"
 #include "core/messages.h"
@@ -51,40 +54,77 @@ struct ComposeDraft {
 };
 
 /**
- * Frequency or destination entry of the VFO screen.
+ * Bytes holding a view's own edit state, which only that view reads back.
  */
-struct VfoEdit {
-    long long errorAt;             ///< Tick of an out-of-band commit, 0 if none
-    int32_t shift;                 ///< TX - RX at the start of the entry
-    char text[2][10];              ///< RX and TX digits, or the destination
-    std::array<uint8_t, 2> cursor; ///< Cursor of each field
-    bool input;                    ///< Frequency entry open
-    bool txField;                  ///< Editing TX rather than RX
-    bool rxPristine;               ///< RX still pre-filled
-    bool txPristine;               ///< TX still derived from RX
-    bool destination;              ///< Destination entry open
-};
+template <size_t N>
+struct EditBlob {
+    /**
+     * Store an edit state.
+     *
+     * @param v: edit state, plain data.
+     */
+    template <typename T>
+    void put(const T &v)
+    {
+        static_assert(sizeof(T) <= N, "edit state too large");
+        static_assert(std::is_trivially_copyable<T>::value,
+                      "edit state must be plain data");
+        memcpy(bytes, &v, sizeof(T));
+    }
 
-/**
- * Row being edited in place in a settings list.
- */
-struct ListEdit {
-    char text[10];  ///< Text or digits of a custom row
-    uint8_t cursor; ///< Cursor of a custom row
-    uint8_t row;    ///< Row being edited
-    bool negative;  ///< Custom row flag: negative offset
-    bool pristine;  ///< Custom row flag: value still pre-filled
+    /**
+     * Read back an edit state stored by put().
+     *
+     * @param v: edit state of the type put() stored.
+     */
+    template <typename T>
+    void get(T &v) const
+    {
+        static_assert(sizeof(T) <= N, "edit state too large");
+        memcpy(&v, bytes, sizeof(T));
+    }
+
+    uint8_t bytes[N]; ///< The stored state
 };
 
 /**
  * In-place edit of a view the macro menu replaced, put back when it closes.
  */
 struct InlineEdit {
-    union {
-        VfoEdit vfo;   ///< VFO screen entry
-        ListEdit list; ///< Settings list entry
-    };
-    ViewId owner;      ///< View that saved the edit, ViewId::Count if none
+    /**
+     * Keep a view's edit state.
+     *
+     * @param id: view keeping it.
+     * @param v: edit state, plain data.
+     */
+    template <typename T>
+    void keep(ViewId id, const T &v)
+    {
+        state.put(v);
+        owner = id;
+    }
+
+    /**
+     * Take back the edit state a view kept, once.
+     *
+     * @param id: view taking it.
+     * @param v: edit state of the type keep() stored.
+     * @return false if the view kept none.
+     */
+    template <typename T>
+    bool take(ViewId id, T &v)
+    {
+        if (owner != id)
+            return false;
+        owner = ViewId::Count;
+        state.get(v);
+        return true;
+    }
+
+    static constexpr size_t SIZE = 48; ///< Largest edit state a view keeps
+
+    EditBlob<SIZE> state;              ///< Edit state of the owner
+    ViewId owner; ///< View that kept it, ViewId::Count if none
 };
 
 /**

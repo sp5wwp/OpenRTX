@@ -70,10 +70,13 @@ private:
     void refreshCustom(uint8_t row, bool speak) override;
 
     /** Keep the callsign being edited. */
-    void saveCustom(ListEdit &e) const override;
+    void saveCustom(EditBlob<CUSTOM_EDIT> &e) const override;
 
     /** Reopen the callsign edit kept by saveCustom(). */
-    void restoreCustom(const ListEdit &e) override;
+    void restoreCustom(const EditBlob<CUSTOM_EDIT> &e) override;
+
+    /** Bind the callsign editor to callBuf_. */
+    void bindCallsign();
 
     /** Store the edited callsign and leave the edit. */
     void callsignConfirm();
@@ -88,6 +91,12 @@ private:
         RowCan,      ///< Channel access number
         RowCanRx,    ///< Receive only the CAN
         RowCount,
+    };
+
+    /** A callsign edit kept while the view is destroyed. */
+    struct CallsignEdit {
+        char text[sizeof(settings_t::callsign)]; ///< Callsign being edited
+        uint16_t cursor;                         ///< Cursor position
     };
 
     std::array<ListItem, RowCount> items_ = {};       ///< Rows

@@ -75,25 +75,32 @@ void M17View::onBeginEdit(uint8_t row)
         return;
     strncpy(callBuf_, state.settings.callsign, sizeof(callBuf_) - 1);
     callBuf_[sizeof(callBuf_) - 1] = '\0';
-    callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
-                        TextInput::Mode::SingleLine, FONT_SIZE_8PT);
-    callsign_.setMultiTap(MTAP_CALLSIGN);
+    bindCallsign();
     callsign_.begin();
 }
 
-void M17View::saveCustom(ListEdit &e) const
+void M17View::bindCallsign()
 {
-    memcpy(e.text, callBuf_, sizeof(callBuf_));
-    e.cursor = static_cast<uint8_t>(callsign_.cursor());
-}
-
-void M17View::restoreCustom(const ListEdit &e)
-{
-    memcpy(callBuf_, e.text, sizeof(callBuf_));
     callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
                         TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     callsign_.setMultiTap(MTAP_CALLSIGN);
-    callsign_.resume(e.cursor, 0);
+}
+
+void M17View::saveCustom(EditBlob<CUSTOM_EDIT> &e) const
+{
+    CallsignEdit c;
+    memcpy(c.text, callBuf_, sizeof(c.text));
+    c.cursor = callsign_.cursor();
+    e.put(c);
+}
+
+void M17View::restoreCustom(const EditBlob<CUSTOM_EDIT> &e)
+{
+    CallsignEdit c;
+    e.get(c);
+    memcpy(callBuf_, c.text, sizeof(callBuf_));
+    bindCallsign();
+    callsign_.resume(c.cursor, 0);
     refreshCustom(RowCallsign, false);
 }
 

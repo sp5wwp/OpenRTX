@@ -54,30 +54,26 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
 
 void SettingsListView::save() const
 {
-    InlineEdit &ie = uiMemory.inlineEdit;
-    if (!editing_) {
-        if (ie.owner == id())
-            ie.owner = ViewId::Count;
+    if (!editing_)
         return;
-    }
 
-    ie.list.row = editRow_;
+    RowEdit e = {};
+    e.row = editRow_;
     if (rowKind(editRow_) == RowKind::Custom)
-        saveCustom(ie.list);
-    ie.owner = id();
+        saveCustom(e.custom);
+    uiMemory.inlineEdit.keep(id(), e);
 }
 
 void SettingsListView::restore()
 {
-    InlineEdit &ie = uiMemory.inlineEdit;
-    if (ie.owner != id())
+    RowEdit e;
+    if (!uiMemory.inlineEdit.take(id(), e))
         return;
-    ie.owner = ViewId::Count;
 
-    editRow_ = ie.list.row;
+    editRow_ = e.row;
     editing_ = true;
     if (rowKind(editRow_) == RowKind::Custom)
-        restoreCustom(ie.list);
+        restoreCustom(e.custom);
     else
         refreshValue(editRow_, false);
 }
