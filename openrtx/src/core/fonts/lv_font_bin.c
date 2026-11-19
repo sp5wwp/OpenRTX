@@ -60,6 +60,15 @@ enum lvCmapFormat {
 };
 
 /**
+ * Limits of the head fields the decoder handles.
+ */
+enum lvLimits {
+    LV_FONT_MAX_BPP = 4,         ///< Widest pixel, in bits
+    LV_FONT_MAX_COMPRESSION = 2, ///< Highest compression format
+    LV_FONT_MAX_FIELD_BITS = 16, ///< Widest glyph header field, in bits
+};
+
+/**
  * Read a little-endian u16.
  *
  * @param p: first byte.
@@ -152,16 +161,17 @@ bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size)
 
     /* Walk the remaining length-prefixed tables (cmap, loca, glyf). */
     uint32_t off = rd_u32(h); /* head table length */
-    while ((off + LV_TABLE_HDR) <= size) {
+    while (off <= (size - LV_TABLE_HDR)) {
         uint32_t tlen = rd_u32(data + off);
         const uint8_t *tag = data + off + LV_TABLE_TAG;
-        if ((tlen == 0u) || ((off + tlen) > size))
+        if ((tlen < LV_TABLE_HDR) || (tlen > (size - off)))
             break;
         if (memcmp(tag, "cmap", 4) == 0)
             f->cmap_off = off;
         else if (memcmp(tag, "loca", 4) == 0) {
             f->loca_off = off;
-            f->glyph_cnt = rd_u32(data + off + LV_TABLE_COUNT);
+            if (tlen >= LV_TABLE_ENTRIES)
+                f->glyph_cnt = rd_u32(data + off + LV_TABLE_COUNT);
         } else if (memcmp(tag, "glyf", 4) == 0)
             f->glyf_off = off;
         off += tlen;
@@ -231,6 +241,33 @@ static uint32_t cmap_lookup(const struct lvFont *f, uint32_t code)
     return 0u;
 }
 
+/**
+ * Get the byte span of a glyph within the glyf table. The loca table stores
+ * glyph_cnt start offsets and no end sentinel, so the last glyph ends at the
+ * end of the glyf table.
+ *
+ * @param f: font.
+ * @param gid: glyph id, below glyph_cnt.
+ * @param start: offset of the glyph's first byte from the glyf table start.
+ * @param next: offset just past the glyph's last byte.
+ */
+static void glyph_span(const struct lvFont *f, uint32_t gid, uint32_t *start,
+                       uint32_t *next)
+{
+    const uint8_t *loca = f->data + f->loca_off + LV_TABLE_ENTRIES;
+    const bool last = ((gid + 1u) >= f->glyph_cnt);
+
+    if (f->loc_fmt) {
+        *start = rd_u32(loca + gid * 4);
+        *next = last ? rd_u32(f->data + f->glyf_off) :
+                       rd_u32(loca + (gid + 1) * 4);
+    } else {
+        *start = rd_u16(loca + gid * 2);
+        *next = last ? rd_u32(f->data + f->glyf_off) :
+                       rd_u16(loca + (gid + 1) * 2);
+    }
+}
+
 bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g)
 {
     if (!f->valid)
@@ -244,22 +281,8 @@ bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g)
         return false;
     }
 
-    /* loca[gid] and loca[gid+1] give this glyph's byte span within glyf. The
-     * loca table stores exactly glyph_cnt start-offsets with NO trailing end
-     * sentinel, so the last glyph's end is the glyf table length, not
-     * loca[glyph_cnt] (which is out of bounds — either glyf-header bytes or
-     * 4-byte-alignment padding, the latter reading 0 and dropping the glyph). */
-    const uint8_t *loca = f->data + f->loca_off + LV_TABLE_ENTRIES;
-    const uint32_t glyf_len = rd_u32(f->data + f->glyf_off);
-    const bool last = (gid + 1u >= f->glyph_cnt);
     uint32_t start, next;
-    if (f->loc_fmt) {
-        start = rd_u32(loca + gid * 4);
-        next = last ? glyf_len : rd_u32(loca + (gid + 1) * 4);
-    } else {
-        start = rd_u16(loca + gid * 2);
-        next = last ? glyf_len : rd_u16(loca + (gid + 1) * 2);
-    }
+    glyph_span(f, gid, &start, &next);
     if (next <= start)
         return false;
 
@@ -288,7 +311,119 @@ bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g)
     g->src = f;
     g->bmp = gd;
     g->bmp_bit = bit;
+    g->bmp_end = 8u * (next - start);
     return true;
+}
+
+/**
+ * Check that the font's head fields have values the decoder handles.
+ *
+ * @param f: font.
+ * @return true if they do.
+ */
+static bool head_ok(const struct lvFont *f)
+{
+    return (f->bpp >= 1u) && (f->bpp <= LV_FONT_MAX_BPP)
+        && (f->compression <= LV_FONT_MAX_COMPRESSION)
+        && (f->xy_bits <= LV_FONT_MAX_FIELD_BITS)
+        && (f->wh_bits <= LV_FONT_MAX_FIELD_BITS)
+        && (f->adv_bits <= LV_FONT_MAX_FIELD_BITS);
+}
+
+/**
+ * Check that the cmap sub-headers, and the data of each sub-table, lie inside
+ * the cmap table.
+ *
+ * @param f: font.
+ * @return true if they do.
+ */
+static bool cmap_ok(const struct lvFont *f)
+{
+    const uint8_t *c = f->data + f->cmap_off;
+    const uint32_t len = rd_u32(c);
+    if (len < LV_TABLE_ENTRIES)
+        return false;
+
+    const uint32_t count = rd_u32(c + LV_TABLE_COUNT);
+    if (count > ((len - LV_TABLE_ENTRIES) / LV_CMAP_SUB_SIZE))
+        return false;
+
+    for (uint32_t i = 0; i < count; i++) {
+        const uint8_t *sh = c + LV_TABLE_ENTRIES + i * LV_CMAP_SUB_SIZE;
+        const uint32_t data_off = rd_u32(sh + LV_CMAP_DATA_OFF);
+        const uint32_t entries = rd_u16(sh + LV_CMAP_ENTRIES);
+        uint32_t bytes;
+
+        switch (sh[LV_CMAP_FORMAT]) {
+            case LV_CMAP_FORMAT0:
+                bytes = rd_u16(sh + LV_CMAP_RANGE_LEN);
+                break;
+            case LV_CMAP_SPARSE:
+                bytes = 4u * entries;
+                break;
+            case LV_CMAP_FORMAT0_TINY:
+                bytes = 0u;
+                break;
+            case LV_CMAP_SPARSE_TINY:
+                bytes = 2u * entries;
+                break;
+            default:
+                return false;
+        }
+
+        if ((data_off > len) || (bytes > (len - data_off)))
+            return false;
+    }
+
+    return true;
+}
+
+/**
+ * Check that the loca table holds glyph_cnt entries and that each glyph lies
+ * inside the glyf table and holds its header, and for a raw font its pixels.
+ *
+ * @param f: font.
+ * @return true if they do.
+ */
+static bool glyphs_ok(const struct lvFont *f)
+{
+    const uint32_t loca_len = rd_u32(f->data + f->loca_off);
+    const uint32_t entry = f->loc_fmt ? 4u : 2u;
+    if ((loca_len < LV_TABLE_ENTRIES)
+        || (f->glyph_cnt > ((loca_len - LV_TABLE_ENTRIES) / entry)))
+        return false;
+
+    const uint32_t glyf_len = rd_u32(f->data + f->glyf_off);
+    const uint32_t box = f->adv_bits + (2u * f->xy_bits);
+    const uint32_t hdr = box + (2u * f->wh_bits);
+
+    for (uint32_t gid = 0; gid < f->glyph_cnt; gid++) {
+        uint32_t start, next;
+        glyph_span(f, gid, &start, &next);
+        if (next <= start)
+            continue; /* lvFont_getGlyph() never returns it */
+        if (next > glyf_len)
+            return false;
+
+        const uint32_t bits = 8u * (next - start);
+        if (hdr > bits)
+            return false;
+        if (f->compression != 0u)
+            continue; /* rle_bits() stops at the glyph's end */
+
+        const uint8_t *gd = f->data + f->glyf_off + start;
+        const uint64_t w = rd_bits(gd, box, f->wh_bits);
+        const uint64_t h = rd_bits(gd, box + f->wh_bits, f->wh_bits);
+        if ((w * h * f->bpp) > (bits - hdr))
+            return false;
+    }
+
+    return true;
+}
+
+bool lvFont_check(const struct lvFont *f)
+{
+    return f->valid && head_ok(f) && cmap_ok(f) && glyphs_ok(f);
 }
 
 /**
@@ -342,6 +477,23 @@ enum rleRun {
 };
 
 /**
+ * Read the next value of an RLE bitstream. A compressed glyph's length is
+ * known only once it is decoded, so a value past the glyph's data reads 0.
+ *
+ * @param r: decoder state.
+ * @param n: value width in bits.
+ * @return the value.
+ */
+static uint32_t rle_bits(struct lvGlyphRows *r, uint8_t n)
+{
+    uint32_t v = 0;
+    if ((r->rdp <= r->end) && (n <= (r->end - r->rdp)))
+        v = rd_bits(r->in, r->rdp, n);
+    r->rdp += n;
+    return v;
+}
+
+/**
  * Decode the next pixel value of an RLE-compressed glyph.
  *
  * @param r: decoder state.
@@ -352,45 +504,39 @@ static uint8_t rle_next(struct lvGlyphRows *r)
     uint8_t ret = 0;
 
     if (r->state == RLE_SINGLE) {
-        ret = (uint8_t)rd_bits(r->in, r->rdp, r->bpp);
+        ret = (uint8_t)rle_bits(r, r->bpp);
         if (r->started && (r->prev == ret)) {
             r->cnt = 0;
             r->state = RLE_REPEAT;
         }
         r->started = true;
         r->prev = ret;
-        r->rdp += r->bpp;
     } else if (r->state == RLE_REPEAT) {
-        uint8_t v = (uint8_t)rd_bits(r->in, r->rdp, 1);
+        uint8_t v = (uint8_t)rle_bits(r, 1);
         r->cnt++;
-        r->rdp += 1;
         if (v == 1) {
             ret = r->prev;
             if (r->cnt == RLE_COLLAPSE_COUNT) {
-                r->cnt = (int32_t)rd_bits(r->in, r->rdp, RLE_COUNTER_BITS);
-                r->rdp += RLE_COUNTER_BITS;
+                r->cnt = (int32_t)rle_bits(r, RLE_COUNTER_BITS);
                 if (r->cnt != 0) {
                     r->state = RLE_COUNTER;
                 } else {
-                    ret = (uint8_t)rd_bits(r->in, r->rdp, r->bpp);
+                    ret = (uint8_t)rle_bits(r, r->bpp);
                     r->prev = ret;
-                    r->rdp += r->bpp;
                     r->state = RLE_SINGLE;
                 }
             }
         } else {
-            ret = (uint8_t)rd_bits(r->in, r->rdp, r->bpp);
+            ret = (uint8_t)rle_bits(r, r->bpp);
             r->prev = ret;
-            r->rdp += r->bpp;
             r->state = RLE_SINGLE;
         }
     } else { /* RLE_COUNTER */
         ret = r->prev;
         r->cnt--;
         if (r->cnt == 0) {
-            ret = (uint8_t)rd_bits(r->in, r->rdp, r->bpp);
+            ret = (uint8_t)rle_bits(r, r->bpp);
             r->prev = ret;
-            r->rdp += r->bpp;
             r->state = RLE_SINGLE;
         }
     }
@@ -404,6 +550,7 @@ bool lvGlyph_beginRows(const struct lvGlyph *g, struct lvGlyphRows *r)
 
     r->in = g->bmp;
     r->rdp = g->bmp_bit;
+    r->end = g->bmp_end;
     r->cnt = 0;
     r->w = g->box_w;
     r->bpp = g->src->bpp;

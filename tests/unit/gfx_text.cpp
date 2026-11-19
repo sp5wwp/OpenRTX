@@ -564,6 +564,56 @@ TEST_CASE("gfx_setFontSource replaces a font and restores the built-in one",
     REQUIRE(gfx_getFontLineHeight(FONT_SIZE_5PT) == h5);
 }
 
+/** Offset of the u32 entry count of a cmap or loca table. */
+static constexpr size_t TABLE_COUNT = 8;
+
+/** Offset of the first loca entry. */
+static constexpr size_t TABLE_ENTRIES = 12;
+
+/**
+ * Write a little-endian u32.
+ *
+ * @param p: first byte.
+ * @param v: value.
+ */
+static void putU32(uint8_t *p, uint32_t v)
+{
+    for (size_t i = 0; i < 4; i++)
+        p[i] = static_cast<uint8_t>(v >> (8 * i));
+}
+
+TEST_CASE("gfx_setFontSource rejects a font whose offsets leave the blob",
+          "[gfx][font]")
+{
+    const uint8_t h5 = gfx_getFontLineHeight(FONT_SIZE_5PT);
+    std::vector<uint8_t> blob(_font_16_start, _font_16_end);
+    struct lvFont font;
+    REQUIRE(
+        lvFont_init(&font, blob.data(), static_cast<uint32_t>(blob.size())));
+    REQUIRE(lvFont_check(&font));
+
+    SECTION("cmap sub-headers past the cmap table")
+    {
+        putU32(&blob[font.cmap_off + TABLE_COUNT], 0x10000000u);
+    }
+
+    SECTION("a glyph past the glyf table")
+    {
+        const size_t entry = font.loc_fmt ? 4 : 2;
+        uint8_t *loca = &blob[font.loca_off + TABLE_ENTRIES];
+        memset(loca + entry, 0xFF, entry);
+    }
+
+    SECTION("more glyphs than the loca table holds")
+    {
+        putU32(&blob[font.loca_off + TABLE_COUNT], 0x10000000u);
+    }
+
+    REQUIRE_FALSE(gfx_setFontSource(FONT_SET_TEXT, FONT_SIZE_5PT, blob.data(),
+                                    static_cast<uint32_t>(blob.size())));
+    REQUIRE(gfx_getFontLineHeight(FONT_SIZE_5PT) == h5);
+}
+
 /* -----------------------------------------------------------------------
  * Built-in font limits.
  * ----------------------------------------------------------------------- */
@@ -572,7 +622,8 @@ TEST_CASE("gfx_setFontSource replaces a font and restores the built-in one",
  * Get the widest glyph box of a font blob.
  *
  * @param path: font blob path.
- * @return the width in pixels, or 0 if the blob cannot be read.
+ * @return the width in pixels, or 0 if the blob cannot be read or is
+ * malformed.
  */
 static uint32_t maxGlyphWidth(const char *path)
 {
@@ -587,7 +638,8 @@ static uint32_t maxGlyphWidth(const char *path)
     fclose(fp);
 
     struct lvFont font;
-    if (!lvFont_init(&font, data.data(), (uint32_t)data.size()))
+    if (!lvFont_init(&font, data.data(), (uint32_t)data.size())
+        || !lvFont_check(&font))
         return 0;
 
     uint32_t width = 0;

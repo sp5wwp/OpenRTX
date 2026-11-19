@@ -245,8 +245,7 @@ bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
 
     if (data != NULL) {
         struct lvFont probe;
-        lvFont_init(&probe, data, len);
-        if (!probe.valid)
+        if (!lvFont_init(&probe, data, len) || !lvFont_check(&probe))
             return false;
     }
 

@@ -59,6 +59,7 @@ struct lvGlyph {
     const struct lvFont *src; ///< Font it was found in, whose bpp applies
     const uint8_t *bmp;       ///< Base pointer of the pixel bitstream
     uint32_t bmp_bit;         ///< Bit offset of the first pixel in bmp
+    uint32_t bmp_end;         ///< Bit offset in bmp where the glyph ends
     int16_t ofs_x;            ///< Baseline-left to glyph box left
     int16_t ofs_y;            ///< Baseline to glyph box BOTTOM
     uint16_t box_w;           ///< Glyph bitmap width, pixels
@@ -75,6 +76,16 @@ struct lvGlyph {
  * @return false, leaving f->valid false, on a malformed or unsupported blob.
  */
 bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size);
+
+/**
+ * Check that every table entry and glyph of a parsed font lies inside its
+ * blob, for a font from outside the firmware. Run it once, when the font is
+ * installed: lvFont_init() checks only where the tables are.
+ *
+ * @param f: font parsed by lvFont_init().
+ * @return false if the font is malformed.
+ */
+bool lvFont_check(const struct lvFont *f);
 
 /**
  * Look up a code point, in the font or its fallbacks.
@@ -106,6 +117,7 @@ uint8_t lvGlyph_pixelRaw(const struct lvGlyph *g, uint16_t x, uint16_t y);
 struct lvGlyphRows {
     const uint8_t *in;                ///< Glyph bitstream
     uint32_t rdp;                     ///< Bit position of the next value
+    uint32_t end;                     ///< Bit position where the glyph ends
     int32_t cnt;                      ///< RLE repeat counter
     uint16_t w;                       ///< Glyph width, pixels
     uint8_t bpp;                      ///< Bits per pixel
