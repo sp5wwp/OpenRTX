@@ -50,16 +50,6 @@ void List::setPosition(const ListPos &p)
     invalidate();
 }
 
-ListItem *List::selectedItem()
-{
-    /* Model-backed rows are read-only (fetched into a scratch on draw), so
-     * there is no persistent item to mutate; callers read selected() instead. */
-    if ((items_ == nullptr) || (selected_ >= count_))
-        return nullptr;
-    /* The item table is borrowed and owned mutably by the view. */
-    return const_cast<ListItem *>(&items_[selected_]);
-}
-
 void List::getItem(uint16_t i, ListItem &out) const
 {
     if (model_ != nullptr)

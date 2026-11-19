@@ -40,7 +40,8 @@ struct ListPos {
  * scrolls by a row instead, stopping at either end. Rows are separated by thin
  * dividers and the selected row is filled with the primary colour.
  *
- * The item table or model is borrowed, not copied.
+ * The item table or model is borrowed, not copied, and only read: a view
+ * that changes a row writes its own table.
  */
 class List : public Object
 {
@@ -122,13 +123,6 @@ public:
      * @param title: text spoken first, such as the screen title; may be empty.
      */
     void announceSelection(const UiText &title = UiText()) const;
-
-    /**
-     * Get the selected row of a fixed table, to change it in place.
-     *
-     * @return the row, or nullptr for a model.
-     */
-    ListItem *selectedItem();
 
     /**
      * Move the selection, or the window of a list without one.
