@@ -284,17 +284,17 @@ void VfoView::build()
     } else {
         /* Compact layout: no room for a second line, so the index, name and
          * detail share one row (the name ellipsizes) as before. */
-        chanRow_.setAxis(Axis::Row);
-        chanRow_.setAlign(Align::Center);
-        chanRow_.setJustify(Justify::Start);
-        chanRow_.setPadding(4, 0);
-        chanRow_.setGap(6);
-        chanRow_.setBasis(rowH);
-        chanRow_.addChild(&chanIdx_);
-        chanRow_.addChild(&chanName_);
-        chanRow_.addChild(&chanDetail_);
+        nameRow_.setAxis(Axis::Row);
+        nameRow_.setAlign(Align::Center);
+        nameRow_.setJustify(Justify::Start);
+        nameRow_.setPadding(4, 0);
+        nameRow_.setGap(6);
+        nameRow_.setBasis(rowH);
+        nameRow_.addChild(&chanIdx_);
+        nameRow_.addChild(&chanName_);
+        nameRow_.addChild(&chanDetail_);
 
-        root_.addChild(&chanRow_);
+        root_.addChild(&nameRow_);
     }
 
     root_.addChild(&spacer_);
@@ -416,13 +416,12 @@ void VfoView::syncMode(const channel_t &ch)
      * tone), shown only when that direction's tone is enabled. Blank
      * otherwise. */
     const char *tag = "";
-    modeSub_[0] = '\0';
+    char sub[sizeof(modeSub_)] = "";
     if (ch.mode == OPMODE_M17) {
         const bool txing = (rtx_getStatus()->opStatus == TX);
         if (txing || state.settings.m17_can_rx) {
             tag = "CAN";
-            snprintf(modeSub_, sizeof(modeSub_), "%u",
-                     (unsigned)state.settings.m17_can);
+            snprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
         }
     } else if (ch.mode == OPMODE_FM) {
         const bool txing = (rtx_getStatus()->opStatus == TX);
@@ -432,7 +431,7 @@ void VfoView::syncMode(const channel_t &ch)
             const uint8_t idx = showTx ? ch.fm.txTone : ch.fm.rxTone;
             const uint16_t t = ctcss_tone[idx];
             tag = "CTCSS";
-            snprintf(modeSub_, sizeof(modeSub_), "%u.%u", (unsigned)(t / 10),
+            snprintf(sub, sizeof(sub), "%u.%u", (unsigned)(t / 10),
                      (unsigned)(t % 10));
         }
     }
@@ -440,13 +439,15 @@ void VfoView::syncMode(const channel_t &ch)
     /* Repaint only when the visible pair changes: covers mode/bandwidth, the
      * FM tone, and the dynamic M17 CAN (settings + TX/RX). The mode label sits
      * on the frequency baseline (hero); the detail sits under it on the channel
-     * row. */
-    char sig[28];
-    snprintf(sig, sizeof(sig), "%s|%s|%s", m1, tag, modeSub_);
-    if (strcmp(sig, modeCache_) == 0)
+     * row. The texts shown are literals, so their pointers stay valid. */
+    const bool same = (shownMode_ != nullptr) && (strcmp(m1, shownMode_) == 0)
+                   && (strcmp(tag, shownTag_) == 0)
+                   && (strcmp(sub, modeSub_) == 0);
+    if (same)
         return;
-    strncpy(modeCache_, sig, sizeof(modeCache_) - 1);
-    modeCache_[sizeof(modeCache_) - 1] = '\0';
+    shownMode_ = m1;
+    shownTag_ = tag;
+    memcpy(modeSub_, sub, sizeof(modeSub_));
 
     hero_.setMode(m1);
     hero_.invalidate();
@@ -893,7 +894,7 @@ void VfoView::exitInput()
 
     /* Force the change-gated readout to repaint from live state next sync. */
     lastFreq_ = 0xFFFFFFFFu;
-    modeCache_[0] = '\1';
+    shownMode_ = nullptr;
     idxCache_[0] = '\1';
     nameCache_[0] = '\1';
     screen_.markAllDirty();

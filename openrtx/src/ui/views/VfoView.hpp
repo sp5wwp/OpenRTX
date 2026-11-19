@@ -131,9 +131,8 @@ private:
 
     Flex root_;
     FreqHero hero_;
-    Flex chanRow_; //< compact only: index + name + detail on one row
-    Flex nameRow_; //< regular: full-width destination / name headline
-    Flex metaRow_; //< regular: index (left) + CAN / tone detail (right)
+    Flex nameRow_; ///< Name headline; compact: index + name + detail
+    Flex metaRow_; ///< Regular only: index (left) + CAN / tone (right)
     Label chanIdx_;
     Label chanName_;
     TextRow chanDetail_; //< right-aligned CAN (M17) / tone (FM)
@@ -147,7 +146,8 @@ private:
     char nameCache_[40] = { 1, 0 }; //< composed name, or bracket-cursor dest
     char readoutBuf_[12] = { 0 };
     char modeSub_[8] = { 0 }; //< mode-stack 2nd line: PL tone (FM) / CAN (M17)
-    char modeCache_[24] = { 1, 0 }; //< change-gate for the "m1|m2" mode stack
+    const char *shownMode_ = nullptr; ///< Mode label shown, nullptr to repaint
+    const char *shownTag_ = "";       ///< CAN / CTCSS tag shown
 
     uint32_t lastFreq_ = 0xFFFFFFFFu;
     uint8_t lastStatus_ = 0xFFu;
