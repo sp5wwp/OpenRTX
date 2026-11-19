@@ -220,13 +220,13 @@ void gfx_setFontMono(bool on);
 /**
  * Font sets: each holds one font per fontSize_t.
  */
-typedef enum {
+enum fontSet {
     FONT_SET_TEXT = 0, ///< Default text font
     FONT_SET_CRISP,    ///< 1bpp text font, see gfx_setFontMono(); the text
                        ///< font itself on monochrome targets
     FONT_SET_ICONS,    ///< App icon glyphs, fallback of the text fonts
     FONT_SET_NUM
-} fontSet_t;
+};
 
 /**
  * Use a font from outside the firmware, e.g. a font pack, instead of the
@@ -240,7 +240,7 @@ typedef enum {
  * @return false, leaving the font unchanged, if the data is not a valid font
  * or the table cannot be allocated.
  */
-bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
+bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
                        uint32_t len);
 
 /**

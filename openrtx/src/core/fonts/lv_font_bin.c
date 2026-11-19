@@ -56,7 +56,7 @@ static int32_t rd_bits_signed(const uint8_t *base, uint32_t bitpos, uint8_t n)
 
 /* ---- header parse ---- */
 
-bool lvFont_init(lvFont_t *f, const uint8_t *data, uint32_t size)
+bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size)
 {
     memset(f, 0, sizeof(*f));
     if ((data == NULL) || (size < 12) || (memcmp(data + 4, "head", 4) != 0))
@@ -112,7 +112,7 @@ bool lvFont_init(lvFont_t *f, const uint8_t *data, uint32_t size)
  * 3 = sparse_tiny. Handling all four keeps non-contiguous / non-Latin ranges
  * (e.g. FontAwesome, future UTF-8) working, not just ASCII. */
 
-static uint32_t cmap_lookup(const lvFont_t *f, uint32_t code)
+static uint32_t cmap_lookup(const struct lvFont *f, uint32_t code)
 {
     const uint8_t *c = f->data + f->cmap_off;
     uint32_t count = rd_u32(c + 8);
@@ -163,7 +163,7 @@ static uint32_t cmap_lookup(const lvFont_t *f, uint32_t code)
 
 /* ---- glyph geometry ---- */
 
-bool lvFont_getGlyph(const lvFont_t *f, uint32_t code, lvGlyph_t *g)
+bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g)
 {
     if (!f->valid)
         return false;
@@ -236,8 +236,8 @@ static uint8_t opa_scale(uint8_t v, uint8_t bpp)
     return (uint8_t)((v * 255u + maxv / 2u) / maxv);
 }
 
-uint8_t lvGlyph_pixelRaw(const lvFont_t *f, const lvGlyph_t *g, uint16_t x,
-                         uint16_t y)
+uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
+                         uint16_t x, uint16_t y)
 {
     /* Decode with the font the glyph came from (a fallback may differ from f). */
     if (g->src != NULL)
@@ -307,7 +307,7 @@ static uint8_t rle_next(struct lvGlyphRows *r)
     return ret;
 }
 
-bool lvGlyph_beginRows(const lvFont_t *f, const lvGlyph_t *g,
+bool lvGlyph_beginRows(const struct lvFont *f, const struct lvGlyph *g,
                        struct lvGlyphRows *r)
 {
     /* Decode with the font the glyph came from (a fallback may differ from f). */

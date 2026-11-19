@@ -560,13 +560,13 @@ static uint32_t maxGlyphWidth(const char *path)
         data.insert(data.end(), buf, buf + n);
     fclose(fp);
 
-    lvFont_t font;
+    struct lvFont font;
     if (!lvFont_init(&font, data.data(), (uint32_t)data.size()))
         return 0;
 
     uint32_t width = 0;
     for (uint32_t cp = 0; cp < 0x110000; cp++) {
-        lvGlyph_t g;
+        struct lvGlyph g;
         if (!lvFont_getGlyph(&font, cp, &g))
             continue;
         if (g.box_w > width)
@@ -610,12 +610,12 @@ TEST_CASE("Glyph rows decode as the pixels read one by one", "[gfx][text]")
         data.insert(data.end(), buf, buf + n);
     fclose(fp);
 
-    lvFont_t font;
+    struct lvFont font;
     REQUIRE(lvFont_init(&font, data.data(), (uint32_t)data.size()));
     REQUIRE(font.compression == 0);
 
     for (uint32_t cp = 0x20; cp < 0x7F; cp++) {
-        lvGlyph_t g;
+        struct lvGlyph g;
         struct lvGlyphRows rows;
         if (!lvFont_getGlyph(&font, cp, &g)
             || !lvGlyph_beginRows(&font, &g, &rows))

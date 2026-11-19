@@ -31,7 +31,7 @@ extern "C" {
 
 /** A parsed font blob. Populated by lvFont_init(); holds only offsets into the
  *  embedded data, no glyph is decoded until lvFont_getGlyph(). */
-typedef struct lvFont {
+struct lvFont {
     const uint8_t *data; //< the whole .bin blob (borrowed, not owned)
     uint32_t size;       //< blob length in bytes
 
@@ -59,10 +59,10 @@ typedef struct lvFont {
     uint8_t adv_fmt;  //< 0 = integer px, 1 = FP4.4
     uint8_t loc_fmt;  //< loca entry size: 0 = uint16, 1 = uint32
     bool valid;       //< true once successfully parsed
-} lvFont_t;
+};
 
 /** A located glyph: geometry plus a pointer to the start of its pixel bits. */
-typedef struct {
+struct lvGlyph {
     /* The font the glyph was actually resolved from — the queried font or one
      * of its fallbacks. Pixel decoding must use this font's parameters (bpp,
      * compression, ...), so lvFont_decodeGlyph()/lvGlyph_pixelRaw() read it. */
@@ -75,20 +75,20 @@ typedef struct {
     const uint8_t *bmp; //< base pointer for the pixel bitstream
     uint32_t bmp_bit;   //< bit offset of the first pixel within *bmp
     uint32_t data_len; //< bytes from the glyph start to the next glyph (for RLE)
-} lvGlyph_t;
+};
 
 /** Parse a font blob header and locate its tables. Returns false on a malformed
  *  or unsupported blob (leaves f->valid = false). */
-bool lvFont_init(lvFont_t *f, const uint8_t *data, uint32_t size);
+bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size);
 
 /** Resolve a Unicode codepoint to its glyph geometry. Returns false when the
  *  font has no glyph for `code` (the caller should skip it). */
-bool lvFont_getGlyph(const lvFont_t *f, uint32_t code, lvGlyph_t *g);
+bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g);
 
 /** Alpha (0..255) of pixel (x,y) within a glyph box, for RAW (uncompressed)
  *  fonts — 1bpp fonts are always raw. Out-of-range returns 0. */
-uint8_t lvGlyph_pixelRaw(const lvFont_t *f, const lvGlyph_t *g, uint16_t x,
-                         uint16_t y);
+uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
+                         uint16_t x, uint16_t y);
 
 /** Widest glyph, in pixels, that lvGlyph_beginRows() decodes. */
 #define LV_GLYPH_MAX_WIDTH 64
@@ -120,7 +120,7 @@ struct lvGlyphRows {
  * @param r: decoder state to start.
  * @return false on a zero-size glyph or one wider than LV_GLYPH_MAX_WIDTH.
  */
-bool lvGlyph_beginRows(const lvFont_t *f, const lvGlyph_t *g,
+bool lvGlyph_beginRows(const struct lvFont *f, const struct lvGlyph *g,
                        struct lvGlyphRows *r);
 
 /**

@@ -65,13 +65,13 @@ DECL_FONT_MONO_BLOB(12);
 DECL_FONT_MONO_BLOB(16);
 #endif
 
-typedef struct {
+struct fontBlob {
     const uint8_t *start;
     const uint8_t *end;
-} fontBlob_t;
+};
 
 /* Ordered by the fontSize_t enum. */
-static const fontBlob_t fontBlobs[FONT_SIZE_NUM] = {
+static const struct fontBlob fontBlobs[FONT_SIZE_NUM] = {
     { _font_5_start, _font_5_end },   // FONT_SIZE_5PT
     { _font_6_start, _font_6_end },   // FONT_SIZE_6PT
     { _font_8_start, _font_8_end },   // FONT_SIZE_8PT
@@ -85,7 +85,7 @@ static const fontBlob_t fontBlobs[FONT_SIZE_NUM] = {
  * app-specific glyphs like the M17 logo (U+E900) — kept separate from the
  * FontAwesome subset merged into the text font. Layered onto each text font so
  * those code points resolve through the fallback chain (see lv_font_bin). */
-static const fontBlob_t iconBlobs[FONT_SIZE_NUM] = {
+static const struct fontBlob iconBlobs[FONT_SIZE_NUM] = {
     { _icons_5_start, _icons_5_end },   // FONT_SIZE_5PT
     { _icons_6_start, _icons_6_end },   // FONT_SIZE_6PT
     { _icons_8_start, _icons_8_end },   // FONT_SIZE_8PT
@@ -97,7 +97,7 @@ static const fontBlob_t iconBlobs[FONT_SIZE_NUM] = {
 
 #ifdef CONFIG_FONT_AA
 /* Parallel 1bpp text set (crisp / non-anti-aliased), selected at run time. */
-static const fontBlob_t monoFontBlobs[FONT_SIZE_NUM] = {
+static const struct fontBlob monoFontBlobs[FONT_SIZE_NUM] = {
     { _font_mono_5_start, _font_mono_5_end },   // FONT_SIZE_5PT
     { _font_mono_6_start, _font_mono_6_end },   // FONT_SIZE_6PT
     { _font_mono_8_start, _font_mono_8_end },   // FONT_SIZE_8PT
@@ -120,7 +120,7 @@ enum fontSlot {
 };
 
 /* Built-in blobs for each font slot, the default source of every font. */
-static const fontBlob_t *const builtinBlobs[FONT_SLOT_NUM] = {
+static const struct fontBlob *const builtinBlobs[FONT_SLOT_NUM] = {
     fontBlobs,     // FONT_SLOT_TEXT
 #ifdef CONFIG_FONT_AA
     monoFontBlobs, // FONT_SLOT_CRISP
@@ -131,7 +131,7 @@ static const fontBlob_t *const builtinBlobs[FONT_SLOT_NUM] = {
 /* Fonts installed with gfx_setFontSource(), a NULL start meaning built-in.
  * The table is allocated when the first font is installed, so a firmware
  * that installs none does not carry it. */
-static fontBlob_t (*fontSources)[FONT_SIZE_NUM] = NULL;
+static struct fontBlob (*fontSources)[FONT_SIZE_NUM] = NULL;
 
 /* What a decoded font is used for: drawing text, or as the icon fallback
  * layered onto the text font. */
@@ -144,7 +144,7 @@ enum fontRole {
 /* The decoded font of each role, for the slot and size last asked for.
  * Decoding is a header parse, cheap next to drawing the glyphs, so the sizes
  * take turns in one font per role instead of each keeping its own. */
-static lvFont_t g_fonts[FONT_ROLE_NUM];
+static struct lvFont g_fonts[FONT_ROLE_NUM];
 
 /* Slot and size each role holds, as 1 + slot * FONT_SIZE_NUM + size; 0 for
  * none. */
@@ -157,7 +157,7 @@ static bool g_use_mono_font = false;
  * @param font: font to initialise.
  * @param blob: blob to decode.
  */
-static void decode_blob(lvFont_t *font, const fontBlob_t *blob)
+static void decode_blob(struct lvFont *font, const struct fontBlob *blob)
 {
     lvFont_init(font, blob->start, (uint32_t)(blob->end - blob->start));
 }
@@ -168,7 +168,7 @@ static void decode_blob(lvFont_t *font, const fontBlob_t *blob)
  * @param set: font set.
  * @return the slot.
  */
-static enum fontSlot font_slot(fontSet_t set)
+static enum fontSlot font_slot(enum fontSet set)
 {
     switch (set) {
 #ifdef CONFIG_FONT_AA
@@ -191,13 +191,13 @@ static enum fontSlot font_slot(fontSet_t set)
  * @param size: font size.
  * @return the font, possibly invalid if the built-in blob is.
  */
-static lvFont_t *load_font(fontSet_t set, fontSize_t size)
+static struct lvFont *load_font(enum fontSet set, fontSize_t size)
 {
     const enum fontSlot slot = font_slot(set);
     const enum fontRole role = (slot == FONT_SLOT_ICONS) ? FONT_ROLE_ICONS :
                                                            FONT_ROLE_TEXT;
     const uint8_t key = (uint8_t)(1 + slot * FONT_SIZE_NUM + size);
-    lvFont_t *font = &g_fonts[role];
+    struct lvFont *font = &g_fonts[role];
 
     if (g_font_key[role] != key) {
         const bool installed = (fontSources != NULL)
@@ -220,19 +220,19 @@ static lvFont_t *load_font(fontSet_t set, fontSize_t size)
  * @param size: font size.
  * @return the font.
  */
-static const lvFont_t *get_font(fontSize_t size)
+static const struct lvFont *get_font(fontSize_t size)
 {
     if ((unsigned)size >= FONT_SIZE_NUM)
         size = FONT_SIZE_5PT;
 
-    fontSet_t set = FONT_SET_TEXT;
+    enum fontSet set = FONT_SET_TEXT;
 #ifdef CONFIG_FONT_AA
     // Mono targets ship only the 1bpp set, so crisp is the text font there
     if (g_use_mono_font)
         set = FONT_SET_CRISP;
 #endif
-    lvFont_t *font = load_font(set, size);
-    lvFont_t *icons = load_font(FONT_SET_ICONS, size);
+    struct lvFont *font = load_font(set, size);
+    struct lvFont *icons = load_font(FONT_SET_ICONS, size);
     font->fallback = icons->valid ? icons : NULL;
 
     return font;
@@ -243,14 +243,14 @@ void gfx_setFontMono(bool on)
     g_use_mono_font = on;
 }
 
-bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
+bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,
                        uint32_t len)
 {
     if (((unsigned)set >= FONT_SET_NUM) || ((unsigned)size >= FONT_SIZE_NUM))
         return false;
 
     if (data != NULL) {
-        lvFont_t probe;
+        struct lvFont probe;
         lvFont_init(&probe, data, len);
         if (!probe.valid)
             return false;
@@ -718,11 +718,11 @@ static uint8_t utf8_decode(const char *s, uint32_t *cp)
     return 1;
 }
 
-static inline uint16_t get_line_size(const lvFont_t *f, const char *text,
+static inline uint16_t get_line_size(const struct lvFont *f, const char *text,
                                      uint16_t length, uint16_t max_width)
 {
     uint16_t line_size = 0;
-    lvGlyph_t glyph;
+    struct lvGlyph glyph;
     uint16_t i = 0;
     while (i < length && text[i] != '\n' && text[i] != '\r') {
         uint32_t cp;
@@ -763,8 +763,8 @@ static inline uint16_t get_reset_x(textAlign_t alignment, uint16_t line_size,
 uint8_t gfx_getFontHeight(fontSize_t size)
 {
     /* Historic semantics: the cap height, proxied by the '|' glyph box. */
-    const lvFont_t *f = get_font(size);
-    lvGlyph_t glyph;
+    const struct lvFont *f = get_font(size);
+    struct lvGlyph glyph;
     if (lvFont_getGlyph(f, '|', &glyph))
         return (uint8_t)glyph.box_h;
     return (uint8_t)f->ascent;
@@ -801,14 +801,14 @@ point_t gfx_printBuffer(point_t start, fontSize_t size, textAlign_t alignment,
 uint16_t gfx_measureText(fontSize_t size, const char *buf, uint16_t start_x,
                          uint16_t max_x, size_t char_count)
 {
-    const lvFont_t *f = get_font(size);
+    const struct lvFont *f = get_font(size);
     size_t len = strlen(buf);
     if (char_count < len)
         len = char_count;
 
     uint16_t cur_x = start_x;
     uint16_t cur_y = f->line_height;
-    lvGlyph_t glyph;
+    struct lvGlyph glyph;
 
     unsigned i = 0;
     while (i < len) {
@@ -861,7 +861,7 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
                                const char *buf, uint16_t max_x,
                                int16_t clip_top_y, int16_t clip_bot_y)
 {
-    const lvFont_t *f = get_font(size);
+    const struct lvFont *f = get_font(size);
 
     size_t len = strlen(buf);
 
@@ -872,7 +872,7 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
     start.x = reset_x;
     int16_t saved_start_y = start.y;
     uint16_t line_h = 0;
-    lvGlyph_t glyph;
+    struct lvGlyph glyph;
 
     unsigned i = 0;
     while (i < len) {
