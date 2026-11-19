@@ -306,10 +306,13 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
             macroLatched = false;
         } else if (macroLatched) {
             closeMacro();
+            vp_beep(BEEP_FUNCTION_LATCH_OFF, LONG_BEEP);
             return false;
         }
-        if (msg.long_press && (state.settings.macroMenuLatch != 0u))
+        if (msg.long_press && (state.settings.macroMenuLatch != 0u)) {
             macroLatched = true;
+            vp_beep(BEEP_FUNCTION_LATCH_ON, LONG_BEEP);
+        }
     } else if (!moni && macroOpen && !macroLatched) {
         closeMacro();
         return false; /* the release only closes the menu */

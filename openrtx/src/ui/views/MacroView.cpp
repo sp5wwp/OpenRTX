@@ -9,6 +9,7 @@
 #include "core/UiMemory.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
+#include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"
 #include "interfaces/display.h"
 #include "hwconfig.h"
@@ -29,6 +30,18 @@ static int digitFromKeys(uint32_t keys)
 {
     const uint32_t digits = keys & 0x3FFu;
     return (digits == 0u) ? -1 : __builtin_ctz(digits);
+}
+
+/**
+ * Speak the CTCSS settings of the current channel.
+ *
+ * @param flags: voice prompt queue flags.
+ */
+static void announceTones(enum vpQueueFlags flags)
+{
+    const channel_t &ch = state.channel;
+    vp_announceCTCSS(ch.fm.rxToneEn, ch.fm.rxTone, ch.fm.txToneEn, ch.fm.txTone,
+                     flags);
 }
 
 /**
@@ -128,6 +141,8 @@ void MacroView::stepSquelch(int dir)
     if ((uint8_t)v != state.settings.sqlLevel) {
         state.settings.sqlLevel = (uint8_t)v;
         requestSyncRtx();
+        vp_announceSquelch(state.settings.sqlLevel,
+                           vp_getVoiceLevelQueueFlags());
     }
 }
 
@@ -135,6 +150,7 @@ void MacroView::doAction(uint8_t number)
 {
     channel_t &ch = state.channel;
     const bool fm = (ch.mode == OPMODE_FM);
+    const enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
 
     switch (number) {
         case 1: /* tone encode/decode cycle (FM) */
@@ -144,6 +160,8 @@ void MacroView::doAction(uint8_t number)
                 ch.fm.txToneEn = (uint8_t)((f >> 1) & 1);
                 ch.fm.rxToneEn = (uint8_t)(f & 1);
                 requestSyncRtx();
+                announceTones(
+                    static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));
             }
             break;
         case 2: /* tone down (FM) */
@@ -152,6 +170,7 @@ void MacroView::doAction(uint8_t number)
                                          % CTCSS_FREQ_NUM);
                 ch.fm.rxTone = ch.fm.txTone;
                 requestSyncRtx();
+                announceTones(flags);
             }
             break;
         case 3: /* tone up (FM) */
@@ -159,12 +178,15 @@ void MacroView::doAction(uint8_t number)
                 ch.fm.txTone = (uint8_t)((ch.fm.txTone + 1) % CTCSS_FREQ_NUM);
                 ch.fm.rxTone = ch.fm.txTone;
                 requestSyncRtx();
+                announceTones(
+                    static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));
             }
             break;
         case 4: /* bandwidth (FM) */
             if (fm) {
                 ch.bandwidth = (uint8_t)((ch.bandwidth + 1) % 2);
                 requestSyncRtx();
+                vp_announceBandwidth(ch.bandwidth, flags);
             }
             break;
         case 5: /* radio mode */
@@ -174,12 +196,14 @@ void MacroView::doAction(uint8_t number)
             ch.mode = OPMODE_FM;
 #endif
             requestSyncRtx();
+            vp_announceRadioMode(ch.mode, flags);
             break;
         case 6: /* power cycle 1 / 2.5 / 5 W */
             ch.power = (ch.power == 1000u) ? 2500u :
                        (ch.power == 2500u) ? 5000u :
                                              1000u;
             requestSyncRtx();
+            vp_announcePower(ch.power, flags);
             break;
 #ifdef CONFIG_SCREEN_BRIGHTNESS
         case 7:   /* brightness down */
@@ -191,6 +215,7 @@ void MacroView::doAction(uint8_t number)
                 b = 100;
             state.settings.brightness = (uint8_t)b;
             display_setBacklightLevel((uint8_t)b);
+            vp_announceSettingsInt(&currentLanguage->brightness, flags, b);
             break;
         }
 #endif
