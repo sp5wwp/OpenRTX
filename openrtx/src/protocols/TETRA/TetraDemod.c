@@ -87,6 +87,8 @@ struct tetraDemodParams tetraDemodParams = {
     .fitHold = 0,
     .acqEnergy = 1,
     .okHold = 2.0f,
+    .ctxMu = 0.008f,
+    .ctxSpan = 2,
 };
 #define P tetraDemodParams
 
@@ -211,6 +213,64 @@ static void advance(struct tetraDemod *dm, float delta)
 }
 
 /**
+ * Symbol value -3, -1, 1, 3 as 0 to 3.
+ */
+static int symbolIndex(float phi)
+{
+    return (decide(phi) + 3) / 2;
+}
+
+/**
+ * Context correction. The phase changes from the radio's discriminator are
+ * distorted in a way that depends on the neighbouring symbols (its audio
+ * path cuts the frequency peaks at the envelope dips of pi/4-DQPSK): on a
+ * C62 the inner points come out too far out and the outer ones too far in.
+ * Learn the mean error of each pattern of neighbours and subtract it.
+ *
+ * The output is delayed by TETRA_DEMOD_CTX_LEN / 2 symbols, always, so the
+ * bit stream does not move when the correction is turned on or off.
+ *
+ * @param y: equalized phase change, wrapped.
+ * @param learn: adapt the table (signal usable).
+ * @param out: corrected phase change of the symbol two symbols ago.
+ * @return false while the delay line fills.
+ */
+static bool contextCorrect(struct tetraDemod *dm, float y, bool learn,
+                           float *out)
+{
+    memmove(&dm->ctxY[0], &dm->ctxY[1], sizeof(dm->ctxY) - sizeof(float));
+    dm->ctxY[TETRA_DEMOD_CTX_LEN - 1] = y;
+    if (dm->ctxFill < TETRA_DEMOD_CTX_LEN) {
+        if (++dm->ctxFill < TETRA_DEMOD_CTX_LEN)
+            return false;
+    }
+
+    float centre = dm->ctxY[TETRA_DEMOD_CTX_LEN / 2];
+    if (P.ctxMu <= 0) {
+        *out = centre;
+        return true;
+    }
+
+    int idx = 0;
+    if (P.ctxSpan >= 2) {
+        for (int i = 0; i < TETRA_DEMOD_CTX_LEN; i++)
+            idx = idx * 4 + symbolIndex(dm->ctxY[i]);
+    } else {
+        for (int i = 1; i < TETRA_DEMOD_CTX_LEN - 1; i++)
+            idx = idx * 4 + symbolIndex(dm->ctxY[i]);
+    }
+
+    float *corr = &dm->ctxTable[idx];
+    float y2 = wrapf(centre - *corr);
+    if (learn) {
+        float e = wrapf(centre - decide(y2) * (PI_F / 4));
+        *corr += P.ctxMu * (e - *corr);
+    }
+    *out = y2;
+    return true;
+}
+
+/**
  * Update the polarity detector with one symbol (in units of pi/4, before
  * any inversion).
  */
@@ -324,6 +384,10 @@ static size_t symbol(struct tetraDemod *dm, float d, int8_t *soft)
         }
     }
 
+    /* Context correction, then the error of what is decided */
+    if (!contextCorrect(dm, wrapf(y), dm->acquired && adapt, &y))
+        return 0;
+    e = decisionError(y);
     dm->errPow += ERR_ALPHA * (e * e - dm->errPow);
     dm->errFast += ERR_FAST_ALPHA * (e * e - dm->errFast);
 

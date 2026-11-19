@@ -35,9 +35,11 @@ extern "C" {
 
 #define TETRA_DEMOD_IN_RATE 48000
 #define TETRA_DEMOD_SPS 8
-#define TETRA_DEMOD_HIST 64   /* 144 kHz samples kept, power of two */
-#define TETRA_DEMOD_INTERP 12 /* FIR taps per polyphase branch */
+#define TETRA_DEMOD_HIST 64       /* 144 kHz samples kept, power of two */
+#define TETRA_DEMOD_INTERP 12     /* FIR taps per polyphase branch */
 #define TETRA_DEMOD_EQ_TAPS 9
+#define TETRA_DEMOD_CTX_LEN 5     /* Symbols in a context: 2 each side */
+#define TETRA_DEMOD_CTX_SIZE 1024 /* 4 values per symbol, 5 symbols */
 
 /*
  * Loop constants, shared by every demodulator instance. The defaults are the
@@ -59,6 +61,8 @@ struct tetraDemodParams {
     float okHold;    /* Seconds after the last good block decoded
                         (tetraDemod_signalOk()) without re-acquiring,
                         however high the phase error; 0: off */
+    float ctxMu;     /* Learning rate of the context correction; 0: off */
+    float ctxSpan;   /* Neighbours on each side in the context: 1 or 2 */
 };
 
 extern struct tetraDemodParams tetraDemodParams;
@@ -93,6 +97,10 @@ struct tetraDemod {
     float eqGood[TETRA_DEMOD_EQ_TAPS]; /* Last taps with a low error */
     float eqBiasGood;
     bool eqHeld;                       /* Restored since the error rose */
+    /* Context correction: mean error per pattern of neighbouring symbols */
+    float ctxY[TETRA_DEMOD_CTX_LEN]; /* Equalized phases, oldest first */
+    uint8_t ctxFill;
+    float ctxTable[TETRA_DEMOD_CTX_SIZE];
     /* Polarity */
     uint64_t srNorm;
     uint64_t srInv;
