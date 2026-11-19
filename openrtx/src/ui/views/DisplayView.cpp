@@ -11,6 +11,7 @@
 #include "interfaces/display.h"
 #include "hwconfig.h"
 
+#include <algorithm>
 #include <cstdio>
 
 namespace ortxui
@@ -136,30 +137,34 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
 void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
     const uint8_t v = curValue(row);
-    if (row == RowTimer)
-        sniprintf(out, cap, "%s", TIMER_LABELS[v].str());
-    else if (row == RowBattery)
-        sniprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
+    switch (row) {
+        case RowTimer:
+            sniprintf(out, cap, "%s", TIMER_LABELS[v].str());
+            break;
+        case RowBattery:
+            sniprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
+            break;
 #ifdef CONFIG_PIX_FMT_RGB565
-    else if (row == RowTheme)
-        sniprintf(out, cap, "%s",
-                  (v ? STR(highContrast) : STR(standard)).str());
-    else if (row == RowText)
-        sniprintf(out, cap, "%s", (v ? STR(crisp) : STR(smooth)).str());
+        case RowTheme:
+            sniprintf(out, cap, "%s",
+                      (v ? STR(highContrast) : STR(standard)).str());
+            break;
+        case RowText:
+            sniprintf(out, cap, "%s", (v ? STR(crisp) : STR(smooth)).str());
+            break;
 #endif
-    else
-        sniprintf(out, cap, "%u", v);
+        default:
+            sniprintf(out, cap, "%u", v);
+            break;
+    }
 }
 
 void DisplayView::onAdjust(uint8_t row, int8_t dir)
 {
     const RowInfo &r = ROWS[row];
 
-    int v = curValue(row) + dir * r.step;
-    if (v < r.min)
-        v = r.min;
-    if (v > r.max)
-        v = r.max;
+    const int32_t next = curValue(row) + dir * r.step;
+    const int32_t v = std::min<int32_t>(std::max<int32_t>(next, r.min), r.max);
 
     applyValue(row, static_cast<uint8_t>(v));
 }

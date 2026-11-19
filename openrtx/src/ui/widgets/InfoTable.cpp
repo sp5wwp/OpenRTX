@@ -12,6 +12,7 @@
 #include "render/DrawCtx.hpp"
 #include "hwconfig.h"
 
+#include <algorithm>
 #include <climits>
 #include <cstdio>
 
@@ -123,9 +124,8 @@ void InfoTable::drawRow(DrawCtx &d, uint8_t i, const Rect &row) const
     Rect val = { 0, 0, 0, 0 };
     const int32_t cw = static_cast<int32_t>(row.w) - 2 * PAD_X;
     if ((cw > 0) && (row.h != 0)) {
-        int32_t keyW = gfx_getTextWidth(FONT, KEYS[i].str());
-        if (keyW > cw)
-            keyW = cw;
+        const int32_t keyW =
+            std::min<int32_t>(gfx_getTextWidth(FONT, KEYS[i].str()), cw);
         const int16_t x = static_cast<int16_t>(row.x + PAD_X);
         key = { x, row.y, static_cast<uint16_t>(keyW), row.h };
         val = { static_cast<int16_t>(x + keyW), row.y,

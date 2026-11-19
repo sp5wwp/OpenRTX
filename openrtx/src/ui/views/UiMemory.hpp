@@ -69,7 +69,7 @@ struct EditBlob {
         static_assert(sizeof(T) <= N, "edit state too large");
         static_assert(std::is_trivially_copyable<T>::value,
                       "edit state must be plain data");
-        memcpy(bytes, &v, sizeof(T));
+        memcpy(bytes.data(), &v, sizeof(T));
     }
 
     /**
@@ -81,10 +81,10 @@ struct EditBlob {
     void get(T &v) const
     {
         static_assert(sizeof(T) <= N, "edit state too large");
-        memcpy(&v, bytes, sizeof(T));
+        memcpy(&v, bytes.data(), sizeof(T));
     }
 
-    uint8_t bytes[N]; ///< The stored state
+    std::array<uint8_t, N> bytes; ///< The stored state
 };
 
 /**

@@ -8,6 +8,8 @@
 #include "render/DrawCtx.hpp"
 #include "base/Layout.hpp"
 
+#include <algorithm>
+
 namespace ortxui
 {
 
@@ -45,19 +47,16 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
     if (area.empty())
         return;
 
-    if (charge > 100u)
-        charge = 100u;
+    charge = std::min<uint8_t>(charge, 100u);
 
     const int16_t bodyH = static_cast<int16_t>(area.h - NUB_H);
     if (bodyH < MIN_BODY_H)
         return;
 
     /* Taller than wide, centred in the assigned width. */
-    int16_t W = static_cast<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN);
-    if (W > static_cast<int16_t>(area.w))
-        W = static_cast<int16_t>(area.w);
-    if (W < MIN_W)
-        W = MIN_W;
+    const int16_t fit = std::min<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN,
+                                          static_cast<int16_t>(area.w));
+    const int16_t W = std::max(fit, MIN_W);
 
     const int16_t bx = static_cast<int16_t>(area.x + (area.w - W) / 2);
     const int16_t byBody = static_cast<int16_t>(area.y + NUB_H);

@@ -16,6 +16,7 @@
 #include "widgets/Label.hpp"
 #include "hwconfig.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -103,10 +104,8 @@ Rect MacroTiles::tileArea(uint8_t tile) const
     if ((row.w == 0) || (row.h == 0))
         return { 0, 0, 0, 0 };
 
-    int free = static_cast<int>(row.w) - 2 * TILE_GAP;
-    if (free < 0)
-        free = 0;
-    const uint16_t w = static_cast<uint16_t>(free / 3);
+    const int32_t spare = std::max<int32_t>(row.w - 2 * TILE_GAP, 0);
+    const uint16_t w = static_cast<uint16_t>(spare / 3);
     return { static_cast<int16_t>(row.x + (tile % 3) * (w + TILE_GAP)), row.y,
              w, row.h };
 }

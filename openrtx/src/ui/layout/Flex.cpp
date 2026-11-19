@@ -7,6 +7,8 @@
 #include "layout/Flex.hpp"
 #include "render/DrawCtx.hpp"
 
+#include <algorithm>
+
 namespace ortxui
 {
 
@@ -56,9 +58,7 @@ void Flex::onLayout()
         return;
 
     const int32_t gaps = gap * (count - 1);
-    int32_t spare = mainAvail - totalBase - gaps;
-    if (spare < 0)
-        spare = 0;
+    const int32_t spare = std::max<int32_t>(mainAvail - totalBase - gaps, 0);
 
     /* Main-axis start cursor and inter-item spacing. A grow weight takes the
      * spare space, so justify only redistributes when nothing grows. */
@@ -106,15 +106,13 @@ void Flex::onLayout()
         if (a == Align::Stretch) {
             crossSize = crossInner;
         } else {
-            if (crossSize > crossInner)
-                crossSize = crossInner;
+            crossSize = std::min(crossSize, crossInner);
             if (a == Align::Center)
                 crossOff = (crossInner - crossSize) / 2;
             else if (a == Align::End)
                 crossOff = crossInner - crossSize;
         }
-        if (crossSize < 0)
-            crossSize = 0;
+        crossSize = std::max<int32_t>(crossSize, 0);
 
         const int32_t mainPos = cursor + h.margin;
         const int32_t crossPos = (row ? cy : cx) + h.margin + crossOff;

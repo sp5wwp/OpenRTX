@@ -8,6 +8,7 @@
 #include "style/Theme.hpp"
 #include "style/Symbols.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <cstring>
 
@@ -128,13 +129,11 @@ void DrawCtx::drawCircle(Point c, uint16_t r, Sem color)
     for (int dy = dy0; dy <= dy1; dy++) {
         for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-            float cov = 1.0f - std::fabs(dist - rf);
+            const float cov = 1.0f - std::fabs(dist - rf);
             if (cov <= 0.0f)
                 continue;
-            if (cov > 1.0f)
-                cov = 1.0f;
             color_t p = col;
-            p.alpha = static_cast<uint8_t>(col.alpha * cov);
+            p.alpha = static_cast<uint8_t>(col.alpha * std::min(cov, 1.0f));
             gfx_setPixel({ static_cast<int16_t>(c.x + dx),
                            static_cast<int16_t>(c.y + dy) },
                          p);
@@ -154,13 +153,11 @@ void DrawCtx::fillCircle(Point c, uint16_t r, Sem color)
     for (int dy = dy0; dy <= dy1; dy++) {
         for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
-            float cov = rf + 0.5f - dist;
+            const float cov = rf + 0.5f - dist;
             if (cov <= 0.0f)
                 continue;
-            if (cov > 1.0f)
-                cov = 1.0f;
             color_t p = col;
-            p.alpha = static_cast<uint8_t>(col.alpha * cov);
+            p.alpha = static_cast<uint8_t>(col.alpha * std::min(cov, 1.0f));
             gfx_setPixel({ static_cast<int16_t>(c.x + dx),
                            static_cast<int16_t>(c.y + dy) },
                          p);
@@ -202,21 +199,17 @@ void DrawCtx::lineAA(Point a, Point b, Sem color, float width)
         for (int px = px0; px <= px1; px++) {
             /* Distance from the pixel centre to the segment. */
             const float fx = px - x0, fy = py - y0;
-            float t = (len2 > 0.0f) ? ((fx * dx + fy * dy) / len2) : 0.0f;
-            if (t < 0.0f)
-                t = 0.0f;
-            if (t > 1.0f)
-                t = 1.0f;
+            const float proj = (len2 > 0.0f) ? ((fx * dx + fy * dy) / len2) :
+                                               0.0f;
+            const float t = std::min(std::max(proj, 0.0f), 1.0f);
             const float cx = x0 + t * dx, cy = y0 + t * dy;
             const float dist =
                 std::sqrt((px - cx) * (px - cx) + (py - cy) * (py - cy));
-            float cov = half + 0.5f - dist;
+            const float cov = half + 0.5f - dist;
             if (cov <= 0.0f)
                 continue;
-            if (cov > 1.0f)
-                cov = 1.0f;
             color_t p = col;
-            p.alpha = static_cast<uint8_t>(col.alpha * cov);
+            p.alpha = static_cast<uint8_t>(col.alpha * std::min(cov, 1.0f));
             gfx_setPixel({ static_cast<int16_t>(px), static_cast<int16_t>(py) },
                          p);
         }

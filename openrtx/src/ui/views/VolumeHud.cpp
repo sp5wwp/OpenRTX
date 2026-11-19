@@ -14,6 +14,7 @@
 #include "widgets/Scratch.hpp"
 #include "hwconfig.h"
 
+#include <algorithm>
 #include <cstdio>
 
 namespace ortxui
@@ -41,9 +42,8 @@ void VolumeHud::draw(DrawCtx &d)
 {
     /* Centre the title and the bar vertically, full width within the pad. */
     const int16_t w = CONFIG_SCREEN_WIDTH - 2 * PAD_X;
-    int spare = CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP;
-    if (spare < 0)
-        spare = 0;
+    const int32_t spare = std::max<int32_t>(
+        CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP, 0);
     const int16_t titleY = static_cast<int16_t>(PAD_Y + spare / 2);
     const Rect title = { PAD_X, titleY, static_cast<uint16_t>(w),
                          static_cast<uint16_t>(TITLE_H) };

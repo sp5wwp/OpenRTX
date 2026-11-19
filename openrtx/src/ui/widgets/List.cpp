@@ -13,6 +13,8 @@
 #include "core/voicePromptUtils.h"
 #include "widgets/Scratch.hpp"
 
+#include <algorithm>
+
 namespace ortxui
 {
 
@@ -282,9 +284,8 @@ void List::drawScrollBar(DrawCtx &d, const Rect &area, int32_t offset,
 {
     const int16_t x = static_cast<int16_t>(area.right() - 1);
     const int32_t trackH = area.h;
-    int32_t thumbH = trackH * shown / total;
-    if (thumbH < SCROLL_BAR_W)
-        thumbH = SCROLL_BAR_W;
+    const int32_t thumbH = std::max<int32_t>(trackH * shown / total,
+                                             SCROLL_BAR_W);
     const int16_t thumbY =
         static_cast<int16_t>(area.y + trackH * offset / total);
 

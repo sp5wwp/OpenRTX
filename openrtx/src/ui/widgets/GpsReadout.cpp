@@ -8,6 +8,7 @@
 #include "base/Layout.hpp"
 #include "base/UiText.hpp"
 
+#include <algorithm>
 #include <climits>
 #include <cmath>
 #include <cstdio>
@@ -60,18 +61,11 @@ static const char *formatCoord(int32_t coord, bool isLat, char *val,
  */
 static void formatLocator(int32_t lat, int32_t lon, char *out, size_t outSize)
 {
+    /* Clamp to the valid grid to keep the arithmetic in range. */
     double a = static_cast<double>(lon) / 1000000.0 + 180.0;
     double b = static_cast<double>(lat) / 1000000.0 + 90.0;
-
-    /* Clamp to the valid grid to keep the arithmetic in range. */
-    if (a < 0.0)
-        a = 0.0;
-    if (a >= 360.0)
-        a = 359.999;
-    if (b < 0.0)
-        b = 0.0;
-    if (b >= 180.0)
-        b = 179.999;
+    a = std::min(std::max(a, 0.0), 359.999);
+    b = std::min(std::max(b, 0.0), 179.999);
 
     char loc[7];
     loc[0] = static_cast<char>('A' + static_cast<int>(a / 20.0));
@@ -119,11 +113,9 @@ void GpsReadout::onLayout()
     if ((cw <= 0) || (ch <= 0))
         return;
 
-    const int lineH = textRow.natural().h;
-    int free = ch - RowCount * lineH;
-    if (free < 0)
-        free = 0;
-    rowH = static_cast<uint16_t>(lineH + free / RowCount);
+    const int32_t lineH = textRow.natural().h;
+    const int32_t spare = std::max<int32_t>(ch - RowCount * lineH, 0);
+    rowH = static_cast<uint16_t>(lineH + spare / RowCount);
 }
 
 const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const

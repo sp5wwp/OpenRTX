@@ -9,6 +9,8 @@
 #include "core/utils.h"
 #include "render/DrawCtx.hpp"
 
+#include <algorithm>
+
 namespace ortxui
 {
 
@@ -71,11 +73,9 @@ void PickerGrid::ensureVisible()
 
 void PickerGrid::move(int delta)
 {
-    int idx = static_cast<int>(selectedCell) + delta;
-    if (idx < 0)
-        idx = 0;
-    if (idx >= static_cast<int>(CELL_COUNT))
-        idx = CELL_COUNT - 1;
+    const int32_t next = selectedCell + delta;
+    const int32_t idx = std::min<int32_t>(std::max<int32_t>(next, 0),
+                                          CELL_COUNT - 1);
     selectedCell = static_cast<uint16_t>(idx);
     ensureVisible();
     invalidate();

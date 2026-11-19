@@ -20,6 +20,7 @@
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -780,10 +781,9 @@ void VfoView::deriveTx()
 {
     Entry &n = *entry;
     const freq_t rx = freqFromSlots(n.rx);
-    int64_t tx = (int64_t)rx + n.shift;
-    if (tx < 0)
-        tx = 0; /* rejected as out of band at commit */
-    slotsFromFreq(n.tx, (freq_t)tx);
+    /* Below 0 Hz is rejected as out of band at commit. */
+    const int64_t tx = std::max<int64_t>(static_cast<int64_t>(rx) + n.shift, 0);
+    slotsFromFreq(n.tx, static_cast<freq_t>(tx));
     n.txSlot = FREQ_SLOTS;
 }
 

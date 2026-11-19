@@ -14,6 +14,7 @@
 #include "core/utils.h"
 #include "interfaces/keyboard.h"
 
+#include <algorithm>
 #include <cstring>
 
 namespace ortxui
@@ -324,8 +325,7 @@ void TextInput::deleteAt(uint16_t pos)
     memmove(textBuf + pos, textBuf + pos + clen,
             static_cast<size_t>(len - pos - clen) + 1); /* include NUL */
     len = static_cast<uint16_t>(len - clen);
-    if (cursorPos > len)
-        cursorPos = len;
+    cursorPos = std::min(cursorPos, len);
     /* Keep the cursor on a cell. */
     if ((cursorPos >= len) && (len > 0))
         cursorPos = prevCell(len);
@@ -572,8 +572,7 @@ void TextInput::stripTrailingSpaces()
     resolvePendingDelete();
     while ((len > 0) && (textBuf[len - 1] == ' '))
         textBuf[--len] = '\0';
-    if (cursorPos > len)
-        cursorPos = len;
+    cursorPos = std::min(cursorPos, len);
 }
 
 void TextInput::formatBracketed(char *out, size_t sz) const
@@ -715,9 +714,8 @@ void TextInput::draw(DrawCtx &d)
                          && !((clen == 1) && (textBuf[cursorPos] == ' '));
         const char *glyph = isDel ? DELETE_GLYPH : t;
         const bool visible = isDel || onChar;
-        uint16_t cw = visible ? gfx_getTextWidth(textFont, glyph) : 3u;
-        if (cw < 2u)
-            cw = 2u;
+        const uint16_t textW = visible ? gfx_getTextWidth(textFont, glyph) : 3u;
+        const uint16_t cw = std::max<uint16_t>(textW, 2u);
         const Rect cell = { cx, lineBox.y, cw, lineBox.h };
         d.fillRect(cell, Sem::Primary);
         if (visible)

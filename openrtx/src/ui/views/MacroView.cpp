@@ -16,6 +16,7 @@
 #include "interfaces/display.h"
 #include "hwconfig.h"
 
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 
@@ -162,11 +163,8 @@ void MacroView::stepSquelch(int dir)
     if (state.channel.mode != OPMODE_FM)
         return;
 
-    int v = static_cast<int>(state.settings.sqlLevel) + dir;
-    if (v < 0)
-        v = 0;
-    if (v > SQL_MAX)
-        v = SQL_MAX;
+    const int32_t next = state.settings.sqlLevel + dir;
+    const int32_t v = std::min<int32_t>(std::max<int32_t>(next, 0), SQL_MAX);
     if (static_cast<uint8_t>(v) != state.settings.sqlLevel) {
         state.settings.sqlLevel = static_cast<uint8_t>(v);
         requestSyncRtx();
@@ -232,11 +230,9 @@ void MacroView::doAction(MacroAction action)
             const int step = (action == MacroAction::BrightnessUp) ?
                                  BRIGHTNESS_STEP :
                                  -BRIGHTNESS_STEP;
-            int b = static_cast<int>(state.settings.brightness) + step;
-            if (b < BRIGHTNESS_MIN)
-                b = BRIGHTNESS_MIN;
-            if (b > BRIGHTNESS_MAX)
-                b = BRIGHTNESS_MAX;
+            const int32_t next = state.settings.brightness + step;
+            const int32_t b = std::min<int32_t>(
+                std::max<int32_t>(next, BRIGHTNESS_MIN), BRIGHTNESS_MAX);
             state.settings.brightness = static_cast<uint8_t>(b);
             display_setBacklightLevel(static_cast<uint8_t>(b));
             vp_announceSettingsInt(&currentLanguage->brightness, flags, b);

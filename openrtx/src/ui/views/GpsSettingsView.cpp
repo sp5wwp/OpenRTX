@@ -7,6 +7,7 @@
 #include "views/GpsSettingsView.hpp"
 #include "core/voicePromptUtils.h"
 
+#include <algorithm>
 #include <cstdio>
 
 namespace ortxui
@@ -58,11 +59,9 @@ void GpsSettingsView::formatValue(uint8_t row, char *out, size_t cap)
 void GpsSettingsView::onAdjust(uint8_t row, int8_t dir)
 {
     (void)row;
-    int tz = state.settings.utc_timezone + dir;
-    if (tz < TZ_MIN)
-        tz = TZ_MIN;
-    if (tz > TZ_MAX)
-        tz = TZ_MAX;
+    const int32_t next = state.settings.utc_timezone + dir;
+    const int32_t tz = std::min<int32_t>(std::max<int32_t>(next, TZ_MIN),
+                                         TZ_MAX);
     state.settings.utc_timezone = static_cast<int8_t>(tz);
 }
 

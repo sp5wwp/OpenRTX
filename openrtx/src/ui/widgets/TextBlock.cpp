@@ -8,6 +8,7 @@
 #include "widgets/List.hpp"
 #include "render/DrawCtx.hpp"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstddef>
 
@@ -40,12 +41,9 @@ int16_t TextBlock::offset() const
 bool TextBlock::scroll(int lines)
 {
     const int16_t cur = offset();
-    int next = cur + lines * gfx_getFontLineHeight(textFont);
-    const int16_t max = maxOffset();
-    if (next < 0)
-        next = 0;
-    if (next > max)
-        next = max;
+    const int32_t step = cur + lines * gfx_getFontLineHeight(textFont);
+    const int32_t next = std::min<int32_t>(std::max<int32_t>(step, 0),
+                                           maxOffset());
     if (next == cur)
         return false;
 
