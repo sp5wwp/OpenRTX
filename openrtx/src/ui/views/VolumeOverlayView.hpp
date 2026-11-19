@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include "core/View.hpp"
+#include "views/VolumeHud.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -42,20 +43,7 @@ public:
     }
 
 private:
-    /**
-     * The HUD's screen: a padded column centring the title over the level
-     * bar, painted from the level shown.
-     */
-    class HudScreen : public Screen
-    {
-    public:
-        /** Paint the title and the level bar. */
-        void draw(DrawCtx &d) override;
-
-        int16_t volume = -1; ///< Level shown, -1 forces the first paint
-    };
-
-    HudScreen screen_; ///< Screen, painting the HUD
+    VolumeHud screen_; ///< Screen, painting the HUD
 };
 
 } // namespace ortxui
