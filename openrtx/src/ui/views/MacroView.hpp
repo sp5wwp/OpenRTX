@@ -12,6 +12,7 @@
 #include "widgets/Widgets.hpp"
 #include "widgets/BarRow.hpp"
 #include "widgets/TopBar.hpp"
+#include "views/MacroTiles.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -42,24 +43,17 @@ public:
     }
 
 private:
-    static constexpr uint8_t kTiles = 9;
-
-    void composeValue(uint8_t tile, const state_t &s, char *out, uint16_t n);
     void doAction(uint8_t number);
     void stepSquelch(int dir);
 
     Screen screen_;
     Flex root_;
-    Flex rows_[3];
-    Flex tiles_[kTiles];
-    Label keyLbl_[kTiles]; //< "N" + icon (static)
-    Label valLbl_[kTiles]; //< live value (change-gated)
+    Flex rows_[3]; //< grid rows, sizing the tiles in the column
+    MacroTiles tiles_;
     Flex footer_;
-    BarRow sqlBar_;        //< squelch level, using the shared level-bar control
+    BarRow sqlBar_; //< squelch level, using the shared level-bar control
 
-    char valBuf_[kTiles][14] = { { 0 } };
     char sqlBuf_[8] = { 0 };
-    char modeKey_[16] = { 0 };  //< "5 " + the mode label
     char sqlLabel_[32] = { 0 }; //< volume glyph + the squelch label
 };
 

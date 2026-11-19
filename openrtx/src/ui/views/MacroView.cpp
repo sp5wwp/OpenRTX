@@ -21,26 +21,6 @@ namespace ortxui
 namespace
 {
 
-/* Top-of-tile labels (number key + icon / short label), one per key 1-9. */
-const char *const kKeyLabels[9] = {
-    "1 " SYMBOL_BELL,           // tone encode/decode
-    "2 T-",                     // tone down
-    "3 T+",                     // tone up
-    "4 " SYMBOL_SIGNAL,         // bandwidth
-    nullptr,                    // radio mode, see modeKey_
-    "6 " SYMBOL_CHARGE,         // power
-    "7 " SYMBOL_BRIGHTNESS "-", // brightness down
-    "8 " SYMBOL_BRIGHTNESS "+", // brightness up
-    "9 " SYMBOL_LOCK,           // keypad lock
-};
-
-/* Just the number keys — used on the tiny mono screen where the icons and a
- * second line per tile do not fit. */
-const char *const kDigits[9] = { "1", "2", "3", "4", "5", "6", "7", "8", "9" };
-
-/* Tone encode/decode label, indexed by (txToneEn << 1) | rxToneEn. */
-const UiText kEncDec[4] = { STR(None), STR(Decode), STR(Encode), STR(Both) };
-
 int digitFromKeys(uint32_t keys)
 {
     const uint32_t digits = keys & 0x3FFu;
@@ -54,8 +34,6 @@ void MacroView::build()
     const int16_t W = CONFIG_SCREEN_WIDTH;
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
-    const fontSize_t keyFont = regular ? FONT_SIZE_6PT : FONT_SIZE_5PT;
-    const fontSize_t valFont = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
 
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
@@ -64,46 +42,14 @@ void MacroView::build()
     TopBar &bar = useTopBar(STR(macroMenu));
     root_.addChild(&bar);
 
-    /* Labels mixing a key or a glyph with a word, composed in the current
+    /* The squelch label mixes a glyph with a word, composed in the current
      * language. */
-    snprintf(modeKey_, sizeof(modeKey_), "5 %s", STR(mode).str());
     snprintf(sqlLabel_, sizeof(sqlLabel_), SYMBOL_VOLUME " %s",
              STR(squelch).str());
 
+    /* The grid rows share the free height; the tiles are placed over them. */
     for (uint8_t r = 0; r < 3; r++) {
-        rows_[r].setAxis(Axis::Row);
-        rows_[r].setAlign(Align::Stretch);
-        rows_[r].setGap(2);
         rows_[r].setGrow(1);
-
-        for (uint8_t c = 0; c < 3; c++) {
-            const uint8_t i = (uint8_t)(r * 3 + c);
-            /* Regular: a 2-line tile (number + icon over the value). Compact
-             * (mono): a single row "N value" — icons and a second line don't
-             * fit on 128x64. */
-            tiles_[i].setAxis(regular ? Axis::Column : Axis::Row);
-            tiles_[i].setAlign(Align::Center);
-            tiles_[i].setPadding(2, 1);
-            tiles_[i].setGrow(1);
-
-            keyLbl_[i].setFont(keyFont);
-            keyLbl_[i].setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_LEFT);
-            keyLbl_[i].setColor(Sem::Accent);
-            const char *key = (kKeyLabels[i] != nullptr) ? kKeyLabels[i] :
-                                                           modeKey_;
-            keyLbl_[i].setText(regular ? key : kDigits[i]);
-            keyLbl_[i].setBasis(regular ? 12 : 9);
-
-            valLbl_[i].setFont(valFont);
-            valLbl_[i].setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_RIGHT);
-            valLbl_[i].setColor(Sem::OnSurface);
-            valLbl_[i].setText(valBuf_[i]);
-            valLbl_[i].setGrow(1);
-
-            tiles_[i].addChild(&keyLbl_[i]);
-            tiles_[i].addChild(&valLbl_[i]);
-            rows_[r].addChild(&tiles_[i]);
-        }
         root_.addChild(&rows_[r]);
     }
 
@@ -124,79 +70,21 @@ void MacroView::build()
 
     screen_.addChild(&root_);
     root_.onLayout();
+
+    const Rect rows[3] = { rows_[0].area(), rows_[1].area(), rows_[2].area() };
+    tiles_.place(rows);
+    tiles_.setArea({ rows[0].x, rows[0].y, rows[0].w,
+                     static_cast<uint16_t>(rows[2].bottom() - rows[0].y + 1) });
+    screen_.addChild(&tiles_);
     screen_.markAllDirty();
-}
-
-void MacroView::composeValue(uint8_t tile, const state_t &s, char *out,
-                             uint16_t n)
-{
-    const channel_t &ch = s.channel;
-    const bool fm = (ch.mode == OPMODE_FM);
-
-    switch (tile) {
-        case 0: { /* tone encode/decode */
-            const uint8_t enc = (uint8_t)((ch.fm.txToneEn << 1)
-                                          | ch.fm.rxToneEn);
-            snprintf(out, n, "%s", fm ? kEncDec[enc].str() : "-");
-            break;
-        }
-        case 1: /* tone down (shows the tone) */
-        case 2: /* tone up */
-            if (fm) {
-                const uint16_t t = ctcss_tone[ch.fm.txTone];
-                snprintf(out, n, "%u.%u", (unsigned)(t / 10),
-                         (unsigned)(t % 10));
-            } else
-                snprintf(out, n, "-");
-            break;
-        case 3: /* bandwidth */
-            snprintf(out, n, "%s",
-                     fm ? (ch.bandwidth == BW_25 ? "WFM" : "NFM") : "-");
-            break;
-        case 4: /* radio mode */
-            snprintf(out, n, "%s",
-                     (ch.mode == OPMODE_M17) ? "M17" : (fm ? "FM" : "DMR"));
-            break;
-        case 5: { /* power */
-            const uint32_t mw = ch.power;
-            if (mw >= 1000u)
-                snprintf(out, n, "%lu.%luW", (unsigned long)(mw / 1000u),
-                         (unsigned long)((mw % 1000u) / 100u));
-            else
-                snprintf(out, n, "%lumW", (unsigned long)mw);
-            break;
-        }
-        case 6: /* brightness */
-        case 7:
-#ifdef CONFIG_SCREEN_BRIGHTNESS
-            snprintf(out, n, "%u%%", (unsigned)s.settings.brightness);
-#else
-            snprintf(out, n, "-");
-#endif
-            break;
-        case 8: /* keypad lock */
-            snprintf(out, n, "%s",
-                     (s.keypad_locked ? STR(on) : STR(off)).str());
-            break;
-        default:
-            out[0] = '\0';
-            break;
-    }
 }
 
 void MacroView::syncFromState(const state_t &s)
 {
     View::syncFromState(s);
 
-    for (uint8_t i = 0; i < kTiles; i++) {
-        char tmp[14];
-        composeValue(i, s, tmp, sizeof(tmp));
-        if (strncmp(tmp, valBuf_[i], sizeof(valBuf_[i])) != 0) {
-            strncpy(valBuf_[i], tmp, sizeof(valBuf_[i]) - 1);
-            valBuf_[i][sizeof(valBuf_[i]) - 1] = '\0';
-            valLbl_[i].invalidate();
-        }
-    }
+    if (tiles_.sync(s))
+        tiles_.invalidate();
 
     /* Squelch is an FM-only RF gate (OpMode_FM); in the digital modes it does
      * nothing, so show it greyed and inert rather than letting it be set. */
