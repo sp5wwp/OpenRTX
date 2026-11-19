@@ -15,6 +15,13 @@ extern bool ui_checkStandby(long long);
 
 extern state_t state;
 
+/**
+ * Check that the backlight stays on just below a timer's threshold and goes
+ * off at it.
+ *
+ * @param conf: display timer setting.
+ * @param time_sec: its threshold, in seconds.
+ */
 static void check_timer_threshold(display_timer_t conf, long long time_sec)
 {
     state.settings.display_timer = conf;

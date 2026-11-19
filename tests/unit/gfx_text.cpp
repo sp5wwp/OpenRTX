@@ -17,27 +17,26 @@ extern "C" {
 }
 #include "render/DrawCtx.hpp"
 
-/*
- * Line-height of the test font (FONT_SIZE_5PT). Queried at runtime so the tests
- * stay valid across font changes (the layout logic is what's under test, not a
- * particular font's metrics).
+/**
+ * Line height of the test font, read at run time: the layout is under test,
+ * not a particular font's metrics.
+ *
+ * @return line height of FONT_SIZE_5PT, in pixels.
  */
 static uint16_t lineH()
 {
     return gfx_getFontLineHeight(FONT_SIZE_5PT);
 }
 
-/* A max_x wide enough that no ASCII string of a few characters will wrap. */
+/** A max_x wide enough that no ASCII string of a few characters will wrap. */
 static constexpr uint16_t WIDE = 4096;
 
-/* A max_x so narrow (1 px) that every printable glyph triggers a wrap. */
+/** A max_x so narrow (1 px) that every printable glyph triggers a wrap. */
 static constexpr uint16_t NARROW = 1;
 
 /* -----------------------------------------------------------------------
- * gfx_printBuffer regression tests.
- *
- * These pin the behaviour fixed in the commit that corrected wrap logic,
- * UB glyph access order, and the sign of text_size.y.
+ * gfx_printBuffer: wrap logic, the order of glyph access, and the sign of
+ * text_size.y.
  * ----------------------------------------------------------------------- */
 
 TEST_CASE("gfx_printBuffer text_size.y is positive", "[gfx][text]")
@@ -66,9 +65,8 @@ TEST_CASE("gfx_printBuffer text_size.y grows with newlines", "[gfx][text]")
 
 TEST_CASE("gfx_printBuffer does not access glyph for newline", "[gfx][text]")
 {
-    /* If the UB glyph-access-before-newline-check bug were present, this
-     * would either crash or corrupt memory when '\\n' (0x0A) is below
-     * f.first.  Reaching REQUIRE without fault is the assertion. */
+    /* Reading a glyph for '\\n' (0x0A, below f.first) would crash or corrupt
+     * memory; reaching REQUIRE without a fault is the assertion. */
     color_t white = { 255, 255, 255, 255 };
     point_t start = { 0, 10 };
 
@@ -342,20 +340,37 @@ TEST_CASE("gfx_printBufferClipped TEXT_ALIGN_RIGHT resets per line",
  * exact rather than approximate. Metrics are queried at runtime, like lineH().
  * ----------------------------------------------------------------------- */
 
+/**
+ * Line width that holds exactly six characters of the test strings.
+ *
+ * @return width in pixels.
+ */
 static uint16_t sixCols()
 {
     return gfx_getTextWidth(FONT_SIZE_5PT, "A") * 6;
 }
 
+/**
+ * Window height that shows two lines of the test font.
+ *
+ * @return height in pixels.
+ */
 static int16_t twoLines()
 {
     return (int16_t)(lineH() * 2);
 }
 
-/* 52 characters: the longest meta text the M17 specification allows. */
+/** 52 characters: the longest meta text the M17 specification allows. */
 static const char META52[] =
     "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
 
+/**
+ * Scroll offset of META52 laid out six characters a line.
+ *
+ * @param cursor_pos: cursor position in META52.
+ * @param visible_h: height of the window.
+ * @return offset in pixels.
+ */
 static int16_t metaOffset(size_t cursor_pos, int16_t visible_h)
 {
     return gfx_scrollOffsetForCursor(FONT_SIZE_5PT, META52, cursor_pos, 0,
@@ -413,9 +428,7 @@ TEST_CASE("gfx_scrollOffsetForCursor keeps every position of a 52 character "
     /*
      * The property the meta text field depends on: whatever the cursor
      * position, the line holding it must fall inside the window once the
-     * returned offset is applied.  Before the scroll helper the field was
-     * drawn at a fixed offset, so everything past the last visible line was
-     * simply not shown.
+     * returned offset is applied.
      */
     for (size_t pos = 0; pos < sizeof(META52) - 1; pos++) {
         uint16_t cursor_y = gfx_measureText(FONT_SIZE_5PT, META52, 0, sixCols(),
@@ -515,14 +528,14 @@ TEST_CASE("DrawCtx::text draws the whole string, however long", "[gfx][text]")
 }
 
 /*
- * Regression: the decoder must render the LAST glyph of a font. lv_font_conv's
+ * The decoder must render the LAST glyph of a font. lv_font_conv's
  * loca table stores exactly glyph_cnt start-offsets with no trailing end
  * sentinel, so the last glyph's end is the glyf table length -- reading
  * loca[glyph_cnt] instead hits table padding (often 0) and silently drops the
  * glyph. The icon font's last glyph is the backspace (U+F55A) and the text
  * font's is the FontAwesome battery (U+F244); a dropped glyph measures 0 wide.
  */
-TEST_CASE("last glyph of each font decodes (non-zero width)",
+TEST_CASE("Last glyph of each font decodes (non-zero width)",
           "[gfx][text][font]")
 {
     /* U+F55A backspace: last glyph of the custom icon/fallback font. */
@@ -533,9 +546,9 @@ TEST_CASE("last glyph of each font decodes (non-zero width)",
     REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x89\x84") > 0);
 }
 
-/* Built-in 16 pt text font, embedded by fontData.c. */
+/** Built-in 16 pt text font, embedded by fontData.c. */
 extern "C" const uint8_t _font_16_start[];
-extern "C" const uint8_t _font_16_end[];
+extern "C" const uint8_t _font_16_end[]; ///< End of the 16 pt font
 
 TEST_CASE("gfx_setFontSource replaces a font and restores the built-in one",
           "[gfx][font]")

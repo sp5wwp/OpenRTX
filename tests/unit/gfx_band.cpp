@@ -21,17 +21,21 @@ extern "C" {
  * it is sent.
  */
 
-static constexpr int16_t W = CONFIG_SCREEN_WIDTH;
-static constexpr int16_t H = CONFIG_SCREEN_HEIGHT;
+static constexpr int16_t W = CONFIG_SCREEN_WIDTH;  ///< Screen width
+static constexpr int16_t H = CONFIG_SCREEN_HEIGHT; ///< Screen height
 
 /** Fill of the rows the display was not sent, to catch them. */
 static constexpr uint16_t UNSENT = 0xAAAA;
 
-static constexpr color_t RED = { 255, 0, 0, 255 };
-static constexpr color_t BLUE = { 0, 0, 255, 255 };
-static constexpr color_t GREY = { 90, 90, 90, 255 };
-static constexpr color_t WHITE = { 255, 255, 255, 255 };
+static constexpr color_t RED = { 255, 0, 0, 255 };       ///< Opaque red
+static constexpr color_t BLUE = { 0, 0, 255, 255 };      ///< Opaque blue
+static constexpr color_t GREY = { 90, 90, 90, 255 };     ///< Opaque grey
+static constexpr color_t WHITE = { 255, 255, 255, 255 }; ///< Opaque white
+
+/** Translucent green, blended with what is under it. */
 static constexpr color_t SEE_THROUGH_GREEN = { 0, 255, 0, 100 };
+
+/** Translucent yellow, blended with what is under it. */
 static constexpr color_t SEE_THROUGH_YELLOW = { 255, 230, 0, 180 };
 
 /** The screen as the display was sent it. */
