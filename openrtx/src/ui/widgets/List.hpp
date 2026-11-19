@@ -81,7 +81,6 @@ public:
     {
         padY_ = padY;
         gap_ = gap;
-        rowWidget_.setPad(padY_, gap_);
     }
     void setSelectable(bool s)
     {
@@ -139,7 +138,6 @@ private:
     uint16_t top_ = 0; //< index of the first visible row (scroll offset)
     int16_t padY_ = 4; //< per-row vertical content inset
     int16_t gap_ = 2;  //< label/value gutter in a value row
-    mutable SettingRow rowWidget_; //< flyweight: bound + painted per row
     bool selectable_ = true;
 };
 

@@ -15,6 +15,11 @@
 namespace ortxui
 {
 
+/* One row widget, bound and painted per row, serves every list: only one view
+ * exists at a time, so lists never paint concurrently. Static rather than on
+ * the stack, which the 2 KB UI thread cannot spare. */
+static SettingRow scratchRow;
+
 void List::setItems(const ListItem *items, uint16_t count)
 {
     items_ = items;
@@ -79,7 +84,8 @@ int16_t List::rowHeight(uint16_t i) const
 {
     ListItem it;
     getItem(i, it);
-    return rowWidget_.heightFor(kindOf(it), it.label, it.value, area_.w);
+    scratchRow.setPad(padY_, gap_);
+    return scratchRow.heightFor(kindOf(it), it.label, it.value, area_.w);
 }
 
 void List::scrollToSelected()
@@ -197,7 +203,7 @@ void List::draw(DrawCtx &d)
      * the item, size it to the item's content, lay it out and paint its
      * subtree. Rows stack by their own heights, so a two-line value row is
      * taller than a plain / checkbox row while keeping the same padding. */
-    rowWidget_.setPad(padY_, gap_);
+    scratchRow.setPad(padY_, gap_);
 
     int16_t y = area_.y;
     uint16_t i = top_;
@@ -205,17 +211,17 @@ void List::draw(DrawCtx &d)
         ListItem it;
         getItem(i, it);
         const SettingRow::Kind kind = kindOf(it);
-        const int16_t h = rowWidget_.heightFor(kind, it.label, it.value,
+        const int16_t h = scratchRow.heightFor(kind, it.label, it.value,
                                                area_.w);
         if (y > area_.bottom())
             break;
 
         const Rect row = { area_.x, y, area_.w, static_cast<uint16_t>(h) };
         const bool selected = selectable_ && (i == selected_);
-        rowWidget_.bind(kind, it.label, it.value, it.checked, selected);
-        rowWidget_.setArea(row);
-        rowWidget_.onLayout();
-        rowWidget_.paintTree(d);
+        scratchRow.bind(kind, it.label, it.value, it.checked, selected);
+        scratchRow.setArea(row);
+        scratchRow.onLayout();
+        scratchRow.paintTree(d);
 
         y = static_cast<int16_t>(y + h);
     }
