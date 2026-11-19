@@ -20,17 +20,60 @@
 /* An SDS text stays on the main screen this long */
 #define TETRA_SDS_SHOW_MS 30000
 
-/**
- * Print an SSI, or a dash if it is not known.
+/*
+ * Text beside a symbol keeps this far from where gfx_drawSymbol() says the
+ * symbol ends: the symbol bitmaps are wider than their advance (13 against
+ * 9 pixels at 8 pt), and a gap keeps the two apart.
  */
-static void _ui_printSsi(point_t pos, fontSize_t font, const char *prefix,
-                         uint32_t ssi)
+#define TETRA_SYMBOL_GAP 6
+
+/**
+ * Print, centred on a line, the first of several texts that fits clear of a
+ * left margin and the same margin on the right, measured in the font; the
+ * last one is printed in any case. gfx_print() does not clip: text wider
+ * than the screen wraps onto the line below.
+ *
+ * @param pos: line position.
+ * @param font: font.
+ * @param left: left margin, pixels.
+ * @param texts: candidate texts, longest first.
+ * @param n: number of candidates.
+ */
+static void _ui_printFit(point_t pos, fontSize_t font, uint16_t left,
+                         const char *const *texts, size_t n)
+{
+    uint16_t avail = 0;
+    if (CONFIG_SCREEN_WIDTH > 2 * left)
+        avail = CONFIG_SCREEN_WIDTH - 2 * left;
+
+    size_t i = 0;
+    while (i + 1 < n && gfx_getTextWidth(font, texts[i]) > avail)
+        i++;
+    gfx_print(pos, font, TEXT_ALIGN_CENTER, color_white, "%s", texts[i]);
+}
+
+/**
+ * Draw a symbol at the left of a line and centre a text clear of it.
+ */
+static void _ui_printWithSymbol(point_t pos, symbolSize_t symSize,
+                                symbol_t symbol, fontSize_t font,
+                                const char *const *texts, size_t n)
+{
+    point_t end = gfx_drawSymbol(pos, symSize, TEXT_ALIGN_LEFT, color_white,
+                                 symbol);
+    _ui_printFit(pos, font, end.x + TETRA_SYMBOL_GAP, texts, n);
+}
+
+/**
+ * Format an SSI, or a dash if it is not known.
+ */
+static void _ui_formatSsi(char *buf, size_t size, const char *prefix,
+                          uint32_t ssi)
 {
     if (ssi != 0)
-        gfx_print(pos, font, TEXT_ALIGN_CENTER, color_white, "%s%lu", prefix,
-                  (unsigned long)ssi);
+        snprintf(buf, size, "%s%lu", prefix, (unsigned long)ssi);
     else
-        gfx_print(pos, font, TEXT_ALIGN_CENTER, color_white, "%s-", prefix);
+        snprintf(buf, size, "%s-", prefix);
 }
 
 /**
@@ -49,58 +92,66 @@ static void _ui_drawTetraInfo(void)
 {
     struct tetraStatus ts;
     tetra_getStatus(&ts);
+    const uint16_t pad = layout.horizontal_pad;
+    char a[32], b[32], c[32];
 
     if (_ui_tetraCallShown(&ts)) {
         // Talking party
-        gfx_drawSymbol(layout.line1_pos, layout.line1_symbol_size,
-                       TEXT_ALIGN_LEFT, color_white, SYMBOL_CALL_MADE);
-        _ui_printSsi(layout.line1_pos, layout.line2_font, "", ts.talker);
+        _ui_formatSsi(a, sizeof(a), "", ts.talker);
+        const char *talker[] = { a };
+        _ui_printWithSymbol(layout.line1_pos, layout.line1_symbol_size,
+                            SYMBOL_CALL_MADE, layout.line1_font, talker, 1);
 
         // Called group or individual
-        gfx_drawSymbol(layout.line2_pos, layout.line2_symbol_size,
-                       TEXT_ALIGN_LEFT, color_white, SYMBOL_CALL_RECEIVED);
-        _ui_printSsi(layout.line2_pos, layout.line2_font,
-                     ts.callGroup ? "G " : "", ts.callDst);
+        _ui_formatSsi(a, sizeof(a), ts.callGroup ? "G " : "", ts.callDst);
+        const char *called[] = { a };
+        _ui_printWithSymbol(layout.line2_pos, layout.line2_symbol_size,
+                            SYMBOL_CALL_RECEIVED, layout.line2_font, called,
+                            1);
 
-        // Cell
-        gfx_drawSymbol(layout.line3_pos, layout.line3_symbol_size,
-                       TEXT_ALIGN_LEFT, color_white,
-                       SYMBOL_TRANSMISSION_TOWER);
-        gfx_print(layout.line3_pos, layout.line3_font, TEXT_ALIGN_CENTER,
-                  color_white, "%u-%u LA %u", ts.mcc, ts.mnc, ts.la);
+        // Cell, without a symbol: the text is too wide to go beside one
+        snprintf(a, sizeof(a), "%u-%u LA %u", ts.mcc, ts.mnc, ts.la);
+        snprintf(b, sizeof(b), "%u-%u", ts.mcc, ts.mnc);
+        const char *cell[] = { a, b };
+        _ui_printFit(layout.line3_pos, layout.line3_font, pad, cell, 2);
 
         // Call state
         if (ts.callEncrypted) {
-            gfx_drawSymbol(layout.line4_pos, layout.line4_symbol_size,
-                           TEXT_ALIGN_LEFT, color_white, SYMBOL_LOCK);
-            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
-                      color_white, "Encrypted");
-        } else if (ts.callId != 0) {
-            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
-                      color_white, "%s, call %u",
-                      ts.voice ? "Voice" : "Idle", ts.callId);
+            const char *enc[] = { "Encrypted" };
+            _ui_printWithSymbol(layout.line4_pos, layout.line4_symbol_size,
+                                SYMBOL_LOCK, layout.line4_font, enc, 1);
         } else {
-            gfx_print(layout.line4_pos, layout.line4_font, TEXT_ALIGN_CENTER,
-                      color_white, "%s", ts.voice ? "Voice" : "Idle");
+            const char *voice = ts.voice ? "Voice" : "Idle";
+            snprintf(a, sizeof(a), "%s, call %u", voice, ts.callId);
+            const char *state[] = { a, voice };
+            _ui_printFit(layout.line4_pos, layout.line4_font, pad,
+                         ts.callId != 0 ? state : state + 1,
+                         ts.callId != 0 ? 2 : 1);
         }
         return;
     }
 
     if (!ts.sync) {
-        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
-                  color_white, "T searching");
+        const char *searching[] = { "T searching" };
+        _ui_printFit(layout.line2_pos, layout.line2_font, pad, searching, 1);
         return;
     }
 
     /* No symbol: centred, the cell text reaches the left edge (as in M17) */
-    if (ts.sysinfo)
-        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
-                  color_white, "T %u-%u LA %u%s", ts.mcc, ts.mnc, ts.la,
-                  ts.airEncryption ? " enc" : "");
-    else
-        gfx_print(layout.line2_pos, layout.line2_font, TEXT_ALIGN_CENTER,
-                  color_white, "T %u-%u CC %u", ts.mcc, ts.mnc,
-                  ts.colourCode);
+    if (ts.sysinfo) {
+        const char *enc = ts.airEncryption ? " enc" : "";
+        snprintf(a, sizeof(a), "T %u-%u LA %u%s", ts.mcc, ts.mnc, ts.la, enc);
+        snprintf(b, sizeof(b), "T %u-%u%s", ts.mcc, ts.mnc, enc);
+        snprintf(c, sizeof(c), "T %u-%u", ts.mcc, ts.mnc);
+        const char *cell[] = { a, b, c };
+        _ui_printFit(layout.line2_pos, layout.line2_font, pad, cell, 3);
+    } else {
+        snprintf(a, sizeof(a), "T %u-%u CC %u", ts.mcc, ts.mnc,
+                 ts.colourCode);
+        snprintf(b, sizeof(b), "T %u-%u", ts.mcc, ts.mnc);
+        const char *cell[] = { a, b };
+        _ui_printFit(layout.line2_pos, layout.line2_font, pad, cell, 2);
+    }
 }
 
 /**
@@ -111,6 +162,7 @@ static void _ui_drawTetraLine1(ui_state_t *ui_state)
 {
     struct tetraStatus ts;
     tetra_getStatus(&ts);
+    const uint16_t pad = layout.horizontal_pad;
 
     if (_ui_tetraCallShown(&ts))
         return;
@@ -128,6 +180,12 @@ static void _ui_drawTetraLine1(ui_state_t *ui_state)
                               &ui_state->m17_meta_text_scroll_position);
             ui_state->m17_meta_text_last_scroll_tick = now;
         }
+        /* Wide characters: show fewer of them */
+        size_t len = strlen(msg);
+        while (len > 1
+               && gfx_getTextWidth(layout.line1_font, msg)
+                      > CONFIG_SCREEN_WIDTH - 2 * pad)
+            msg[--len] = '\0';
         gfx_print(layout.line1_pos, layout.line1_font, TEXT_ALIGN_CENTER,
                   color_white, "%s", msg);
         return;
@@ -135,9 +193,15 @@ static void _ui_drawTetraLine1(ui_state_t *ui_state)
 
     // Phase error, carrier offset, lost sample blocks, resyncs
     ui_state->m17_meta_text_scroll_position = 0;
-    gfx_print(layout.line1_pos, layout.line1_font, TEXT_ALIGN_CENTER,
-              color_white, "e%u%% %+dHz o%u r%u", ts.phaseErr, ts.carrierHz,
-              ts.overruns, ts.resyncs);
+    char a[40], b[40], c[24], d[8];
+    snprintf(a, sizeof(a), "e%u%% %+dHz o%u r%u", ts.phaseErr, ts.carrierHz,
+             ts.overruns, ts.resyncs);
+    snprintf(b, sizeof(b), "e%u%% %+d o%u r%u", ts.phaseErr, ts.carrierHz,
+             ts.overruns, ts.resyncs);
+    snprintf(c, sizeof(c), "e%u%% %+dHz", ts.phaseErr, ts.carrierHz);
+    snprintf(d, sizeof(d), "e%u%%", ts.phaseErr);
+    const char *demod[] = { a, b, c, d };
+    _ui_printFit(layout.line1_pos, layout.line1_font, pad, demod, 4);
 }
 #endif
 
