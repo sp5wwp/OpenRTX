@@ -16,7 +16,6 @@
 #include "core/cps.h"
 #include "rtx/rtx.h"
 #include "interfaces/keyboard.h"
-#include "interfaces/platform.h"
 #include "interfaces/cps_io.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
@@ -203,24 +202,6 @@ static void composeEntry(const char *digits, char *main, char *sub)
     sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : '-';
     sub[1] = (d6 >= 0) ? '0' : '-';
     sub[2] = '\0';
-}
-
-/**
- * Check whether a frequency falls inside one of the radio's supported bands.
- *
- * @param freq: frequency in Hz.
- * @return true if in band.
- */
-static bool freqInBand(freq_t freq)
-{
-    const hwInfo_t *hw = platform_getHwInfo();
-    if (hw->vhf_band && (freq >= (freq_t)hw->vhf_minFreq * 1000000u)
-        && (freq <= (freq_t)hw->vhf_maxFreq * 1000000u))
-        return true;
-    if (hw->uhf_band && (freq >= (freq_t)hw->uhf_minFreq * 1000000u)
-        && (freq <= (freq_t)hw->uhf_maxFreq * 1000000u))
-        return true;
-    return false;
 }
 
 VfoView::~VfoView()

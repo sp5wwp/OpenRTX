@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <math.h>
 #include "core/cps.h"
+#include "interfaces/platform.h"
 
 uint8_t interpCalParameter(const freq_t freq, const freq_t *calPoints,
                            const uint8_t *param, const uint8_t elems)
@@ -111,4 +112,20 @@ size_t utf8Encode(uint32_t cp, char *out)
     out[1] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
     out[2] = (char)(0x80u | (cp & 0x3Fu));
     return 3;
+}
+
+bool freqInBand(const freq_t freq)
+{
+    // hwInfo_t band limits are in MHz
+    const hwInfo_t *hw = platform_getHwInfo();
+
+    if(hw->vhf_band && (freq >= (freq_t) hw->vhf_minFreq * 1000000u)
+                    && (freq <= (freq_t) hw->vhf_maxFreq * 1000000u))
+        return true;
+
+    if(hw->uhf_band && (freq >= (freq_t) hw->uhf_minFreq * 1000000u)
+                    && (freq <= (freq_t) hw->uhf_maxFreq * 1000000u))
+        return true;
+
+    return false;
 }
