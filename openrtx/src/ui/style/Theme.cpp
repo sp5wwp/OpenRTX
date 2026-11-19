@@ -78,7 +78,7 @@ static constexpr color_t standardColor(Sem role)
 }
 
 /**
- * Build a theme table from a role mapping and the list of role indices.
+ * Build a theme table from a role mapping, one entry per role index.
  *
  * @param map: role to colour mapping.
  * @return the table.
@@ -105,6 +105,7 @@ static constexpr ThemeTable makeTheme(color_t (*map)(Sem))
 const ThemeTable THEME_STANDARD = makeTheme(standardColor);
 const ThemeTable THEME_HIGH_CONTRAST = makeTheme(highContrastColor);
 
+/** Theme installed by themeSetCustom(), or nullptr. */
 static const ThemeTable *customTheme = nullptr;
 
 void themeSetCustom(const ThemeTable *theme)

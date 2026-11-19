@@ -13,13 +13,8 @@ namespace ortxui
 {
 
 /**
- * Semantic colour roles.
- *
- * Widgets reference roles, never raw colours. A Theme maps each role to a
- * concrete framebuffer colour for the active target, and collapses them to
- * ink/paper on 1bpp monochrome targets. This is what lets one screen render
- * in full colour on the 160x128 RGB565 panels and legibly in black & white on
- * the 128x64 mono panels with no per-widget branching.
+ * Semantic colour roles. Widgets draw with roles, never raw colours, so one
+ * screen renders on colour and 1bpp panels alike; the theme maps each role.
  */
 enum class Sem : uint8_t {
     Background = 0, ///< Base app background
@@ -37,7 +32,7 @@ enum class Sem : uint8_t {
     Warning,        ///< Battery low and other cautions
     Mark,           ///< Checklist tick and alerts
 
-    Count
+    Count           ///< Number of roles
 };
 
 } // namespace ortxui
