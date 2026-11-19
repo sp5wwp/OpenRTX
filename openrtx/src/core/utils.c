@@ -11,6 +11,9 @@
 #include "core/cps.h"
 #include "interfaces/platform.h"
 
+/** FNV-1a multiplier for 32-bit hashes. */
+static const uint32_t FNV1A_PRIME = 16777619u;
+
 uint8_t interpCalParameter(const freq_t freq, const freq_t *calPoints,
                            const uint8_t *param, const uint8_t elems)
 {
@@ -112,6 +115,11 @@ size_t utf8Encode(uint32_t cp, char *out)
     out[1] = (char)(0x80u | ((cp >> 6) & 0x3Fu));
     out[2] = (char)(0x80u | (cp & 0x3Fu));
     return 3;
+}
+
+uint32_t fnv1a(const uint32_t hash, const uint32_t value)
+{
+    return (hash ^ value) * FNV1A_PRIME;
 }
 
 bool freqInBand(const freq_t freq)
