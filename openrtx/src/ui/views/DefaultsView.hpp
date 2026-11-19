@@ -26,6 +26,12 @@ namespace ortxui
 class DefaultsView : public View
 {
 public:
+    /** Constructor. */
+    DefaultsView() = default;
+
+    /** Destructor. */
+    ~DefaultsView() = default;
+
     void build() override;
     void onShow() override;
     void announce() override;

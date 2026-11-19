@@ -38,6 +38,9 @@ struct ListItem {
 class ListModel
 {
 public:
+    /** Constructor. */
+    ListModel() = default;
+
     virtual ~ListModel() = default;
     virtual uint16_t rowCount() const = 0;
     virtual void rowAt(uint16_t index, ListItem &out) const = 0;

@@ -77,6 +77,10 @@ struct NavIntent {
 class View
 {
 public:
+    /** Constructor. */
+    View() = default;
+
+    /** Destructor. */
     virtual ~View() = default;
 
     /** Build the widget tree, once, right after construction. */

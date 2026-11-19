@@ -31,6 +31,12 @@ namespace ortxui
 class BanksView : public View, public ListModel
 {
 public:
+    /** Constructor. */
+    BanksView() = default;
+
+    /** Destructor. */
+    ~BanksView() = default;
+
     void build() override;
     void onShow() override;
     NavIntent onEvent(const Event &e) override;

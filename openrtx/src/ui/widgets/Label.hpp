@@ -23,6 +23,12 @@ namespace ortxui
 class Label : public Object
 {
 public:
+    /** Constructor. */
+    Label() = default;
+
+    /** Destructor. */
+    ~Label() = default;
+
     /**
      * How text that is wider than the label's box is handled:
      *   Wrap      - the backend wraps to further lines (the historic default).

@@ -30,6 +30,12 @@ namespace ortxui
 class Scratch
 {
 public:
+    /** Constructor. */
+    Scratch() = default;
+
+    /** Destructor. */
+    ~Scratch() = default;
+
     /** Bytes of the largest widget drawn through the scratch. */
     static constexpr size_t SIZE = std::max({
         sizeof(SettingRow),

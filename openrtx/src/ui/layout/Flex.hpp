@@ -33,6 +33,12 @@ namespace ortxui
 class Flex : public Object
 {
 public:
+    /** Constructor. */
+    Flex() = default;
+
+    /** Destructor. */
+    ~Flex() = default;
+
     void setAxis(Axis a)
     {
         axis_ = a;

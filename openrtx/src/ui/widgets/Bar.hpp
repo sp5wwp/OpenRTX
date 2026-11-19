@@ -19,6 +19,12 @@ namespace ortxui
 class Bar : public Object
 {
 public:
+    /** Constructor. */
+    Bar() = default;
+
+    /** Destructor. */
+    ~Bar() = default;
+
     void setValue(float v)
     {
         value_ = v;

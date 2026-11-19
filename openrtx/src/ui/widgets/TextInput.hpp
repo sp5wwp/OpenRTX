@@ -41,6 +41,12 @@ namespace ortxui
 class TextInput : public Object
 {
 public:
+    /** Constructor. */
+    TextInput() = default;
+
+    /** Destructor. */
+    ~TextInput() = default;
+
     enum class Mode : uint8_t { SingleLine, MultiLine };
     enum class CursorStyle : uint8_t {
         Bracket, //< inline "[X]" (formatBracketed); parity with the old editors

@@ -29,6 +29,9 @@ namespace ortxui
 class DrawCtx
 {
 public:
+    /** Destructor. */
+    ~DrawCtx() = default;
+
     /** Constructor, drawing on the whole screen. */
     DrawCtx();
 

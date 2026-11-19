@@ -27,6 +27,12 @@ namespace ortxui
 class ChecklistView : public View
 {
 public:
+    /** Constructor. */
+    ChecklistView() = default;
+
+    /** Destructor. */
+    ~ChecklistView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
     NavIntent onEvent(const Event &e) override;

@@ -26,6 +26,12 @@ namespace ortxui
 class AboutView : public View
 {
 public:
+    /** Constructor. */
+    AboutView() = default;
+
+    /** Destructor. */
+    ~AboutView() = default;
+
     void build() override;
 
     Screen &screen() override

@@ -25,6 +25,12 @@ namespace ortxui
 class PickerView : public View
 {
 public:
+    /** Constructor. */
+    PickerView() = default;
+
+    /** Destructor. */
+    ~PickerView() = default;
+
     void build() override;
 
     /** Start a pick at the first cell. Call before pushing the picker. */

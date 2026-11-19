@@ -26,6 +26,12 @@ namespace ortxui
 class MessageComposeView : public View
 {
 public:
+    /** Constructor. */
+    MessageComposeView() = default;
+
+    /** Destructor. */
+    ~MessageComposeView() = default;
+
     /** Build the widget tree. */
     void build() override;
 

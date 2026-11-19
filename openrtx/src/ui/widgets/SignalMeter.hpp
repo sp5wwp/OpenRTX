@@ -28,6 +28,12 @@ namespace ortxui
 class SignalMeter : public Object
 {
 public:
+    /** Constructor. */
+    SignalMeter() = default;
+
+    /** Destructor. */
+    ~SignalMeter() = default;
+
     void setLabel(const char *l)
     {
         label_ = (l != nullptr) ? l : "";

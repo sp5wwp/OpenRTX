@@ -35,6 +35,12 @@ namespace ortxui
 class TextInputView : public View
 {
 public:
+    /** Constructor. */
+    TextInputView() = default;
+
+    /** Destructor. */
+    ~TextInputView() = default;
+
     void build() override;
 
     /**

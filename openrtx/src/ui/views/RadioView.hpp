@@ -33,6 +33,12 @@ namespace ortxui
 class RadioView : public SettingsListView
 {
 public:
+    /** Constructor. */
+    RadioView() = default;
+
+    /** Destructor. */
+    ~RadioView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
 

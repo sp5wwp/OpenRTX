@@ -21,6 +21,12 @@ namespace ortxui
 class PickerGrid : public Object
 {
 public:
+    /** Constructor. */
+    PickerGrid() = default;
+
+    /** Destructor. */
+    ~PickerGrid() = default;
+
     /**
      * Put back a selection and scroll row.
      *

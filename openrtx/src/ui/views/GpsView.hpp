@@ -30,6 +30,12 @@ namespace ortxui
 class GpsView : public View
 {
 public:
+    /** Constructor. */
+    GpsView() = default;
+
+    /** Destructor. */
+    ~GpsView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
     void announce() override;

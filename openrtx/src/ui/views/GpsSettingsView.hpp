@@ -29,6 +29,12 @@ namespace ortxui
 class GpsSettingsView : public SettingsListView
 {
 public:
+    /** Constructor. */
+    GpsSettingsView() = default;
+
+    /** Destructor. */
+    ~GpsSettingsView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
 

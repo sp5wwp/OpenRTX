@@ -28,6 +28,12 @@ namespace ortxui
 class BarRow : public Object
 {
 public:
+    /** Constructor. */
+    BarRow() = default;
+
+    /** Destructor. */
+    ~BarRow() = default;
+
     /**
      * Set the leading label; plain text is borrowed, not copied.
      *

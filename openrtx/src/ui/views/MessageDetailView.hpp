@@ -30,6 +30,12 @@ namespace ortxui
 class MessageDetailView : public View
 {
 public:
+    /** Constructor. */
+    MessageDetailView() = default;
+
+    /** Destructor. */
+    ~MessageDetailView() = default;
+
     /** Build the widget tree. */
     void build() override;
 

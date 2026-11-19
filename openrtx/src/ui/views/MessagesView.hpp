@@ -30,6 +30,12 @@ namespace ortxui
 class MessagesView : public View, public ListModel
 {
 public:
+    /** Constructor. */
+    MessagesView() = default;
+
+    /** Destructor. */
+    ~MessagesView() = default;
+
     /** Build the widget tree. */
     void build() override;
 

@@ -30,6 +30,12 @@ namespace ortxui
 class ContactsView : public View, public ListModel
 {
 public:
+    /** Constructor. */
+    ContactsView() = default;
+
+    /** Destructor. */
+    ~ContactsView() = default;
+
     void build() override;
     void onShow() override;
     NavIntent onEvent(const Event &e) override;

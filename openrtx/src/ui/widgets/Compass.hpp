@@ -22,6 +22,12 @@ namespace ortxui
 class Compass : public Object
 {
 public:
+    /** Constructor. */
+    Compass() = default;
+
+    /** Destructor. */
+    ~Compass() = default;
+
     /** Heading 0-359 (0 = North, clockwise); `valid` gates the needle. */
     void setHeading(int16_t deg, bool valid);
 

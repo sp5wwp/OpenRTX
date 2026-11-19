@@ -22,6 +22,9 @@ namespace ortxui
 class Screen : public Object
 {
 public:
+    /** Destructor. */
+    ~Screen() = default;
+
     Screen();
 
     void draw(DrawCtx &d) override; //< root paints nothing itself

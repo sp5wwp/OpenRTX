@@ -34,6 +34,12 @@ struct MenuRow {
 class MenuView : public View, public ListModel
 {
 public:
+    /** Constructor. */
+    MenuView() = default;
+
+    /** Destructor. */
+    ~MenuView() = default;
+
     /** Build the widget tree of the menu id() names. */
     void build() override;
 

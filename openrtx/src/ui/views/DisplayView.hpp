@@ -28,6 +28,12 @@ namespace ortxui
 class DisplayView : public SettingsListView
 {
 public:
+    /** Constructor. */
+    DisplayView() = default;
+
+    /** Destructor. */
+    ~DisplayView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
 

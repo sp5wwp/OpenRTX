@@ -29,6 +29,12 @@ namespace ortxui
 class TimeDateView : public View
 {
 public:
+    /** Constructor. */
+    TimeDateView() = default;
+
+    /** Destructor. */
+    ~TimeDateView() = default;
+
     void build() override;
     void onShow() override;
     void announce() override;

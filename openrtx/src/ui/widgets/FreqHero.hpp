@@ -25,6 +25,12 @@ namespace ortxui
 class FreqHero : public Object
 {
 public:
+    /** Constructor. */
+    FreqHero() = default;
+
+    /** Destructor. */
+    ~FreqHero() = default;
+
     void setFreq(uint32_t hz);
 
     /** Keypad-entry rendering: the caller composes the main ("146.5--") and sub

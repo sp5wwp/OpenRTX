@@ -32,6 +32,12 @@ namespace ortxui
 class ChannelsView : public View, public ListModel
 {
 public:
+    /** Constructor. */
+    ChannelsView() = default;
+
+    /** Destructor. */
+    ~ChannelsView() = default;
+
     void build() override;
     void onShow() override;
     NavIntent onEvent(const Event &e) override;

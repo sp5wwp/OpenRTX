@@ -42,6 +42,12 @@ struct ListPos {
 class List : public Object
 {
 public:
+    /** Constructor. */
+    List() = default;
+
+    /** Destructor. */
+    ~List() = default;
+
     /** Back the list with a borrowed static item array (small, fixed menus). */
     void setItems(const ListItem *items, uint16_t count);
     /** Back the list with an on-demand model (large / lazily-read lists). */

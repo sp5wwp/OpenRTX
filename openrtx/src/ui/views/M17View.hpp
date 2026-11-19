@@ -34,6 +34,12 @@ namespace ortxui
 class M17View : public SettingsListView
 {
 public:
+    /** Constructor. */
+    M17View() = default;
+
+    /** Destructor. */
+    ~M17View() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
 

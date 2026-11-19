@@ -32,6 +32,12 @@ namespace ortxui
 class MacroView : public View
 {
 public:
+    /** Constructor. */
+    MacroView() = default;
+
+    /** Destructor. */
+    ~MacroView() = default;
+
     void build() override;
 
     void syncFromState(const state_t &s) override;

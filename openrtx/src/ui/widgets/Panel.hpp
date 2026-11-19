@@ -19,6 +19,12 @@ namespace ortxui
 class Panel : public Object
 {
 public:
+    /** Constructor. */
+    Panel() = default;
+
+    /** Destructor. */
+    ~Panel() = default;
+
     void setColor(Sem c)
     {
         color_ = c;

@@ -41,6 +41,12 @@ struct ListEdit;
 class SettingsListView : public View
 {
 public:
+    /** Constructor. */
+    SettingsListView() = default;
+
+    /** Destructor. */
+    ~SettingsListView() = default;
+
     Screen &screen() override
     {
         return screen_;

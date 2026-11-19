@@ -24,6 +24,12 @@ namespace ortxui
 class TextBlock : public Object
 {
 public:
+    /** Constructor. */
+    TextBlock() = default;
+
+    /** Destructor. */
+    ~TextBlock() = default;
+
     /** Point at new text, keeping the scroll position. */
     void setText(const char *t)
     {

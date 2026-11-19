@@ -30,6 +30,12 @@ namespace ortxui
 class InfoView : public View
 {
 public:
+    /** Constructor. */
+    InfoView() = default;
+
+    /** Destructor. */
+    ~InfoView() = default;
+
     void build() override;
     void syncFromState(const state_t &s) override;
 

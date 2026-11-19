@@ -25,6 +25,12 @@ class DrawCtx;
 class BatteryIcon
 {
 public:
+    /** Constructor. */
+    BatteryIcon() = default;
+
+    /** Destructor. */
+    ~BatteryIcon() = default;
+
     /**
      * Get the glyph's footprint, which the top bar centres in its slot.
      *

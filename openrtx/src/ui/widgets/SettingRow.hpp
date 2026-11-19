@@ -36,6 +36,9 @@ namespace ortxui
 class SettingRow : public Flex
 {
 public:
+    /** Destructor. */
+    ~SettingRow() = default;
+
     SettingRow();
 
     enum class Kind : uint8_t {

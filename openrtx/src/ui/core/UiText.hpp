@@ -27,6 +27,9 @@ namespace ortxui
 class UiText
 {
 public:
+    /** Destructor. */
+    ~UiText() = default;
+
     /**
      * Empty text.
      */

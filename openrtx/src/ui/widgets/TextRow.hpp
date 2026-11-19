@@ -35,6 +35,12 @@ namespace ortxui
 class TextRow : public Object
 {
 public:
+    /** Constructor. */
+    TextRow() = default;
+
+    /** Destructor. */
+    ~TextRow() = default;
+
     /** Runs a row holds: a value and its tag or unit. */
     static constexpr uint8_t kMaxRuns = 2;
 
