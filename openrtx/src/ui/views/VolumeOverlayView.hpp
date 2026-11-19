@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_VOLUMEOVERLAYVIEW_HPP
 #define ORTX_UI_VOLUMEOVERLAYVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include "core/View.hpp"
 #include "views/VolumeHud.hpp"
@@ -38,15 +42,6 @@ public:
      * @param s: state snapshot.
      */
     void syncFromState(const state_t &s) override;
-
-    /**
-     * Ignore an event: ui_shim hides the HUD before a key event, so only
-     * status events reach it.
-     *
-     * @param e: event.
-     * @return no navigation.
-     */
-    NavIntent onEvent(const Event &e) override;
 
     /**
      * Get the widget tree.

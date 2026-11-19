@@ -5,7 +5,6 @@
  */
 
 #include "views/VolumeOverlayView.hpp"
-#include "core/Event.hpp"
 
 namespace ortxui
 {
@@ -24,13 +23,6 @@ void VolumeOverlayView::syncFromState(const state_t &s)
 
     screen_.setVolume(volume);
     screen_.invalidate();
-}
-
-NavIntent VolumeOverlayView::onEvent(const Event &)
-{
-    /* The overlay never self-navigates: ui_shim opens it on knob movement and
-     * closes it on the Transient timeout (or the next key press). */
-    return NavIntent::none();
 }
 
 } // namespace ortxui
