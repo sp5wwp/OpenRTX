@@ -35,7 +35,8 @@
  *   rw <reg> <value>     write a BK4819 register; the radio driver may
  *                        overwrite it at the next mode or frequency change
  *   afc [0|1]            read or set the TETRA frequency correction (a
- *                        setting, saved like one)
+ *                        setting, saved like one); also shows the stored
+ *                        correction
  */
 
 #include <stdarg.h>
@@ -325,7 +326,8 @@ static void execute(char *cmd)
             state.settings.tetraAfcOff = (argv[1][0] == '0');
             pthread_mutex_unlock(&state_mutex);
         }
-        reply("afc %d", !state.settings.tetraAfcOff);
+        reply("afc %d stored=%d", !state.settings.tetraAfcOff,
+              (int)state.settings.tetraAfcOffset);
 #endif
     } else if (!strcmp(argv[0], "d") && argc == 2) {
         baseband_dump_pause(argv[1][0] == '0');
