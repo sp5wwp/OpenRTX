@@ -46,7 +46,7 @@ void M17View::build()
     items_[RowCanRx].checked = state.settings.m17_can_rx;
     items_[RowCanRx].value = nullptr;
 
-    buildList(STR(m17), items_, RowCount);
+    buildList(STR(m17), items_.data(), RowCount);
     refreshCustom(RowCallsign);
     refreshValue(RowCan);
 }

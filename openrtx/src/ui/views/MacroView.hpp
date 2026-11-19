@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_MACROVIEW_HPP
 #define ORTX_UI_MACROVIEW_HPP
 
+#include <array>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"
@@ -54,7 +55,7 @@ private:
 
     Screen screen_;
     Flex root_;
-    Flex rows_[3]; //< grid rows, sizing the tiles in the column
+    std::array<Flex, 3> rows_; //< grid rows, sizing the tiles in the column
     MacroTiles tiles_;
     Flex footer_;
     BarRow sqlBar_; //< squelch level, using the shared level-bar control

@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_MESSAGECOMPOSEVIEW_HPP
 #define ORTX_UI_MESSAGECOMPOSEVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include "core/View.hpp"
 #include "widgets/TopBar.hpp"
@@ -88,7 +89,7 @@ private:
     /** The To / Message / Send rows. */
     List list_;
     /** Row items, values borrowed from the draft. */
-    ListItem items_[ROW_COUNT] = {};
+    std::array<ListItem, ROW_COUNT> items_ = {};
 };
 
 } // namespace ortxui

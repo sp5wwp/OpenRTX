@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_CHECKLISTVIEW_HPP
 #define ORTX_UI_CHECKLISTVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
@@ -62,7 +63,7 @@ private:
     Flex root_;
     List list_;
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     bool seeded_ = false;
 };
 

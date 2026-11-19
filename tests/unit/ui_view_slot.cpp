@@ -61,7 +61,7 @@ static uint16_t selectedRow(const Navigator &nav)
  */
 static void forgetLists()
 {
-    memset(uiMemory.lists, 0, sizeof(uiMemory.lists));
+    uiMemory.lists.fill({ 0, 0 });
 }
 
 TEST_CASE("The view slot fits every view", "[ui][slot]")

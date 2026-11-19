@@ -65,7 +65,7 @@ static Event repeat(uint32_t keys)
  */
 static void resetVfo()
 {
-    memset(uiMemory.lists, 0, sizeof(uiMemory.lists));
+    uiMemory.lists.fill({ 0, 0 });
     state.tuner_mode = VFO;
     state.step_index = 0;
     state.channel.mode = OPMODE_FM;

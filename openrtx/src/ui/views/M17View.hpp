@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_M17VIEW_HPP
 #define ORTX_UI_M17VIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/SettingsListView.hpp"
@@ -75,7 +76,7 @@ private:
         RowCount,
     };
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][24] = {};
 
     /* Callsign edit state: the buffer is edited through the shared TextInput

@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_THEME_HPP
 #define ORTX_UI_THEME_HPP
 
+#include <array>
 #include "core/graphics.h"
 #include "style/SemanticColor.hpp"
 
@@ -17,7 +18,7 @@ namespace ortxui
  * A theme: the colour of each semantic role.
  */
 struct ThemeTable {
-    color_t colors[static_cast<int>(Sem::Count)]; ///< Indexed by Sem
+    std::array<color_t, static_cast<size_t>(Sem::Count)> colors; ///< By Sem
 };
 
 /**

@@ -32,7 +32,7 @@ void ChecklistView::build()
         items_[i].checkbox = true;
     }
 
-    list_.setItems(items_, RowCount);
+    list_.setItems(items_.data(), RowCount);
     list_.setContentPad(4);
     list_.setFlag(FLAG_FOCUSABLE, true);
     list_.setGrow(1);

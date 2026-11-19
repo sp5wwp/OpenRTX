@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_NAVIGATOR_HPP
 #define ORTX_UI_NAVIGATOR_HPP
 
+#include <array>
 #include <cstdint>
 #include "core/View.hpp"
 #include "core/ViewId.hpp"
@@ -165,9 +166,9 @@ private:
 
     static constexpr uint8_t kMaxDepth = 8;
 
-    ViewSlot &slot_;               ///< Where the top screen is built
-    UiMemory &mem_;                ///< What survives a view
-    ViewId stack_[kMaxDepth];      ///< Screens, root first
+    ViewSlot &slot_;                      ///< Where the top screen is built
+    UiMemory &mem_;                       ///< What survives a view
+    std::array<ViewId, kMaxDepth> stack_; ///< Screens, root first
     ViewId built_ = ViewId::Count; ///< Screen currently built in the slot
     uint8_t depth_ = 0;            ///< Number of screens on the stack
 

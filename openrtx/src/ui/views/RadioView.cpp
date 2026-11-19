@@ -92,7 +92,7 @@ void RadioView::build()
         items_[i].label = kLabels[i];
         items_[i].value = bufs_[i];
     }
-    buildList(STR(radio), items_, RowCount);
+    buildList(STR(radio), items_.data(), RowCount);
     refreshCustom(RowOffset);
     refreshValue(RowDirection);
     refreshValue(RowStep);

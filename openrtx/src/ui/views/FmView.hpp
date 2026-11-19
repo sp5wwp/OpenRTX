@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_FMVIEW_HPP
 #define ORTX_UI_FMVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/SettingsListView.hpp"
@@ -46,7 +47,7 @@ private:
         RowCount,
     };
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][12] = {};
 
     /* Change-gate mirrors of the fields we render. */

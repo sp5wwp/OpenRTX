@@ -33,7 +33,7 @@ void GpsSettingsView::build()
     items_[RowSetTime].checked = state.settings.gpsSetTime;
     items_[RowTimezone].value = bufs_[RowTimezone];
 
-    buildList(STR(gps), items_, RowCount);
+    buildList(STR(gps), items_.data(), RowCount);
     refreshValue(RowTimezone);
 
     lastEnabled_ = state.settings.gps_enabled;

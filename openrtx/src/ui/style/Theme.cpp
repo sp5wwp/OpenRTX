@@ -4,6 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <array>
+#include <utility>
 #include "style/Theme.hpp"
 #include "style/Palette.hpp"
 #include "hwconfig.h"
@@ -84,17 +86,28 @@ static constexpr color_t instrumentColor(Sem role)
 }
 
 /**
- * Build a theme table from a role mapping.
+ * Build a theme table from a role mapping, at compile time.
+ *
+ * @param map: role to colour mapping.
+ * @return the table.
+ */
+template <size_t... I>
+static constexpr ThemeTable makeTheme(color_t (*map)(Sem),
+                                      std::index_sequence<I...>)
+{
+    return { { { map(static_cast<Sem>(I))... } } };
+}
+
+/**
+ * Build a theme table from a role mapping, at compile time.
  *
  * @param map: role to colour mapping.
  * @return the table.
  */
 static constexpr ThemeTable makeTheme(color_t (*map)(Sem))
 {
-    ThemeTable t{};
-    for (int i = 0; i < static_cast<int>(Sem::Count); i++)
-        t.colors[i] = map(static_cast<Sem>(i));
-    return t;
+    return makeTheme(
+        map, std::make_index_sequence<static_cast<size_t>(Sem::Count)>());
 }
 
 const ThemeTable THEME_INSTRUMENT = makeTheme(instrumentColor);

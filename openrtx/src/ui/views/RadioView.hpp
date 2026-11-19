@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_RADIOVIEW_HPP
 #define ORTX_UI_RADIOVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/SettingsListView.hpp"
@@ -71,7 +72,7 @@ private:
         RowCount,
     };
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][20] = {};
 
     /* Offset keypad entry on the shared TextInput slot engine (6-digit kHz).

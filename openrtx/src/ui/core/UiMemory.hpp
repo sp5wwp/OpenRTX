@@ -11,6 +11,7 @@
 #error This header is C++ only!
 #endif
 
+#include <array>
 #include <cstdint>
 #include "core/ViewId.hpp"
 #include "core/UiText.hpp"
@@ -53,15 +54,15 @@ struct ComposeDraft {
  * Frequency or destination entry of the VFO screen.
  */
 struct VfoEdit {
-    long long errorAt; ///< Tick of an out-of-band commit, 0 if none
-    int32_t shift;     ///< TX - RX at the start of the entry
-    char text[2][10];  ///< RX and TX digits, or the destination
-    uint8_t cursor[2]; ///< Cursor of each field
-    bool input;        ///< Frequency entry open
-    bool txField;      ///< Editing TX rather than RX
-    bool rxPristine;   ///< RX still pre-filled
-    bool txPristine;   ///< TX still derived from RX
-    bool destination;  ///< Destination entry open
+    long long errorAt;             ///< Tick of an out-of-band commit, 0 if none
+    int32_t shift;                 ///< TX - RX at the start of the entry
+    char text[2][10];              ///< RX and TX digits, or the destination
+    std::array<uint8_t, 2> cursor; ///< Cursor of each field
+    bool input;                    ///< Frequency entry open
+    bool txField;                  ///< Editing TX rather than RX
+    bool rxPristine;               ///< RX still pre-filled
+    bool txPristine;               ///< TX still derived from RX
+    bool destination;              ///< Destination entry open
 };
 
 /**
@@ -129,14 +130,14 @@ struct UiMemory {
     /** Free the editor's working copy. */
     void closeEdit();
 
-    ListPos lists[VIEW_COUNT]; ///< List position of each view
-    EditRequest edit;          ///< Text editor request
-    InlineEdit inlineEdit;     ///< Edit of the view under the macro menu
-    ComposeDraft *draft;       ///< Compose draft, nullptr when not composing
-    uint32_t inboxPinned;      ///< Sequence pinned in the inbox
-    uint32_t messageSeq;       ///< Sequence of the message shown in detail
-    int16_t messageScroll;     ///< Scroll offset of the message body
-    bool draftReply;           ///< Draft answers a received message
+    std::array<ListPos, VIEW_COUNT> lists; ///< List position of each view
+    EditRequest edit;                      ///< Text editor request
+    InlineEdit inlineEdit; ///< Edit of the view under the macro menu
+    ComposeDraft *draft;   ///< Compose draft, nullptr when not composing
+    uint32_t inboxPinned;  ///< Sequence pinned in the inbox
+    uint32_t messageSeq;   ///< Sequence of the message shown in detail
+    int16_t messageScroll; ///< Scroll offset of the message body
+    bool draftReply;       ///< Draft answers a received message
 };
 
 /** The UI memory. */

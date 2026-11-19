@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_DISPLAYVIEW_HPP
 #define ORTX_UI_DISPLAYVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/SettingsListView.hpp"
@@ -67,11 +68,11 @@ private:
         uint8_t step;
     };
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][20] = {};
     /* build() seeds last_ with the live value of every row before any sync, so a
      * zero start never aliases a real value into a skipped first paint. */
-    uint8_t last_[RowCount] = {};
+    std::array<uint8_t, RowCount> last_ = {};
 };
 
 } // namespace ortxui

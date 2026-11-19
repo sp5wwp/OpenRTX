@@ -31,7 +31,7 @@ void FmView::build()
         items_[i].label = kLabels[i];
         items_[i].value = bufs_[i];
     }
-    buildList(STR(fm), items_, RowCount);
+    buildList(STR(fm), items_.data(), RowCount);
     for (uint8_t i = 0; i < RowCount; i++)
         refreshValue(i);
 

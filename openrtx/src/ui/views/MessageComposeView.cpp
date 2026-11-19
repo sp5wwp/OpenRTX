@@ -38,7 +38,7 @@ void MessageComposeView::build()
 
     list_.setArea({ 0, topH, (uint16_t)W, (uint16_t)(H - topH) });
     list_.setContentPad(1);
-    list_.setItems(items_, ROW_COUNT);
+    list_.setItems(items_.data(), ROW_COUNT);
     list_.setFlag(FLAG_FOCUSABLE, true);
 
     screen_.addChild(&bar);

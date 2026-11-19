@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_TEXTROW_HPP
 #define ORTX_UI_TEXTROW_HPP
 
+#include <array>
 #include <cstdint>
 #include "core/Object.hpp"
 #include "core/graphics.h"
@@ -89,7 +90,7 @@ private:
     }
     int16_t baselineY() const;
 
-    Run runs_[kMaxRuns];
+    std::array<Run, kMaxRuns> runs_;
     uint8_t count_ = 0;
     int16_t indent_ = 0;
     int16_t gap_ = 3;

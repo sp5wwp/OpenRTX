@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_DRAWCTX_HPP
 #define ORTX_UI_DRAWCTX_HPP
 
+#include <array>
 #include "core/graphics.h"
 #include "core/Geometry.hpp"
 #include "style/SemanticColor.hpp"
@@ -119,7 +120,7 @@ private:
     static constexpr uint8_t kClipStackMax = 16;
     Rect bounds_; ///< Part of the screen being drawn
     Rect clip_;
-    Rect clipStack_[kClipStackMax];
+    std::array<Rect, kClipStackMax> clipStack_;
     uint8_t clipDepth_ = 0;
 };
 

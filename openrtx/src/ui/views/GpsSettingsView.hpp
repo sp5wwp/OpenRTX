@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_GPSSETTINGSVIEW_HPP
 #define ORTX_UI_GPSSETTINGSVIEW_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/SettingsListView.hpp"
@@ -56,7 +57,7 @@ private:
     static constexpr int8_t kTzMin = -24;
     static constexpr int8_t kTzMax = 28;
 
-    ListItem items_[RowCount] = {};
+    std::array<ListItem, RowCount> items_ = {};
     char bufs_[RowCount][16] = {};
 
     /* Change-gate mirrors. */

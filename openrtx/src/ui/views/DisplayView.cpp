@@ -30,7 +30,7 @@ void DisplayView::build()
         items_[i].label = kLabels[i];
         items_[i].value = bufs_[i];
     }
-    buildList(STR(display), items_, RowCount);
+    buildList(STR(display), items_.data(), RowCount);
 
     /* Seed the value strings and the change-gate from the live settings so no
      * row starts blank (last_'s 0xFF sentinel would otherwise alias a real value

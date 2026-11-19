@@ -7,6 +7,7 @@
 #ifndef ORTX_UI_TEXTINPUT_HPP
 #define ORTX_UI_TEXTINPUT_HPP
 
+#include <array>
 #include <cstdint>
 #include <cstddef>
 #include "core/Object.hpp"
@@ -287,7 +288,7 @@ private:
     char placeholder_ = '-';
     uint16_t slotCount_ = 0;  //< number of editable slots laid into the buffer
     uint16_t slotCursor_ = 0; //< active slot ordinal, in [0, slotCount_]
-    uint16_t slotPos_[kMaxSlots] = {}; //< buffer offset of each slot
+    std::array<uint16_t, kMaxSlots> slotPos_ = {}; //< buffer offset of each slot
 
     /* Validation + commit/cancel hooks (handleKey). */
     void *hookCtx_ = nullptr;
