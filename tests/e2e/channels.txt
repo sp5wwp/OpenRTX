@@ -27,10 +27,9 @@ volume 100
 sleep 2000
 wait_stable
 screenshot_sync channels_after_volume.bmp
-# Opening and closing the macro menu comes back on the same row too.
-keyhold MONI
-wait_stable
-keyrelease
+# Opening and closing the macro menu comes back on the same row too. A tap
+# opens and closes it; a hold past the long press would latch it open.
+key MONI
 wait_stable
 screenshot_sync channels_after_macro.bmp
 # ENTER loads the channel and pops to the VFO home: M17 CQ, 433.475.
