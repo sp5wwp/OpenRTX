@@ -249,7 +249,14 @@ void display_terminate()
 {
 }
 
-void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+/**
+ * Send rows of pixels to the display.
+ *
+ * @param startRow: first screen row.
+ * @param endRow: screen row after the last one.
+ * @param pixels: pixels of the rows, starting from column 0 of startRow.
+ */
+static void sendRows(uint8_t startRow, uint8_t endRow, const uint16_t *pixels)
 {
     /*
      * Put screen data lines back to output mode, since they are in common with
@@ -277,18 +284,25 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
     sendData(endRow);
     sendCmd(ST775R_CMD_RAMWR);
 
-    for(uint8_t y = startRow; y < endRow; y++)
+    size_t count = (endRow - startRow) * CONFIG_SCREEN_WIDTH;
+    for(size_t i = 0; i < count; i++)
     {
-        for(uint8_t x = 0; x < CONFIG_SCREEN_WIDTH; x++)
-        {
-            size_t pos = x + y * CONFIG_SCREEN_WIDTH;
-            uint16_t pixel = ((uint16_t *) fb)[pos];
-            sendData((pixel >> 8) & 0xff);
-            sendData(pixel & 0xff);
-        }
+        sendData((pixels[i] >> 8) & 0xff);
+        sendData(pixels[i] & 0xff);
     }
 
     gpio_setPin(LCD_CS);
+}
+
+void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+{
+    const uint16_t *frameBuffer = (const uint16_t *) fb;
+    sendRows(startRow, endRow, frameBuffer + (startRow * CONFIG_SCREEN_WIDTH));
+}
+
+void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+{
+    sendRows(startRow, endRow, (const uint16_t *) band);
 }
 
 void display_render(void *fb)

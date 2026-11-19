@@ -21,6 +21,14 @@
 
 static bool inProgress;             /* Flag to signal when rendering is in progress */
 
+#ifdef CONFIG_PIX_FMT_RGB565
+/**
+ * Whole screen assembled from the bands, sent to the window once the last
+ * band arrives.
+ */
+static PIXEL_SIZE screen[CONFIG_SCREEN_HEIGHT * CONFIG_SCREEN_WIDTH];
+#endif
+
 /*
  * SDL main loop syncronization
  */
@@ -115,6 +123,18 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
 
     inProgress = false;
 }
+
+#ifdef CONFIG_PIX_FMT_RGB565
+void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+{
+    size_t rowSize = CONFIG_SCREEN_WIDTH * sizeof(PIXEL_SIZE);
+    memcpy(&screen[startRow * CONFIG_SCREEN_WIDTH], band,
+           (endRow - startRow) * rowSize);
+
+    if(endRow == CONFIG_SCREEN_HEIGHT)
+        display_renderRows(0, CONFIG_SCREEN_HEIGHT, screen);
+}
+#endif
 
 void display_render(void *fb)
 {

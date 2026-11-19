@@ -409,7 +409,16 @@ void display_terminate()
     __DSB();
 }
 
-void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+/**
+ * Send rows of pixels to the display and wait for the DMA transfer to end, so
+ * that the caller can reuse the buffer.
+ *
+ * @param startRow: first screen row.
+ * @param endRow: screen row after the last one.
+ * @param pixels: pixels of the rows, starting from column 0 of startRow; they
+ * are byte swapped in place.
+ */
+static void sendRows(uint8_t startRow, uint8_t endRow, uint16_t *pixels)
 {
     /*
      * Put screen data lines back to alternate function mode, since they are in
@@ -432,15 +441,10 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
      * the CS pin low, in this way user code calling the renderingInProgress
      * function gets true as return value and does not stomp our work.
      */
-    uint16_t *frameBuffer = (uint16_t *) fb;
-    for(uint8_t y = startRow; y < endRow; y++)
+    size_t count = (endRow - startRow) * CONFIG_SCREEN_WIDTH;
+    for(size_t i = 0; i < count; i++)
     {
-        for(uint8_t x = 0; x < CONFIG_SCREEN_WIDTH; x++)
-        {
-            size_t pos = x + y * CONFIG_SCREEN_WIDTH;
-            uint16_t pixel = frameBuffer[pos];
-            frameBuffer[pos] = __builtin_bswap16(pixel);
-        }
+        pixels[i] = __builtin_bswap16(pixels[i]);
     }
 
     /* Configure start and end rows in display driver */
@@ -456,26 +460,28 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
     /*
      * Configure DMA2 stream 7 to send framebuffer data to the screen.
      * Both source and destination memory sizes are configured to 8 bit, thus
-     * we have to set the transfer size to twice the framebuffer size, since
-     * this one is made of 16 bit variables.
+     * we have to set the transfer size to twice the number of pixels, since
+     * they are 16 bit variables.
      */
-    DMA2_Stream7->NDTR = (endRow - startRow) * CONFIG_SCREEN_WIDTH * sizeof(uint16_t);
-    DMA2_Stream7->PAR  = ((uint32_t ) frameBuffer + (startRow * CONFIG_SCREEN_WIDTH
-                                                     * sizeof(uint16_t)));
+    DMA2_Stream7->NDTR = count * sizeof(uint16_t);
+    DMA2_Stream7->PAR  = (uint32_t) pixels;
     DMA2_Stream7->M0AR = LCD_FSMC_ADDR_DATA;
-    DMA2_Stream7->CR = DMA_SxCR_CHSEL         /* Channel 7                   */
-                     | DMA_SxCR_PINC          /* Increment source pointer    */
-                     | DMA_SxCR_DIR_1         /* Memory to memory            */
-                     | DMA_SxCR_TCIE          /* Transfer complete interrupt */
-                     | DMA_SxCR_TEIE          /* Transfer error interrupt    */
-                     | DMA_SxCR_EN;           /* Start transfer              */
 
     /*
-     * Put the calling thread in waiting status until render completes.
+     * Start the transfer and put the calling thread in waiting status until
+     * it completes. The transfer starts with interrupts disabled, so that its
+     * completion interrupt cannot run before lcdWaiting is set: a band is
+     * short enough to be sent while this thread is preempted.
      */
     {
         FastInterruptDisableLock dLock;
         lcdWaiting = Thread::IRQgetCurrentThread();
+        DMA2_Stream7->CR = DMA_SxCR_CHSEL         /* Channel 7                   */
+                         | DMA_SxCR_PINC          /* Increment source pointer    */
+                         | DMA_SxCR_DIR_1         /* Memory to memory            */
+                         | DMA_SxCR_TCIE          /* Transfer complete interrupt */
+                         | DMA_SxCR_TEIE          /* Transfer error interrupt    */
+                         | DMA_SxCR_EN;           /* Start transfer              */
         do
         {
             Thread::IRQwait();
@@ -485,6 +491,17 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
             }
         } while(lcdWaiting);
     }
+}
+
+void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+{
+    uint16_t *frameBuffer = (uint16_t *) fb;
+    sendRows(startRow, endRow, frameBuffer + (startRow * CONFIG_SCREEN_WIDTH));
+}
+
+void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+{
+    sendRows(startRow, endRow, (uint16_t *) band);
 }
 
 void display_render(void *fb)
