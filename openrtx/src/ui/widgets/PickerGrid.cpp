@@ -15,8 +15,10 @@ namespace ortxui
 /* Pickable code points: the Latin-1 supplement the fonts carry. */
 static constexpr uint32_t FIRST_CP = 0xA1; ///< First pickable code point
 static constexpr uint32_t LAST_CP = 0xFF;  ///< Last pickable code point
+
+/** Number of cells. */
 static constexpr uint16_t CELL_COUNT =
-    static_cast<uint16_t>(LAST_CP - FIRST_CP + 1); ///< Number of cells
+    static_cast<uint16_t>(LAST_CP - FIRST_CP + 1);
 
 static constexpr int16_t CELL_H_REGULAR = 20; ///< Cell height, regular screen
 static constexpr int16_t CELL_H_COMPACT = 14; ///< Cell height, compact screen
