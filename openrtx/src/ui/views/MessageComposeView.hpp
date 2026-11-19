@@ -82,14 +82,10 @@ private:
         ROW_COUNT,
     };
 
-    /** Widget-tree root. */
-    Screen screen_;
-    /** Column: top bar over the rows. */
-    Flex root_;
-    /** The To / Message / Send rows. */
-    List list_;
-    /** Row items, values borrowed from the draft. */
-    std::array<ListItem, ROW_COUNT> items_ = {};
+    Screen screen_;                              ///< Widget-tree root
+    Flex root_;                                  ///< Top bar over the rows
+    List list_;                                  ///< To, Message, Send rows
+    std::array<ListItem, ROW_COUNT> items_ = {}; ///< Rows, on the draft
 };
 
 } // namespace ortxui

@@ -26,10 +26,10 @@ struct UiMemory;
  * What a View asks the Navigator to do after handling an event.
  */
 enum class NavAction : uint8_t {
-    None,      //< Stay on this view
-    Push,      //< Open `target` as a child screen (ENTER-style drill-in)
-    Pop,       //< Return to the parent screen (ESC-style back)
-    PopToRoot, //< Unwind all the way to the home screen (e.g. channel picked)
+    None,      ///< Stay on this view
+    Push,      ///< Open `target` as a child screen
+    Pop,       ///< Return to the parent screen
+    PopToRoot, ///< Unwind all the way to the home screen
 };
 
 /**
@@ -156,28 +156,30 @@ public:
     virtual void announce();
 
     /**
-     * Pull displayed fields from the state snapshot (change-gated). The base
-     * refreshes the shared top bar (clock/battery) if one was registered;
-     * overrides should call it first, then sync their own content.
+     * Update what the view shows from the state snapshot, before each frame.
+     * The base refreshes the shared top bar; overrides call it first.
+     *
+     * @param s: state snapshot.
      */
     virtual void syncFromState(const state_t &s);
 
     /**
-     * Handle a decoded input event and return a navigation intent. The default
-     * routes the event into the Screen (focus/selection) and maps ESC to a
-     * back-pop, which suits any leaf view.
+     * Handle an input event. The default goes back on ESC and passes anything
+     * else to the Screen.
+     *
+     * @param e: event.
+     * @return what the navigator does next.
      */
     virtual NavIntent onEvent(const Event &e);
 
-    /** The view's widget-tree root. */
+    /** Get the view's widget-tree root. */
     virtual Screen &screen() = 0;
 
     /**
-     * Consume a pending "reconfigure the radio" request. A view that edits an
-     * rtx-affecting field of state.channel (e.g. FM CTCSS tones) calls
-     * requestSyncRtx(); ui_shim reads this after dispatching an event and
-     * raises the sync_rtx out-parameter so threads.c re-applies state.channel
-     * to the radio. Returns true once, then clears the flag.
+     * Take the view's request to reconfigure the radio from state.channel,
+     * clearing it.
+     *
+     * @return true once after requestSyncRtx().
      */
     bool takeSyncRtx()
     {
@@ -204,16 +206,15 @@ protected:
      */
     static TopBar &topBar();
 
-    /** Ask ui_shim to reconfigure the radio from state.channel (see above). */
+    /** Ask for the radio to be reconfigured from state.channel. */
     void requestSyncRtx()
     {
         syncRtx_ = true;
     }
 
     /**
-     * Speak a value/label via voice prompts (flush + announce + play), gated by
-     * settings.vpLevel. Views call this from their edit paths so a value that
-     * changes in place (no list-selection change) is still announced.
+     * Speak a text now, when voice prompts are on, such as a value changed in
+     * place.
      *
      * @param text: text to speak; an entry plays its own prompt.
      */
@@ -223,7 +224,7 @@ private:
     friend class ViewSlot;
 
     bool hasTopBar_ = false;    ///< The screen shows the shared top bar
-    bool syncRtx_ = false;
+    bool syncRtx_ = false;      ///< The radio is to be reconfigured
     ViewId id_ = ViewId::Count; ///< Screen this view was built as
 };
 

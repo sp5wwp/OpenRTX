@@ -51,7 +51,7 @@ public:
      * Fill a row.
      *
      * @param index: row index.
-     * @param out: the row.
+     * @param out: the row, default-constructed by the List.
      */
     virtual void rowAt(uint16_t index, ListItem &out) const = 0;
 

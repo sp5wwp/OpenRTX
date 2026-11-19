@@ -52,15 +52,12 @@ bool UiMemory::openEdit(const UiText &title, char *dst, uint16_t cap,
                         const Charset &cs, const MultiTapTable &tap,
                         bool multiline, bool rtx)
 {
-    if (cap == 0)
-        cap = 1;
-
     free(edit.work);
     edit.work = static_cast<char *>(malloc(cap));
     if (edit.work == nullptr)
         return false;
 
-    strncpy(edit.work, (dst != nullptr) ? dst : "", cap - 1);
+    strncpy(edit.work, dst, cap - 1);
     edit.work[cap - 1] = '\0';
 
     edit.title = title;

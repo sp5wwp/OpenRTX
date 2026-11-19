@@ -19,28 +19,41 @@
 namespace ortxui
 {
 
+/** Whether the screen is the regular size class. */
+static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
+
+/** Height of the header line. */
+static constexpr int16_t HEADER_H = REGULAR ? 14 : 10;
+
+/** Margin around the body. */
+static constexpr uint8_t BODY_MARGIN = REGULAR ? 3 : 2;
+
+/** Height of the footer. */
+static constexpr int16_t FOOTER_H = REGULAR ? 12 : 9;
+
+/** Horizontal padding of the footer. */
+static constexpr int16_t FOOTER_PAD_X = 4;
+
 void MessageDetailView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-    const bool regular = (sizeClass() == SizeClass::Regular);
-    const fontSize_t small = regular ? FONT_SIZE_6PT : FONT_SIZE_5PT;
+    const fontSize_t text = REGULAR ? FONT_SIZE_8PT : FONT_SIZE_6PT;
+    const fontSize_t small = REGULAR ? FONT_SIZE_6PT : FONT_SIZE_5PT;
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(message));
 
-    header_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
+    header_.setFont(text);
     header_.setColor(Sem::Accent);
     header_.setAlign(TEXT_ALIGN_CENTER);
     header_.setOverflow(Label::Overflow::Ellipsize);
     header_.setText(headerBuf_);
-    header_.setBasis(regular ? 14 : 10);
+    header_.setBasis(HEADER_H);
 
-    body_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
+    body_.setFont(text);
     body_.setGrow(1);
-    body_.setMargin(regular ? 3 : 2);
+    body_.setMargin(BODY_MARGIN);
 
     reply_.setFont(small);
     reply_.setColor(Sem::Accent);
@@ -54,8 +67,8 @@ void MessageDetailView::build()
 
     footer_.setAxis(Axis::Row);
     footer_.setBackground(Sem::Surface);
-    footer_.setPadding(4, 0);
-    footer_.setBasis(regular ? 12 : 9);
+    footer_.setPadding(FOOTER_PAD_X, 0);
+    footer_.setBasis(FOOTER_H);
     footer_.addChild(&reply_);
     footer_.addChild(&position_);
 
@@ -65,7 +78,6 @@ void MessageDetailView::build()
     root_.addChild(&footer_);
     screen_.addChild(&root_);
     root_.onLayout();
-    screen_.markAllDirty();
 }
 
 void MessageDetailView::open(uint32_t sequence)
@@ -151,8 +163,9 @@ void MessageDetailView::refresh(const struct message *msg, size_t idx,
     const char *rcpt = (msg->recipient[0] != '\0') ? msg->recipient :
                                                      STR(broadcast).str();
     sniprintf(headerBuf_, sizeof(headerBuf_), "%s > %s", msg->sender, rcpt);
-    sniprintf(positionBuf_, sizeof(positionBuf_), "%u/%u", (unsigned)(idx + 1),
-              (unsigned)messages_count());
+    sniprintf(positionBuf_, sizeof(positionBuf_), "%u/%u",
+              static_cast<unsigned>(idx + 1),
+              static_cast<unsigned>(messages_count()));
     reply_.setText(reply ? STR(reply) : UiText(""));
     screen_.markAllDirty();
 }

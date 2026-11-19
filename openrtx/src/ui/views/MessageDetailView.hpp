@@ -90,34 +90,20 @@ private:
     /** Whether `msg` can be answered while operating in `mode`. */
     static bool canReply(const struct message *msg, uint8_t mode);
 
-    /** Widget-tree root. */
-    Screen screen_;
-    /** Column: top bar, header, body, footer. */
-    Flex root_;
-    /** "sender > recipient" line. */
-    Label header_;
-    /** Scrollable message body. */
-    TextBlock body_;
-    /** Footer row: Reply hint left, position right. */
-    Flex footer_;
-    /** Reply hint, blank when the message cannot be answered. */
-    Label reply_;
-    /** "n/m" position in the inbox. */
-    Label position_;
-    /** Sequence number of the pinned message. */
-    uint32_t seq_ = 0;
-    /** Sequence number the widgets currently show; 0 when none. */
-    uint32_t shownSeq_ = 0;
-    /** Index the position label currently shows. */
-    size_t shownIdx_ = SIZE_MAX;
-    /** Inbox size the position label currently shows. */
-    size_t shownCount_ = 0;
-    /** Whether the Reply hint is currently shown. */
-    bool shownReply_ = false;
-    /** Header text. */
-    char headerBuf_[2 * MSG_ADDR_MAX_LEN + 4] = {};
-    /** Position text. */
-    char positionBuf_[12] = {};
+    Screen screen_;              ///< Widget-tree root
+    Flex root_;                  ///< Top bar, header, body, footer
+    Label header_;               ///< "sender > recipient" line
+    TextBlock body_;             ///< Scrollable message body
+    Flex footer_;                ///< Reply hint left, position right
+    Label reply_;                ///< Reply hint, blank if it cannot be answered
+    Label position_;             ///< "n/m" position in the inbox
+    uint32_t seq_ = 0;           ///< Sequence number of the pinned message
+    uint32_t shownSeq_ = 0;      ///< Sequence number shown, 0 when none
+    size_t shownIdx_ = SIZE_MAX; ///< Index the position label shows
+    size_t shownCount_ = 0;      ///< Inbox size the position label shows
+    bool shownReply_ = false;    ///< The Reply hint is shown
+    char headerBuf_[2 * MSG_ADDR_MAX_LEN + 4] = {}; ///< Header text
+    char positionBuf_[12] = {};                     ///< Position text
 };
 
 } // namespace ortxui

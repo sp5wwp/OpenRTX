@@ -88,9 +88,8 @@ struct InlineEdit {
 };
 
 /**
- * What survives a view being destroyed. Only one view exists at a time, so
- * state that used to live in a view kept alive below the active one is kept
- * here: list positions, pinned messages, the editor's request and the drafts.
+ * What survives a view being destroyed: list positions, pinned messages, the
+ * editor's request and the drafts.
  */
 struct UiMemory {
     /** Constructor. */

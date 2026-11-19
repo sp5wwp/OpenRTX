@@ -67,9 +67,6 @@ uint16_t CodeplugView::rowCount() const
 
 void CodeplugView::rowAt(uint16_t index, ListItem &out) const
 {
-    out.value = nullptr;
-    out.checkbox = false;
-
     if (first_.isSet()) {
         if (index == 0) {
             out.label = first_;

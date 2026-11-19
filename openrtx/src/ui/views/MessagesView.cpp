@@ -53,9 +53,6 @@ void MessagesView::build()
 
 void MessagesView::rowAt(uint16_t index, ListItem &out) const
 {
-    out.checkbox = false;
-    out.value = nullptr;
-
     const struct message *msg = messages_get(index);
     if (msg == nullptr) {
         out.label = (index == count_) ? STR(newMessage) : UiText("");

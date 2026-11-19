@@ -85,24 +85,15 @@ private:
     /** Pin value of the "New Message" row. */
     static constexpr uint32_t NEW_ROW = UINT32_MAX;
 
-    /** Widget-tree root. */
-    Screen screen_;
-    /** Column: top bar over the list or the empty-state line. */
-    Flex root_;
-    /** Message rows. */
-    List list_;
-    /** "No messages" line. */
-    Label empty_;
-    /** Sequence of the selected entry, NEW_ROW, or 0 for the newest. */
-    uint32_t pinned_ = 0;
-    /** digest() at the last reload. */
-    uint32_t digest_ = 0;
-    /** Number of messages at the last reload. */
-    uint16_t count_ = 0;
-    /** Whether the "New Message" row is shown. */
-    bool canCompose_ = false;
-    /** Row label scratch: status mark and callsign. */
-    mutable char label_[MSG_ADDR_MAX_LEN + 8] = {};
+    Screen screen_;           ///< Widget-tree root
+    Flex root_;               ///< Top bar over the list or the empty line
+    List list_;               ///< Message rows
+    Label empty_;             ///< "No messages" line
+    uint32_t pinned_ = 0;     ///< Selected sequence, NEW_ROW, 0 for newest
+    uint32_t digest_ = 0;     ///< digest() at the last reload
+    uint16_t count_ = 0;      ///< Number of messages at the last reload
+    bool canCompose_ = false; ///< The "New Message" row is shown
+    mutable char label_[MSG_ADDR_MAX_LEN + 8] = {}; ///< Mark and callsign
 };
 
 } // namespace ortxui
