@@ -21,33 +21,26 @@ namespace ortxui
 {
 
 /**
- * The VFO home screen (mockups 5-6): a left-weighted instrument readout.
+ * The home screen: the frequency and mode, the channel name or M17
+ * destination, the channel index with the CAN or CTCSS tone, and the signal
+ * meter at the bottom. The compact screen puts the index, name and detail on
+ * one row. syncFromState() follows the shown fields change-gated and drives
+ * the meter from the RX/TX status.
  *
- * A Flex column: shared top bar / frequency hero (big freq + sub-digits + mode
- * label) / the channel name or M17 destination as a full-width blue headline /
- * a meta strip (index left, M17 CAN or FM tone right) / open space / the signal
- * meter pinned to the bottom. The compact (64px) screen has no room for the
- * two-line identity block, so there the index, name and detail share one row
- * (the name ellipsizes). Widgets are direct members in static storage. build()
- * wires the tree and lays it out once; syncFromState() pulls the shown radio
- * fields from the state snapshot change-gated, and drives the meter from the
- * RX/TX status (green RX with an S-scale, orange TX as a solid power bar).
- *
- * As the navigation root, ENTER drills into the main menu (wired via setMenu()).
- * The screen is also interactive: UP/DOWN (or the knob) tune the frequency in
- * VFO mode or step through channels in memory mode; ESC toggles between VFO and
- * memory mode; a digit key opens an in-place frequency keypad entry (RX then TX
- * set). Radio-affecting edits raise requestSyncRtx(). Mirrors the classic VFO.
+ * As the navigation root, ENTER opens the main menu. UP/DOWN or the knob tune
+ * the frequency in VFO mode or step the channel in memory mode, ESC switches
+ * between the two, and a digit opens the frequency entry, RX then TX.
  */
 class VfoView : public View
 {
 public:
     /** Constructor. */
-    VfoView();
+    VfoView() = default;
 
     /** Destructor. */
     ~VfoView();
 
+    /** Build the widget tree. */
     void build() override;
 
     /** Keep an open frequency or destination entry while destroyed. */
@@ -56,10 +49,30 @@ public:
     /** Reopen a frequency or destination entry kept by save(). */
     void restore(UiMemory &m) override;
 
+    /**
+     * Follow the state snapshot.
+     *
+     * @param s: state snapshot.
+     */
     void syncFromState(const state_t &s) override;
+
+    /**
+     * Tune, switch VFO and memory mode, or edit an open entry.
+     *
+     * @param e: event.
+     * @return the intent: the main menu on ENTER, else none.
+     */
     NavIntent onEvent(const Event &e) override;
+
+    /** Speak the channel summary in memory mode, the frequencies and mode in
+     * VFO mode. */
     void announce() override;
 
+    /**
+     * Get the widget tree.
+     *
+     * @return the screen.
+     */
     Screen &screen() override
     {
         return screen_;
@@ -76,13 +89,30 @@ public:
     }
 
 private:
-    void syncMode(const channel_t &ch);
-    void syncMeter(const state_t &s);
-    void announceVfoState(); //< speak channel summary (MEM) or freq+mode (VFO)
+    /**
+     * Follow the mode label and the CAN or CTCSS detail.
+     *
+     * @param ch: channel shown.
+     * @param txing: whether the radio is transmitting.
+     */
+    void syncMode(const channel_t &ch, bool txing);
 
-    /* --- interaction --- */
-    NavIntent
-    onInputEvent(const Event &e); //< key handling while entering a freq
+    /**
+     * Follow the meter: RSSI on an S-scale with the squelch mark while
+     * receiving, power while transmitting.
+     *
+     * @param s: state snapshot.
+     * @param status: operating status from the rtx module.
+     */
+    void syncMeter(const state_t &s, uint8_t status);
+
+    /**
+     * Handle a key while a frequency is being entered.
+     *
+     * @param e: event.
+     * @return no navigation.
+     */
+    NavIntent onInputEvent(const Event &e);
 
     /**
      * Step the frequency in VFO mode, the channel in memory mode.
@@ -90,10 +120,31 @@ private:
      * @param dir: +1 up, -1 down.
      */
     void step(int dir);
-    void stepFreq(int dir);          //< VFO: tune RX+TX by one freq step
-    void stepChannel(int dir);       //< MEM: load the next/prev channel
-    void toggleVfoMem();             //< switch between VFO and memory mode
-    bool loadChannel(int16_t index); //< bank-aware channel load into state
+
+    /**
+     * Tune RX and TX by one frequency step, staying in band.
+     *
+     * @param dir: +1 up, -1 down.
+     */
+    void stepFreq(int dir);
+
+    /**
+     * Load the next or previous channel.
+     *
+     * @param dir: +1 next, -1 previous.
+     */
+    void stepChannel(int dir);
+
+    /** Switch between VFO and memory mode. */
+    void toggleVfoMem();
+
+    /**
+     * Load a channel into the state, through the bank when one is enabled.
+     *
+     * @param index: channel index, in the bank when one is enabled.
+     * @return false if there is no such channel.
+     */
+    bool loadChannel(int16_t index);
 
     /**
      * Open an entry, allocating its state.
@@ -112,13 +163,31 @@ private:
      * @return false if the entry could not be allocated.
      */
     bool openInput();
-    void beginInput(uint8_t firstDigit); //< open entry with a digit (type-over)
-    void beginInputTweak(); //< open entry to edit the current freq in place (*)
-    void switchField();     //< toggle RX/TX entry, deriving TX from RX + offset
-    void deriveTx();        //< fill the TX field with the entered RX + offset
-    void confirmInput();    //< ENTER: validate + commit both RX and TX in band
-    void exitInput();       //< leave keypad entry, restore the readout
-    void refreshInput();    //< redraw the hero/label from the entry
+
+    /**
+     * Open a frequency entry retyped from a first digit.
+     *
+     * @param firstDigit: digit typed.
+     */
+    void beginInput(uint8_t firstDigit);
+
+    /** Open a frequency entry on the current frequency, to edit it in place. */
+    void beginInputTweak();
+
+    /** Switch between the RX and TX fields, deriving TX from RX + offset. */
+    void switchField();
+
+    /** Fill the TX field with the entered RX plus the offset. */
+    void deriveTx();
+
+    /** Advance from RX to TX, or commit both if they are in band. */
+    void confirmInput();
+
+    /** Close the frequency entry and show the live readout again. */
+    void exitInput();
+
+    /** Show the entry in the frequency and channel line. */
+    void refreshInput();
 
     /**
      * Edit the RX or the TX digits, keeping both buffers' digits.
@@ -127,13 +196,31 @@ private:
      * @param slot: cursor slot.
      */
     void bindField(bool tx, uint8_t slot);
-    void announceFreq(); //< speak the current channel frequencies
-    void clearFmTone();  //< drop the momentary FM tone if latched
+    /** Speak the current channel frequencies. */
+    void announceFreq();
 
-    /* --- M17 destination (shown in the channel line, edited via #) --- */
+    /** Drop the FM tone burst if it is keyed. */
+    void clearFmTone();
+
+    /**
+     * Compose the channel line: "VFO" or the memory index, and the channel
+     * name or the M17 destination.
+     *
+     * @param s: state snapshot.
+     * @param idxOut: index text, sizeof(idxCache_) bytes.
+     * @param nameOut: name text.
+     * @param nameSz: size of nameOut.
+     */
     void composeChanLine(const state_t &s, char *idxOut, char *nameOut,
-                         uint16_t nameSz); //< build the index + name slot text
-    void m17DstLabel(char *out, uint16_t sz); //< "@<dest>" (or "@ALL")
+                         uint16_t nameSz);
+
+    /**
+     * Compose the M17 destination label, "@" and the destination or "ALL".
+     *
+     * @param out: output buffer.
+     * @param sz: size of out.
+     */
+    void m17DstLabel(char *out, uint16_t sz);
 
     /**
      * Handle an event while the destination is edited.
@@ -174,15 +261,13 @@ private:
     /** Speak the character under the cursor. */
     void announceDstChar();
 
-    /* Frequency keypad entry (mirrors the classic MAIN_VFO_INPUT screen), now on
-     * the shared TextInput slot engine: two 7-slot numeric fields (RX then TX,
-     * 100 MHz..100 Hz), rendered through FreqHero. RX pre-fills from the current
-     * frequency; TX auto-derives from RX plus the channel's existing offset. */
+    /* Digits of a frequency field, 100 MHz to 100 Hz. RX pre-fills from the
+     * current frequency; TX derives from RX plus the channel's offset. */
     static constexpr uint8_t kFreqDigits = 7;
 
     /**
-     * A frequency or M17 destination entry (classic MAIN_VFO # -> dst input),
-     * edited in place through one TextInput. It exists only while open, so
+     * A frequency or M17 destination entry, edited in place through one
+     * TextInput. It exists only while open, so
      * the screen does not carry it the rest of the time.
      */
     struct Entry {
@@ -200,34 +285,32 @@ private:
         bool txPristine = true;        ///< TX still derived from RX + offset
     };
 
-    Screen screen_;
+    Screen screen_;      ///< Widget tree
+    Flex root_;          ///< Column of the rows
+    FreqHero hero_;      ///< Frequency and mode label
+    Flex nameRow_;       ///< Name headline; compact: index + name + detail
+    Flex metaRow_;       ///< Regular only: index (left) + CAN / tone (right)
+    Label chanIdx_;      ///< "VFO" or the memory index
+    Label chanName_;     ///< Channel name or M17 destination
+    TextRow chanDetail_; ///< CAN (M17) or CTCSS tone (FM), right-aligned
+    SignalMeter meter_;  ///< RSSI or TX power
+    Flex spacer_;        ///< Pushes the meter to the bottom
 
-    Flex root_;
-    FreqHero hero_;
-    Flex nameRow_; ///< Name headline; compact: index + name + detail
-    Flex metaRow_; ///< Regular only: index (left) + CAN / tone (right)
-    Label chanIdx_;
-    Label chanName_;
-    TextRow chanDetail_; //< right-aligned CAN (M17) / tone (FM)
-    SignalMeter meter_;
-    Flex spacer_;
-
-    /* Channel-line slot: composed index + name text, change-gated by string
-     * compare (the name slot depends on tuner mode, channel name, radio mode
-     * and, in M17, the destination — a plain string diff covers them all). */
-    char idxCache_[8] = { 1, 0 };   //< sentinel forces the first paint
-    char nameCache_[40] = { 1, 0 }; //< composed name, or bracket-cursor dest
-    char readoutBuf_[12] = { 0 };
-    char modeSub_[8] = { 0 }; //< mode-stack 2nd line: PL tone (FM) / CAN (M17)
+    /* The channel line, change-gated by string compare: it depends on the
+     * tuner mode, the channel name, the mode and the M17 destination. */
+    char idxCache_[8] = { 1, 0 };     ///< Index shown, 1 forces a paint
+    char nameCache_[40] = { 1, 0 };   ///< Name or destination shown
+    char readoutBuf_[12] = { 0 };     ///< Meter readout
+    char modeSub_[8] = { 0 };         ///< Detail value: CAN (M17) or tone (FM)
     const char *shownMode_ = nullptr; ///< Mode label shown, nullptr to repaint
     const char *shownTag_ = "";       ///< CAN / CTCSS tag shown
 
-    uint32_t lastFreq_ = 0xFFFFFFFFu;
-    uint8_t lastStatus_ = 0xFFu;
-    int32_t lastRssi_ = INT32_MIN;
-    uint8_t lastSql_ = 0xFFu;  //< squelch level last drawn on the meter marker
-    uint8_t lastMode_ = 0xFFu; //< channel mode (marker only shows in FM)
-    uint16_t lastFill_ = UINT16_MAX; ///< Meter fill width last drawn
+    uint32_t lastFreq_ = UINT32_MAX;  ///< Frequency shown
+    uint8_t lastStatus_ = 0xFFu;      ///< TX/RX status on the meter
+    int32_t lastRssi_ = INT32_MIN;    ///< RSSI on the meter
+    uint8_t lastSql_ = 0xFFu;         ///< Squelch level on the meter mark
+    uint8_t lastMode_ = 0xFFu;        ///< Mode on the meter: FM shows the mark
+    uint16_t lastFill_ = UINT16_MAX;  ///< Meter fill width shown
 
     Entry *entry_ = nullptr; ///< Open entry, on the heap; nullptr if none
 };

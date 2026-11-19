@@ -42,12 +42,8 @@ static constexpr char kPlaceholder = '-';
 /* How long an out-of-band entry error stays on screen before it self-clears. */
 static constexpr long long kInputErrorMs = 1500;
 
-/* The TX power meter is a dB (log) scale relative to the radio's maximum
- * output. There is no per-device max-power field yet (hwInfo_t only carries
- * bands), so assume 5 W — the rating of essentially every OpenRTX-supported
- * radio; when a hwInfo max-power field lands, read it here instead. The meter
- * empties kPowerSpanDb below the max, so full power fills every dot and each
- * halving of power (~3 dB) drops a few dots. */
+/* The TX meter is a dB scale up to the highest power the macro menu sets,
+ * emptying kPowerSpanDb below it. */
 static constexpr uint32_t kMaxPowerMw = 5000;
 static constexpr float kPowerSpanDb = 10.0f;
 
@@ -84,11 +80,8 @@ static float powerToFrac(uint32_t mw)
 }
 
 /**
- * Get the meter fill fraction for an RSSI, a continuous mirror of
- * rssiToSlevel() normalised to S11 (the meter's full scale, matching the
- * classic S-meter). By mapping in the dB domain the bar keeps full resolution
- * instead of snapping to whole S-points, so the squelch mark (fed the same
- * way) lands precisely.
+ * Get the meter fill fraction for an RSSI: rssiToSlevel() made continuous and
+ * scaled to S11, so the fill and the squelch mark do not snap to S-points.
  *
  * @param rssi: RSSI in dBm.
  * @return the fraction, [0, 1].
@@ -116,7 +109,7 @@ static float rssiToFrac(float rssi)
  */
 static int digitFromKeys(uint32_t keys)
 {
-    const uint32_t digits = keys & 0x3FFu;
+    const uint32_t digits = keys & KBD_NUM_MASK;
     if (digits == 0u)
         return -1;
     return __builtin_ctz(digits);
@@ -213,8 +206,7 @@ static void composeEntry(const char *digits, char *main, char *sub)
 }
 
 /**
- * Check whether a frequency falls inside one of the radio's supported bands
- * (ported from the classic _ui_freq_check_limits).
+ * Check whether a frequency falls inside one of the radio's supported bands.
  *
  * @param freq: frequency in Hz.
  * @return true if in band.
@@ -231,10 +223,6 @@ static bool freqInBand(freq_t freq)
     return false;
 }
 
-VfoView::VfoView()
-{
-}
-
 VfoView::~VfoView()
 {
     if (entry_ != nullptr)
@@ -247,59 +235,45 @@ void VfoView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
     root_.setAxis(Axis::Column);
 
     /* Shared top bar with a blank title (VFO shows only the status cluster). */
     TopBar &bar = useTopBar("");
 
-    /* Frequency hero. On the roomy screen it is a little taller than the text
-     * needs so the mode stack breathes; on the tiny mono screen it is trimmed
-     * to just clear the frequency and the mode/tone stack, freeing vertical
-     * room below so the channel line and meter both fit within 64px. */
+    /* Taller than the text on the roomy screen; just clearing it on the
+     * compact one, so the channel line and the meter fit in 64 px. */
     hero_.setBasis(regular ? 40 : 26);
 
-    /* Channel identity, all one text size. The compact screen uses a smaller
-     * font so a full line (ascent + descent) still fits its tight budget. */
+    /* The channel line in one font; rows a full line high, so descenders and
+     * the '@' of a destination are not clipped. */
     const fontSize_t chanFont = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
-    /* Row height = the font's full line height (ascent + descent) so descenders
-     * (and the '@' / caps of an M17 destination) are not clipped. */
     const int16_t rowH = gfx_getFontLineHeight(chanFont);
 
-    /* Index / "where am I" slot: "VFO" or the 1-based memory index. Wide enough
-     * for the widest content ("VFO" ~30px @ 8pt, ~23px @ 6pt). */
+    /* "VFO" or the 1-based memory index, wide enough for "VFO". */
     chanIdx_.setFont(chanFont);
     chanIdx_.setAlign(TEXT_ALIGN_LEFT);
     chanIdx_.setColor(Sem::OnSurfaceMuted);
     chanIdx_.setBasis(regular ? 34 : 26);
 
-    /* Channel name / M17 destination, in blue -- the "who / where" headline. On
-     * the roomy screen it gets its OWN full-width line, so a long destination
-     * ("@HELLOWORLD") shows in full instead of ellipsizing in the sliver left
-     * between the index and the CAN tag. */
+    /* Channel name or M17 destination; on the roomy screen on a line of its
+     * own, so a long destination shows in full. */
     chanName_.setFont(chanFont);
     chanName_.setAlign(TEXT_ALIGN_LEFT);
     chanName_.setColor(Sem::Primary);
     chanName_.setGrow(1);
-    /* Still ellipsize as a backstop (a pathological name wider than the whole
-     * line) rather than wrapping into the row below. */
+    /* A name wider than the line ellipsizes rather than wrapping. */
     chanName_.setOverflow(Label::Overflow::Ellipsize);
 
-    /* Detail = a small "CAN" tag + the value at the row font (or just a tone
-     * value in FM), right-aligned and sharing one baseline. */
+    /* A small "CAN" or "CTCSS" tag and the value, right-aligned. */
     chanDetail_.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted); /* tag */
     chanDetail_.setRun(1, chanFont, Sem::OnSurfaceMuted);      /* value */
     chanDetail_.setGap(3);
-    /* Wide enough for the longest tagged value -- "CTCSS 254.1" -- so the tag
-     * is never clipped; the roomy meta strip has space to spare, and the M17
-     * "CAN n" simply right-aligns within it. */
+    /* Wide enough for the longest tagged value, "CTCSS 254.1". */
     chanDetail_.setBasis(regular ? 70 : 48);
 
-    /* Signal meter, pinned to the bottom of the screen: the growing spacer sits
-     * ABOVE it, pushing the readout down and letting the identity block breathe
-     * near the top. */
-    /* Tall enough that the label/readout (6 pt) clear the bar band above the
-     * S-scale numbers (5 pt) without the ascenders clipping. */
+    /* The meter sits at the bottom under a growing spacer, tall enough for
+     * the label and readout over the S-scale numbers. */
     meter_.setBasis(regular ? 19 : 15);
     meter_.setColor(Sem::RxSuccess);
     meter_.setLabel("RX");
@@ -309,9 +283,8 @@ void VfoView::build()
     root_.addChild(&hero_);
 
     if (regular) {
-        /* Roomy layout: the destination is the headline on its own full-width
-         * line; below it a quieter meta strip carries the index (left) and the
-         * CAN / tone detail (right, under the mode label in the hero). */
+        /* Roomy layout: the name on its own line, then the index (left) and
+         * the CAN / tone detail (right). */
         nameRow_.setAxis(Axis::Row);
         nameRow_.setAlign(Align::Center);
         nameRow_.setJustify(Justify::Start);
@@ -331,7 +304,7 @@ void VfoView::build()
         root_.addChild(&metaRow_);
     } else {
         /* Compact layout: no room for a second line, so the index, name and
-         * detail share one row (the name ellipsizes) as before. */
+         * detail share one row and the name ellipsizes. */
         nameRow_.setAxis(Axis::Row);
         nameRow_.setAlign(Align::Center);
         nameRow_.setJustify(Justify::Start);
@@ -435,7 +408,7 @@ void VfoView::closeEntry()
     entry_ = nullptr;
 }
 
-void VfoView::syncMode(const channel_t &ch)
+void VfoView::syncMode(const channel_t &ch, bool txing)
 {
     const char *m1 = "--";
     switch (ch.mode) {
@@ -463,13 +436,11 @@ void VfoView::syncMode(const channel_t &ch)
     const char *tag = "";
     char sub[sizeof(modeSub_)] = "";
     if (ch.mode == OPMODE_M17) {
-        const bool txing = (rtx_getStatus()->opStatus == TX);
         if (txing || state.settings.m17_can_rx) {
             tag = "CAN";
             sniprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
         }
     } else if (ch.mode == OPMODE_FM) {
-        const bool txing = (rtx_getStatus()->opStatus == TX);
         const bool showTx = txing && (ch.fm.txToneEn != 0u);
         const bool showRx = !txing && (ch.fm.rxToneEn != 0u);
         if (showTx || showRx) {
@@ -501,11 +472,8 @@ void VfoView::syncMode(const channel_t &ch)
     chanDetail_.invalidate();
 }
 
-void VfoView::syncMeter(const state_t &s)
+void VfoView::syncMeter(const state_t &s, uint8_t status)
 {
-    /* Live TX/RX comes from the rtx module; state.rtxStatus is only the
-     * requested mode. */
-    const uint8_t status = rtx_getStatus()->opStatus;
     const uint8_t sql = s.settings.sqlLevel;
     const uint8_t mode = s.channel.mode;
     const bool restyle = (status != lastStatus_) || (sql != lastSql_)
@@ -579,6 +547,11 @@ void VfoView::syncFromState(const state_t &s)
 {
     View::syncFromState(s); /* shared top bar */
 
+    /* Live TX/RX comes from the rtx module; state.rtxStatus is only the
+     * requested mode. */
+    const uint8_t status = rtx_getStatus()->opStatus;
+    const bool txing = (status == TX);
+
     /* While entering a frequency, the hero and channel line show the keypad
      * buffer (driven by refreshInput()); don't let live state overwrite them. */
     const bool input = (entry_ != nullptr) && !entry_->destination;
@@ -589,7 +562,6 @@ void VfoView::syncFromState(const state_t &s)
          * offset), show the TX frequency the radio is keyed up on; otherwise
          * (idle, or simplex) show the RX frequency. Gating on the *shown* value
          * repaints on both frequency changes and TX start/stop. */
-        const bool txing = (rtx_getStatus()->opStatus == TX);
         const freq_t shown = (txing && (ch.tx_frequency != ch.rx_frequency)) ?
                                  ch.tx_frequency :
                                  ch.rx_frequency;
@@ -599,15 +571,15 @@ void VfoView::syncFromState(const state_t &s)
             lastFreq_ = (uint32_t)shown;
         }
 
-        syncMode(ch);
+        syncMode(ch, txing);
 
         /* Channel line (skipped while editing the destination, which drives it
          * directly): VFO mode shows "VFO" (or the M17 destination) with no
          * index; memory mode shows the 1-based index + channel name. Compose
          * the slot text and repaint only on a string change. */
         if (entry_ == nullptr) {
-            char idxText[8];
-            char nameText[40];
+            char idxText[sizeof(idxCache_)];
+            char nameText[sizeof(nameCache_)];
             composeChanLine(s, idxText, nameText, sizeof(nameText));
 
             if (strncmp(idxText, idxCache_, sizeof(idxCache_)) != 0) {
@@ -631,7 +603,7 @@ void VfoView::syncFromState(const state_t &s)
         }
     }
 
-    syncMeter(s);
+    syncMeter(s, status);
 }
 
 NavIntent VfoView::onEvent(const Event &e)
@@ -658,8 +630,8 @@ NavIntent VfoView::onEvent(const Event &e)
     if (e.kind == EvKind::Key) {
         const uint32_t k = e.keys;
 
-        /* The momentary FM tone latches on # and is cleared by the next other
-         * key (classic parity). */
+        /* The FM tone burst plays while # is held: any other event, its
+         * release included, ends it. */
         if ((k & KEY_HASH) == 0u)
             clearFmTone();
 
@@ -924,9 +896,8 @@ void VfoView::bindField(bool tx, uint8_t slot)
 
 void VfoView::confirmInput()
 {
-    /* ENTER on the RX field advances to TX (deriving it from the offset) so the
-     * operator sees and confirms the TX frequency before anything is applied,
-     * instead of silently committing on the first ENTER. ENTER on TX commits. */
+    /* ENTER on RX advances to TX, derived from the offset, so the TX frequency
+     * is seen before anything is applied; ENTER on TX commits. */
     Entry &n = *entry_;
     if (!n.txField) {
         switchField();
@@ -958,7 +929,7 @@ void VfoView::exitInput()
     closeEntry();
 
     /* Force the change-gated readout to repaint from live state next sync. */
-    lastFreq_ = 0xFFFFFFFFu;
+    lastFreq_ = UINT32_MAX;
     shownMode_ = nullptr;
     idxCache_[0] = '\1';
     nameCache_[0] = '\1';
@@ -1014,13 +985,13 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
         /* Far-left is the "where am I" slot: "VFO" here, the memory index in
          * memory mode. In M17 the destination fills the name slot; FM has no
          * name (just the frequency). The CAN lives in the mode stack, not here. */
-        sniprintf(idxOut, 8, "VFO");
+        sniprintf(idxOut, sizeof(idxCache_), "VFO");
         if (ch.mode == OPMODE_M17)
             m17DstLabel(nameOut, nameSz);
         else
             nameOut[0] = '\0';
     } else {
-        sniprintf(idxOut, 8, "%03u", s.channel_index + 1);
+        sniprintf(idxOut, sizeof(idxCache_), "%03u", s.channel_index + 1);
         sniprintf(nameOut, nameSz, "%s",
                   (ch.name[0] != '\0') ? ch.name : "---");
     }
@@ -1137,10 +1108,8 @@ void VfoView::announceFreq()
     vp_play();
 }
 
-void VfoView::announceVfoState()
+void VfoView::announce()
 {
-    /* In memory mode speak the full channel summary; when tuning speak the
-     * frequency pair and mode. Mirrors the classic VFO/MEM announcements. */
     if (state.settings.vpLevel < vpLow)
         return;
 
@@ -1155,11 +1124,6 @@ void VfoView::announceVfoState()
         vp_announceRadioMode(state.channel.mode, flags);
     }
     vp_play();
-}
-
-void VfoView::announce()
-{
-    announceVfoState();
 }
 
 } // namespace ortxui
