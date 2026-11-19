@@ -77,10 +77,10 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
             sniprintf(out, n, "%u%%", charge_);
             break;
         case ROW_RSSI:
-            sniprintf(out, n, "%ld dBm", (long)rssi_);
+            sniprintf(out, n, "%ld dBm", static_cast<long>(rssi_));
             break;
         case ROW_HEAP:
-            sniprintf(out, n, "%u B", (unsigned)heapUsed_);
+            sniprintf(out, n, "%lu B", static_cast<unsigned long>(heapUsed_));
             break;
         case ROW_BAND:
             sniprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
