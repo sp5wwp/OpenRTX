@@ -61,6 +61,7 @@ static long long last_event_tick = 0;
 /* Macro menu, opened by a held MONI key rather than by a view. */
 static bool macroOpen = false;
 static bool macroLatched = false;
+static bool moniDown = false; ///< MONI was held in the last key event
 
 #if !defined(PLATFORM_TTWRPLUS)
 /* The low-battery warning, drawn instead of the active screen while shown. */
@@ -197,6 +198,7 @@ extern "C" void ui_init()
     last_event_tick = getTick();
     macroOpen = false;
     macroLatched = false;
+    moniDown = false;
 #if !defined(PLATFORM_TTWRPLUS)
     lowBatteryShown = false;
 #endif
@@ -360,10 +362,14 @@ static void clickKey(const kbd_msg_t &msg)
  */
 static bool filterKey(const kbd_msg_t &msg, long long now)
 {
+    const bool moni = ((msg.keys & KEY_MONI) != 0u);
+    const bool moniPress = moni && !moniDown;
+    moniDown = moni;
+
     /* A key press waking the display only wakes it, but MONI still opens the
      * macro menu. */
     const bool woke = exitStandby(now);
-    if (woke && ((msg.keys & KEY_MONI) == 0u))
+    if (woke && !moni)
         return false;
 
     /* Input acts on the screen under the volume HUD. */
@@ -378,31 +384,29 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
     /* Keypad lock: while locked, ignore keys unless the macro menu is open or
      * MONI is pressed (so it can always be opened to unlock), except the FM
      * tone burst. */
-    if (uiMemory.keypadLocked && !macroOpen && ((msg.keys & KEY_MONI) == 0u)
-        && !isToneBurstKey(msg)) {
+    if (uiMemory.keypadLocked && !macroOpen && !moni && !isToneBurstKey(msg)) {
         clickKey(msg);
         return false;
     }
 
-    /* Macro menu: shown while MONI is held. A long-press latches it open (if
-     * enabled); a MONI press while latched, or releasing MONI when not
-     * latched, closes it. MONI repeating while held does neither. */
-    const bool moni = ((msg.keys & KEY_MONI) != 0u);
-    if (moni && !msg.repeat) {
-        if (!macroOpen) {
-            nav.openOverlay(ViewId::Macro);
-            macroOpen = true;
-            macroLatched = false;
-        } else if (macroLatched) {
-            closeMacro();
-            vp_beep(BEEP_FUNCTION_LATCH_OFF, LONG_BEEP);
-            return false;
-        }
-        if (msg.long_press && (state.settings.macroMenuLatch != 0u)) {
-            macroLatched = true;
-            vp_beep(BEEP_FUNCTION_LATCH_ON, LONG_BEEP);
-        }
-    } else if (!moni && macroOpen && !macroLatched) {
+    /* Macro menu: a MONI press opens it and releasing MONI closes it. Held
+     * long, it latches open (if enabled) until the next MONI press. Keys
+     * pressed and released while MONI is held do neither. */
+    if (moniPress && macroLatched) {
+        closeMacro();
+        vp_beep(BEEP_FUNCTION_LATCH_OFF, LONG_BEEP);
+        return false;
+    }
+    if (moniPress && !macroOpen) {
+        nav.openOverlay(ViewId::Macro);
+        macroOpen = true;
+    }
+    if (moni && msg.long_press && macroOpen && !macroLatched
+        && (state.settings.macroMenuLatch != 0u)) {
+        macroLatched = true;
+        vp_beep(BEEP_FUNCTION_LATCH_ON, LONG_BEEP);
+    }
+    if (!moni && macroOpen && !macroLatched) {
         closeMacro();
         return false; /* the release only closes the menu */
     }

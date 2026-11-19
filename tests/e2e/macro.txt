@@ -3,11 +3,11 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # variants: default smallscreen
 
-# Macro menu: holding MONI shows the icon-tile grid of quick actions; a number
-# key acts on the current channel while held; releasing MONI closes it. The
-# overlay uses the shared top bar and is otherwise opaque (no S-meter), so it
-# is deterministic on its own. Locking the keypad (key 9) shows a lock glyph in
-# the top bar of every screen, including the VFO after the menu closes.
+# Macro menu: holding MONI shows the icon-tile grid of quick actions and a
+# number key acts on the current channel. MONI is held past the long press,
+# which latches the menu open, so another MONI press closes it. Locking the
+# keypad (key 9) shows a lock glyph in the top bar of every screen, including
+# the VFO after the menu closes.
 rssi 0
 wait_stable 5000 3
 keyhold MONI
@@ -21,6 +21,8 @@ screenshot_sync macro_power.bmp
 key 9
 wait_stable
 keyrelease
+wait_stable
+key MONI
 wait_stable
 screenshot_sync macro_vfo_locked.bmp
 quit
