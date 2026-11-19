@@ -42,7 +42,7 @@ void AboutView::build()
     brand.setFont(FONT_SIZE_8PT);
     brand.setAlign(TEXT_ALIGN_CENTER);
     brand.setColor(Sem::Accent); /* OpenRTX gold */
-    brand.setText("OpenRTX");
+    brand.setText(STR(openRTX));
     brand.setBasis(gfx_getFontHeight(FONT_SIZE_8PT));
 
     version.setFont(FONT_SIZE_6PT);

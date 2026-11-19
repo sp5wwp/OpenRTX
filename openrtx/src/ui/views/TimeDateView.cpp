@@ -186,7 +186,7 @@ void TimeDateView::announceDigit() const
     if ((n == FieldMonth) || (n == FieldYear))
         vp_queuePrompt(PROMPT_SLASH);
     if (n == FieldHour)
-        vp_queueString("hh:mm",
+        vp_queueString(STR(timeFields).str(),
                        static_cast<vpFlags>(vpAnnounceCommonSymbols
                                             | vpAnnounceLessCommonSymbols));
     if (n == FieldMinute)

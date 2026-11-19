@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: OpenRTX\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
-"POT-Creation-Date: 2026-11-19 11:54-0600\n"
+"POT-Creation-Date: 2026-11-19 16:09-0600\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -427,7 +427,7 @@ msgstr ""
 msgid "Smooth"
 msgstr ""
 
-#. i18n: text without anti-aliasing
+#. i18n: text drawn with the pixel font, without anti-aliasing
 #: openrtx/include/ui/EnglishStrings.h
 msgid "Crisp"
 msgstr ""
@@ -626,4 +626,33 @@ msgstr ""
 #. i18n: spoken for the delete slot of a text field
 #: openrtx/include/ui/EnglishStrings.h
 msgid "Delete"
+msgstr ""
+
+#. i18n: home screen, marks the free-tuning mode as opposed to a memory
+#. channel number; keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "VFO"
+msgstr ""
+
+#. i18n: receive, on the signal meter and the frequency entry; keep it
+#. short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "RX"
+msgstr ""
+
+#. i18n: transmit, on the signal meter and the frequency entry; keep it
+#. short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "TX"
+msgstr ""
+
+#. i18n: home screen, tags the sub-audio tone of the channel; keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "CTCSS"
+msgstr ""
+
+#. i18n: spoken when the time and date entry reaches the time; the time
+#. fields of the time and date entry hint, in the same letters
+#: openrtx/include/ui/EnglishStrings.h
+msgid "hh:mm"
 msgstr ""

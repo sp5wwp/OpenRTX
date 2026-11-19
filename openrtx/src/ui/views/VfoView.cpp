@@ -256,7 +256,7 @@ void VfoView::build()
     meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
     meter.setTextColor(Sem::RxSuccess);
     meter.setShowScale(true);
-    meter.setLabel("RX");
+    meter.setLabel(STR(RX));
     spacer.setGrow(1);
 
     root.addChild(&bar);
@@ -390,7 +390,7 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
         const bool showTx = txing && (ch.fm.txToneEn != 0u);
         const bool showRx = !txing && (ch.fm.rxToneEn != 0u);
         if (showTx || showRx) {
-            tag = "CTCSS";
+            tag = STR(CTCSS).str();
             formatTone(showTx ? ch.fm.txTone : ch.fm.rxTone, sub, sizeof(sub));
         }
     }
@@ -432,7 +432,7 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
         const uint32_t mw = s.channel.power;
 
         if (restyle) {
-            meter.setLabel("TX");
+            meter.setLabel(STR(TX));
             meter.setColors(Sem::SurfaceHigh, Sem::TxDanger);
             meter.setTextColor(Sem::TxDanger);
             meter.setShowScale(false);
@@ -445,7 +445,7 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
         const uint8_t level = rssiToSlevel(s.rssi);
 
         if (restyle) {
-            meter.setLabel("RX");
+            meter.setLabel(STR(RX));
             meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
             meter.setTextColor(Sem::RxSuccess);
             meter.setShowScale(true);
@@ -853,7 +853,7 @@ void VfoView::refreshInput()
 
     const bool err = (n.errorAt != 0);
     hero.setEntry(main, sub);
-    hero.setMode(n.txField ? "TX" : "RX");
+    hero.setMode((n.txField ? STR(TX) : STR(RX)).str());
     hero.setTextColor(err ? Sem::Mark : Sem::Accent);
     hero.invalidate();
 
@@ -879,7 +879,7 @@ void VfoView::m17DstLabel(char *out, uint16_t sz)
 {
     const char *dst = state.settings.m17_dest;
     if (dst[0] == '\0')
-        sniprintf(out, sz, "@ALL");
+        sniprintf(out, sz, "@%s", STR(broadcast).str());
     else
         sniprintf(out, sz, "@%s", dst);
 }
@@ -891,7 +891,7 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
 
     if (s.tuner_mode == VFO) {
         /* An FM VFO has no name; M17 shows the destination there. */
-        sniprintf(idxOut, sizeof(idxCache), "VFO");
+        sniprintf(idxOut, sizeof(idxCache), "%s", STR(VFO).str());
         if (ch.mode == OPMODE_M17)
             m17DstLabel(nameOut, nameSz);
         else

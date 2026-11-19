@@ -168,6 +168,11 @@ typedef struct
     const char* metres;
     const char* kmPerHour;
     const char* deleteChar;
+    const char* VFO;
+    const char* RX;
+    const char* TX;
+    const char* CTCSS;
+    const char* timeFields;
 }
 stringsTable_t;
 

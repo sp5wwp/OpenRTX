@@ -118,7 +118,7 @@ const stringsTable_t englishStrings =
     .textStyle         = N_("Text"),
     // i18n: anti-aliased text
     .smooth            = N_("Smooth"),
-    // i18n: text without anti-aliasing
+    // i18n: text drawn with the pixel font, without anti-aliasing
     .crisp             = N_("Crisp"),
     // i18n: hardware version, keep it short
     .hwVersion         = N_("HW Ver"),
@@ -187,5 +187,19 @@ const stringsTable_t englishStrings =
     .kmPerHour         = N_("km/h"),
     // i18n: spoken for the delete slot of a text field
     .deleteChar        = N_("Delete"),
+    // i18n: home screen, marks the free-tuning mode as opposed to a memory
+    // channel number; keep it short
+    .VFO               = N_("VFO"),
+    // i18n: receive, on the signal meter and the frequency entry; keep it
+    // short
+    .RX                = N_("RX"),
+    // i18n: transmit, on the signal meter and the frequency entry; keep it
+    // short
+    .TX                = N_("TX"),
+    // i18n: home screen, tags the sub-audio tone of the channel; keep it short
+    .CTCSS             = N_("CTCSS"),
+    // i18n: spoken when the time and date entry reaches the time; the time
+    // fields of the time and date entry hint, in the same letters
+    .timeFields        = N_("hh:mm"),
 };
 #endif  // ENGLISHSTRINGS_H
