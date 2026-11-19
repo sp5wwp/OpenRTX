@@ -232,8 +232,10 @@ Status fields in T mode: `e` phase error (% of pi/4), `cfo` carrier offset
 downlink blocks that passed the CRC, `ral` slot grid re-alignments, `rq`/`sl`
 demodulator re-acquisitions / timing jumps, `rs`/`ov` resyncs / overruns,
 `fr`/`bad` speech frames decoded / failing the CRC, `ots` traffic slots
-ignored because speech follows another timeslot, `seed`, and the centre
-equalizer taps (x1000).
+ignored because speech follows another timeslot, `seed`, the centre
+equalizer taps (x1000), and `spk`: speech frames played on the speaker,
+then the times the speaker path was refused, the output stream did not
+start, and a burst ended for lack of an output buffer.
 
 `scripts/c62_remote.py` also works as a Python module (`Remote`) for test
 loops. For offline work, `tests/platform/c62_tetra_host.c` runs the same
