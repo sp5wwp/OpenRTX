@@ -20,6 +20,9 @@
 /* 30 ms per half buffer: room for libtetra's per-slot decoding */
 #define HALF_SAMPLES 1440
 
+/* Samples dropped after starting or retuning: 0.5 s */
+#define SETTLE_SAMPLES (TETRA_DEMOD_IN_RATE / 2)
+
 /* Large state: static, there is only one TETRA mode */
 static int16_t baseband[2 * HALF_SAMPLES];
 static int8_t soft[HALF_SAMPLES * 3 / 4 + 8];
@@ -35,6 +38,7 @@ static volatile bool eqSeed = true; /* Start from CONFIG_TETRA_EQ_INIT */
 OpMode_TETRA::OpMode_TETRA()
     : startRx(false)
     , dataErrors(0)
+    , settle(SETTLE_SAMPLES)
     , demodJumps(0)
     , basebandPath(-1)
     , basebandId(-1)
@@ -48,6 +52,7 @@ OpMode_TETRA::~OpMode_TETRA()
 
 void OpMode_TETRA::reset()
 {
+    settle = SETTLE_SAMPLES;
     tetraDemod_init(&demod);
 #ifdef CONFIG_TETRA_EQ_INIT
     static const float eqInit[TETRA_DEMOD_EQ_TAPS] = CONFIG_TETRA_EQ_INIT;
@@ -167,6 +172,16 @@ void OpMode_TETRA::update(rtxStatus_t *const rtx, const bool newCfg)
         return;
     }
     dataErrors = 0;
+
+    /*
+     * Drop what follows a start or a retune: the receiver and the audio
+     * path settle, and the demodulator would take their transient for the
+     * carrier offset and keep it.
+     */
+    if (settle > 0) {
+        settle -= (block.len < settle) ? block.len : settle;
+        return;
+    }
 
     size_t n = tetraDemod_process(&demod, block.data, block.len, soft);
 
