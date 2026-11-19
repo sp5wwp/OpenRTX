@@ -17,9 +17,6 @@
 
 #include "emulator.h"
 #include "sdl_engine.h"
-#include "core/ui.h"
-#include "core/event.h"
-#include "core/input.h"
 
 /*
  * How long screenshot_sync waits for the SDL thread to write the file. It is
@@ -264,33 +261,6 @@ static int holdKeys(void *_self, int _argc, char **_argv)
     return SH_CONTINUE; // continue
 }
 
-// keyLong injects a COMPLETED long-press keyboard event for the given key(s),
-// bypassing the timing-based long-press detection in input_scanKeyboard. This
-// is needed because the e2e harness runs the emulator under `faketime -f`,
-// which FREEZES the wall clock (for a stable top-bar clock in goldens) — so the
-// 700ms long-press timer never elapses and a real `keyhold` can never trigger a
-// long-press. `keylong 1` makes a long-press deterministic and testable.
-static int keyLong(void *_self, int _argc, char **_argv)
-{
-    (void)_self;
-    keyboard_t combo = 0;
-
-    for (int i = 0; i < _argc; i++) {
-        if (_argv[i] != NULL)
-            combo |= keyname2keyboard(_argv[i]);
-    }
-
-    kbd_msg_t msg;
-    msg.value = 0;
-    msg.long_press = 1;
-    msg.keys = combo;
-    ui_pushEvent(EVENT_KBD, msg.value);
-
-    printf("Long-press keys: 0x%08X\n", (unsigned)combo);
-    shell_ready(NULL, 0, NULL);
-    return SH_CONTINUE; // continue
-}
-
 // releaseKeys clears any keys held by holdKeys.
 static int releaseKeys(void *_self, int _argc, char **_argv)
 {
@@ -521,7 +491,6 @@ static _climenu_option _options[] = {
     {"keycombo", "Press a bunch of keys simultaneously", NULL, pressMultiKeys },
     {"keyhold",  "Hold keys down until 'keyrelease' (e.g. 'keyhold MONI')", NULL, holdKeys },
     {"keyrelease", "Release keys held by 'keyhold'", NULL, releaseKeys },
-    {"keylong",  "Inject a long-press event for keys (e.g. 'keylong 1'); works under the frozen test clock", NULL, keyLong },
     {"show",     "Show current radio state (ptt, rssi, etc)", NULL, printState},
     {"screenshot", "[screenshot.bmp] Save screenshot to first arg or screenshot.bmp if none given",
                                 NULL,   screenshot
