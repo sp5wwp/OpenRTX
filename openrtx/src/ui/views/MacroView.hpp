@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_MACROVIEW_HPP
 #define ORTX_UI_MACROVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/BarRow.hpp"
