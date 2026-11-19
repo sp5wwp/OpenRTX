@@ -33,9 +33,6 @@ public:
     /** Destructor. */
     ~DrawCtx() = default;
 
-    /** Constructor, drawing on the whole screen. */
-    DrawCtx();
-
     /**
      * Constructor, drawing on part of the screen.
      *
@@ -74,7 +71,7 @@ public:
     /** 1px circle outline centred at `c`. */
     void drawCircle(Point c, uint16_t r, Sem color);
 
-    /** Filled disc centred at `c` (scanline fill; no backend primitive). */
+    /** Anti-aliased filled disc centred at `c`, shaded per pixel by coverage. */
     void fillCircle(Point c, uint16_t r, Sem color);
 
     /** 1px line between two points. */
@@ -82,7 +79,7 @@ public:
 
     /** Anti-aliased line of the given width (coverage-blended; a crisp 1px line
      *  on 1bpp targets since gfx_setPixel thresholds there). */
-    void lineAA(Point a, Point b, Sem color, float width = 1.3f);
+    void lineAA(Point a, Point b, Sem color, float width = LINE_AA_WIDTH);
 
     /**
      * Draw a NUL-terminated string. Returns the drawn text extent as reported
@@ -117,11 +114,12 @@ public:
                      int16_t maxX, int16_t clipTop, int16_t clipBot);
 
 private:
-    static constexpr uint8_t kClipStackMax = 16;
-    Rect bounds_; ///< Part of the screen being drawn
-    Rect clip_;
-    std::array<Rect, kClipStackMax> clipStack_;
-    uint8_t clipDepth_ = 0;
+    static constexpr uint8_t CLIP_STACK_MAX = 16; ///< Deepest nesting of clips
+    static constexpr float LINE_AA_WIDTH = 1.3f;  ///< Default lineAA() width
+
+    std::array<Rect, CLIP_STACK_MAX> clipStack_;  ///< Clips saved by pushClip()
+    Rect clip_;                                   ///< Current clip
+    uint8_t clipDepth_ = 0;                       ///< Clips on clipStack_
 };
 
 } // namespace ortxui
