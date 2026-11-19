@@ -1,7 +1,8 @@
 /*
  * SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+ * SPDX-FileCopyrightText: Copyright 2025 LVGL Kft
  *
- * SPDX-License-Identifier: GPL-3.0-or-later
+ * SPDX-License-Identifier: GPL-3.0-or-later AND MIT
  */
 
 #include "lv_font_bin.h"
@@ -250,10 +251,12 @@ uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
 }
 
 /* ---- RLE (modified I3BN) decompressor ----
- * Ported from LVGL's lv_font_fmt_txt.c (rle_next / decompress). The glyph
- * bitstream stores a run when a pixel value repeats the previous one: a 1-bit
- * flag chain, collapsing to a 6-bit counter after 11 repeats. compression == 1
- * additionally XOR-prefilters each line against the previous one. */
+ * Ported from rle_next() and decompress_line() in LVGL's
+ * src/font/fmt_txt/lv_font_fmt_txt.c (https://github.com/lvgl/lvgl), MIT
+ * licence. The glyph bitstream stores a run when a pixel value repeats the
+ * previous one: a 1-bit flag chain, collapsing to a 6-bit counter after 11
+ * repeats. compression == 1 additionally XOR-prefilters each line against the
+ * previous one. */
 
 enum {
     RLE_SINGLE = 0,

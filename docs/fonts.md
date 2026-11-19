@@ -3,7 +3,8 @@
 OpenRTX's UI text is drawn from **LVGL binary fonts** (the format produced by
 [`lv_font_conv`](https://github.com/lvgl/lv_font_conv)). The generated `.bin`
 blobs are committed under `openrtx/fonts/` and embedded into the firmware; a
-small in-tree reader decodes them at runtime. No LVGL source is vendored.
+small in-tree reader decodes them at runtime. Its RLE decoder is ported from
+LVGL's `lv_font_fmt_txt.c` (MIT).
 
 ## Layout
 

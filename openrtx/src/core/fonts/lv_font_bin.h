@@ -17,16 +17,14 @@ extern "C" {
 
 /*
  * Reader for the LVGL binary font format emitted by `lv_font_conv --format bin`
- * (https://github.com/lvgl/lv_font_conv). This is an in-tree, from-scratch
- * decoder — no LVGL code is vendored; it mirrors the on-disk layout defined by
- * lv_font_conv's own table writers (lib/font/table_{head,cmap,loca,glyf}.js),
- * documented inline where each field is parsed.
+ * (https://github.com/lvgl/lv_font_conv). The tables are parsed as laid out by
+ * lv_font_conv's writers (lib/font/table_{head,cmap,loca,glyf}.js); the RLE
+ * pixel decoder in lv_font_bin.c is ported from LVGL (MIT).
  *
  * The blob is a sequence of length-prefixed tables (`head`, `cmap`, `loca`,
  * `glyf`), little-endian. Glyph geometry lives in a big-endian (MSB-first)
- * bitstream. Coordinates use the LVGL/baseline convention: a glyph's `ofs_y` is
- * the signed offset from the text baseline to the BOTTOM of the glyph box (the
- * opposite anchor to the old Adafruit GFXfont `yOffset`).
+ * bitstream. A glyph's `ofs_y` is the signed offset from the text baseline to
+ * the BOTTOM of the glyph box.
  */
 
 /** A parsed font blob. Populated by lvFont_init(); holds only offsets into the
