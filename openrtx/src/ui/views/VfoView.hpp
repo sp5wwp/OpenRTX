@@ -65,6 +65,16 @@ public:
         return screen_;
     }
 
+    /**
+     * Check whether a frequency entry is open.
+     *
+     * @return true while the RX or TX digits are being typed.
+     */
+    bool freqEntryOpen() const
+    {
+        return (entry_ != nullptr) && !entry_->destination;
+    }
+
 private:
     void syncMode(const channel_t &ch);
     void syncMeter(const state_t &s);

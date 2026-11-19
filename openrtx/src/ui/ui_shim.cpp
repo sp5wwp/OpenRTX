@@ -38,6 +38,7 @@
 #include "core/UiMemory.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
+#include "views/VfoView.hpp"
 #include "views/ViewSlot.hpp"
 #include "views/VolumeOverlayView.hpp"
 
@@ -321,14 +322,29 @@ static void handleTick(long long now, bool *sync_rtx)
 }
 
 /**
- * Allow transmitting only from the home screen with the macro menu closed, as
- * the classic UI did, so a PTT press in a menu or editor never keys up.
+ * Check whether the home screen is shown with no menu or entry open on it.
+ *
+ * @return true if PTT may key up.
+ */
+static bool txAllowed()
+{
+    if (macroOpen || (nav.activeId() != ViewId::Vfo))
+        return false;
+
+    /* The slot holds the home screen while it tops the stack. */
+    const VfoView *vfo = static_cast<const VfoView *>(viewSlot.view());
+    return !vfo->freqEntryOpen();
+}
+
+/**
+ * Allow transmitting only from the home screen, so a PTT press in a menu or
+ * editor never keys up.
  *
  * @param sync_rtx: set when the gate changes, so the rtx thread applies it.
  */
 static void updatePttGate(bool *sync_rtx)
 {
-    const bool disable = macroOpen || (nav.activeId() != ViewId::Vfo);
+    const bool disable = !txAllowed();
     if (disable != state.pttDisable) {
         state.pttDisable = disable;
         *sync_rtx = true;

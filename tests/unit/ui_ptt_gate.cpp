@@ -69,4 +69,14 @@ TEST_CASE("PTT is gated outside the home screen", "[ui]")
         REQUIRE(pressKeys(0));
         REQUIRE_FALSE(state.pttDisable);
     }
+
+    SECTION("a frequency entry blocks transmission until it closes")
+    {
+        pressKeys(KEY_1);
+        REQUIRE(state.pttDisable);
+
+        pressKeys(0);
+        pressKeys(KEY_ESC);
+        REQUIRE_FALSE(state.pttDisable);
+    }
 }
