@@ -36,8 +36,8 @@ static constexpr int16_t BAR_H = REGULAR ? 16 : 12;
 static constexpr int16_t PAD_X = 4;
 static constexpr int16_t GAP = 4;
 
-/* Width of the left slot. Fixed, it also balances the right cluster, keeping
- * the centred title or clock centred. */
+/* Width of the left slot. Fixed, it also balances the right slot, keeping the
+ * centred title or clock centred. */
 static constexpr int16_t LOCK_W = REGULAR ? 28 : 22;
 
 /* Width of the battery percentage and of the battery icon slots. */
@@ -55,14 +55,18 @@ static constexpr fontSize_t FONT = FONT_SIZE_6PT;
  * @param align: horizontal alignment.
  * @param color: text colour.
  * @param text: text.
+ * @param ellipsize: end a text too wide for the box with an ellipsis.
  */
 static void paintText(DrawCtx &d, const Rect &box, textAlign_t align, Sem color,
-                      const char *text)
+                      const char *text, bool ellipsize = false)
 {
     const bool clip = !box.empty();
     if (clip)
         d.pushClip(box);
-    d.textInBox(box, FONT, align, color, text);
+    if (ellipsize)
+        d.textInBoxEllipsized(box, FONT, align, color, text);
+    else
+        d.textInBox(box, FONT, align, color, text);
     if (clip)
         d.popClip();
 }
@@ -83,14 +87,7 @@ void TopBar::reset(const UiText &title)
     minute_ = -1;
     charge_ = 0xFF;
     glyphs_ = 0;
-    showIcon_ = -1;
-}
-
-void TopBar::setTitle(const UiText &t)
-{
-    title_ = t;
-    hasTitle_ = !title_.empty();
-    invalidate();
+    showIcon_ = state.settings.showBatteryIcon;
 }
 
 const char *TopBar::middleText(char *clock) const
@@ -100,15 +97,14 @@ const char *TopBar::middleText(char *clock) const
 
     clock[0] = '\0';
     if (minute_ >= 0)
-        sniprintf(clock, CLOCK_SIZE, "%02u:%02u", hour_, minute_);
+        sniprintf(clock, CLOCK_SIZE, "%02u:%02u", static_cast<unsigned>(hour_),
+                  static_cast<unsigned>(minute_));
     return clock;
 }
 
 int16_t TopBar::rightWidth() const
 {
-    if (showIcon_ < 0)
-        return PCT_W + GAP + ICON_W;
-    return (showIcon_ != 0) ? ICON_W : PCT_W;
+    return showIcon_ ? ICON_W : PCT_W;
 }
 
 void TopBar::update(const state_t &s)
@@ -125,8 +121,8 @@ void TopBar::update(const state_t &s)
         invalidate();
     }
 
-    /* Battery: percentage OR icon, per settings.showBatteryIcon. */
-    const int8_t showIcon = s.settings.showBatteryIcon ? 1 : 0;
+    /* Battery: percentage or icon, per settings.showBatteryIcon. */
+    const bool showIcon = s.settings.showBatteryIcon;
     const bool relayout = (showIcon != showIcon_);
     showIcon_ = showIcon;
 
@@ -151,23 +147,15 @@ void TopBar::update(const state_t &s)
 
 void TopBar::onLayout()
 {
-    /* A padded row: the left slot and the right cluster at their fixed
-     * widths, the centre growing from its text width into the rest. A bar
-     * with no room keeps the slots it had. */
+    /* A padded row: the left and right slots at their fixed widths, the
+     * centre taking the rest. A bar with no room keeps the slots it had. */
     const int cw = static_cast<int>(area_.w) - 2 * PAD_X;
     const int ch = static_cast<int>(area_.h);
     if ((cw <= 0) || (ch <= 0))
         return;
 
-    char clock[CLOCK_SIZE];
-    const int textW = gfx_getTextWidth(FONT, middleText(clock));
-    const int slots = (showIcon_ < 0) ? 4 : 3;
-    int free = cw - LOCK_W - textW - rightWidth() - GAP * (slots - 1);
-    if (showIcon_ < 0)
-        free += GAP; /* rightWidth() counts the gap inside the cluster */
-    if (free < 0)
-        free = 0;
-    middleW_ = static_cast<uint16_t>(textW + free);
+    const int middle = cw - LOCK_W - rightWidth() - 2 * GAP;
+    middleW_ = static_cast<uint16_t>((middle > 0) ? middle : 0);
 
     /* The text slots are centred at their line height. */
     const int lineH = gfx_getFontLineHeight(FONT);
@@ -184,23 +172,27 @@ void TopBar::draw(DrawCtx &d)
 
     paintText(d, { x, textY, static_cast<uint16_t>(LOCK_W), textH_ },
               TEXT_ALIGN_LEFT, Sem::Accent, LEFT_GLYPHS[glyphs_]);
-    x = static_cast<int16_t>(x + LOCK_W + GAP);
 
+    /* A text too wide for the centre also takes the left slot when that shows
+     * no glyph, and ellipsizes if it still does not fit. */
     char clock[CLOCK_SIZE];
-    paintText(d, { x, textY, middleW_, textH_ }, TEXT_ALIGN_CENTER,
-              Sem::OnSurface, middleText(clock));
-    x = static_cast<int16_t>(x + middleW_ + GAP);
+    const char *middle = middleText(clock);
+    Rect box = { static_cast<int16_t>(x + LOCK_W + GAP), textY, middleW_,
+                 textH_ };
+    if ((glyphs_ == 0) && (gfx_getTextWidth(FONT, middle) > middleW_)) {
+        box.x = x;
+        box.w = static_cast<uint16_t>(middleW_ + LOCK_W + GAP);
+    }
+    paintText(d, box, TEXT_ALIGN_CENTER, Sem::OnSurface, middle, true);
+    x = static_cast<int16_t>(x + LOCK_W + GAP + middleW_ + GAP);
 
-    if (showIcon_ <= 0) {
+    if (!showIcon_) {
         char pct[8] = "";
         if (charge_ != 0xFF)
             sniprintf(pct, sizeof(pct), "%u%%", charge_);
         paintText(d, { x, textY, static_cast<uint16_t>(PCT_W), textH_ },
                   TEXT_ALIGN_RIGHT, Sem::OnSurface, pct);
-        x = static_cast<int16_t>(x + PCT_W + GAP);
-    }
-
-    if (showIcon_ != 0) {
+    } else {
         /* The icon is centred across the bar at its own height. */
         const Size icon = BatteryIcon::size();
         const uint16_t iconH = (icon.h < area_.h) ? icon.h : area_.h;
