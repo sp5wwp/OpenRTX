@@ -11,6 +11,7 @@
 #include "core/UiMemory.hpp"
 #include "core/state.h"
 #include "core/graphics.h"
+#include "core/utils.h"
 #include "interfaces/keyboard.h"
 #include "rtx/rtx.h"
 #include "hwconfig.h"
@@ -19,12 +20,6 @@
 
 namespace ortxui
 {
-
-/** FNV-1a offset basis. */
-static constexpr uint32_t FNV_BASIS = 2166136261u;
-
-/** FNV-1a prime. */
-static constexpr uint32_t FNV_PRIME = 16777619u;
 
 void MessagesView::build()
 {
@@ -77,15 +72,15 @@ uint32_t MessagesView::digest(uint8_t mode) const
     /* FNV-1a over what the rows show; the inbox holds a few dozen entries,
      * so walking it once per frame is cheap. */
     const size_t n = messages_count();
-    uint32_t h = FNV_BASIS;
-    h = (h ^ static_cast<uint32_t>(n)) * FNV_PRIME;
-    h = (h ^ (messages_canCompose(mode) ? 1u : 0u)) * FNV_PRIME;
+    uint32_t h = FNV1A_BASIS;
+    h = fnv1a(h, static_cast<uint32_t>(n));
+    h = fnv1a(h, messages_canCompose(mode) ? 1u : 0u);
     for (size_t i = 0; i < n; i++) {
         const struct message *msg = messages_get(i);
         const uint32_t flags = (static_cast<uint32_t>(msg->status) << 1)
                              | msg->unread;
-        h = (h ^ msg->sequence) * FNV_PRIME;
-        h = (h ^ flags) * FNV_PRIME;
+        h = fnv1a(h, msg->sequence);
+        h = fnv1a(h, flags);
     }
     return h;
 }

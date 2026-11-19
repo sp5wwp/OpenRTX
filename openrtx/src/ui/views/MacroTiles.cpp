@@ -11,6 +11,7 @@
 #include "core/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
+#include "core/utils.h"
 #include "layout/Flex.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
@@ -50,10 +51,6 @@ static constexpr uint16_t VALUE_SIZE = 14;
 
 /* Size of a composed key label. */
 static constexpr uint16_t KEY_SIZE = 16;
-
-/* FNV-1a offset basis and prime, for the value digest. */
-static constexpr uint32_t FNV_BASIS = 2166136261u;
-static constexpr uint32_t FNV_PRIME = 16777619u;
 
 /**
  * One tile: a key label over (or, on the compact screen, beside) the value.
@@ -166,13 +163,13 @@ bool MacroTiles::sync(const state_t &s)
 {
     state_ = &s;
 
-    uint32_t h = FNV_BASIS;
+    uint32_t h = FNV1A_BASIS;
     for (uint8_t i = 0; i < TILES; i++) {
         char value[VALUE_SIZE];
         composeValue(i, s, value, sizeof(value));
         for (const char *c = value; *c != '\0'; c++)
-            h = (h ^ static_cast<uint8_t>(*c)) * FNV_PRIME;
-        h *= FNV_PRIME; /* hash the NUL too, separating the tiles */
+            h = fnv1a(h, static_cast<uint8_t>(*c));
+        h = fnv1a(h, 0u); /* hash the NUL too, separating the tiles */
     }
 
     const bool changed = (h != digest_);

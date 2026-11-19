@@ -97,6 +97,23 @@ uint8_t ctcssFreqToIndex(const uint16_t freq);
 size_t utf8Encode(uint32_t cp, char *out);
 
 /**
+ * FNV-1a hash of no data, the start of a hash.
+ */
+#define FNV1A_BASIS 2166136261u
+
+/**
+ * Mix a value into an FNV-1a hash.
+ *
+ * @param hash: hash so far, FNV1A_BASIS to start.
+ * @param value: value to mix in.
+ * @return the new hash.
+ */
+static inline uint32_t fnv1a(const uint32_t hash, const uint32_t value)
+{
+    return (hash ^ value) * 16777619u;
+}
+
+/**
  * Check whether a frequency falls inside one of the radio's bands.
  *
  * @param freq: frequency in Hz.
