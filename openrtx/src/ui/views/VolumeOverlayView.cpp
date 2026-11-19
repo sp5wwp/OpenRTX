@@ -6,7 +6,11 @@
 
 #include "views/VolumeOverlayView.hpp"
 #include "core/Event.hpp"
+#include "core/Layout.hpp"
 #include "core/graphics.h"
+#include "render/DrawCtx.hpp"
+#include "style/Symbols.hpp"
+#include "widgets/Scratch.hpp"
 #include "hwconfig.h"
 
 #include <cstdio>
@@ -14,38 +18,22 @@
 namespace ortxui
 {
 
+/* Whether the HUD is laid out for the roomy screen. */
+static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
+
+/* Inset of the column from the screen edges. */
+static constexpr int16_t PAD_X = 6;
+static constexpr int16_t PAD_Y = 4;
+
+/* Gap between the title and the bar. */
+static constexpr int16_t GAP = REGULAR ? 6 : 3;
+
+/* Heights of the title and of the bar. */
+static constexpr int16_t TITLE_H = REGULAR ? 20 : 12;
+static constexpr int16_t BAR_H = REGULAR ? 16 : 10;
+
 void VolumeOverlayView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-    const bool regular = (sizeClass() == SizeClass::Regular);
-
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
-    root_.setAxis(Axis::Column);
-    root_.setJustify(Justify::Center);
-    root_.setAlign(Align::Stretch);
-    root_.setPadding(6, 4);
-    root_.setGap(regular ? 6 : 3);
-
-    snprintf(titleBuf_, sizeof(titleBuf_), SYMBOL_VOLUME " %s",
-             STR(volume).str());
-    title_.setText(titleBuf_);
-    title_.setFont(regular ? FONT_SIZE_12PT : FONT_SIZE_8PT);
-    title_.setAlign(TEXT_ALIGN_CENTER);
-    title_.setColor(Sem::Accent);
-    title_.setBasis(regular ? 20 : 12);
-
-    bar_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
-    bar_.setColors(Sem::SurfaceHigh, Sem::Primary);
-    bar_.setTextColor(Sem::OnSurface);
-    bar_.setReadout(readoutBuf_);
-    bar_.setBasis(regular ? 16 : 10);
-
-    root_.addChild(&title_);
-    root_.addChild(&bar_);
-
-    screen_.addChild(&root_);
-    root_.onLayout();
     screen_.markAllDirty();
 }
 
@@ -53,14 +41,11 @@ void VolumeOverlayView::syncFromState(const state_t &s)
 {
     /* No top bar on the HUD, so the base refresh is skipped; just track the
      * live knob level (change-gated so we only repaint when it moves). */
-    if ((int16_t)s.volume == shownVol_)
+    if ((int16_t)s.volume == screen_.volume)
         return;
-    shownVol_ = (int16_t)s.volume;
 
-    bar_.setValue(s.volume / 255.0f);
-    const unsigned pct = (unsigned)((s.volume * 100u + 127u) / 255u);
-    snprintf(readoutBuf_, sizeof(readoutBuf_), "%u%%", pct);
-    bar_.invalidate();
+    screen_.volume = (int16_t)s.volume;
+    screen_.invalidate();
 }
 
 NavIntent VolumeOverlayView::onEvent(const Event &)
@@ -68,6 +53,49 @@ NavIntent VolumeOverlayView::onEvent(const Event &)
     /* The overlay never self-navigates: ui_shim opens it on knob movement and
      * closes it on the Transient timeout (or the next key press). */
     return NavIntent::none();
+}
+
+void VolumeOverlayView::HudScreen::draw(DrawCtx &d)
+{
+    /* The title and the bar, centred down the padded screen and stretched
+     * across it. */
+    const int16_t w = CONFIG_SCREEN_WIDTH - 2 * PAD_X;
+    int free = CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP;
+    if (free < 0)
+        free = 0;
+    const int16_t titleY = static_cast<int16_t>(PAD_Y + free / 2);
+    const Rect title = { PAD_X, titleY, static_cast<uint16_t>(w),
+                         static_cast<uint16_t>(TITLE_H) };
+    const Rect bar = { PAD_X, static_cast<int16_t>(titleY + TITLE_H + GAP),
+                       static_cast<uint16_t>(w), static_cast<uint16_t>(BAR_H) };
+
+    /* The title mixes a glyph with a word, composed in the current
+     * language. */
+    char text[32];
+    snprintf(text, sizeof(text), SYMBOL_VOLUME " %s", STR(volume).str());
+    d.pushClip(title);
+    d.textInBox(title, REGULAR ? FONT_SIZE_12PT : FONT_SIZE_8PT,
+                TEXT_ALIGN_CENTER, Sem::Accent, text);
+    d.popClip();
+
+    const unsigned level = (volume < 0) ? 0u : static_cast<unsigned>(volume);
+    char readout[8] = "";
+    if (volume >= 0)
+        snprintf(readout, sizeof(readout), "%u%%",
+                 (level * 100u + 127u) / 255u);
+
+    BarRow &row = Scratch::get<BarRow>();
+    row.setLabel(UiText());
+    row.setFont(REGULAR ? FONT_SIZE_8PT : FONT_SIZE_6PT);
+    row.setColors(Sem::SurfaceHigh, Sem::Primary);
+    row.setTextColor(Sem::OnSurface);
+    row.setReadout(readout);
+    row.setValue(level / 255.0f);
+    row.setArea(bar);
+    row.paintTree(d);
+
+    /* The readout lived on this stack frame. */
+    row.setReadout("");
 }
 
 } // namespace ortxui

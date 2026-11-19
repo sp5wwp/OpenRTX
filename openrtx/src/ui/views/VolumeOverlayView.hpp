@@ -7,10 +7,8 @@
 #ifndef ORTX_UI_VOLUMEOVERLAYVIEW_HPP
 #define ORTX_UI_VOLUMEOVERLAYVIEW_HPP
 
+#include <cstdint>
 #include "core/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
-#include "widgets/BarRow.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -21,13 +19,14 @@ namespace ortxui
  * while the user turns the physical volume knob. It is a modal overlay driven
  * globally by ui_shim (the knob is a polled analogue value, not a view's own
  * input), presented with a Transient dismiss policy so it auto-hides shortly
- * after the knob stops moving. It never self-navigates.
+ * after the knob stops moving. It never self-navigates. It stays built while
+ * other screens come and go, so it keeps only the level it shows and paints
+ * the title and bar from it.
  */
 class VolumeOverlayView : public View
 {
 public:
     void build() override;
-
     void syncFromState(const state_t &s) override;
     NavIntent onEvent(const Event &e) override;
 
@@ -37,14 +36,20 @@ public:
     }
 
 private:
-    Screen screen_;
-    Flex root_;
-    Label title_;
-    BarRow bar_;
+    /**
+     * The HUD's screen: a padded column centring the title over the level
+     * bar, painted from the level shown.
+     */
+    class HudScreen : public Screen
+    {
+    public:
+        /** Paint the title and the level bar. */
+        void draw(DrawCtx &d) override;
 
-    char titleBuf_[32] = { 0 }; //< volume glyph + the volume label
-    char readoutBuf_[8] = { 0 };
-    int16_t shownVol_ = -1; //< last-rendered volume (−1 forces the first paint)
+        int16_t volume = -1; ///< Level shown, -1 forces the first paint
+    };
+
+    HudScreen screen_; ///< Screen, painting the HUD
 };
 
 } // namespace ortxui
