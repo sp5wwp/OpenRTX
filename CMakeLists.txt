@@ -178,6 +178,7 @@ target_sources(app
     openrtx/src/ui/views/VfoView.cpp
     openrtx/src/ui/views/VolumeOverlayView.cpp
     openrtx/src/ui/views/VolumeHud.cpp
+    openrtx/src/ui/views/LowBatteryScreen.cpp
     openrtx/src/ui/views/TextInputView.cpp
     openrtx/src/ui/views/PickerView.cpp
     openrtx/src/ui/views/PickerGrid.cpp
