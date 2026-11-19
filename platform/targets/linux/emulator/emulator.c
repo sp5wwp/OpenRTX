@@ -21,6 +21,33 @@
 #include "core/event.h"
 #include "core/input.h"
 
+/*
+ * How long screenshot_sync waits for the SDL thread to write the file. It is
+ * generous because the SDL thread may be busy rendering when the request is
+ * queued.
+ */
+#define SCREENSHOT_SYNC_TIMEOUT_MS 5000
+
+/*
+ * Default arguments of wait_stable: give up after 5s unless three consecutive
+ * frames are identical, checking every 10ms. A UI that redraws only when
+ * something changes stops sending frames once it has settled, so half a second
+ * without a new frame counts as stable too.
+ */
+#define WAIT_STABLE_TIMEOUT_MS 5000
+#define WAIT_STABLE_FRAMES 3
+#define WAIT_STABLE_POLL_MS 10
+#define WAIT_STABLE_QUIET_MS 500
+
+/*
+ * The UI handles one event per iteration of its main loop, so a key press is
+ * queued behind any pending status update and can take effect some loops
+ * after it was read, while frames identical to the previous screen keep
+ * coming. The event queue of the UI holds 16 events, so after 16 loops all
+ * the events queued before then have been handled.
+ */
+#define WAIT_STABLE_UI_LOOPS 16
+
 /* Custom SDL Event to request a screenshot */
 extern Uint32 SDL_Screenshot_Event;
 
@@ -294,18 +321,11 @@ static int releaseKeys(void *_self, int _argc, char **_argv)
 //     return SH_CONTINUE; // continue
 // }
 
-/*
- * How long screenshot_sync waits for the SDL thread to write the file. It is
- * generous because the SDL thread may be busy rendering when the request is
- * queued.
- */
-#define SCREENSHOT_SYNC_TIMEOUT_MS 5000
-
 static int queueScreenshot(int argc, char **argv, bool sync)
 {
     char *filename = "screenshot.bmp";
 
-    if (argc && argv[0] != NULL) {
+    if (argc && (argv[0] != NULL)) {
         filename = argv[0];
     }
 
@@ -388,26 +408,6 @@ static int shell_sleep(void *_self, int _argc, char **_argv)
     usleep(sleepus);
     return SH_CONTINUE;
 }
-
-/*
- * Default arguments of wait_stable: give up after 5s unless three consecutive
- * frames are identical, checking every 10ms. A UI that redraws only when
- * something changes stops sending frames once it has settled, so half a second
- * without a new frame counts as stable too.
- */
-#define WAIT_STABLE_TIMEOUT_MS 5000
-#define WAIT_STABLE_FRAMES 3
-#define WAIT_STABLE_POLL_MS 10
-#define WAIT_STABLE_QUIET_MS 500
-
-/*
- * The UI handles one event per iteration of its main loop, so a key press is
- * queued behind any pending status update and can take effect some loops
- * after it was read, while frames identical to the previous screen keep
- * coming. The event queue of the UI holds 16 events, so after 16 loops all
- * the events queued before then have been handled.
- */
-#define WAIT_STABLE_UI_LOOPS 16
 
 static int shell_waitStable(void *_self, int _argc, char **_argv)
 {
