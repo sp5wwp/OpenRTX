@@ -154,6 +154,28 @@ TEST_CASE("Settings that reach the radio request an rtx sync", "[ui][settings]")
     slot.destroy();
 }
 
+TEST_CASE("Accessibility steps the voice prompt level", "[ui][settings]")
+{
+    resetState();
+    ViewSlot slot;
+    View *v = slot.build(ViewId::Accessibility);
+
+    /* Voice is the row after Macro Latch. */
+    press(v, KEY_DOWN);
+    press(v, KEY_ENTER);
+    press(v, KEY_DOWN);
+    REQUIRE(state.settings.vpLevel == vpNone);
+    press(v, KEY_UP);
+    press(v, KEY_UP);
+    REQUIRE(state.settings.vpLevel == vpLow);
+    press(v, KEY_UP);
+    press(v, KEY_UP);
+    press(v, KEY_UP);
+    REQUIRE(state.settings.vpLevel == vpHigh);
+
+    slot.destroy();
+}
+
 TEST_CASE("Time and date sets only a valid entry", "[ui][settings]")
 {
     resetState();

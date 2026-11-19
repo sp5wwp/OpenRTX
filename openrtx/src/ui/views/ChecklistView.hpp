@@ -9,6 +9,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstddef>
 #include "core/SettingsListView.hpp"
 #include "core/state.h"
 
@@ -16,8 +17,9 @@ namespace ortxui
 {
 
 /**
- * The Settings > Accessibility screen: a list of checkboxes, each toggled by
- * ENTER into its state.settings flag.
+ * The Settings > Accessibility screen: the macro latch and phonetic spelling
+ * checkboxes, toggled by ENTER, and the voice prompt level, stepped in place
+ * from Off through Beep to levels 1-3.
  */
 class ChecklistView : public SettingsListView
 {
@@ -28,24 +30,31 @@ public:
     /** Destructor. */
     ~ChecklistView() = default;
 
-    /** Build the checkboxes from the live settings. */
+    /** Build the rows from the live settings. */
     void build() override;
 
 private:
-    /** Every row is a checkbox. */
-    RowKind rowKind(uint8_t row) const override
-    {
-        (void)row;
-        return RowKind::Checkbox;
-    }
+    /** Voice is a Stepper, the other rows are checkboxes. */
+    RowKind rowKind(uint8_t row) const override;
+
+    /** Render the voice prompt level. */
+    void formatValue(uint8_t row, char *out, size_t cap) override;
+
+    /** Step the voice prompt level. */
+    void onAdjust(uint8_t row, int8_t dir) override;
 
     /** Write a toggled row into its settings flag. */
     void onToggle(uint8_t row, bool on) override;
 
+    /** Speak the voice prompt level at any level, the rest as the base. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
+
     /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowPhonetic, ///< Spell callsigns and text phonetically
         RowLatch,    ///< Keep the macro menu open after MONI
+        RowVoice,    ///< Voice prompt level
+        RowPhonetic, ///< Spell callsigns and text phonetically
         RowCount,
     };
 
