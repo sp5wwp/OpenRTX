@@ -12,7 +12,7 @@
 #endif
 
 #include <cstdint>
-#include "base/Geometry.hpp"
+#include "render/Geometry.hpp"
 #include "base/Layout.hpp"
 
 namespace ortxui

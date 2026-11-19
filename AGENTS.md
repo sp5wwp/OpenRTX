@@ -33,7 +33,7 @@ openrtx/           Core firmware (hardware-agnostic)
         ├── app/        Navigation and the entry points of ui.h
         ├── base/       Object tree, screens, events
         ├── layout/     Flex layout
-        ├── render/     Theme-aware drawing over core/graphics.h
+        ├── render/     Rectangles and theme-aware drawing over core/graphics.h
         ├── style/      Colour themes, character sets, glyph names
         ├── views/      The View base, the UI memory and the screens
         └── widgets/    Objects that paint themselves (labels, lists, tables, text input)

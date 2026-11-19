@@ -59,7 +59,7 @@ openrtx           # The core program, including its UI, common utilities, and fe
     ├── app       # Navigation and the entry points of ui.h
     ├── base      # Object tree, screens, and events
     ├── layout    # Flex layout
-    ├── render    # Theme-aware drawing on top of core/graphics.h
+    ├── render    # Rectangles and theme-aware drawing on top of core/graphics.h
     ├── style     # Colour themes, character sets, and glyph names
     ├── views     # The base View, the UI memory, and the screens
     └── widgets   # Objects that paint themselves, such as labels, lists, tables, and text input
