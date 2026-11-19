@@ -5,18 +5,13 @@
  */
 
 #include "views/FmView.hpp"
-#include "core/cps.h"
+#include "core/UiFormat.hpp"
 #include "core/voicePromptUtils.h"
 
 #include <cstdio>
 
 namespace ortxui
 {
-
-/* Encode/decode enable label, indexed by (rxToneEn << 1) | txToneEn: the TX
- * tone encodes, the RX tone decodes. */
-static constexpr UiText ENABLE_LABELS[4] = { STR(None), STR(Encode),
-                                             STR(Decode), STR(Both) };
 
 void FmView::build()
 {
@@ -30,11 +25,11 @@ void FmView::formatValue(uint8_t row, char *out, size_t cap)
     const fmInfo_t &fm = state.channel.fm;
 
     if (row == RowTone) {
-        const uint16_t t = ctcss_tone[fm.txTone];
-        sniprintf(out, cap, "%u.%u Hz", (unsigned)(t / 10), (unsigned)(t % 10));
+        char tone[8];
+        formatTone(fm.txTone, tone, sizeof(tone));
+        sniprintf(out, cap, "%s Hz", tone);
     } else {
-        const uint8_t idx = (uint8_t)((fm.rxToneEn << 1) | fm.txToneEn);
-        sniprintf(out, cap, "%s", ENABLE_LABELS[idx].str());
+        sniprintf(out, cap, "%s", toneEnableLabel(fm).str());
     }
 }
 
@@ -42,19 +37,10 @@ void FmView::onAdjust(uint8_t row, int8_t dir)
 {
     fmInfo_t &fm = state.channel.fm;
 
-    if (row == RowTone) {
-        const int n = CTCSS_FREQ_NUM;
-        int t = (int)fm.txTone + dir;
-        t = ((t % n) + n) % n;  /* wrap both directions */
-        fm.txTone = (uint8_t)t;
-        fm.rxTone = (uint8_t)t; /* the RX tone follows the TX tone */
-    } else {
-        /* Step (tx << 1 | rx): None, Decode, Encode, Both. */
-        int flags = (fm.txToneEn << 1) | fm.rxToneEn;
-        flags = ((flags + dir) & 3);
-        fm.txToneEn = (uint8_t)((flags >> 1) & 1);
-        fm.rxToneEn = (uint8_t)(flags & 1);
-    }
+    if (row == RowTone)
+        stepTone(fm, dir);
+    else
+        stepToneEnable(fm, dir);
 
     requestSyncRtx(); /* re-tune the radio with the new tone/enable */
 }

@@ -9,6 +9,7 @@
 #include "style/Symbols.hpp"
 #include "style/Charsets.hpp"
 #include "core/Event.hpp"
+#include "core/UiFormat.hpp"
 #include "core/UiMemory.hpp"
 #include "core/Layout.hpp"
 #include "interfaces/delays.h"
@@ -394,10 +395,10 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
     const char *m1 = "--";
     switch (ch.mode) {
         case OPMODE_FM:
-            m1 = (ch.bandwidth == BW_25) ? "WFM" : "NFM";
+            m1 = bandwidthLabel(ch.bandwidth);
             break;
         case OPMODE_DMR:
-            m1 = "DMR";
+            m1 = STR(dmr).str();
             break;
         case OPMODE_M17:
             m1 = SYMBOL_M17; /* the M17 wordmark logo glyph */
@@ -425,11 +426,8 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
         const bool showTx = txing && (ch.fm.txToneEn != 0u);
         const bool showRx = !txing && (ch.fm.rxToneEn != 0u);
         if (showTx || showRx) {
-            const uint8_t idx = showTx ? ch.fm.txTone : ch.fm.rxTone;
-            const uint16_t t = ctcss_tone[idx];
             tag = "CTCSS";
-            sniprintf(sub, sizeof(sub), "%u.%u", (unsigned)(t / 10),
-                      (unsigned)(t % 10));
+            formatTone(showTx ? ch.fm.txTone : ch.fm.rxTone, sub, sizeof(sub));
         }
     }
 
@@ -480,12 +478,7 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
         /* Fill on a dB power scale relative to the radio's max output. */
         meter_.setValue(powerToFrac(mw));
 
-        if (mw >= 1000u)
-            sniprintf(readout, sizeof(readout), "%lu.%luW",
-                      (unsigned long)(mw / 1000u),
-                      (unsigned long)((mw % 1000u) / 100u));
-        else
-            sniprintf(readout, sizeof(readout), "%lumW", (unsigned long)mw);
+        formatPower(mw, readout, sizeof(readout));
     } else {
         const uint8_t level = rssiToSlevel(s.rssi);
 

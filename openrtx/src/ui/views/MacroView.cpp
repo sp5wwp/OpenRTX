@@ -7,6 +7,7 @@
 #include "views/MacroView.hpp"
 #include "core/Event.hpp"
 #include "core/UiMemory.hpp"
+#include "core/UiFormat.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
 #include "core/voicePromptUtils.h"
@@ -166,10 +167,7 @@ void MacroView::doAction(uint8_t number)
     switch (number) {
         case 1: /* tone encode/decode cycle (FM) */
             if (fm) {
-                uint8_t f = (uint8_t)((ch.fm.txToneEn << 1) | ch.fm.rxToneEn);
-                f = (uint8_t)((f + 1) & 3);
-                ch.fm.txToneEn = (uint8_t)((f >> 1) & 1);
-                ch.fm.rxToneEn = (uint8_t)(f & 1);
+                stepToneEnable(ch.fm, +1);
                 requestSyncRtx();
                 announceTones(
                     static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));
@@ -177,17 +175,14 @@ void MacroView::doAction(uint8_t number)
             break;
         case 2: /* tone down (FM) */
             if (fm) {
-                ch.fm.txTone = (uint8_t)((ch.fm.txTone + CTCSS_FREQ_NUM - 1)
-                                         % CTCSS_FREQ_NUM);
-                ch.fm.rxTone = ch.fm.txTone;
+                stepTone(ch.fm, -1);
                 requestSyncRtx();
                 announceTones(flags);
             }
             break;
         case 3: /* tone up (FM) */
             if (fm) {
-                ch.fm.txTone = (uint8_t)((ch.fm.txTone + 1) % CTCSS_FREQ_NUM);
-                ch.fm.rxTone = ch.fm.txTone;
+                stepTone(ch.fm, +1);
                 requestSyncRtx();
                 announceTones(
                     static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));

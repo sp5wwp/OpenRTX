@@ -153,6 +153,7 @@ target_sources(app
     openrtx/src/ui/core/Screen.cpp
     openrtx/src/ui/core/Event.cpp
     openrtx/src/ui/core/UiText.cpp
+    openrtx/src/ui/core/UiFormat.cpp
     openrtx/src/ui/core/View.cpp
     openrtx/src/ui/core/SettingsListView.cpp
     openrtx/src/ui/core/Navigator.cpp

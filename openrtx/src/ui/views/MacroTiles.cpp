@@ -7,6 +7,7 @@
 #include "views/MacroTiles.hpp"
 #include "core/LayoutFonts.hpp"
 #include "core/UiMemory.hpp"
+#include "core/UiFormat.hpp"
 #include "core/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
@@ -39,14 +40,6 @@ static constexpr const char *KEY_LABELS[MacroTiles::TILES] = {
  * second line per tile do not fit. */
 static constexpr const char *DIGITS[MacroTiles::TILES] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9",
-};
-
-/* Tone encode/decode label, indexed by (txToneEn << 1) | rxToneEn. */
-static constexpr UiText ENC_DEC[4] = {
-    STR(None),
-    STR(Decode),
-    STR(Encode),
-    STR(Both),
 };
 
 /* Gap between the tiles of a row. */
@@ -132,38 +125,25 @@ void MacroTiles::composeValue(uint8_t tile, const state_t &s, char *out,
     const bool fm = (ch.mode == OPMODE_FM);
 
     switch (tile) {
-        case 0: { /* tone encode/decode */
-            const uint8_t enc = (uint8_t)((ch.fm.txToneEn << 1)
-                                          | ch.fm.rxToneEn);
-            sniprintf(out, n, "%s", fm ? ENC_DEC[enc].str() : "-");
+        case 0: /* tone encode/decode */
+            sniprintf(out, n, "%s", fm ? toneEnableLabel(ch.fm).str() : "-");
             break;
-        }
         case 1: /* tone down (shows the tone) */
         case 2: /* tone up */
-            if (fm) {
-                const uint16_t t = ctcss_tone[ch.fm.txTone];
-                sniprintf(out, n, "%u.%u", (unsigned)(t / 10),
-                          (unsigned)(t % 10));
-            } else
+            if (fm)
+                formatTone(ch.fm.txTone, out, n);
+            else
                 sniprintf(out, n, "-");
             break;
         case 3: /* bandwidth */
-            sniprintf(out, n, "%s",
-                      fm ? (ch.bandwidth == BW_25 ? "WFM" : "NFM") : "-");
+            sniprintf(out, n, "%s", fm ? bandwidthLabel(ch.bandwidth) : "-");
             break;
         case 4: /* radio mode */
-            sniprintf(out, n, "%s",
-                      (ch.mode == OPMODE_M17) ? "M17" : (fm ? "FM" : "DMR"));
+            sniprintf(out, n, "%s", modeLabel(ch.mode).str());
             break;
-        case 5: { /* power */
-            const uint32_t mw = ch.power;
-            if (mw >= 1000u)
-                sniprintf(out, n, "%lu.%luW", (unsigned long)(mw / 1000u),
-                          (unsigned long)((mw % 1000u) / 100u));
-            else
-                sniprintf(out, n, "%lumW", (unsigned long)mw);
+        case 5: /* power */
+            formatPower(ch.power, out, n);
             break;
-        }
         case 6: /* brightness */
         case 7:
 #ifdef CONFIG_SCREEN_BRIGHTNESS
