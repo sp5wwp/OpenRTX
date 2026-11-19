@@ -91,7 +91,7 @@ void MacroView::build()
     sqlBar_.setColors(Sem::SurfaceHigh, Sem::TxDanger);
     sqlBar_.setTextColor(Sem::OnSurface);
     sqlBar_.setReadout(sqlBuf_);
-    /* Fill the footer width via grow (BarRow's natural() exceeds the screen). */
+    /* Fill the footer width via grow. */
     sqlBar_.setBasis(0);
     sqlBar_.setGrow(1);
     footer_.addChild(&sqlBar_);

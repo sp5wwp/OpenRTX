@@ -12,19 +12,19 @@
 namespace ortxui
 {
 
-static constexpr int16_t kPad = 3;   ///< Outer gutter
-static constexpr int16_t kGap = 5;   ///< Gap around the label / readout
-static constexpr uint16_t kBarH = 8; ///< Track thickness
+static constexpr int16_t PAD = 3;    ///< Outer gutter
+static constexpr int16_t GAP = 5;    ///< Gap around the label / readout
+static constexpr uint16_t BAR_H = 8; ///< Track thickness
 
 Size BarRow::natural() const
 {
-    return { 200, static_cast<uint16_t>(gfx_getFontLineHeight(font_)) };
+    return { 0, static_cast<uint16_t>(gfx_getFontLineHeight(font_)) };
 }
 
 void BarRow::draw(DrawCtx &d)
 {
-    int16_t left = static_cast<int16_t>(area_.x + kPad);
-    int16_t right = static_cast<int16_t>(area_.x + area_.w - kPad);
+    int16_t left = static_cast<int16_t>(area_.x + PAD);
+    int16_t right = static_cast<int16_t>(area_.x + area_.w - PAD);
 
     /* Label pinned to the left, after its glyph if it has one. */
     char joined[32];
@@ -37,7 +37,7 @@ void BarRow::draw(DrawCtx &d)
         const uint16_t lw = gfx_getTextWidth(font_, label);
         d.textInBox({ left, area_.y, lw, area_.h }, font_, TEXT_ALIGN_LEFT,
                     text_, label);
-        left = static_cast<int16_t>(left + lw + kGap);
+        left = static_cast<int16_t>(left + lw + GAP);
     }
 
     /* Readout pinned to the right. */
@@ -45,7 +45,7 @@ void BarRow::draw(DrawCtx &d)
         const uint16_t rw = gfx_getTextWidth(font_, readout_);
         d.textInBox({ static_cast<int16_t>(right - rw), area_.y, rw, area_.h },
                     font_, TEXT_ALIGN_RIGHT, text_, readout_);
-        right = static_cast<int16_t>(right - rw - kGap);
+        right = static_cast<int16_t>(right - rw - GAP);
     }
 
     if (right <= left)
@@ -54,7 +54,7 @@ void BarRow::draw(DrawCtx &d)
     /* Track spans the space between the label and the readout, vertically
      * centred; the fill covers `value` of its width. */
     const uint16_t trackW = static_cast<uint16_t>(right - left);
-    const uint16_t barH = (area_.h < kBarH) ? area_.h : kBarH;
+    const uint16_t barH = (area_.h < BAR_H) ? area_.h : BAR_H;
     const int16_t barY = static_cast<int16_t>(area_.y + (area_.h - barH) / 2);
     const uint16_t radius = static_cast<uint16_t>(barH / 2);
 
