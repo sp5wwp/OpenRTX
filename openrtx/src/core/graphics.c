@@ -285,7 +285,7 @@ bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
  */
 
 #define PIXEL_T rgb565_t
-#define FB_SIZE (CONFIG_SCREEN_HEIGHT * CONFIG_SCREEN_WIDTH)
+#define FB_SIZE (GFX_BAND_ROWS * CONFIG_SCREEN_WIDTH)
 
 typedef struct {
     uint16_t b : 5;
@@ -331,12 +331,65 @@ static bw_t _color2bw(color_t true_color)
 #error Please define a pixel format type into hwconfig.h or meson.build
 #endif
 
+#if (CONFIG_GFX_BAND_ROWS > 0) && !defined(CONFIG_PIX_FMT_RGB565)
+#error Drawing in bands is supported only on RGB565 displays
+#endif
+
+/**
+ * The framebuffer, or the band being drawn on targets drawing in bands. It
+ * goes in a section of its own, which the linker scripts place where the
+ * display DMA can reach it.
+ */
 #if defined(PLATFORM_LINUX)
 static PIXEL_T framebuffer[FB_SIZE];
 #else
 static PIXEL_T __attribute__((section(".bss.fb"))) framebuffer[FB_SIZE];
 #endif
 static char text[32];
+
+#if CONFIG_GFX_BAND_ROWS > 0
+/** First screen row held by the band buffer. */
+static int16_t band_y0 = 0;
+
+/** Rows of the clip rectangle as set, before narrowing them to the band. */
+static int16_t user_clip_y0 = 0;
+static int16_t user_clip_y1 = CONFIG_SCREEN_HEIGHT - 1;
+#else
+/** The framebuffer holds the screen from its first row. */
+static const int16_t band_y0 = 0;
+#endif
+
+/* Active clip rectangle (screen space, inclusive corners), narrowed to the
+ * band on targets drawing in bands. Drawing outside it is suppressed in
+ * gfx_setPixel, which every primitive routes through. Defaults to the whole
+ * screen, or the first band. */
+static int16_t clip_x0 = 0;
+static int16_t clip_y0 = 0;
+static int16_t clip_x1 = CONFIG_SCREEN_WIDTH - 1;
+static int16_t clip_y1 = GFX_BAND_ROWS - 1;
+
+/**
+ * Set the rows of the clip rectangle, narrowed to the rows of the band being
+ * drawn.
+ *
+ * @param y0: first row.
+ * @param y1: last row.
+ */
+static void set_clip_rows(int16_t y0, int16_t y1)
+{
+#if CONFIG_GFX_BAND_ROWS > 0
+    const int16_t band_y1 = (int16_t)(band_y0 + CONFIG_GFX_BAND_ROWS - 1);
+
+    user_clip_y0 = y0;
+    user_clip_y1 = y1;
+    if (y0 < band_y0)
+        y0 = band_y0;
+    if (y1 > band_y1)
+        y1 = band_y1;
+#endif
+    clip_y0 = y0;
+    clip_y1 = y1;
+}
 
 void gfx_init()
 {
@@ -351,14 +404,42 @@ void gfx_terminate()
     display_terminate();
 }
 
+void gfx_beginBand(uint8_t startRow)
+{
+#if CONFIG_GFX_BAND_ROWS > 0
+    band_y0 = startRow;
+    set_clip_rows(user_clip_y0, user_clip_y1);
+#else
+    (void)startRow;
+#endif
+}
+
 void gfx_renderRows(uint8_t startRow, uint8_t endRow)
 {
+#if CONFIG_GFX_BAND_ROWS > 0
+    int16_t first = (startRow > band_y0) ? startRow : band_y0;
+    int16_t end = (int16_t)(band_y0 + CONFIG_GFX_BAND_ROWS);
+    if (end > endRow)
+        end = endRow;
+    if (end > CONFIG_SCREEN_HEIGHT)
+        end = CONFIG_SCREEN_HEIGHT;
+    if (first >= end)
+        return;
+
+    display_renderBand((uint8_t)first, (uint8_t)end,
+                       &framebuffer[(first - band_y0) * CONFIG_SCREEN_WIDTH]);
+#else
     display_renderRows(startRow, endRow, framebuffer);
+#endif
 }
 
 void gfx_render()
 {
+#if CONFIG_GFX_BAND_ROWS > 0
+    gfx_renderRows(0, CONFIG_SCREEN_HEIGHT);
+#else
     display_render(framebuffer);
+#endif
 }
 
 void gfx_clearRows(uint8_t startRow, uint8_t endRow)
@@ -380,36 +461,23 @@ void gfx_clearScreen()
 
 void gfx_fillScreen(color_t color)
 {
-    for (int16_t y = 0; y < CONFIG_SCREEN_HEIGHT; y++) {
-        for (int16_t x = 0; x < CONFIG_SCREEN_WIDTH; x++) {
-            point_t pos = { x, y };
-            gfx_setPixel(pos, color);
-        }
-    }
+    point_t origin = { 0, 0 };
+    gfx_drawRect(origin, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT, color,
+                 true);
 }
-
-/* Active clip rectangle (screen space, inclusive corners). Drawing outside it is
- * suppressed in gfx_setPixel, which every primitive routes through. Defaults to
- * the whole screen. */
-static int16_t clip_x0 = 0;
-static int16_t clip_y0 = 0;
-static int16_t clip_x1 = CONFIG_SCREEN_WIDTH - 1;
-static int16_t clip_y1 = CONFIG_SCREEN_HEIGHT - 1;
 
 void gfx_setClipRect(int16_t x, int16_t y, uint16_t width, uint16_t height)
 {
     clip_x0 = x;
-    clip_y0 = y;
     clip_x1 = (int16_t)(x + (int16_t)width - 1);
-    clip_y1 = (int16_t)(y + (int16_t)height - 1);
+    set_clip_rows(y, (int16_t)(y + (int16_t)height - 1));
 }
 
 void gfx_resetClipRect(void)
 {
     clip_x0 = 0;
-    clip_y0 = 0;
     clip_x1 = CONFIG_SCREEN_WIDTH - 1;
-    clip_y1 = CONFIG_SCREEN_HEIGHT - 1;
+    set_clip_rows(0, CONFIG_SCREEN_HEIGHT - 1);
 }
 
 inline void gfx_setPixel(point_t pos, color_t color)
@@ -423,19 +491,21 @@ inline void gfx_setPixel(point_t pos, color_t color)
         return; // outside the active clip rectangle
 
 #ifdef CONFIG_PIX_FMT_RGB565
+    // The clip keeps pos.y inside the rows the buffer holds
+    size_t idx = pos.x + (pos.y - band_y0) * CONFIG_SCREEN_WIDTH;
+
     // Blend old pixel value and new one
     if (color.alpha < 255) {
         uint8_t alpha = color.alpha;
         rgb565_t new_pixel = _true2highColor(color);
-        rgb565_t old_pixel = framebuffer[pos.x + pos.y * CONFIG_SCREEN_WIDTH];
+        rgb565_t old_pixel = framebuffer[idx];
         rgb565_t pixel;
         pixel.r = ((255 - alpha) * old_pixel.r + alpha * new_pixel.r) / 255;
         pixel.g = ((255 - alpha) * old_pixel.g + alpha * new_pixel.g) / 255;
         pixel.b = ((255 - alpha) * old_pixel.b + alpha * new_pixel.b) / 255;
-        framebuffer[pos.x + pos.y * CONFIG_SCREEN_WIDTH] = pixel;
+        framebuffer[idx] = pixel;
     } else {
-        framebuffer[pos.x + pos.y * CONFIG_SCREEN_WIDTH] =
-            _true2highColor(color);
+        framebuffer[idx] = _true2highColor(color);
     }
 #elif defined CONFIG_PIX_FMT_BW
     // Ignore more than half transparent pixels
@@ -517,8 +587,15 @@ void gfx_drawRect(point_t start, uint16_t width, uint16_t height, color_t color,
         x_max = CONFIG_SCREEN_WIDTH - 1;
     if (y_max > (CONFIG_SCREEN_HEIGHT - 1))
         y_max = CONFIG_SCREEN_HEIGHT - 1;
-    for (int16_t y = start.y; y <= y_max; y++) {
-        for (int16_t x = start.x; x <= x_max; x++) {
+
+    // Visit only the pixels inside the clip, which in a band is a few rows
+    int16_t x_from = (start.x > clip_x0) ? start.x : clip_x0;
+    int16_t y_from = (start.y > clip_y0) ? start.y : clip_y0;
+    int16_t x_to = ((int16_t)x_max < clip_x1) ? (int16_t)x_max : clip_x1;
+    int16_t y_to = ((int16_t)y_max < clip_y1) ? (int16_t)y_max : clip_y1;
+
+    for (int16_t y = y_from; y <= y_to; y++) {
+        for (int16_t x = x_from; x <= x_to; x++) {
             if (y == start.y || y == y_max || x == start.x || x == x_max)
                 perimeter = 1;
             else
@@ -852,6 +929,17 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
             start.y += f->line_height;
         }
 
+        /* A glyph wholly outside the clip rectangle, as most are when
+         * drawing a band, draws nothing: skip decoding it. */
+        const int16_t glyph_x0 = (int16_t)(start.x + xo);
+        const int16_t glyph_y0 = (int16_t)(start.y + top);
+        if ((glyph_y0 > clip_y1) || ((glyph_y0 + (int16_t)h) <= clip_y0)
+            || (glyph_x0 > clip_x1) || ((glyph_x0 + (int16_t)w) <= clip_x0)) {
+            start.x += glyph.adv_w;
+            i += clen;
+            continue;
+        }
+
         /* Draw pixels, suppressing those outside the clip window. On colour
          * displays each glyph row is decoded to 8-bit coverage and
          * alpha-blended (anti-aliasing); a glyph too wide to decode is read
@@ -863,10 +951,17 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
         const bool decoded = lvGlyph_beginRows(f, &glyph, &rows);
 #endif
         for (uint16_t yy = 0; yy < h; yy++) {
+            /* Rows are decoded in order: decode those above the clip without
+             * drawing them, and stop below it. */
+            const int16_t row = (int16_t)(glyph_y0 + yy);
+            if (row > clip_y1)
+                break;
 #ifdef CONFIG_PIX_FMT_RGB565
             if (decoded)
                 lvGlyph_nextRow(&rows, cov);
 #endif
+            if (row < clip_y0)
+                continue;
             for (uint16_t xx = 0; xx < w; xx++) {
 #ifdef CONFIG_PIX_FMT_RGB565
                 uint8_t a = decoded ? cov[xx] :

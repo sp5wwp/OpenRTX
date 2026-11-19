@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <stdint.h>
 #include "core/gps.h"
+#include "hwconfig.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -42,7 +43,26 @@ extern "C" {
  * then to set the value of the pixel having coordinates (X,Y), framebuffer has
  * to be indexed in this way: buf[X + Y*CONFIG_SCREEN_WIDTH].
  *
+ * Colour targets can instead draw the screen a band of rows at a time, to save
+ * the RAM of a full framebuffer: with CONFIG_GFX_BAND_ROWS set, the buffer
+ * holds that many rows and the screen is drawn by repeating, for each band,
+ * gfx_beginBand(), the drawing of the whole screen, and gfx_render(). Drawing
+ * outside the band is clipped away.
  */
+
+#ifndef CONFIG_GFX_BAND_ROWS
+#define CONFIG_GFX_BAND_ROWS 0
+#endif
+
+/**
+ * Rows drawn and sent at a time: the band height on targets drawing in bands,
+ * the whole screen on the others.
+ */
+#if CONFIG_GFX_BAND_ROWS > 0
+#define GFX_BAND_ROWS CONFIG_GFX_BAND_ROWS
+#else
+#define GFX_BAND_ROWS CONFIG_SCREEN_HEIGHT
+#endif
 
 /**
  * Structure that represents the X,Y coordinates of a single point
@@ -117,9 +137,19 @@ void gfx_init();
 void gfx_terminate();
 
 /**
+ * Start drawing the band of GFX_BAND_ROWS rows from a screen row: until the
+ * next band starts, drawing lands in the band and is clipped to its rows, and
+ * gfx_render() sends it. Does nothing on targets drawing in a framebuffer.
+ *
+ * @param startRow: first screen row of the band.
+ */
+void gfx_beginBand(uint8_t startRow);
+
+/**
  * This function calls the correspondent method of the low level interface display.h
  * Copy a given section, between two given rows, of framebuffer content to the
- * display.
+ * display. On targets drawing in bands, only the rows of the current band are
+ * copied.
  * @param startRow: first row of the framebuffer section to be copied
  * @param endRow: last row of the framebuffer section to be copied
  */
@@ -128,7 +158,8 @@ void gfx_renderRows(uint8_t startRow, uint8_t endRow);
 /**
  * This function calls the correspondent method of the low level interface display.h
  * Copy framebuffer content to the display internal buffer. To be called
- * whenever there is need to update the display.
+ * whenever there is need to update the display. On targets drawing in bands,
+ * this sends the current band.
  */
 void gfx_render();
 
@@ -145,11 +176,13 @@ void gfx_clearRows(uint8_t startRow, uint8_t endRow);
  * Clears the content of the screen
  * This results in a black screen on color displays
  * And a white screen on B/W displays
+ * On targets drawing in bands, this clears the current band.
  */
 void gfx_clearScreen();
 
 /**
- * Fills screen with the specified color.
+ * Fills screen with the specified color, within the clip rectangle and, on
+ * targets drawing in bands, the current band.
  * @param color: border and fill color, in color_t format.
  */
 void gfx_fillScreen(color_t color);
