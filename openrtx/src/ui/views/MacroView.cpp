@@ -77,11 +77,8 @@ void MacroView::build()
     TopBar &bar = useTopBar(STR(macroMenu));
     root_.addChild(&bar);
 
-    /* The grid rows share the free height; the tiles are placed over them. */
-    for (uint8_t r = 0; r < 3; r++) {
-        rows_[r].setGrow(1);
-        root_.addChild(&rows_[r]);
-    }
+    tiles_.setGrow(1);
+    root_.addChild(&tiles_);
 
     footer_.setAxis(Axis::Row);
     footer_.setAlign(Align::Center);
@@ -100,13 +97,6 @@ void MacroView::build()
 
     screen_.addChild(&root_);
     root_.onLayout();
-
-    /* The tiles cover the three rows. */
-    const Rect &top = rows_[0].area();
-    tiles_.setArea(
-        { top.x, top.y, top.w,
-          static_cast<uint16_t>(rows_[2].area().bottom() - top.y + 1) });
-    screen_.addChild(&tiles_);
 #if defined(CONFIG_UI_NO_KEYBOARD)
     tiles_.select(selected_);
 #endif

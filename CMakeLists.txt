@@ -157,7 +157,6 @@ target_sources(app
     openrtx/src/ui/core/SettingsListView.cpp
     openrtx/src/ui/core/Navigator.cpp
     openrtx/src/ui/core/UiMemory.cpp
-    openrtx/src/ui/core/LayoutFonts.cpp
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp

@@ -5,7 +5,6 @@
  */
 
 #include "views/MacroTiles.hpp"
-#include "core/LayoutFonts.hpp"
 #include "core/UiMemory.hpp"
 #include "core/UiFormat.hpp"
 #include "core/UiText.hpp"
@@ -69,7 +68,7 @@ struct ScratchTile {
     Label value; ///< Live value
 };
 
-void MacroTiles::setUp(uint8_t tile, char *keyBuf)
+void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
     ScratchTile &scratch = Scratch::get<ScratchTile>();
@@ -94,7 +93,7 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf)
     scratch.value.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     scratch.value.setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_RIGHT);
     scratch.value.setColor(Sem::OnSurface);
-    scratch.value.setText("");
+    scratch.value.setText(value);
     scratch.value.setGrow(1);
 }
 
@@ -191,21 +190,14 @@ void MacroTiles::draw(DrawCtx &d)
             continue;
         ScratchTile &scratch = Scratch::get<ScratchTile>();
 
-        /* The labels are laid out with an empty value and the metrics the
-         * screen was built with. */
-        {
-            LayoutFonts fonts;
-            setUp(i, keyBuf);
-            scratch.key.setArea({ 0, 0, 0, 0 });
-            scratch.value.setArea({ 0, 0, 0, 0 });
-            if (!tile.empty()) {
-                scratch.box.setArea(tile);
-                scratch.box.onLayout();
-            }
-        }
-
         composeValue(i, *state_, value, sizeof(value));
-        scratch.value.setText(value);
+        setUp(i, keyBuf, value);
+        scratch.key.setArea({ 0, 0, 0, 0 });
+        scratch.value.setArea({ 0, 0, 0, 0 });
+        if (!tile.empty()) {
+            scratch.box.setArea(tile);
+            scratch.box.onLayout();
+        }
 
         const bool selected = (i == selected_);
         if (selected)

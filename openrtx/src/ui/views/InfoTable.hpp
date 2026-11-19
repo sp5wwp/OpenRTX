@@ -22,10 +22,9 @@ namespace ortxui
 /**
  * The key/value table of the Info screen: battery, charge, RSSI, heap, bands
  * and hardware version, one row each, every other row striped. The rows share
- * the table's height, and each is laid out when drawn like a padded row of a
- * key at its natural width and a value filling the rest, with the metrics the
- * screen was built with. The values are composed when drawn too, so the table
- * stores only the live readings it shows.
+ * the table's height, and each is laid out when drawn: a key at its natural
+ * width and the value right-aligned in the rest. The values are composed when
+ * drawn too, so the table stores only the live readings it shows.
  */
 class InfoTable : public Object
 {

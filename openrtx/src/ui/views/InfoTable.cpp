@@ -6,7 +6,6 @@
 
 #include "views/InfoTable.hpp"
 #include "core/Layout.hpp"
-#include "core/LayoutFonts.hpp"
 #include "core/UiText.hpp"
 #include "core/memory_profiling.h"
 #include "interfaces/platform.h"
@@ -108,7 +107,7 @@ bool InfoTable::sync(const state_t &s)
 
 void InfoTable::draw(DrawCtx &d)
 {
-    /* The rows grew equally from nothing, so they split the height evenly. */
+    /* The rows split the height evenly. */
     const uint16_t rowH = static_cast<uint16_t>(area_.h / ROW_COUNT);
     for (uint8_t i = 0; i < ROW_COUNT; i++) {
         const Rect row = { area_.x, static_cast<int16_t>(area_.y + i * rowH),
@@ -122,37 +121,26 @@ void InfoTable::draw(DrawCtx &d)
 
 void InfoTable::drawRow(DrawCtx &d, uint8_t i, const Rect &row) const
 {
-    /* A padded row: the key at its natural width, the value growing into the
-     * rest, measured with the metrics the screen was built with. Only the
-     * static values had text when it was. */
-    char value[VALUE_SIZE] = "";
-    int16_t keyW;
-    int16_t valueW;
-    {
-        LayoutFonts fonts;
-        if (i >= ROW_BAND)
-            composeValue(i, value, sizeof(value));
-        keyW = static_cast<int16_t>(gfx_getTextWidth(FONT, KEYS[i].str()));
-        valueW = static_cast<int16_t>(gfx_getTextWidth(FONT, value));
-    }
-
+    /* A padded row: the key at its natural width, the value right-aligned in
+     * the rest. */
     Rect key = { 0, 0, 0, 0 };
     Rect val = { 0, 0, 0, 0 };
-    const int cw = static_cast<int>(row.w) - 2 * PAD_X;
+    const int32_t cw = static_cast<int32_t>(row.w) - 2 * PAD_X;
     if ((cw > 0) && (row.h != 0)) {
-        int free = cw - keyW - valueW;
-        if (free < 0)
-            free = 0;
+        int32_t keyW = gfx_getTextWidth(FONT, KEYS[i].str());
+        if (keyW > cw)
+            keyW = cw;
         const int16_t x = static_cast<int16_t>(row.x + PAD_X);
         key = { x, row.y, static_cast<uint16_t>(keyW), row.h };
         val = { static_cast<int16_t>(x + keyW), row.y,
-                static_cast<uint16_t>(valueW + free), row.h };
+                static_cast<uint16_t>(cw - keyW), row.h };
     }
 
+    char value[VALUE_SIZE];
     composeValue(i, value, sizeof(value));
 
-    /* Clip to the row as its container would, striping every other row to
-     * keep the dense table readable. */
+    /* Clip to the row, striping every other row to keep the dense table
+     * readable. */
     const bool clip = !row.empty();
     if (clip)
         d.pushClip(row);

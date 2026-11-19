@@ -69,12 +69,13 @@ private:
     Rect tileArea(uint8_t tile) const;
 
     /**
-     * Set the scratch tile up for one tile, with an empty value.
+     * Set the scratch tile up for one tile.
      *
      * @param tile: tile index.
      * @param keyBuf: storage for the key text, at least 16 bytes.
+     * @param value: value text, borrowed until the tile is painted.
      */
-    static void setUp(uint8_t tile, char *keyBuf);
+    static void setUp(uint8_t tile, char *keyBuf, const char *value);
 
     /**
      * Compose a tile's value.

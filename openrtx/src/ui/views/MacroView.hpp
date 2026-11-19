@@ -7,7 +7,6 @@
 #ifndef ORTX_UI_MACROVIEW_HPP
 #define ORTX_UI_MACROVIEW_HPP
 
-#include <array>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/BarRow.hpp"
@@ -94,15 +93,14 @@ private:
      */
     void onKnobEvent(const Event &e);
 
-    Screen screen_;            ///< Widget tree
-    Flex root_;                ///< Column of the bar, grid and footer
-    std::array<Flex, 3> rows_; ///< Grid rows, sizing the tiles
-    MacroTiles tiles_;         ///< The action tiles
-    Flex footer_;              ///< Row of the squelch bar
-    BarRow sqlBar_;            ///< Squelch level
+    Screen screen_;          ///< Widget tree
+    Flex root_;              ///< Column of the bar, grid and footer
+    MacroTiles tiles_;       ///< The action tiles
+    Flex footer_;            ///< Row of the squelch bar
+    BarRow sqlBar_;          ///< Squelch level
 
-    char sqlBuf_[8] = { 0 };   ///< Squelch readout
-    uint8_t selected_ = 0;     ///< Tile the knob picked, without number keys
+    char sqlBuf_[8] = { 0 }; ///< Squelch readout
+    uint8_t selected_ = 0;   ///< Tile the knob picked, without number keys
 };
 
 } // namespace ortxui

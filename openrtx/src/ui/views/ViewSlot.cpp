@@ -5,7 +5,6 @@
  */
 
 #include "views/ViewSlot.hpp"
-#include "core/LayoutFonts.hpp"
 #include "core/utils.h"
 
 #include <new>
@@ -116,9 +115,6 @@ View *ViewSlot::build(ViewId id)
     destroy();
     view_ = BUILDERS[static_cast<uint8_t>(id)].make(storage_);
     view_->id_ = id;
-
-    /* Lay out with the smooth font metrics whatever the text setting. */
-    LayoutFonts fonts;
     view_->build();
     return view_;
 }

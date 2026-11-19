@@ -5,7 +5,6 @@
  */
 
 #include "views/VfoView.hpp"
-#include "core/LayoutFonts.hpp"
 #include "style/Symbols.hpp"
 #include "style/Charsets.hpp"
 #include "core/Event.hpp"
@@ -953,8 +952,6 @@ void VfoView::showDstEdit(bool editing)
     if (sizeClass() == SizeClass::Regular)
         return;
 
-    /* Lay the row out with the metrics build() used. */
-    LayoutFonts fonts;
     chanIdx_.setFlag(FLAG_HIDDEN, editing);
     nameRow_.onLayout();
 }
