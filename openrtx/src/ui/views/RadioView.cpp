@@ -8,8 +8,11 @@
 #include "core/Event.hpp"
 #include "core/UiMemory.hpp"
 #include "interfaces/keyboard.h"
+#include "core/utils.h"
+#include "core/voicePromptUtils.h"
 #include "hwconfig.h"
 
+#include <cstdint>
 #include <cstdio>
 #include <cstring>
 
@@ -245,15 +248,18 @@ void RadioView::offsetAdjust(int dir)
 void RadioView::offsetApply()
 {
     /* Apply the entered magnitude in the current direction (keeping a '-' split
-     * negative), so re-selecting + ENTER round-trips the exact offset. */
-    const int64_t off = (int64_t)offsetKhz() * 1000;
-    const int64_t tx = (int64_t)state.channel.rx_frequency
+     * negative); a TX frequency the radio cannot tune keeps the entry open. */
+    const int64_t off = static_cast<int64_t>(offsetKhz()) * 1000;
+    const int64_t tx = static_cast<int64_t>(state.channel.rx_frequency)
                      + (offsetNeg_ ? -off : off);
-    if ((tx >= 0) && (tx <= 0xFFFFFFFF)) {
-        state.channel.tx_frequency = (uint32_t)tx;
-        lastTx_ = state.channel.tx_frequency;
-        requestSyncRtx();
+    if ((tx < 0) || (tx > UINT32_MAX) || !freqInBand(static_cast<freq_t>(tx))) {
+        vp_announceError(vp_getVoiceLevelQueueFlags());
+        return;
     }
+
+    state.channel.tx_frequency = static_cast<freq_t>(tx);
+    lastTx_ = state.channel.tx_frequency;
+    requestSyncRtx();
     endEdit();
 }
 
