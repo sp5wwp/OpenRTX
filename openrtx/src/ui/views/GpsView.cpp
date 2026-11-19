@@ -15,11 +15,10 @@ namespace ortxui
 
 void GpsView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(gps));
@@ -123,9 +122,7 @@ void GpsView::syncFromState(const state_t &s)
 
 void GpsView::announce()
 {
-    /* Speak the full GPS fix on entry (fix quality, position, speed, altitude,
-     * direction) rather than just the screen title. vp_announceGPSInfo is only
-     * declared under CONFIG_GPS; this view is only reachable there too. */
+    /* vp_announceGPSInfo() exists only with CONFIG_GPS, as this screen. */
 #ifdef CONFIG_GPS
     if (state.settings.vpLevel >= vpLow)
         vp_announceGPSInfo(vpGPSAll);

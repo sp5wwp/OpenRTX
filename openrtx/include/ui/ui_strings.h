@@ -7,18 +7,20 @@
 #ifndef UI_STRINGS_H
 #define UI_STRINGS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-/*
- * NOTE: This string table's order must not be altered as voice prompts will be
- * indexed in the same order as these strings.
- * Also, menus may be printed using string table offsets.
- */
 /**
  * Mark a string for translation: xgettext extracts it into the
  * template (scripts/update_pot.sh), and it compiles to the string.
  */
 #define N_(s) s
 
+/*
+ * NOTE: This string table's order must not be altered as voice prompts will be
+ * indexed in the same order as these strings. Append new strings at the end.
+ */
 typedef struct
 {
     const char* languageName;
@@ -168,7 +170,10 @@ typedef struct
 }
 stringsTable_t;
 
-extern const stringsTable_t englishStrings; // Built-in English table
+/** Built-in English table. */
+extern const stringsTable_t englishStrings;
+
+/** Table of the current language. */
 extern const stringsTable_t* currentLanguage;
 
 /**
@@ -180,5 +185,9 @@ extern const stringsTable_t* currentLanguage;
  * present.
  */
 int GetEnglishStringTableOffset(const char* text);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

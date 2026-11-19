@@ -93,14 +93,10 @@ private:
     /** Current scroll offset, clamped to the current text. */
     int16_t offset() const;
 
-    /** Borrowed text. */
-    const char *text_ = "";
-    /** Text font. */
-    fontSize_t font_ = FONT_SIZE_8PT;
-    /** Text colour role. */
-    Sem color_ = Sem::OnSurface;
-    /** Scroll offset in pixels, clamped by offset() when used. */
-    int16_t scroll_ = 0;
+    const char *text_ = "";           ///< Borrowed text
+    fontSize_t font_ = FONT_SIZE_8PT; ///< Text font
+    Sem color_ = Sem::OnSurface;      ///< Text colour role
+    int16_t scroll_ = 0;              ///< Scroll offset in pixels, clamped
 };
 
 } // namespace ortxui

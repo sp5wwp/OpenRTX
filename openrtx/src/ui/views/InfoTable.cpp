@@ -62,10 +62,6 @@ InfoTable::InfoTable() :
 {
 }
 
-InfoTable::~InfoTable()
-{
-}
-
 void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
 {
     const hwInfo_t *hw = platform_getHwInfo();

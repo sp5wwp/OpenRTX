@@ -11,7 +11,6 @@
 #include "core/View.hpp"
 #include "views/InfoTable.hpp"
 #include "layout/Flex.hpp"
-#include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"
 #include "core/state.h"
 
@@ -19,13 +18,9 @@ namespace ortxui
 {
 
 /**
- * The Info screen: a title bar over a table of key/value rows (firmware
- * battery, RSSI, heap, band, hardware version). Each row is a Flex row
- * [key | value] and the rows share the space equally (grow), so the table fills
- * the screen without hand-placed coordinates or scrolling. A leaf view: ESC
- * pops back. syncFromState() refreshes the live values (battery/charge/RSSI/
- * heap) change-gated; the rest are filled once at build. (The firmware version
- * is shown on the About screen rather than duplicated here.)
+ * The Info screen: battery voltage and charge, RSSI, heap use, bands and
+ * hardware version, one row each, under the title bar. The rows share the
+ * screen's height, so it never scrolls; the firmware version is on About.
  */
 class InfoView : public View
 {
@@ -36,18 +31,22 @@ public:
     /** Destructor. */
     ~InfoView() = default;
 
+    /** Build the title bar over the table. */
     void build() override;
+
+    /** Repaint the table when a reading it shows changed. */
     void syncFromState(const state_t &s) override;
 
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
-    Screen screen_;
-    Flex root_;
-    InfoTable table_; //< zebra-striped rows of keys and values
+    Screen screen_;   ///< Widget tree root
+    Flex root_;       ///< Top bar over the table
+    InfoTable table_; ///< Striped rows of keys and values
 };
 
 } // namespace ortxui

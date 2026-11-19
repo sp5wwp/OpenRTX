@@ -34,7 +34,7 @@ public:
     GpsReadout();
 
     /** Destructor. */
-    ~GpsReadout();
+    ~GpsReadout() = default;
 
     /**
      * Follow a fix.

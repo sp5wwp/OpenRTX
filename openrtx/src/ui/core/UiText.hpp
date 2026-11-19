@@ -10,9 +10,7 @@
 #include <cstddef>
 #include <cstdint>
 
-extern "C" {
 #include "ui/ui_strings.h"
-}
 #include "core/voicePromptUtils.h"
 
 namespace ortxui
@@ -128,4 +126,4 @@ private:
     ::ortxui::UiText::entry(offsetof(stringsTable_t, field) \
                             / sizeof(const char *))
 
-#endif // ORTX_UI_UITEXT_HPP
+#endif /* ORTX_UI_UITEXT_HPP */

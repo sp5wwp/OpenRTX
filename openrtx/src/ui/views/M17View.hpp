@@ -41,19 +41,32 @@ public:
     void build() override;
 
 private:
-    /* SettingsListView hooks: Callsign is Custom (cursor-cycle editor), Meta is
-     * an Action (modal push), CAN is a Stepper, CAN RX is a Checkbox. */
+    /** Callsign is Custom, Meta an Action, CAN a Stepper, CAN RX a Checkbox. */
     RowKind rowKind(uint8_t row) const override;
+
+    /** Render the CAN. */
     void formatValue(uint8_t row, char *out, size_t cap) override;
+
+    /** Step the CAN. */
     void onAdjust(uint8_t row, int8_t dir) override;
+
+    /** Apply the CAN RX check. */
     void onToggle(uint8_t row, bool on) override;
 
     /** Speak the CAN as a number, the other rows as the base does. */
     void announceValue(uint8_t row, const UiText &value,
                        vpQueueFlags flags) override;
+
+    /** Open the meta text editor. */
     NavIntent onActivate(uint8_t row) override;
+
+    /** Load the callsign into its editor. */
     void onBeginEdit(uint8_t row) override;
+
+    /** Drive the callsign editor. */
     bool onEditEvent(const Event &e) override;
+
+    /** Render the callsign, bracketed at the cursor while it is edited. */
     void refreshCustom(uint8_t row, bool speak) override;
 
     /** Keep the callsign being edited. */
@@ -68,11 +81,12 @@ private:
     /** Speak the character under the cursor. */
     void announceCursorChar();
 
+    /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowCallsign,
-        RowMeta,
-        RowCan,
-        RowCanRx,
+        RowCallsign, ///< Source callsign
+        RowMeta,     ///< Meta text sent with a transmission
+        RowCan,      ///< Channel access number
+        RowCanRx,    ///< Receive only the CAN
         RowCount,
     };
 

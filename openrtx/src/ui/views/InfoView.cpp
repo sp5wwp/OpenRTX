@@ -12,10 +12,8 @@ namespace ortxui
 
 void InfoView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(info));

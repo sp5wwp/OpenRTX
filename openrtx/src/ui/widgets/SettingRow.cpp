@@ -18,13 +18,13 @@ SettingRow::SettingRow()
     setAxis(Axis::Column);
     setAlign(Align::Stretch);
     setJustify(Justify::Center);
-    setPadding(kPadX, static_cast<uint8_t>(padY_));
+    setPadding(PAD_X, static_cast<uint8_t>(padY_));
     setGap(static_cast<uint8_t>(gap_));
 
-    label_.setFont(kLabelFont);
+    label_.setFont(LABEL_FONT);
     label_.setAlign(TEXT_ALIGN_LEFT);
     label_.setOverflow(Label::Overflow::Ellipsize);
-    value_.setFont(kValueFont);
+    value_.setFont(VALUE_FONT);
     value_.setAlign(TEXT_ALIGN_RIGHT);
     value_.setOverflow(Label::Overflow::Ellipsize);
 
@@ -36,7 +36,7 @@ void SettingRow::setPad(int16_t padY, int16_t gap)
 {
     padY_ = padY;
     gap_ = gap;
-    setPadding(kPadX, static_cast<uint8_t>(padY_));
+    setPadding(PAD_X, static_cast<uint8_t>(padY_));
     setGap(static_cast<uint8_t>(gap_));
 }
 
@@ -65,11 +65,11 @@ void SettingRow::bind(Kind kind, const UiText &label, const UiText &value,
 bool SettingRow::fitsOneLine(const UiText &label, const UiText &value,
                              int16_t rowW) const
 {
-    const int16_t avail = static_cast<int16_t>(rowW - 2 * kPadX);
+    const int16_t avail = static_cast<int16_t>(rowW - 2 * PAD_X);
     if (avail <= 0)
         return false;
-    const int need = gfx_getTextWidth(kLabelFont, label.str()) + kFitGap
-                   + gfx_getTextWidth(kValueFont, value.str());
+    const int need = gfx_getTextWidth(LABEL_FONT, label.str()) + FIT_GAP
+                   + gfx_getTextWidth(VALUE_FONT, value.str());
     return need <= avail;
 }
 
@@ -77,13 +77,13 @@ int16_t SettingRow::heightFor(Kind kind, const UiText &label,
                               const UiText &value, int16_t rowW) const
 {
     const int16_t oneLine =
-        static_cast<int16_t>(2 * padY_ + gfx_getFontLineHeight(kLabelFont));
+        static_cast<int16_t>(2 * padY_ + gfx_getFontLineHeight(LABEL_FONT));
     /* A value row keeps its second line only when the two texts do not fit side
      * by side; a fitting row is as short as a plain row (the label font is the
      * taller of the two). */
     if ((kind == Kind::Value) && !fitsOneLine(label, value, rowW))
         return static_cast<int16_t>(oneLine + gap_
-                                    + gfx_getFontLineHeight(kValueFont));
+                                    + gfx_getFontLineHeight(VALUE_FONT));
     return oneLine;
 }
 
@@ -118,8 +118,7 @@ void SettingRow::draw(DrawCtx &d)
     if (area_.empty())
         return;
 
-    /* Selected rows fill blue (covering their own divider); others draw a thin
-     * bottom separator like a classic menu list. */
+    /* A selected row fills over its separator; the others draw a thin one. */
     if (selected_) {
         d.fillRect(area_, Sem::Primary);
     } else {
@@ -132,8 +131,8 @@ void SettingRow::draw(DrawCtx &d)
         return;
 
     /* Anti-aliased tick box, vertically centred at the right edge. */
-    const int16_t bs = 12;
-    const int16_t bx = static_cast<int16_t>(area_.right() - bs - 4);
+    const int16_t bs = BOX;
+    const int16_t bx = static_cast<int16_t>(area_.right() - bs - BOX_INSET);
     const int16_t by = static_cast<int16_t>(area_.y + (area_.h - bs) / 2);
     const Rect box = { bx, by, static_cast<uint16_t>(bs),
                        static_cast<uint16_t>(bs) };

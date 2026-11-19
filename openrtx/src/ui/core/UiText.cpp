@@ -30,6 +30,7 @@ const char *UiText::str() const
     if (!isEntry())
         return (raw_ != nullptr) ? raw_ : "";
 
+    /* A language pack may leave an entry untranslated. */
     const char *s = entries(currentLanguage)[id_];
     if ((s == nullptr) || (s[0] == '\0'))
         s = entries(&englishStrings)[id_];

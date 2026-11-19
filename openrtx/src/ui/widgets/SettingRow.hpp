@@ -15,37 +15,27 @@ namespace ortxui
 {
 
 /**
- * One List row, composed from the layout engine instead of hand-painted. A List
- * reuses a single SettingRow as a flyweight: it binds the row to each item in
- * turn, sizes it, lays it out and paints it. Because the row is a Flex column of
- * a label and (for a value row) a value line, the engine supplies the vertical
- * padding and inter-line gutter, and heightFor() reports the content height plus
- * a uniform inset — so a plain row, a checkbox row and a two-line value row all
- * carry the SAME padding to their separators, differing only in height.
- *
- * The row paints its own selection fill, bottom separator and (for a boolean)
- * an anti-aliased checkbox; the label / value children paint after draw().
- *
- * A value row is adaptive: when the label and value fit side by side within the
- * row width they collapse onto ONE line (label left, value right, each centred),
- * just like a checkbox row; only when they do not fit does the value drop to a
- * second line. The decision is measured per row from the bound text and the
- * assigned width, so a short "Direction +" sits on one line while a long value
- * wraps — mixed row heights within a menu are expected.
+ * One List row: a label, with a value beside it or, if they do not fit side
+ * by side, under it, or with a checkbox. A List binds one SettingRow to each
+ * row in turn, lays it out and paints it; every kind keeps the same padding,
+ * so rows differ only in height. The row paints its selection fill, separator
+ * and checkbox; the label and value paint after it.
  */
 class SettingRow : public Flex
 {
 public:
-    /** Destructor. */
-    ~SettingRow() = default;
+    /** How a row shows its item. */
+    enum class Kind : uint8_t {
+        Plain,    ///< A label only
+        Value,    ///< A label and a value, on one line if they fit
+        Checkbox, ///< A label and a checkbox at the right
+    };
 
+    /** Constructor. */
     SettingRow();
 
-    enum class Kind : uint8_t {
-        Plain,    //< a single label (submenu / channel / credit line)
-        Value,    //< label + value; one line if they fit, else two
-        Checkbox, //< a label with an anti-aliased tick box at the right
-    };
+    /** Destructor. */
+    ~SettingRow() = default;
 
     /** Per-list geometry: vertical content inset and the label/value gutter. */
     void setPad(int16_t padY, int16_t gap);
@@ -76,8 +66,13 @@ public:
     int16_t heightFor(Kind kind, const UiText &label, const UiText &value,
                       int16_t rowW) const;
 
+    /** The row's width by its height for the bound text. */
     Size natural() const override;
+
+    /** Lay the label and value on one line or two. */
     void onLayout() override;
+
+    /** Paint the selection fill, the separator and the checkbox. */
     void draw(DrawCtx &d) override;
 
 private:
@@ -93,23 +88,26 @@ private:
     bool fitsOneLine(const UiText &label, const UiText &value,
                      int16_t rowW) const;
 
-    static constexpr int16_t kPadX = 6;   //< left inset for the label
-    static constexpr int16_t kFitGap = 8; //< min gutter between label & value
-                                          //  when they share one line
-    /* Smaller fonts on the compact panels keep the list dense on a 64px
-     * screen, mirroring the other size-class-aware widgets. */
-    static constexpr fontSize_t kLabelFont =
+    static constexpr int16_t PAD_X = 6;     ///< Inset of the label and value
+    static constexpr int16_t FIT_GAP = 8;   ///< Least gap on a shared line
+    static constexpr int16_t BOX = 12;      ///< Checkbox size
+    static constexpr int16_t BOX_INSET = 4; ///< Checkbox inset from the right
+
+    /** Label font; smaller on the compact screen to keep the list dense. */
+    static constexpr fontSize_t LABEL_FONT =
         (sizeClass() == SizeClass::Regular) ? FONT_SIZE_8PT : FONT_SIZE_6PT;
-    static constexpr fontSize_t kValueFont =
+
+    /** Value font. */
+    static constexpr fontSize_t VALUE_FONT =
         (sizeClass() == SizeClass::Regular) ? FONT_SIZE_6PT : FONT_SIZE_5PT;
 
-    Label label_;
-    Label value_;
-    Kind kind_ = Kind::Plain;
-    bool checked_ = false;
-    bool selected_ = false;
-    int16_t padY_ = 4;
-    int16_t gap_ = 2;
+    Label label_;             ///< Row label
+    Label value_;             ///< Row value, for a value row
+    Kind kind_ = Kind::Plain; ///< Row kind
+    bool checked_ = false;    ///< Checkbox state
+    bool selected_ = false;   ///< The row is selected
+    int16_t padY_ = 4;        ///< Vertical inset
+    int16_t gap_ = 2;         ///< Gap between the label and a value below it
 };
 
 } // namespace ortxui

@@ -45,7 +45,7 @@ public:
     InfoTable();
 
     /** Destructor. */
-    ~InfoTable();
+    ~InfoTable() = default;
 
     /**
      * Follow a state snapshot.

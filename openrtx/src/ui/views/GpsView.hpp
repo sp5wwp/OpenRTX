@@ -20,53 +20,68 @@ namespace ortxui
 {
 
 /**
- * The GPS Position screen (mockup 1): a compass rose on the left showing course
- * over ground, and a right-hand column of big value / small unit readouts
- * (latitude, longitude, Maidenhead locator, altitude, speed). When there is no
- * fix — GPS absent, disabled, or not yet locked — the readouts are replaced by
- * a single centred status line and the compass needle is hidden. A leaf view:
- * ESC pops back. All live values are change-gated in syncFromState().
+ * The GPS position screen: a compass rose showing the course over ground
+ * beside a column of readouts (latitude, longitude, Maidenhead locator,
+ * altitude, speed). Without a fix, because the GPS is absent, off or not yet
+ * locked, a status line replaces both.
  */
 class GpsView : public View
 {
 public:
-    /* Coarse presentation state; a change re-lays-out body vs. status line. */
-    enum class FixKind : uint8_t {
-        NoGps,
-        GpsOff,
-        NoFix,
-        FixLost,
-        Fixed,
-    };
-
     /** Constructor. */
     GpsView() = default;
 
     /** Destructor. */
     ~GpsView() = default;
 
+    /** Build the body and the status line, showing the status line. */
     void build() override;
+
+    /** Follow the fix, repainting only what changed. */
     void syncFromState(const state_t &s) override;
+
+    /** Speak the full GPS fix. */
     void announce() override;
 
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
+    /** What the screen shows; a change swaps the body and the status line. */
+    enum class FixKind : uint8_t {
+        NoGps,   ///< No GPS detected
+        GpsOff,  ///< GPS turned off
+        NoFix,   ///< Waiting for a fix
+        FixLost, ///< The fix was lost
+        Fixed,   ///< A fix
+    };
+
+    /**
+     * Get what the screen shows for a state.
+     *
+     * @param s: state snapshot.
+     * @return the fix kind.
+     */
     FixKind classify(const state_t &s) const;
+
+    /**
+     * Show the body or the status line.
+     *
+     * @param fixed: show the body.
+     */
     void showFixed(bool fixed);
 
-    Screen screen_;
-    Flex root_;
-    Flex body_;
-    Compass compass_;
-    GpsReadout readout_; ///< Position, locator, altitude and speed
-    Label status_;
-
-    FixKind lastKind_ = FixKind::NoGps;
-    int16_t lastHeading_ = INT16_MIN;
+    Screen screen_;                     ///< Widget tree root
+    Flex root_;                         ///< Top bar over the body
+    Flex body_;                         ///< Compass beside the readouts
+    Compass compass_;                   ///< Course over ground
+    GpsReadout readout_;                ///< Position, locator, altitude, speed
+    Label status_;                      ///< Why there is no fix
+    FixKind lastKind_ = FixKind::NoGps; ///< Fix kind shown
+    int16_t lastHeading_ = INT16_MIN;   ///< Course shown
 };
 
 } // namespace ortxui

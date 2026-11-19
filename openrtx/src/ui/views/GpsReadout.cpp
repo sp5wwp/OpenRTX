@@ -104,10 +104,6 @@ GpsReadout::GpsReadout() :
     row_.setRun(1, FONT_SIZE_6PT, Sem::OnSurfaceMuted);
 }
 
-GpsReadout::~GpsReadout()
-{
-}
-
 bool GpsReadout::sync(const gps_t &g)
 {
     const bool changed = (g.latitude != lat_) || (g.longitude != lon_)
