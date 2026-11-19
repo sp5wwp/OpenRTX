@@ -298,44 +298,55 @@ bool RadioView::onEditEvent(const Event &e)
         return false;
 
     int dir = 0;
-    if (e.kind == EvKind::Encoder) {
-        dir = e.encoder; /* knob nudges the offset by the tuning step */
-    } else if (e.kind == EvKind::KeyRepeat) {
-        /* A held arrow keeps nudging; every other key acts once. */
-        if ((e.keys & (KEY_UP | KEY_RIGHT)) != 0u)
-            dir = +1;
-        else if ((e.keys & (KEY_DOWN | KEY_LEFT)) != 0u)
-            dir = -1;
-    } else if (e.kind == EvKind::Key) {
-        const uint32_t k = e.keys;
-        if ((k & KEY_ENTER) != 0u) {
-            offsetApply();
-            return true;
-        }
-        if ((k & KEY_ESC) != 0u) {
-            endEdit();
-            return true;
-        }
-        if ((k & (KEY_UP | KEY_RIGHT)) != 0u) {
-            dir = +1; /* like the Step field */
-        } else if ((k & (KEY_DOWN | KEY_LEFT)) != 0u) {
-            dir = -1;
-        } else {
-            /* Digits retype the value, '*' backspaces -- through the shared key
-             * contract, so delete is '*' here as everywhere. The pre-filled
-             * value is pristine until the first digit clears it. */
-            const bool digit = ((k & kDigitMask) != 0u);
-            if (digit || ((k & KEY_STAR) != 0u)) {
-                if (offsetPristine_) {
-                    if (digit)
-                        offsetInput_.clearSlots();
-                    offsetPristine_ = false;
-                }
-                offsetInput_.handleKey(k, 0);
-                refreshCustom(RowOffset);
+    switch (e.kind) {
+        case EvKind::Encoder:
+            dir = e.encoder; /* knob nudges the offset by the tuning step */
+            break;
+
+        case EvKind::KeyRepeat:
+            /* A held arrow keeps nudging; every other key acts once. */
+            if ((e.keys & (KEY_UP | KEY_RIGHT)) != 0u)
+                dir = +1;
+            else if ((e.keys & (KEY_DOWN | KEY_LEFT)) != 0u)
+                dir = -1;
+            break;
+
+        case EvKind::Key: {
+            const uint32_t k = e.keys;
+            if ((k & KEY_ENTER) != 0u) {
+                offsetApply();
+                return true;
             }
-            return true;
+            if ((k & KEY_ESC) != 0u) {
+                endEdit();
+                return true;
+            }
+            if ((k & (KEY_UP | KEY_RIGHT)) != 0u) {
+                dir = +1; /* like the Step field */
+            } else if ((k & (KEY_DOWN | KEY_LEFT)) != 0u) {
+                dir = -1;
+            } else {
+                /* Digits retype the value, '*' backspaces -- through the
+                 * shared key contract, so delete is '*' here as everywhere.
+                 * The pre-filled value is pristine until the first digit
+                 * clears it. */
+                const bool digit = ((k & kDigitMask) != 0u);
+                if (digit || ((k & KEY_STAR) != 0u)) {
+                    if (offsetPristine_) {
+                        if (digit)
+                            offsetInput_.clearSlots();
+                        offsetPristine_ = false;
+                    }
+                    offsetInput_.handleKey(k, 0);
+                    refreshCustom(RowOffset);
+                }
+                return true;
+            }
+            break;
         }
+
+        default:
+            break;
     }
     if (dir != 0)
         offsetAdjust(dir);
