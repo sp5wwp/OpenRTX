@@ -14,10 +14,9 @@ namespace ortxui
 {
 
 /**
- * A small compass rose (GPS mockup 1): an outlined dial with N/E/S/W cardinals,
- * an accent-coloured needle pointing to the current course-over-ground, and the
- * heading in degrees below the dial. When there is no fix the needle is hidden
- * and the dial reads as an inert placeholder.
+ * A small compass rose: an outlined dial with N/E/S/W cardinals, a needle
+ * pointing to the course over ground, and the heading in degrees below the
+ * dial. Without a valid heading the needle is hidden.
  */
 class Compass : public Object
 {
@@ -28,14 +27,20 @@ public:
     /** Destructor. */
     ~Compass() = default;
 
-    /** Heading 0-359 (0 = North, clockwise); `valid` gates the needle. */
+    /**
+     * Set the heading.
+     *
+     * @param deg: degrees clockwise from north, any range.
+     * @param valid: whether the needle shows.
+     */
     void setHeading(int16_t deg, bool valid);
 
+    /** Paint the dial, the needle and the heading. */
     void draw(DrawCtx &d) override;
 
 private:
-    int16_t heading = 0;
-    bool headingValid = false;
+    int16_t heading = 0;       ///< Heading, 0-359 degrees
+    bool headingValid = false; ///< The needle shows
 };
 
 } // namespace ortxui

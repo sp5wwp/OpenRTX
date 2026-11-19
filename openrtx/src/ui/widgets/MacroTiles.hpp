@@ -19,7 +19,7 @@
 namespace ortxui
 {
 
-/** Macro menu actions in tile order: number key N runs action N - 1. */
+/** Macro modal actions in tile order: number key N runs action N - 1. */
 enum class MacroAction : uint8_t {
     ToneEnable,     ///< Cycle the CTCSS use
     ToneDown,       ///< Step the CTCSS tone down
@@ -34,7 +34,7 @@ enum class MacroAction : uint8_t {
 };
 
 /**
- * The 3x3 tile grid of the macro menu: each tile shows its number key (with
+ * The 3x3 tile grid of the macro modal: each tile shows its number key (with
  * an icon on the larger screens) and the live value of its action. The tiles
  * are laid out and painted one at a time through the scratch tile, and the
  * values are composed when drawn from the readings the grid copies.

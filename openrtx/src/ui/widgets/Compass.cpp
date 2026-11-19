@@ -16,7 +16,7 @@ namespace ortxui
 
 void Compass::setHeading(int16_t deg, bool valid)
 {
-    /* Normalise into 0-359 so the needle maths and label agree. */
+    /* Normalise to 0-359 so the needle and the readout agree. */
     int16_t d = static_cast<int16_t>(deg % 360);
     if (d < 0)
         d = static_cast<int16_t>(d + 360);
@@ -58,9 +58,7 @@ void Compass::draw(DrawCtx &d)
                     k.s);
     }
 
-    /* Heading readout under the dial. The font has no degree glyph, so the
-     * heading reads as a plain 3-digit bearing; the dial supplies the
-     * "degrees" context. */
+    /* The font has no degree glyph: a plain 3-digit bearing. */
     char label[6] = "---";
     if (headingValid)
         sniprintf(label, sizeof(label), "%03d", heading);

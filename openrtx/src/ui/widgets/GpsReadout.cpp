@@ -15,14 +15,10 @@
 namespace ortxui
 {
 
-/* Inset of the rows from the column edges. */
-static constexpr int16_t PAD = 2;
+static constexpr int16_t PAD = 2;        ///< Inset of the rows in the column
+static constexpr size_t VALUE_SIZE = 16; ///< Size of a composed value
 
-/* Size of a composed value. */
-static constexpr size_t VALUE_SIZE = 16;
-
-/* Label of each row, in row order; the hemisphere replaces the first two once
- * there is a fix. */
+/** Unit of each row; a fix puts its hemisphere on the first two. */
 static constexpr UiText UNITS[] = { UiText("N"), UiText("E"), STR(locator),
                                     STR(altitudeShort), STR(speedShort) };
 
@@ -117,8 +113,7 @@ bool GpsReadout::sync(const gps_t &g)
 
 void GpsReadout::onLayout()
 {
-    /* A padded column whose rows grow equally from their line height. A
-     * column with no room keeps the rows it had. */
+    /* The rows grow equally; a column with no room keeps the rows it had. */
     const int cw = static_cast<int>(bounds.w) - 2 * PAD;
     const int ch = static_cast<int>(bounds.h) - 2 * PAD;
     if ((cw <= 0) || (ch <= 0))
@@ -182,8 +177,7 @@ void GpsReadout::draw(DrawCtx &d)
         textRow.paintTree(d);
     }
 
-    /* The value lived on this stack frame: do not leave the row pointing at
-     * it for the next layout to measure. */
+    /* Do not leave the row pointing at this stack frame. */
     textRow.setText(0, "");
 }
 

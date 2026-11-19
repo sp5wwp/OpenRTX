@@ -14,15 +14,12 @@
 namespace ortxui
 {
 
-/* Below this width the 12 pt frequency does not fit beside the mode label. */
+/** Below this width the 12 pt frequency does not fit beside the mode label. */
 static constexpr uint16_t COMPACT_W = 150;
 
-/* Inset of the texts from the sides, and of the baseline from the bottom. */
-static constexpr int16_t INDENT = 4;
-static constexpr int16_t BASELINE_RISE = 3;
-
-/* Least gap on either side of the sub-kHz digits. */
-static constexpr int16_t SUB_GAP = 2;
+static constexpr int16_t INDENT = 4;        ///< Inset of the texts at the sides
+static constexpr int16_t BASELINE_RISE = 3; ///< Baseline above the bottom
+static constexpr int16_t SUB_GAP = 2;       ///< Gap by the sub-kHz digits
 
 void FreqHero::setFreq(uint32_t hz)
 {

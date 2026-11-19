@@ -18,19 +18,16 @@
 namespace ortxui
 {
 
-/* Row keys, in row order. */
+/** Row keys, in row order. */
 static constexpr UiText KEYS[InfoTable::RowCount] = {
     STR(batteryVoltage), STR(batteryCharge), STR(RSSI),
     STR(usedHeap),       STR(band),          STR(hwVersion),
 };
 
-/* Inset of the key and value from the row edges. */
-static constexpr int16_t PAD_X = 4;
+static constexpr int16_t PAD_X = 4;      ///< Inset of the texts in the row
+static constexpr size_t VALUE_SIZE = 20; ///< Size of a composed value
 
-/* Size of a composed value. */
-static constexpr size_t VALUE_SIZE = 20;
-
-/* Text font of the table. */
+/** Text font of the table. */
 static constexpr fontSize_t FONT = (sizeClass() == SizeClass::Regular) ?
                                        FONT_SIZE_8PT :
                                        FONT_SIZE_6PT;
@@ -66,7 +63,7 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
 
     switch (row) {
         case RowBattery: {
-            /* Integer volts + one decimal, rounding the mantissa to nearest. */
+            /* Volts with one decimal, rounded to nearest. */
             const uint16_t volt = (vbat + 50) / 1000;
             const uint16_t mv = ((vbat - volt * 1000) + 50) / 100;
             sniprintf(out, n, "%u.%uV", volt, mv);
@@ -138,8 +135,7 @@ void InfoTable::drawRow(DrawCtx &d, uint8_t i, const Rect &row) const
     char value[VALUE_SIZE];
     composeValue(i, value, sizeof(value));
 
-    /* Clip to the row, striping every other row to keep the dense table
-     * readable. */
+    /* Stripe every other row to keep the dense table readable. */
     const bool clip = !row.empty();
     if (clip)
         d.pushClip(row);

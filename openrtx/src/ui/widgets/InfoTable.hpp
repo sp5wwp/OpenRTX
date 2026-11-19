@@ -20,24 +20,22 @@ namespace ortxui
 {
 
 /**
- * The key/value table of the Info screen: battery, charge, RSSI, heap, bands
- * and hardware version, one row each, every other row striped. The rows share
- * the table's height, and each is laid out when drawn: a key at its natural
- * width and the value right-aligned in the rest. The values are composed when
- * drawn too, so the table stores only the live readings it shows.
+ * The key/value table of the Info screen, one row per reading, every other
+ * row striped. The values are composed when drawn, so the table stores only
+ * the live readings it shows.
  */
 class InfoTable : public Object
 {
 public:
     /** Rows, top to bottom. */
     enum Row : uint8_t {
-        RowBattery,
-        RowCharge,
-        RowRssi,
-        RowHeap,
-        RowBand,
-        RowHwVersion,
-        RowCount,
+        RowBattery,   ///< Battery voltage
+        RowCharge,    ///< Battery charge
+        RowRssi,      ///< RSSI
+        RowHeap,      ///< Heap in use
+        RowBand,      ///< Bands the radio covers
+        RowHwVersion, ///< Hardware version
+        RowCount,     ///< Number of rows
     };
 
     /** Constructor. */

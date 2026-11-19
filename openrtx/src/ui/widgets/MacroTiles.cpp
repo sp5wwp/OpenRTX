@@ -22,7 +22,7 @@
 namespace ortxui
 {
 
-/* Top-of-tile labels (number key + icon / short label), one per key 1-9. */
+/** Key label of each tile on a regular screen: the key and an icon or tag. */
 static constexpr const char *KEY_LABELS[MacroTiles::TILES] = {
     "1 " SYMBOL_BELL,           // tone encode/decode
     "2 T-",                     // tone down
@@ -35,29 +35,18 @@ static constexpr const char *KEY_LABELS[MacroTiles::TILES] = {
     "9 " SYMBOL_LOCK,           // keypad lock
 };
 
-/* Just the number keys — used on the tiny mono screen where the icons and a
- * second line per tile do not fit. */
+/** Key label of each tile on a compact screen, where icons do not fit. */
 static constexpr const char *DIGITS[MacroTiles::TILES] = {
     "1", "2", "3", "4", "5", "6", "7", "8", "9",
 };
 
-/* Gap between the tiles of a row. */
-static constexpr uint8_t TILE_GAP = 2;
-
-/* Height of the key line of a two-line tile, width of the key of a
- * one-line tile. */
-static constexpr int16_t KEY_H_REGULAR = 12;
-static constexpr int16_t KEY_W_COMPACT = 9;
-
-/* Padding inside a tile. */
-static constexpr uint8_t TILE_PAD_X = 2;
-static constexpr uint8_t TILE_PAD_Y = 1;
-
-/* Size of a composed tile value. */
-static constexpr size_t VALUE_SIZE = 14;
-
-/* Size of a composed key label. */
-static constexpr uint16_t KEY_SIZE = 16;
+static constexpr uint8_t TILE_GAP = 2;       ///< Gap between the tiles of a row
+static constexpr int16_t KEY_H_REGULAR = 12; ///< Key line of a two-line tile
+static constexpr int16_t KEY_W_COMPACT = 9;  ///< Key width of a one-line tile
+static constexpr uint8_t TILE_PAD_X = 2;     ///< Horizontal padding in a tile
+static constexpr uint8_t TILE_PAD_Y = 1;     ///< Vertical padding in a tile
+static constexpr size_t VALUE_SIZE = 14;     ///< Size of a composed value
+static constexpr uint16_t KEY_SIZE = 16;     ///< Size of a composed key label
 
 /**
  * One tile: a key label over (or, on the compact screen, beside) the value.
@@ -81,8 +70,8 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
     const bool regular = (sizeClass() == SizeClass::Regular);
     ScratchTile &scratch = Scratch::get<ScratchTile>();
 
-    /* Regular: a 2-line tile (number + icon over the value). Compact (mono):
-     * a single row "N value" — icons and a second line don't fit on 128x64. */
+    /* The key over the value on a regular screen, beside it on a compact
+     * one. */
     scratch.box.setAxis(regular ? Axis::Column : Axis::Row);
     scratch.box.setAlign(Align::Center);
     scratch.box.setPadding(TILE_PAD_X, TILE_PAD_Y);
