@@ -238,9 +238,7 @@ point_t DrawCtx::text(Point at, fontSize_t size, textAlign_t align, Sem color,
                       const char *str)
 {
     const point_t start = { at.x, at.y };
-    /* "%s" keeps arbitrary content (including '%') safe through the backend's
-     * printf-style formatter. */
-    return gfx_print(start, size, align, themeColor(color), "%s", str);
+    return gfx_printBuffer(start, size, align, themeColor(color), str);
 }
 
 void DrawCtx::textInBox(const Rect &box, fontSize_t size, textAlign_t align,
@@ -268,14 +266,28 @@ void DrawCtx::textInBox(const Rect &box, fontSize_t size, textAlign_t align,
     const int16_t baseline = static_cast<int16_t>(
         box.y + (static_cast<int>(box.h) - lineH) / 2 + ascent);
     const point_t start = { x, baseline };
-    gfx_print(start, size, TEXT_ALIGN_LEFT, themeColor(color), "%s", str);
+    gfx_printBuffer(start, size, TEXT_ALIGN_LEFT, themeColor(color), str);
+}
+
+/**
+ * Move a cut back to the start of the UTF-8 sequence it falls in, so the
+ * text before it never ends in part of a character.
+ *
+ * @param s: text.
+ * @param n: cut, in bytes from the start of the text.
+ * @return the cut, at a character boundary.
+ */
+static size_t utf8Boundary(const char *s, size_t n)
+{
+    while ((n > 0) && ((static_cast<uint8_t>(s[n]) & 0xC0u) == 0x80u))
+        n--;
+
+    return n;
 }
 
 void DrawCtx::textInBoxEllipsized(const Rect &box, fontSize_t size,
                                   textAlign_t align, Sem color, const char *str)
 {
-    if (str == nullptr)
-        return;
     if (gfx_getTextWidth(size, str) <= box.w) {
         textInBox(box, size, align, color, str);
         return;
@@ -287,13 +299,14 @@ void DrawCtx::textInBoxEllipsized(const Rect &box, fontSize_t size,
     const uint16_t ellW = gfx_getTextWidth(size, kEllipsis);
 
     char buf[64];
-    size_t n = strnlen(str, sizeof(buf) - sizeof(kEllipsis));
+    size_t n = utf8Boundary(str, strnlen(str, sizeof(buf) - sizeof(kEllipsis)));
     memcpy(buf, str, n);
     buf[n] = '\0';
     while ((n > 0)
            && (static_cast<uint16_t>(gfx_getTextWidth(size, buf) + ellW)
                > box.w)) {
-        buf[--n] = '\0';
+        n = utf8Boundary(buf, n - 1);
+        buf[n] = '\0';
     }
     memcpy(buf + n, kEllipsis, sizeof(kEllipsis)); /* includes the NUL */
     textInBox(box, size, align, color, buf);

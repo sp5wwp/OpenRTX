@@ -15,6 +15,7 @@ extern "C" {
 #include "core/graphics.h"
 #include "fonts/lv_font_bin.h"
 }
+#include "render/DrawCtx.hpp"
 
 /*
  * Line-height of the test font (FONT_SIZE_5PT). Queried at runtime so the tests
@@ -486,6 +487,31 @@ TEST_CASE("gfx_printBufferClipped lays out the whole string, however long",
                                               sixCols(), 0, INT16_MAX);
 
     REQUIRE((sz_long.y - sz_short.y) == (int16_t)(29 * lineH()));
+}
+
+TEST_CASE("DrawCtx::text draws the whole string, however long", "[gfx][text]")
+{
+    /* 40 bytes of narrow glyphs on one line: more than the printf buffer
+     * holds, still narrower than the screen. */
+    char dots[41];
+    memset(dots, '.', sizeof(dots) - 1);
+    dots[sizeof(dots) - 1] = '\0';
+
+    const color_t white = { 255, 255, 255, 255 };
+    const point_t start = { 0, (int16_t)lineH() };
+    const point_t whole = gfx_printBuffer(start, FONT_SIZE_5PT, TEXT_ALIGN_LEFT,
+                                          white, dots);
+    dots[30] = '\0';
+    const uint16_t cut = gfx_getTextWidth(FONT_SIZE_5PT, dots);
+    dots[30] = '.';
+    REQUIRE(whole.x > cut);
+
+    ortxui::DrawCtx d(
+        ortxui::Rect{ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    const point_t drawn = d.text({ start.x, start.y }, FONT_SIZE_5PT,
+                                 TEXT_ALIGN_LEFT, ortxui::Sem::OnSurface, dots);
+
+    REQUIRE(drawn.x == whole.x);
 }
 
 /*
