@@ -98,9 +98,8 @@ GpsReadout::GpsReadout() :
     const bool regular = (sizeClass() == SizeClass::Regular);
 
     /* A value and a small unit, right-aligned and sharing one baseline. */
-    row_.setRun(0, regular ? FONT_SIZE_8PT : FONT_SIZE_6PT, Sem::OnSurface,
-                TextRow::Side::Right);
-    row_.setRun(1, FONT_SIZE_6PT, Sem::OnSurfaceMuted, TextRow::Side::Right);
+    row_.setRun(0, regular ? FONT_SIZE_8PT : FONT_SIZE_6PT, Sem::OnSurface);
+    row_.setRun(1, FONT_SIZE_6PT, Sem::OnSurfaceMuted);
 }
 
 GpsReadout::~GpsReadout()

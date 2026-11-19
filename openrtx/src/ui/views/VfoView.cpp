@@ -286,10 +286,8 @@ void VfoView::build()
 
     /* Detail = a small "CAN" tag + the value at the row font (or just a tone
      * value in FM), right-aligned and sharing one baseline. */
-    chanDetail_.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted,
-                       TextRow::Side::Right); /* tag */
-    chanDetail_.setRun(1, chanFont, Sem::OnSurfaceMuted,
-                       TextRow::Side::Right); /* value */
+    chanDetail_.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted); /* tag */
+    chanDetail_.setRun(1, chanFont, Sem::OnSurfaceMuted);      /* value */
     chanDetail_.setGap(3);
     /* Wide enough for the longest tagged value -- "CTCSS 254.1" -- so the tag
      * is never clipped; the roomy meta strip has space to spare, and the M17
