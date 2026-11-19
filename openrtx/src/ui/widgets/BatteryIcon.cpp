@@ -11,11 +11,30 @@
 namespace ortxui
 {
 
+/* Height of the terminal, and the smallest body that still reads as one. */
+static constexpr int16_t NUB_H = 2;
+static constexpr int16_t MIN_BODY_H = 5;
+static constexpr int16_t MIN_W = 6;
+
+/* Width of the body for its height, and of the terminal for the body's. */
+static constexpr int16_t BODY_W_NUM = 4;
+static constexpr int16_t BODY_W_DEN = 5;
+static constexpr int16_t NUB_W_NUM = 3;
+static constexpr int16_t NUB_W_DEN = 5;
+
+/* Body width from which the corners round by 2 px rather than 1. */
+static constexpr int16_t ROUND2_W = 9;
+
+/* Inset of the charge fill from the outline. */
+static constexpr int16_t FILL_INSET = 2;
+
+/* Charge at or below which the fill shows the warning colour. */
+static constexpr uint8_t LOW_CHARGE = 20;
+
 Size BatteryIcon::size()
 {
-    /* An upright battery with the terminal on top. The height is kept a couple
-     * of pixels short of the top-bar height so the glyph has padding above and
-     * below; paint() fits within whatever area the row assigns. */
+    /* A little shorter than the top bar, so the glyph has room above and
+     * below. */
     const bool regular = (sizeClass() == SizeClass::Regular);
     return regular ? Size{ 13, 12 } : Size{ 10, 9 };
 }
@@ -28,34 +47,31 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
     if (charge > 100u)
         charge = 100u;
 
-    const int16_t nubH = 2;
-    const int16_t bodyH = static_cast<int16_t>(area.h - nubH);
-    if (bodyH < 5)
+    const int16_t bodyH = static_cast<int16_t>(area.h - NUB_H);
+    if (bodyH < MIN_BODY_H)
         return;
 
-    /* Battery aspect: taller than wide. Centre it in the assigned width. */
-    int16_t W = static_cast<int16_t>(bodyH * 4 / 5);
+    /* Taller than wide, centred in the assigned width. */
+    int16_t W = static_cast<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN);
     if (W > static_cast<int16_t>(area.w))
         W = static_cast<int16_t>(area.w);
-    if (W < 6)
-        W = 6;
+    if (W < MIN_W)
+        W = MIN_W;
 
     const int16_t bx = static_cast<int16_t>(area.x + (area.w - W) / 2);
-    const int16_t byBody = static_cast<int16_t>(area.y + nubH);
-    const uint16_t r = (W >= 9) ? 2u : 1u;
+    const int16_t byBody = static_cast<int16_t>(area.y + NUB_H);
+    const uint16_t r = (W >= ROUND2_W) ? 2u : 1u;
 
-    /* Terminal: a SQUARED-off cap centred on top of the body (about three
-     * fifths of the body width, crisp corners so it reads as a battery contact,
-     * not a rounded bottle neck). It overlaps the body by 1px so they join. */
-    const int16_t nubW = static_cast<int16_t>((W * 3) / 5);
+    /* A square terminal centred on top, overlapping the body by 1 px so they
+     * join. */
+    const int16_t nubW = static_cast<int16_t>((W * NUB_W_NUM) / NUB_W_DEN);
     d.fillRect({ static_cast<int16_t>(bx + (W - nubW) / 2), area.y,
-                 static_cast<uint16_t>(nubW), static_cast<uint16_t>(nubH + 1) },
+                 static_cast<uint16_t>(nubW),
+                 static_cast<uint16_t>(NUB_H + 1) },
                Sem::OnSurface);
 
-    /* Body outline = an outer rounded rect hollowed by an inner one in the bar
-     * colour (the top bar's Surface). The TOP corners are then squared off (a
-     * real battery has a flat top under its terminal); the bottom keeps its
-     * anti-aliased rounding. */
+    /* The outline: a rounded body hollowed in the bar colour, with square top
+     * corners under the terminal. */
     d.fillRoundRect({ bx, byBody, static_cast<uint16_t>(W),
                       static_cast<uint16_t>(bodyH) },
                     r, Sem::OnSurface);
@@ -77,18 +93,19 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
                    Sem::Surface);
     }
 
-    /* Charge fill, from the bottom up, inset 2px from the outline. */
-    const int innerH = bodyH - 4;
+    /* The charge fills from the bottom up. */
+    const int innerH = bodyH - 2 * FILL_INSET;
     const int fillH = innerH * static_cast<int>(charge) / 100;
     if (fillH <= 0)
         return;
 
-    const Sem fill = (charge <= 20u) ? Sem::Warning : Sem::OnSurface;
-    d.fillRoundRect({ static_cast<int16_t>(bx + 2),
-                      static_cast<int16_t>(byBody + 2 + (innerH - fillH)),
-                      static_cast<uint16_t>(W - 4),
-                      static_cast<uint16_t>(fillH) },
-                    1, fill);
+    const Sem fill = (charge <= LOW_CHARGE) ? Sem::Warning : Sem::OnSurface;
+    d.fillRoundRect(
+        { static_cast<int16_t>(bx + FILL_INSET),
+          static_cast<int16_t>(byBody + FILL_INSET + (innerH - fillH)),
+          static_cast<uint16_t>(W - 2 * FILL_INSET),
+          static_cast<uint16_t>(fillH) },
+        1, fill);
 }
 
 } // namespace ortxui

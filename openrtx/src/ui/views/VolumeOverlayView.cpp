@@ -17,12 +17,12 @@ void VolumeOverlayView::build()
 
 void VolumeOverlayView::syncFromState(const state_t &s)
 {
-    /* No top bar on the HUD, so the base refresh is skipped; just track the
-     * live knob level (change-gated so we only repaint when it moves). */
-    if ((int16_t)s.volume == screen_.volume())
+    /* The HUD has no top bar, so the base refresh is not needed. */
+    const int16_t volume = static_cast<int16_t>(s.volume);
+    if (volume == screen_.volume())
         return;
 
-    screen_.setVolume((int16_t)s.volume);
+    screen_.setVolume(volume);
     screen_.invalidate();
 }
 

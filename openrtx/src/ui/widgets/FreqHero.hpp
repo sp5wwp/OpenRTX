@@ -15,12 +15,9 @@ namespace ortxui
 {
 
 /**
- * The VFO frequency hero (mockups 5-6): a large left-aligned frequency to
- * kHz, small trailing sub-kHz digits sharing its baseline, and the mode /
- * bandwidth label (WFM/NFM/M17) right-aligned on that same baseline. Custom-
- * drawn because the mixed-size baseline alignment is finer than the box layout
- * expresses. Secondary M17/FM details (CAN, tone) live in the channel row
- * below, not here. The mode label is a borrowed const string.
+ * The VFO frequency: a large frequency to kHz, small sub-kHz digits and the
+ * mode label (WFM/NFM/M17) right-aligned, all on one baseline. It draws itself
+ * because the box layout cannot align mixed font sizes on a baseline.
  */
 class FreqHero : public Object
 {
@@ -31,36 +28,51 @@ public:
     /** Destructor. */
     ~FreqHero() = default;
 
+    /**
+     * Show a frequency, in the readout colour.
+     *
+     * @param hz: frequency in Hz.
+     */
     void setFreq(uint32_t hz);
 
-    /** Keypad-entry rendering: the caller composes the main ("146.5--") and sub
-     *  ("00" / "--") strings itself, with '-' placeholders for un-entered slots,
-     *  and drives the colour with setTextColor(). Bypasses the numeric format of
-     *  setFreq() so partial entry and placeholders show through. */
+    /**
+     * Show a keypad entry instead of a frequency, '-' marking the digits not
+     * typed yet.
+     *
+     * @param main: MHz and kHz, as "146.5--".
+     * @param sub: sub-kHz digits, as "00" or "--".
+     */
     void setEntry(const char *main, const char *sub);
 
-    /** Right-aligned mode/bandwidth label (WFM/NFM/M17), on the frequency
-     *  baseline. Power is intentionally omitted — it is shown on the meter
-     *  while transmitting. */
+    /**
+     * Set the mode label.
+     *
+     * @param mode: label, which must outlive the widget's use of it.
+     */
     void setMode(const char *mode)
     {
-        mode_ = (mode != nullptr) ? mode : "";
+        mode_ = mode;
     }
 
-    /** Colour of the frequency text (not the mode label). Gold while editing,
-     *  the alert colour on an out-of-band entry; setFreq() resets it. */
+    /**
+     * Set the colour of the frequency, not of the mode label: the accent while
+     * editing, the alert colour for an out-of-band entry. setFreq() resets it.
+     *
+     * @param c: colour role.
+     */
     void setTextColor(Sem c)
     {
         textColor_ = c;
     }
 
+    /** Paint the frequency, the sub-kHz digits and the mode label. */
     void draw(DrawCtx &d) override;
 
 private:
-    char mainBuf_[16] = "0.000";
-    char subBuf_[6] = "00";
-    const char *mode_ = "";
-    Sem textColor_ = Sem::OnSurface;
+    const char *mode_ = "";          ///< Mode label
+    char mainBuf_[16] = "0.000";     ///< MHz and kHz
+    char subBuf_[6] = "00";          ///< Sub-kHz digits
+    Sem textColor_ = Sem::OnSurface; ///< Colour of the frequency
 };
 
 } // namespace ortxui

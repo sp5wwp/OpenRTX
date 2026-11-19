@@ -38,10 +38,10 @@ void VolumeHud::draw(DrawCtx &d)
     /* The title and the bar, centred down the padded screen and stretched
      * across it. */
     const int16_t w = CONFIG_SCREEN_WIDTH - 2 * PAD_X;
-    int free = CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP;
-    if (free < 0)
-        free = 0;
-    const int16_t titleY = static_cast<int16_t>(PAD_Y + free / 2);
+    int spare = CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP;
+    if (spare < 0)
+        spare = 0;
+    const int16_t titleY = static_cast<int16_t>(PAD_Y + spare / 2);
     const Rect title = { PAD_X, titleY, static_cast<uint16_t>(w),
                          static_cast<uint16_t>(TITLE_H) };
     const Rect bar = { PAD_X, static_cast<int16_t>(titleY + TITLE_H + GAP),

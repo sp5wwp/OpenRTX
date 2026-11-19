@@ -15,15 +15,9 @@ namespace ortxui
 {
 
 /**
- * The VFO signal meter: a leading label ("RX"/"TX"), a continuous horizontal
- * bar filled to `value` (RSSI in RX, power in TX), an optional red threshold
- * mark (the squelch opening level) on the same axis, an optional S-scale
- * (1/3/5/7/9) beneath it, and a trailing readout. Drawn within its
- * layout-assigned area.
- *
- * The bar is pixel-resolution: unlike a fixed set of dots it does not quantise
- * RSSI or the squelch mark to whole S-points, so the full granularity of both
- * is visible and they share one axis (a green level under a red squelch gate).
+ * The VFO signal meter: a label ("RX"/"TX"), a bar filled to a fraction (RSSI
+ * or power) at pixel resolution, an optional red mark on the same axis (the
+ * squelch level), an optional S-scale beneath it, and a readout.
  */
 class SignalMeter : public Object
 {
@@ -34,32 +28,61 @@ public:
     /** Destructor. */
     ~SignalMeter() = default;
 
+    /**
+     * Set the label.
+     *
+     * @param l: label, which must outlive the meter's use of it.
+     */
     void setLabel(const char *l)
     {
-        label_ = (l != nullptr) ? l : "";
+        label_ = l;
     }
+
+    /**
+     * Set the readout.
+     *
+     * @param r: readout, which must outlive the meter's use of it.
+     */
     void setReadout(const char *r)
     {
-        readout_ = (r != nullptr) ? r : "";
+        readout_ = r;
     }
+
+    /**
+     * Set the colour of the label, readout and fill.
+     *
+     * @param c: colour role.
+     */
     void setColor(Sem c)
     {
         color_ = c;
     }
-    /** Main fill fraction (RSSI or power), clamped to [0, 1]. */
+
+    /**
+     * Set the fill.
+     *
+     * @param v: fraction, clamped to [0, 1] when drawn.
+     */
     void setValue(float v)
     {
         value_ = v;
     }
+
     /**
-     * Threshold mark (squelch opening level) as a fraction [0, 1] on the same
-     * axis as the fill, drawn as a red vertical gate. A negative value (the
-     * default) hides it.
+     * Set the mark.
+     *
+     * @param v: fraction on the fill's axis; negative hides the mark.
      */
     void setMarker(float v)
     {
         marker_ = v;
     }
+
+    /**
+     * Show or hide the S-scale.
+     *
+     * @param s: whether the scale shows.
+     */
     void setShowScale(bool s)
     {
         showScale_ = s;
@@ -73,7 +96,14 @@ public:
      */
     uint16_t fillWidth() const;
 
+    /**
+     * Get the meter's natural size.
+     *
+     * @return the size.
+     */
     Size natural() const override;
+
+    /** Paint the label, bar, mark, scale and readout. */
     void draw(DrawCtx &d) override;
 
 private:
@@ -86,12 +116,12 @@ private:
      */
     uint16_t track(int16_t &left) const;
 
-    const char *label_ = "";
-    const char *readout_ = "";
-    Sem color_ = Sem::RxSuccess;
-    float value_ = 0.0f;
-    float marker_ = -1.0f; //< squelch mark fraction, <0 hides it
-    bool showScale_ = true;
+    const char *label_ = "";     ///< Label
+    const char *readout_ = "";   ///< Readout
+    float value_ = 0.0f;         ///< Fill fraction
+    float marker_ = -1.0f;       ///< Mark fraction, negative to hide it
+    Sem color_ = Sem::RxSuccess; ///< Colour of the label, readout and fill
+    bool showScale_ = true;      ///< The S-scale shows
 };
 
 } // namespace ortxui

@@ -16,13 +16,9 @@ namespace ortxui
 {
 
 /**
- * The transient volume HUD: a full-screen title + horizontal level bar shown
- * while the user turns the physical volume knob. It is a modal overlay driven
- * globally by ui_shim (the knob is a polled analogue value, not a view's own
- * input), presented with a Transient dismiss policy so it auto-hides shortly
- * after the knob stops moving. It never self-navigates. It stays built while
- * other screens come and go, so it keeps only the level it shows and paints
- * the title and bar from it.
+ * The volume HUD: a title over a level bar, shown by ui_shim over the screen
+ * while the volume knob turns and hidden shortly after it stops. It stays
+ * built while screens come and go, keeping only the level it shows.
  */
 class VolumeOverlayView : public View
 {
@@ -33,10 +29,30 @@ public:
     /** Destructor. */
     ~VolumeOverlayView() = default;
 
+    /** Ready the HUD for its first paint. */
     void build() override;
+
+    /**
+     * Follow the volume level.
+     *
+     * @param s: state snapshot.
+     */
     void syncFromState(const state_t &s) override;
+
+    /**
+     * Ignore an event: ui_shim hides the HUD before a key event, so only
+     * status events reach it.
+     *
+     * @param e: event.
+     * @return no navigation.
+     */
     NavIntent onEvent(const Event &e) override;
 
+    /**
+     * Get the widget tree.
+     *
+     * @return the screen.
+     */
     Screen &screen() override
     {
         return screen_;
