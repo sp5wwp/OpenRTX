@@ -37,12 +37,12 @@ static constexpr color_t highContrastColor(Sem role)
 }
 
 /**
- * Instrument mapping.
+ * Standard mapping.
  *
  * @param role: colour role.
  * @return the role's colour.
  */
-static constexpr color_t instrumentColor(Sem role)
+static constexpr color_t standardColor(Sem role)
 {
     switch (role) {
         case Sem::Background:
@@ -102,7 +102,7 @@ static constexpr ThemeTable makeTheme(color_t (*map)(Sem))
         map, std::make_index_sequence<static_cast<size_t>(Sem::Count)>());
 }
 
-const ThemeTable THEME_INSTRUMENT = makeTheme(instrumentColor);
+const ThemeTable THEME_STANDARD = makeTheme(standardColor);
 const ThemeTable THEME_HIGH_CONTRAST = makeTheme(highContrastColor);
 
 static const ThemeTable *customTheme = nullptr;
@@ -120,7 +120,7 @@ color_t themeColor(Sem role)
     if (customTheme != nullptr)
         theme = customTheme;
     else if (!state.settings.highContrast)
-        theme = &THEME_INSTRUMENT;
+        theme = &THEME_STANDARD;
 #endif
 
     return theme->colors[static_cast<size_t>(role)];

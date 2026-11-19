@@ -22,9 +22,9 @@ struct ThemeTable {
 };
 
 /**
- * Built-in "Instrument" colour theme.
+ * Built-in "Standard" colour theme.
  */
-extern const ThemeTable THEME_INSTRUMENT;
+extern const ThemeTable THEME_STANDARD;
 
 /**
  * Built-in High Contrast theme: ink and paper only. It is the only theme on

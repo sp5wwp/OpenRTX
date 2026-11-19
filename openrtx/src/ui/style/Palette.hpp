@@ -23,7 +23,7 @@ constexpr color_t rgb(uint8_t r, uint8_t g, uint8_t b)
 }
 
 /*
- * Colours of the Instrument theme on colour (RGB565) targets.
+ * Colours of the Standard theme on colour (RGB565) targets.
  */
 constexpr color_t BACKGROUND = rgb(0x00, 0x00, 0x00);   ///< True black
 constexpr color_t SURFACE = rgb(0x2C, 0x2E, 0x33);      ///< Top bar, elevation
