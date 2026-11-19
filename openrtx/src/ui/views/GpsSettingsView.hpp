@@ -12,6 +12,7 @@
 #include <cstddef>
 #include "core/SettingsListView.hpp"
 #include "core/state.h"
+#include "hwconfig.h"
 
 namespace ortxui
 {
@@ -19,7 +20,7 @@ namespace ortxui
 /**
  * The Settings > GPS screen: GPS Enabled and GPS Set Time checkboxes, toggled
  * by ENTER, and the UTC timezone, stepped in half hours and shown as e.g.
- * "+1.0". The GPS position screen is GpsView.
+ * "+1.0". The clock rows need CONFIG_RTC. The GPS position screen is GpsView.
  */
 class GpsSettingsView : public SettingsListView
 {
@@ -53,8 +54,10 @@ private:
     /** Rows, top to bottom. */
     enum Row : uint8_t {
         RowEnabled,  ///< GPS on or off
+#ifdef CONFIG_RTC
         RowSetTime,  ///< Set the clock from the GPS
         RowTimezone, ///< UTC offset in half hours
+#endif
         RowCount,
     };
 

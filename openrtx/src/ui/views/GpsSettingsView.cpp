@@ -17,17 +17,24 @@ void GpsSettingsView::build()
     items_[RowEnabled].label = STR(gpsEnabled);
     items_[RowEnabled].checkbox = true;
     items_[RowEnabled].checked = state.settings.gps_enabled;
+#ifdef CONFIG_RTC
     items_[RowSetTime].label = STR(gpsSetTime);
     items_[RowSetTime].checkbox = true;
     items_[RowSetTime].checked = state.settings.gpsSetTime;
     items_[RowTimezone].label = STR(UTCTimeZone);
+#endif
 
     buildList(STR(gps), items_.data(), RowCount);
 }
 
 GpsSettingsView::RowKind GpsSettingsView::rowKind(uint8_t row) const
 {
-    return (row == RowTimezone) ? RowKind::Stepper : RowKind::Checkbox;
+#ifdef CONFIG_RTC
+    if (row == RowTimezone)
+        return RowKind::Stepper;
+#endif
+    (void)row;
+    return RowKind::Checkbox;
 }
 
 void GpsSettingsView::formatValue(uint8_t row, char *out, size_t cap)
@@ -63,17 +70,22 @@ void GpsSettingsView::onToggle(uint8_t row, bool on)
 {
     if (row == RowEnabled)
         state.settings.gps_enabled = on;
+#ifdef CONFIG_RTC
     else if (row == RowSetTime)
         state.settings.gpsSetTime = on;
+#endif
 }
 
 void GpsSettingsView::announceValue(uint8_t row, const UiText &value,
                                     vpQueueFlags flags)
 {
-    if (row == RowTimezone)
+#ifdef CONFIG_RTC
+    if (row == RowTimezone) {
         vp_announceTimeZone(state.settings.utc_timezone, flags);
-    else
-        SettingsListView::announceValue(row, value, flags);
+        return;
+    }
+#endif
+    SettingsListView::announceValue(row, value, flags);
 }
 
 } // namespace ortxui
