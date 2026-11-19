@@ -19,10 +19,9 @@ LVGL's `lv_font_fmt_txt.c` (MIT).
 | Glyph names (`SYMBOL_*`) | `openrtx/src/ui/style/Symbols.hpp` |
 
 Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one text blob
-and one icon blob. Colour
-(RGB565) targets embed the anti-aliased **4bpp** set; monochrome (BW) targets
-embed the compact **1bpp** set, which colour targets also embed for the
-**Crisp** text setting. The choice is made in `fontData.c` from
+and one icon blob. Colour (RGB565) targets embed the anti-aliased **4bpp**
+set; monochrome (BW) targets embed the compact **1bpp** set, which colour
+targets also embed for the **Crisp** text setting. The choice is made in `fontData.c` from
 `CONFIG_FONT_AA`, which the colour targets define in their `hwconfig.h` (the
 colour emulator derives it from its pixel format).
 
@@ -77,20 +76,21 @@ UTF-8 encoding of the codepoint), regenerate, and commit.
 
 ## Custom icon font (fallback layer)
 
-App-specific marks that are **not** FontAwesome live in a separate *custom icon
-font* rather than being merged into the text blobs: the M17 wordmark logo
-(`SYMBOL_M17`, U+E900), the Latin-1 supplement (U+00A1–U+00FF: accented
-letters + symbols) that backs the UTF-8 character picker (`PickerView`), the
-ellipsis (U+2026) that ends truncated text, and the FontAwesome backspace
-(U+F55A) of the picker's delete slot. The blobs therefore carry the M17 logo's
-GPL-3.0, the Ubuntu Font Licence and the OFL (see `REUSE.toml`). Each text font
-is given the same-size custom-icon font as a `fallback` (mirroring LVGL's
-`lv_font_t.fallback`), so `lvFont_getGlyph` walks the chain and those code
-points render like any other glyph — a single-colour, theme-tinted silhouette
-that also works on 1bpp targets. Keeping it separate means the `ubuntu_*.bin`
-blobs stay byte-for-byte stable when the icon set changes, and vice-versa. The
-per-size blobs are `openrtx/fonts/icons_*.bin`, embedded alongside the text
-fonts in `fontData.c` and wired as fallbacks in `graphics.c` (`get_font`).
+Glyphs that are not merged into the text fonts live in a separate *custom
+icon font*, `openrtx/fonts/icons_*.bin`, so that changing them leaves the
+`ubuntu_*.bin` blobs alone:
+
+- the M17 wordmark logo (`SYMBOL_M17`, U+E900);
+- the Latin-1 supplement (U+00A1–U+00FF) of the character picker
+  (`PickerView`);
+- the ellipsis (U+2026) that ends truncated text;
+- the FontAwesome backspace (U+F55A) of the picker's delete slot.
+
+The blobs therefore carry GPL-3.0, the Ubuntu Font Licence and the OFL (see
+`REUSE.toml`). `get_font()` in `graphics.c` gives each text font the
+same-size icon font as its `fallback`, as LVGL's `lv_font_t.fallback` does, so
+`lvFont_getGlyph()` finds these glyphs like any other; they are drawn in the
+text colour, on 1bpp targets too.
 
 The M17 glyph is `SYMBOL_M17` in `Symbols.hpp`. Its source is a 3-colour
 *stroked* SVG (`openrtx/fonts/m17_logo.svg`, the M17 project logo as

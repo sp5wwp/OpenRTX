@@ -31,7 +31,7 @@ openrtx/           Core firmware (hardware-agnostic)
     ├── rtx/        Operational adapters integrating protocols with audio, PTT, squelch
     └── ui/         UI toolkit, shared by every target
         ├── app/        Navigation and the entry points of ui.h
-        ├── base/       Object tree, screens, events
+        ├── base/       Object tree, screens, events, UI text and keypad capabilities
         ├── layout/     Flex layout
         ├── render/     Rectangles and theme-aware drawing over core/graphics.h
         ├── style/      Colour themes and glyph names
