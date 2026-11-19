@@ -119,8 +119,10 @@ void TextInputView::refreshHint()
     else if (kbdHasNumeric())
         hint_.setText(regular ? STR(hintKeypadClear) :
                                 STR(hintKeypadClearShort));
-    else
+    else if (kbdHasArrows())
         hint_.setText(regular ? STR(hintArrows) : STR(hintArrowsShort));
+    else
+        hint_.setText(STR(hintKnob));
 }
 
 void TextInputView::commit()

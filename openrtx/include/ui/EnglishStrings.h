@@ -155,5 +155,8 @@ const stringsTable_t englishStrings =
     .enterTx           = N_("ENTER TX"),
     // i18n: key hint, keep the key names; one line on a 128 px screen
     .hintArrowsShort   = N_("Up/Dn L/R"),
+    // i18n: key hint for a radio with only a knob, ENTER and ESC; keep the
+    // key name ENTER; one line on a 128 px screen
+    .hintKnob          = N_("Knob:char ENTER:next hold:OK"),
 };
 #endif  // ENGLISHSTRINGS_H

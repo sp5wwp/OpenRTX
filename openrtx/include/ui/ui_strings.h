@@ -143,6 +143,7 @@ typedef struct
     const char* enterRx;
     const char* enterTx;
     const char* hintArrowsShort;
+    const char* hintKnob;
 }
 stringsTable_t;
 

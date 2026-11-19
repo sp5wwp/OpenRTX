@@ -162,7 +162,8 @@ public:
     /**
      * Apply an event to a text field: a press as handleKey(), held arrows and
      * '*' as repeated presses, and the knob as a character change or a cursor
-     * move.
+     * move. On a keypad with neither arrows nor digits, ENTER steps to the next
+     * character and a long ENTER commits.
      *
      * @param e: event.
      * @param nowTick: current tick, for multi-tap.

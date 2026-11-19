@@ -37,6 +37,17 @@ static constexpr uint32_t REPEAT_KEYS = KEY_STAR | KEY_UP | KEY_DOWN | KEY_LEFT
                                       | KEY_RIGHT;
 
 /**
+ * Tell whether the keypad has neither arrows nor digits, so the knob changes
+ * the character and ENTER steps to the next one.
+ *
+ * @return true on a knob-only keypad.
+ */
+static constexpr bool knobOnly()
+{
+    return !kbdHasArrows() && !kbdHasNumeric();
+}
+
+/**
  * Minimal UTF-8 encoder (BMP) for putCodePoint().
  *
  * @param cp: code point.
@@ -516,9 +527,9 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
 {
     switch (e.kind) {
         case EvKind::Encoder:
-            /* The knob changes the character where LEFT/RIGHT move the cursor,
-             * and moves the cursor otherwise. */
-            if (kbdHasArrows())
+            /* The knob changes the character where LEFT/RIGHT move the cursor
+             * or nothing else can, and moves the cursor otherwise. */
+            if (kbdHasArrows() || knobOnly())
                 cycle(e.encoder);
             else
                 moveCursor(e.encoder);
@@ -529,7 +540,16 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
                 return KeyResult::NotHandled;
             return handleKey(e.keys & REPEAT_KEYS, nowTick);
 
+        case EvKind::KeyLong:
+            if (knobOnly() && ((e.keys & KEY_ENTER) != 0u))
+                return commit();
+            return KeyResult::NotHandled;
+
         case EvKind::Key:
+            if (knobOnly() && ((e.keys & KEY_ENTER) != 0u)) {
+                moveCursor(+1);
+                return KeyResult::Editing;
+            }
             return handleKey(e.keys, nowTick);
 
         default:
