@@ -1,0 +1,34 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# M17 callsign delete without 0-9 keys: the character wheel is the only way
+# to change or delete a character. Cycle one to the delete slot, then a move
+# key applies it.
+wait_stable 5000 3
+# Menu > Settings > M17: Settings is main-menu row idx 4 without GPS, M17 is
+# Settings row idx 2 without Time & Date and GPS.
+key ENTER
+wait_stable
+key DOWN DOWN DOWN DOWN ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+# Edit Callsign ("N0CALL", cursor on the leading 'N').
+key ENTER
+wait_stable
+# Cycle 'N' down 15 steps: N -> ... -> A -> space -> delete slot.
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+key DOWN DOWN DOWN DOWN DOWN DOWN DOWN
+wait_stable
+screenshot_sync callsign_del_marker.bmp
+# RIGHT applies the delete, removing the character: "0CALL".
+key RIGHT
+wait_stable
+screenshot_sync callsign_deleted.bmp
+# ENTER commits: the M17 settings show the shorter callsign.
+key ENTER
+wait_stable
+screenshot_sync callsign_committed.bmp
+quit
