@@ -340,17 +340,10 @@ bool RadioView::onEditEvent(const Event &e)
             } else if ((k & (KEY_DOWN | KEY_LEFT)) != 0u) {
                 dir = -1;
             } else {
-                /* Digits retype the value and '*' backspaces; the first digit
-                 * replaces the pre-filled offset. */
-                const bool digit = ((k & KBD_NUM_MASK) != 0u);
-                if (digit || ((k & KEY_STAR) != 0u)) {
-                    if (offsetPristine_) {
-                        if (digit)
-                            offsetInput_.clearSlots();
-                        offsetPristine_ = false;
-                    }
+                /* Digits retype the value and '*' backspaces. */
+                if ((k & (KBD_NUM_MASK | KEY_STAR)) != 0u) {
                     announceKey(k);
-                    offsetInput_.handleKey(k, 0);
+                    offsetInput_.handlePrefilledKey(k, offsetPristine_, 0);
                     refreshCustom(RowOffset, false);
                 }
                 return true;

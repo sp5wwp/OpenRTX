@@ -184,6 +184,25 @@ public:
     /** Empty every slot and put the cursor on the first. */
     void clearSlots();
 
+    /**
+     * Get the character a slot shows.
+     *
+     * @param ordinal: slot.
+     * @return the digit, or the placeholder if the slot is empty.
+     */
+    char slotChar(uint16_t ordinal) const;
+
+    /**
+     * Handle a key on a slot field pre-filled with a value: while `pristine`,
+     * a digit first empties the field so it retypes the value, and the key
+     * ends the pre-fill. Call it only for a key that edits the field.
+     *
+     * @param keys: keys pressed.
+     * @param pristine: the field still holds its pre-filled value.
+     * @param nowTick: time of the key press, in ms.
+     */
+    void handlePrefilledKey(uint32_t keys, bool &pristine, long long nowTick);
+
     /** Cursor position in the buffer. */
     uint16_t cursor() const
     {

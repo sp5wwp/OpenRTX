@@ -136,16 +136,14 @@ void TimeDateView::endEdit()
 
 void TimeDateView::refreshEdit()
 {
-    auto d = [&](uint8_t o) -> char {
-        const int v = input_.slotDigit(o);
-        return (v >= 0) ? static_cast<char>('0' + v) : '_';
-    };
-
+    const TextInput &f = input_;
     char text[TEXT_SIZE];
-    sniprintf(text, sizeof(text), "%c%c/%c%c/%c%c", d(0), d(1), d(2), d(3),
-              d(4), d(5));
+    sniprintf(text, sizeof(text), "%c%c/%c%c/%c%c", f.slotChar(0),
+              f.slotChar(1), f.slotChar(2), f.slotChar(3), f.slotChar(4),
+              f.slotChar(5));
     showText(dateLabel_, dateBuf_, text);
-    sniprintf(text, sizeof(text), "%c%c:%c%c:00", d(6), d(7), d(8), d(9));
+    sniprintf(text, sizeof(text), "%c%c:%c%c:00", f.slotChar(6), f.slotChar(7),
+              f.slotChar(8), f.slotChar(9));
     showText(timeLabel_, timeBuf_, text);
 }
 

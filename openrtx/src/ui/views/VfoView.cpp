@@ -186,17 +186,14 @@ static void slotsFromFreq(char *digits, freq_t hz)
  */
 static void composeEntry(const char *digits, char *main, char *sub)
 {
-    auto sc = [&](uint16_t o) -> char {
-        const int d = slotDigit(digits, o);
-        return (d >= 0) ? static_cast<char>('0' + d) : '-';
-    };
-    main[0] = sc(0);
-    main[1] = sc(1);
-    main[2] = sc(2);
+    /* An empty slot holds the placeholder, which is what it shows. */
+    main[0] = digits[0];
+    main[1] = digits[1];
+    main[2] = digits[2];
     main[3] = '.';
-    main[4] = sc(3);
-    main[5] = sc(4);
-    main[6] = sc(5);
+    main[4] = digits[3];
+    main[5] = digits[4];
+    main[6] = digits[5];
     main[7] = '\0';
 
     const int d6 = slotDigit(digits, 6);
@@ -675,14 +672,8 @@ NavIntent VfoView::onInputEvent(const Event &e)
         return NavIntent::none();
 
     Entry &n = *entry_;
-    TextInput &f = n.input;
-    bool &pristine = n.txField ? n.txPristine : n.rxPristine;
-    if (pristine) {
-        if (digit >= 0)
-            f.clearSlots(); /* first digit retypes the whole frequency */
-        pristine = false;   /* '*' / arrows instead begin an in-place tweak */
-    }
-    f.handleKey(k, getTick()); /* a known-mutating key always edits the field */
+    n.input.handlePrefilledKey(k, n.txField ? n.txPristine : n.rxPristine,
+                               getTick());
 
     n.errorAt = 0;
     if ((digit >= 0) && (state.settings.vpLevel >= vpLow)) {

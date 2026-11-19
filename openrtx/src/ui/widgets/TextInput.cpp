@@ -464,6 +464,23 @@ TextInput::KeyResult TextInput::commit()
     return KeyResult::Committed;
 }
 
+char TextInput::slotChar(uint16_t ordinal) const
+{
+    const int d = slotDigit(ordinal);
+    return (d >= 0) ? static_cast<char>('0' + d) : placeholder_;
+}
+
+void TextInput::handlePrefilledKey(uint32_t keys, bool &pristine,
+                                   long long nowTick)
+{
+    if (pristine) {
+        if ((keys & KBD_NUM_MASK) != 0u)
+            clearSlots();
+        pristine = false;
+    }
+    handleKey(keys, nowTick);
+}
+
 TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
 {
     if ((keys & KEY_ENTER) != 0u)
