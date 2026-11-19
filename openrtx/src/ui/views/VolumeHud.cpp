@@ -19,24 +19,27 @@
 namespace ortxui
 {
 
-/* Whether the HUD is laid out for the roomy screen. */
+/** Whether the HUD is laid out for the roomy screen. */
 static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
 
-/* Inset of the column from the screen edges. */
+/** Inset of the column from the left and right screen edges. */
 static constexpr int16_t PAD_X = 6;
+
+/** Inset of the column from the top and bottom screen edges. */
 static constexpr int16_t PAD_Y = 4;
 
-/* Gap between the title and the bar. */
+/** Gap between the title and the bar. */
 static constexpr int16_t GAP = REGULAR ? 6 : 3;
 
-/* Heights of the title and of the bar. */
+/** Height of the title. */
 static constexpr int16_t TITLE_H = REGULAR ? 20 : 12;
+
+/** Height of the bar. */
 static constexpr int16_t BAR_H = REGULAR ? 16 : 10;
 
 void VolumeHud::draw(DrawCtx &d)
 {
-    /* The title and the bar, centred down the padded screen and stretched
-     * across it. */
+    /* Centre the title and the bar vertically, full width within the pad. */
     const int16_t w = CONFIG_SCREEN_WIDTH - 2 * PAD_X;
     int spare = CONFIG_SCREEN_HEIGHT - 2 * PAD_Y - TITLE_H - BAR_H - GAP;
     if (spare < 0)
@@ -47,8 +50,7 @@ void VolumeHud::draw(DrawCtx &d)
     const Rect bar = { PAD_X, static_cast<int16_t>(titleY + TITLE_H + GAP),
                        static_cast<uint16_t>(w), static_cast<uint16_t>(BAR_H) };
 
-    /* The title mixes a glyph with a word, composed in the current
-     * language. */
+    /* The volume glyph, then the word in the current language. */
     char text[32];
     sniprintf(text, sizeof(text), SYMBOL_VOLUME " %s", STR(volume).str());
     d.pushClip(title);
@@ -74,7 +76,7 @@ void VolumeHud::draw(DrawCtx &d)
     row.setArea(bar);
     row.paintTree(d);
 
-    /* The readout lived on this stack frame. */
+    /* Drop the pointer to this stack frame's readout. */
     row.setReadout("");
 }
 

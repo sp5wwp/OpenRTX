@@ -17,7 +17,7 @@
 namespace ortxui
 {
 
-/* One top bar serves every screen, since only one view exists at a time. */
+/** One top bar serves every screen, since only one view exists at a time. */
 static TopBar sharedTopBar;
 
 Rect View::screenArea()

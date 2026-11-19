@@ -12,7 +12,7 @@
 namespace ortxui
 {
 
-/* Contributor credits, as list rows the list borrows from flash. */
+/** Contributor credits, as list rows the list borrows from flash. */
 static constexpr ListItem AUTHORS[] = {
     { STR(Niccolo), UiText() },
     { STR(Silvano), UiText() },
@@ -41,7 +41,7 @@ void AboutView::build()
 
     brand.setFont(FONT_SIZE_8PT);
     brand.setAlign(TEXT_ALIGN_CENTER);
-    brand.setColor(Sem::Accent); /* OpenRTX gold, kept as a secondary accent */
+    brand.setColor(Sem::Accent); /* OpenRTX gold */
     brand.setText("OpenRTX");
     brand.setBasis(gfx_getFontHeight(FONT_SIZE_8PT));
 
@@ -66,7 +66,7 @@ void AboutView::build()
     root.addChild(&authors);
     tree.addChild(&root);
     root.onLayout();
-    tree.focusFirst(); /* recurses into the layout tree to reach the list */
+    tree.focusFirst();
 
     tree.markAllDirty();
 }

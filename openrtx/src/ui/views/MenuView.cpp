@@ -13,7 +13,7 @@
 namespace ortxui
 {
 
-/* Menu tables; a screen the target lacks has no row. */
+/** Rows of the main menu; a screen the target lacks has no row. */
 static constexpr MenuRow MAIN_MENU[] = {
     { STR(banks), ViewId::Banks },
     { STR(channels), ViewId::Channels },
@@ -29,6 +29,7 @@ static constexpr MenuRow MAIN_MENU[] = {
     { STR(about), ViewId::About },
 };
 
+/** Rows of the settings menu; a screen the target lacks has no row. */
 static constexpr MenuRow SETTINGS_MENU[] = {
     { STR(display), ViewId::Display },
 #ifdef CONFIG_RTC

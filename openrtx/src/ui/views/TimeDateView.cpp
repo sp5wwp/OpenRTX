@@ -24,11 +24,11 @@ static constexpr char ENTRY_MASK[] = "9999999999";
 
 /** Entry slot of each field's first digit. */
 enum EntryField : uint8_t {
-    FieldDate = 0,
-    FieldMonth = 2,
-    FieldYear = 4,
-    FieldHour = 6,
-    FieldMinute = 8,
+    FieldDate = 0,   ///< Day of the month
+    FieldMonth = 2,  ///< Month
+    FieldYear = 4,   ///< Year in the century
+    FieldHour = 6,   ///< Hour
+    FieldMinute = 8, ///< Minute
 };
 
 void TimeDateView::build()

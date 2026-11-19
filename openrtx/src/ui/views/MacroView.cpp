@@ -22,16 +22,22 @@
 namespace ortxui
 {
 
-/* Height of the squelch footer, roomy and compact screens. */
+/** Height of the squelch footer on the roomy screen. */
 static constexpr int16_t FOOTER_H_REGULAR = 14;
+
+/** Height of the squelch footer on the compact screen. */
 static constexpr int16_t FOOTER_H_COMPACT = 10;
 
-/* Highest squelch level. */
+/** Highest squelch level. */
 static constexpr uint8_t SQL_MAX = 15;
 
-/* Brightness range and step of the brightness actions, in percent. */
+/** Lowest brightness the brightness actions set, in percent. */
 static constexpr int BRIGHTNESS_MIN = 5;
+
+/** Highest brightness the brightness actions set, in percent. */
 static constexpr int BRIGHTNESS_MAX = 100;
+
+/** Brightness step of the brightness actions, in percent. */
 static constexpr int BRIGHTNESS_STEP = 5;
 
 /**
@@ -130,8 +136,7 @@ void MacroView::syncFromState(const state_t &s)
     if (tiles.sync(s, uiMemory.keypadLocked))
         tiles.invalidate();
 
-    /* Squelch is an FM-only RF gate (OpMode_FM); in the digital modes it does
-     * nothing, so show it greyed and inert rather than letting it be set. */
+    /* Squelch gates only FM: grey it out in the other modes. */
     const bool fmSql = (s.channel.mode == OPMODE_FM);
     char sq[8];
     if (fmSql)
@@ -153,7 +158,7 @@ void MacroView::syncFromState(const state_t &s)
 
 void MacroView::stepSquelch(int dir)
 {
-    /* No-op outside FM: squelch only gates the analogue RX path. */
+    /* Squelch gates only FM. */
     if (state.channel.mode != OPMODE_FM)
         return;
 

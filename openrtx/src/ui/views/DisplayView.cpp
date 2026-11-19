@@ -27,16 +27,17 @@ struct RowInfo {
 /** Rows, in row order. */
 static constexpr RowInfo ROWS[] = {
 #ifdef CONFIG_SCREEN_BRIGHTNESS
-    { STR(brightness), 5u, 100u, 5u },
+    { STR(brightness), 5u, 100u, 5u }, // Backlight, in percent
 #endif
 #ifdef CONFIG_SCREEN_CONTRAST
-    { STR(contrast), 0u, 255u, 4u },
+    { STR(contrast), 0u, 255u, 4u },         // Display contrast
 #endif
-    { STR(squelch), 0u, 15u, 1u },     { STR(timer), TIMER_OFF, TIMER_1H, 1u },
-    { STR(battery), 0u, 1u, 1u },   // percent or icon
+    { STR(squelch), 0u, 15u, 1u },           // FM squelch level
+    { STR(timer), TIMER_OFF, TIMER_1H, 1u }, // Standby timeout
+    { STR(battery), 0u, 1u, 1u },            // Percent or icon
 #ifdef CONFIG_PIX_FMT_RGB565
-    { STR(theme), 0u, 1u, 1u },     // standard or high contrast
-    { STR(textStyle), 0u, 1u, 1u }, // smooth or crisp
+    { STR(theme), 0u, 1u, 1u },              // Standard or high contrast
+    { STR(textStyle), 0u, 1u, 1u },          // Smooth or crisp
 #endif
 };
 

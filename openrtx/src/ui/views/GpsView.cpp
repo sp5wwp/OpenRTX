@@ -34,12 +34,11 @@ void GpsView::build()
 
     body.addChild(&compass);
     body.addChild(&readout);
-    /* Start collapsed: the default presentation is "no fix" (see lastKind),
-     * so the body is hidden until a fix arrives and showFixed() reveals it. */
+    /* Hidden until a fix arrives, as lastKind starts without one. */
     body.setFlag(FlagHidden, true);
     root.addChild(&body);
 
-    /* No-fix status line (shown instead of the body when there is no fix). */
+    /* Why there is no fix, in place of the body. */
     status.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
     status.setAlign(TEXT_ALIGN_CENTER);
     status.setColor(Sem::OnSurfaceMuted);
@@ -69,13 +68,13 @@ void GpsView::showFixed(bool fixed)
 {
     body.setFlag(FlagHidden, !fixed);
     status.setFlag(FlagHidden, fixed);
-    root.onLayout(); /* re-flow now that one branch collapsed */
+    root.onLayout();
     tree.markAllDirty();
 }
 
 void GpsView::syncFromState(const state_t &s)
 {
-    View::syncFromState(s); /* shared top bar */
+    View::syncFromState(s); /* refresh the shared top bar */
 
     const FixKind kind = classify(s);
     const bool fixed = (kind == FixKind::Fixed);

@@ -104,8 +104,8 @@ static void announceFreq(const char *const *name, uint32_t hz,
 }
 
 /**
- * Lay a decimal value into a slot field left-aligned, so it reads back as that
- * integer via its filled prefix (filled slot count = number of digits).
+ * Fill a slot field with a decimal value, left-aligned, so its filled slots
+ * read back as that value.
  *
  * @param f: slot field.
  * @param val: value.
@@ -297,7 +297,6 @@ void RadioView::announceValue(uint8_t row, const UiText &value,
 
 void RadioView::announceKey(uint32_t keys)
 {
-    /* Speak the digit typed, or the one '*' removes. */
     if (state.settings.vpLevel < vpLow)
         return;
 
@@ -318,7 +317,7 @@ bool RadioView::onEditEvent(const Event &e)
     int8_t dir = 0;
     switch (e.kind) {
         case EvKind::Encoder:
-            dir = e.encoder; /* knob nudges the offset by the tuning step */
+            dir = e.encoder;
             break;
 
         case EvKind::KeyRepeat:

@@ -66,10 +66,18 @@ public:
     }
 
 private:
-    /** Hand the draft to the inbox; returns true once it is handed over. */
+    /**
+     * Hand the draft to the inbox.
+     *
+     * @return true once it is handed over.
+     */
     bool send();
 
-    /** Release the draft body and leave the form. */
+    /**
+     * Release the draft and leave the form.
+     *
+     * @return the navigation intent.
+     */
     NavIntent close();
 
     /** Point the row values at the current draft. */
@@ -77,10 +85,10 @@ private:
 
     /** Rows of the form, top to bottom. */
     enum Row : uint8_t {
-        RowTo,
-        RowBody,
-        RowSend,
-        RowCount,
+        RowTo,    ///< Recipient
+        RowBody,  ///< Message text
+        RowSend,  ///< Send the draft
+        RowCount, ///< Number of rows
     };
 
     Screen tree;                               ///< Widget-tree root

@@ -13,14 +13,16 @@
 namespace ortxui
 {
 
-/* Charge the battery glyph shows. */
+/** Charge the battery glyph shows. */
 static constexpr uint8_t CHARGE_SHOWN = 10;
 
-/* Baseline of the first prompt line, and the step to the second. */
+/** Baseline of the first prompt line. */
 static constexpr int16_t PROMPT_Y = CONFIG_SCREEN_HEIGHT * 2 / 3;
+
+/** Step from the first prompt line to the second. */
 static constexpr int16_t PROMPT_STEP = 16;
 
-/* Font of the prompt. */
+/** Font of the prompt. */
 static constexpr fontSize_t PROMPT_FONT = FONT_SIZE_6PT;
 
 void LowBatteryScreen::draw(DrawCtx &d)

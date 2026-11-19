@@ -58,7 +58,7 @@ private:
         RowSetTime,  ///< Set the clock from the GPS
         RowTimezone, ///< UTC offset in half hours
 #endif
-        RowCount,
+        RowCount,    ///< Number of rows
     };
 
     static constexpr int8_t TZ_MIN = -24;      ///< Westmost timezone, -12:00

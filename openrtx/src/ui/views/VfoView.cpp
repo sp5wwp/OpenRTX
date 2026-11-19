@@ -29,22 +29,25 @@
 namespace ortxui
 {
 
-/* Slot mask for keypad frequency entry: 7 editable digits, no separators
- * (FreqHero composes the MHz.kHz layout). Slot 0 = 100 MHz .. slot 6 = 100 Hz. */
+/**
+ * Slot mask of a frequency field, 100 MHz to 100 Hz, without separators:
+ * FreqHero lays out the MHz and kHz groups.
+ */
 static constexpr char FREQ_MASK[] = "9999999";
 
-/* Slots of a frequency field, and what an empty one shows. */
+/** Slots of a frequency field. */
 static constexpr uint16_t FREQ_SLOTS = sizeof(FREQ_MASK) - 1;
+
+/** What an empty slot shows. */
 static constexpr char PLACEHOLDER = '-';
 
-/* How long an out-of-band entry error stays on screen before it self-clears. */
+/** How long an out-of-band entry stays flagged. */
 static constexpr long long INPUT_ERROR_MS = 1500;
 
-/* Thickness of the meter's bar. */
+/** Thickness of the meter's bar. */
 static constexpr uint8_t METER_BAR_H = 7;
 
-/* The TX meter is a dB scale up to the highest power the macro menu sets,
- * emptying POWER_SPAN_DB below it. */
+/** Range of the TX meter's dB scale, which is full at POWER_MAX_MW. */
 static constexpr float POWER_SPAN_DB = 10.0f;
 
 /**
@@ -63,8 +66,7 @@ static float clampFrac(float f)
 }
 
 /**
- * Get the meter fill fraction for a TX power on the dB scale. Any nonzero
- * power shows at least a sliver (you are transmitting something).
+ * Get the meter fill fraction for a TX power on the dB scale.
  *
  * @param mw: power in mW.
  * @return the fraction, [0, 1].
@@ -88,7 +90,7 @@ static float powerToFrac(uint32_t mw)
  */
 static float rssiToFrac(float rssi)
 {
-    /* S1..S9 rise 6 dB/point (-121..-73), S9..S11 rise 10 dB/point (-73..-53). */
+    /* S1-S9 rise 6 dB a point (-121 to -73), S9-S11 10 dB (-73 to -53). */
     float s;
     if (rssi <= -121.0f)
         s = 0.0f;
@@ -117,7 +119,7 @@ static int digitFromKeys(uint32_t keys)
 
 /**
  * Get the place value of a slot in a frequency field: the last slot is 100 Hz,
- * each earlier slot ten times larger (slot 0 of 7 = 100 MHz).
+ * each earlier slot ten times larger.
  *
  * @param o: slot ordinal.
  * @param n: slots in the field.
@@ -145,8 +147,7 @@ static int slotDigit(const char *digits, uint16_t o)
 }
 
 /**
- * Read a slot field back as a frequency. Un-entered (placeholder) slots
- * contribute 0, so a partial entry keeps its automatic trailing zeros.
+ * Read a slot field back as a frequency; empty slots count as 0.
  *
  * @param digits: field buffer.
  * @return the frequency in Hz.
@@ -176,9 +177,8 @@ static void slotsFromFreq(char *digits, freq_t hz)
 }
 
 /**
- * Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
- * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with PLACEHOLDER for
- * un-entered slots so the operator sees how many digits remain.
+ * Compose the FreqHero texts of a frequency field: "MMM.KKK", and the 100 Hz
+ * digit with a fixed 10 Hz zero. Empty slots show PLACEHOLDER.
  *
  * @param digits: field buffer.
  * @param main: main text output, 8 bytes.
@@ -215,7 +215,7 @@ void VfoView::build()
     root.setArea(screenArea());
     root.setAxis(Axis::Column);
 
-    /* Shared top bar with a blank title (VFO shows only the status cluster). */
+    /* No title: the home screen's top bar shows the clock. */
     TopBar &bar = useTopBar("");
 
     /* Taller than the text on the roomy screen; just clearing it on the
@@ -242,9 +242,9 @@ void VfoView::build()
     /* A name wider than the line ellipsizes rather than wrapping. */
     chanName.setOverflow(Label::Overflow::Ellipsize);
 
-    /* A small "CAN" or "CTCSS" tag and the value, right-aligned. */
-    chanDetail.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted); /* tag */
-    chanDetail.setRun(1, chanFont, Sem::OnSurfaceMuted);      /* value */
+    /* A small CAN or CTCSS tag, then the value. */
+    chanDetail.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted);
+    chanDetail.setRun(1, chanFont, Sem::OnSurfaceMuted);
     chanDetail.setGap(3);
     /* Wide enough for the longest tagged value, "CTCSS 254.1". */
     chanDetail.setBasis(regular ? 70 : 48);
@@ -311,7 +311,7 @@ void VfoView::save() const
     if (entry == nullptr)
         return;
 
-    /* Fold the live cursor into the state kept. */
+    /* Take the live cursor from the TextInput. */
     EntryState s = *entry;
     const uint8_t slot = static_cast<uint8_t>(entry->input.cursorSlot());
     if (s.destination)
@@ -371,20 +371,14 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
             m1 = STR(dmr).str();
             break;
         case OPMODE_M17:
-            m1 = SYMBOL_M17; /* the M17 wordmark logo glyph */
+            m1 = SYMBOL_M17;
             break;
         default:
             break;
     }
 
-    /* Channel-row detail (right, under the mode): a small "CAN" tag + number in
-     * M17 -- but only when the CAN is actually gating traffic: on TX (you key
-     * up on it) or when RX is filtered to it (m17_can_rx). While RX is
-     * promiscuous and idle the CAN filters nothing, so hide it. In FM it is the
-     * CTCSS tone, tagged "CTCSS" (small, like the CAN tag), matching the current
-     * direction (the TX/encode tone while transmitting, else the RX/decode
-     * tone), shown only when that direction's tone is enabled. Blank
-     * otherwise. */
+    /* The CAN shows only while it filters something: on TX or with the CAN
+     * RX check on. The tone shows only when the current direction uses it. */
     const char *tag = "";
     char sub[sizeof(modeSub)] = "";
     if (ch.mode == OPMODE_M17) {
@@ -401,10 +395,8 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
         }
     }
 
-    /* Repaint only when the visible pair changes: covers mode/bandwidth, the
-     * FM tone, and the dynamic M17 CAN (settings + TX/RX). The mode label sits
-     * on the frequency baseline (hero); the detail sits under it on the channel
-     * row. The texts shown are literals, so their pointers stay valid. */
+    /* The texts are literals or table entries, so the pointers kept stay
+     * valid. */
     const bool same = (shownMode != nullptr) && (strcmp(m1, shownMode) == 0)
                    && (strcmp(tag, shownTag) == 0)
                    && (strcmp(sub, modeSub) == 0);
@@ -444,9 +436,8 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
             meter.setColors(Sem::SurfaceHigh, Sem::TxDanger);
             meter.setTextColor(Sem::TxDanger);
             meter.setShowScale(false);
-            meter.setMarker(-1.0f); /* squelch is an RX/FM concept */
+            meter.setMarker(-1.0f); /* squelch gates RX only */
         }
-        /* Fill on a dB power scale relative to the radio's max output. */
         meter.setValue(powerToFrac(mw));
 
         formatPower(mw, readout, sizeof(readout));
@@ -459,8 +450,8 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
             meter.setTextColor(Sem::RxSuccess);
             meter.setShowScale(true);
 
-            /* Map the squelch threshold like the fill, so the mark sits
-             * where the signal has to reach. Only FM gates on RSSI. */
+            /* The mark sits where the signal has to reach; only FM gates on
+             * RSSI. */
             if (mode == OPMODE_FM)
                 meter.setMarker(
                     rssiToFrac(static_cast<float>(squelchToRssi(sql))));
@@ -476,8 +467,8 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
             sniprintf(readout, sizeof(readout), "S%u", (unsigned)level);
     }
 
-    /* Repaint only when what the meter draws changes, the readout or the
-     * fill's width in pixels, not on every dBm of RSSI. */
+    /* Repaint on a change of the readout or of the fill in pixels, not on
+     * every dBm. */
     const bool text = (strcmp(readout, readoutBuf) != 0);
     if (text) {
         memcpy(readoutBuf, readout, sizeof(readoutBuf));
@@ -491,23 +482,18 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
 
 void VfoView::syncFromState(const state_t &s)
 {
-    View::syncFromState(s); /* shared top bar */
+    View::syncFromState(s); /* refresh the shared top bar */
 
-    /* Live TX/RX comes from the rtx module; state.rtxStatus is only the
-     * requested mode. */
+    /* state.rtxStatus is the mode requested; rtx has the live one. */
     const uint8_t status = rtx_getStatus()->opStatus;
     const bool txing = (status == TX);
 
-    /* While entering a frequency, the hero and channel line show the keypad
-     * buffer (driven by refreshInput()); don't let live state overwrite them. */
+    /* An open frequency entry owns the hero and the channel line. */
     const bool input = (entry != nullptr) && !entry->destination;
     if (!input) {
         const channel_t &ch = s.channel;
 
-        /* While actually transmitting a channel with an RX/TX split (repeater
-         * offset), show the TX frequency the radio is keyed up on; otherwise
-         * (idle, or simplex) show the RX frequency. Gating on the *shown* value
-         * repaints on both frequency changes and TX start/stop. */
+        /* Show the frequency the radio is on: TX while transmitting. */
         const freq_t shown = (txing && (ch.tx_frequency != ch.rx_frequency)) ?
                                  ch.tx_frequency :
                                  ch.rx_frequency;
@@ -519,10 +505,7 @@ void VfoView::syncFromState(const state_t &s)
 
         syncMode(ch, txing);
 
-        /* Channel line (skipped while editing the destination, which drives it
-         * directly): VFO mode shows "VFO" (or the M17 destination) with no
-         * index; memory mode shows the 1-based index + channel name. Compose
-         * the slot text and repaint only on a string change. */
+        /* An open destination edit owns the channel line. */
         if (entry == nullptr) {
             char idxText[sizeof(idxCache)];
             char nameText[sizeof(nameCache)];
@@ -542,7 +525,7 @@ void VfoView::syncFromState(const state_t &s)
             }
         }
     } else if (entry->errorAt != 0) {
-        /* Expire a transient out-of-band error (this runs every GUI frame). */
+        /* Clear the out-of-band flag once it has been shown long enough. */
         if ((getTick() - entry->errorAt) >= INPUT_ERROR_MS) {
             entry->errorAt = 0;
             refreshInput();
@@ -559,7 +542,7 @@ NavIntent VfoView::onEvent(const Event &e)
 
     /* The knob tunes in VFO mode and steps channels in memory mode. */
     if (e.kind == EvKind::Encoder) {
-        clearFmTone(); /* any input other than # drops the momentary tone */
+        clearFmTone();
         step(e.encoder);
         return NavIntent::none();
     }
@@ -599,12 +582,11 @@ NavIntent VfoView::onEvent(const Event &e)
         } else if ((k & KEY_DOWN) != 0u) {
             step(-1);
         } else if ((k & KEY_STAR) != 0u) {
-            /* '*' opens the keypad on the current frequency for an in-place
-             * edit (backspace the trailing kHz); a digit retypes from scratch. */
+            /* '*' edits the current frequency in place. */
             if (state.tuner_mode == VFO)
                 beginInputTweak();
         } else if (state.tuner_mode == VFO) {
-            /* A digit opens the frequency keypad (VFO mode only). */
+            /* A digit retypes the frequency. */
             const int d = digitFromKeys(k);
             if (d >= 0)
                 beginInput((uint8_t)d);
@@ -627,19 +609,15 @@ NavIntent VfoView::onInputEvent(const Event &e)
         return NavIntent::none();
     }
     if ((k & KEY_ESC) != 0u) {
-        exitInput(); /* discard the entry */
+        exitInput();
         return NavIntent::none();
     }
     if ((k & (KEY_UP | KEY_DOWN)) != 0u) {
-        switchField(); /* toggle RX/TX, deriving TX from RX + offset */
+        switchField();
         return NavIntent::none();
     }
 
-    /* Character-level keys go through the shared TextInput key contract, so '*'
-     * is backspace here exactly as in every other editor. Only act on keys that
-     * actually edit the field (a digit, '*' backspace, or a cursor move); ignore
-     * key-release (k==0) and other keys so they can't silently consume the
-     * pristine (pre-filled) state without editing it. */
+    /* Only a key that edits the field may end its pre-filled state. */
     const int digit = digitFromKeys(k);
     const bool mutating = (digit >= 0) || ((k & KEY_STAR) != 0u)
                        || ((k & (KEY_LEFT | KEY_RIGHT)) != 0u);
@@ -673,8 +651,7 @@ void VfoView::stepFreq(int dir)
     const freq_t nrx = (dir > 0) ? (rx + step) : (rx - step);
     const freq_t ntx = (dir > 0) ? (tx + step) : (tx - step);
 
-    /* Reject a step that would push either edge out of band (underflow wraps
-     * to a huge value and is rejected the same way). */
+    /* An underflow wraps to a huge value, out of band like any other. */
     if (!freqInBand(nrx) || !freqInBand(ntx))
         return;
 
@@ -698,7 +675,7 @@ void VfoView::stepChannel(int dir)
 void VfoView::toggleVfoMem()
 {
     if (state.tuner_mode == VFO) {
-        /* VFO -> memory: remember the VFO, then load the current channel. */
+        /* Keep the VFO to come back to. */
         state.vfo_channel = state.channel;
         if (loadChannel((int16_t)state.channel_index)) {
             state.tuner_mode = CH;
@@ -708,9 +685,8 @@ void VfoView::toggleVfoMem()
                                        (uint16_t)(state.channel_index + 1),
                                        vp_getVoiceLevelQueueFlags());
         }
-        /* An empty/invalid codeplug leaves us in VFO mode (no channel). */
+        /* Without a channel to load, stay in VFO mode. */
     } else {
-        /* Memory -> VFO: restore the saved VFO channel. */
         state.channel = state.vfo_channel;
         state.tuner_mode = VFO;
         requestSyncRtx();
@@ -752,8 +728,7 @@ bool VfoView::openInput()
     n.shift = static_cast<int32_t>(static_cast<int64_t>(ch.tx_frequency)
                                    - static_cast<int64_t>(ch.rx_frequency));
 
-    /* TX starts empty; RX is fully pre-filled with the cursor at the end. TX
-     * is derived lazily on the first switch / commit. */
+    /* RX is pre-filled, cursor at the end; TX is derived when first shown. */
     memset(n.tx, PLACEHOLDER, FREQ_SLOTS);
     n.tx[FREQ_SLOTS] = '\0';
     slotsFromFreq(n.rx, ch.rx_frequency);
@@ -767,7 +742,6 @@ void VfoView::beginInput(uint8_t firstDigit)
     if (!openInput())
         return;
 
-    /* First digit retypes from the top (the pre-filled RX is pristine). */
     entry->rxPristine = false;
     entry->input.clearSlots();
     entry->input.putDigit(firstDigit);
@@ -777,9 +751,7 @@ void VfoView::beginInput(uint8_t firstDigit)
 
 void VfoView::beginInputTweak()
 {
-    /* '*' opens the keypad on the full current frequency, cursor at the last
-     * digit. The field stays pristine: the next '*' backspaces the trailing kHz
-     * to correct in place, while a digit retypes the whole value from the top. */
+    /* Left pre-filled: '*' backspaces from the end, a digit retypes it. */
     if (openInput())
         refreshInput();
 }
@@ -788,7 +760,7 @@ void VfoView::switchField()
 {
     Entry &n = *entry;
     if (!n.txField && n.txPristine)
-        deriveTx(); /* refresh TX from the latest RX + offset before showing it */
+        deriveTx();
 
     /* Keep the cursor of the field left, and edit the other one. */
     const uint8_t slot = static_cast<uint8_t>(n.input.cursorSlot());
@@ -810,7 +782,7 @@ void VfoView::deriveTx()
     const freq_t rx = freqFromSlots(n.rx);
     int64_t tx = (int64_t)rx + n.shift;
     if (tx < 0)
-        tx = 0; /* an underflowing offset is rejected in band at commit */
+        tx = 0; /* rejected as out of band at commit */
     slotsFromFreq(n.tx, (freq_t)tx);
     n.txSlot = FREQ_SLOTS;
 }
@@ -830,8 +802,7 @@ void VfoView::bindField(bool tx, uint8_t slot)
 
 void VfoView::confirmInput()
 {
-    /* ENTER on RX advances to TX, derived from the offset, so the TX frequency
-     * is seen before anything is applied; ENTER on TX commits. */
+    /* ENTER on RX shows TX first; ENTER on TX applies both. */
     Entry &n = *entry;
     if (!n.txField) {
         switchField();
@@ -851,8 +822,7 @@ void VfoView::confirmInput()
         }
         exitInput();
     } else {
-        /* Keep the buffer and flag the error; syncFromState clears it shortly,
-         * or the next edit does. */
+        /* Keep the entry and flag it until the next edit or INPUT_ERROR_MS. */
         n.errorAt = getTick();
         refreshInput();
     }
@@ -920,9 +890,7 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
     const channel_t &ch = s.channel;
 
     if (s.tuner_mode == VFO) {
-        /* Far-left is the "where am I" slot: "VFO" here, the memory index in
-         * memory mode. In M17 the destination fills the name slot; FM has no
-         * name (just the frequency). The CAN lives in the mode stack, not here. */
+        /* An FM VFO has no name; M17 shows the destination there. */
         sniprintf(idxOut, sizeof(idxCache), "VFO");
         if (ch.mode == OPMODE_M17)
             m17DstLabel(nameOut, nameSz);
@@ -1005,7 +973,7 @@ void VfoView::endDstEdit(bool commit)
         strncpy(state.settings.m17_dest, entry->dst,
                 sizeof(state.settings.m17_dest) - 1);
         state.settings.m17_dest[sizeof(state.settings.m17_dest) - 1] = '\0';
-        requestSyncRtx(); /* the destination feeds the M17 LSF */
+        requestSyncRtx(); /* the destination goes into the M17 LSF */
     }
 
     closeEntry();

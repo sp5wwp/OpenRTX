@@ -75,7 +75,7 @@ private:
         RowTheme,    ///< Standard or high contrast palette
         RowText,     ///< Smooth or crisp text
 #endif
-        RowCount,
+        RowCount,    ///< Number of rows
     };
 
     std::array<ListItem, RowCount> items = {}; ///< Rows

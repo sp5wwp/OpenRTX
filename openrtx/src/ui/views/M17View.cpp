@@ -144,8 +144,6 @@ NavIntent M17View::onActivate(uint8_t row)
 
 void M17View::announceCursorChar()
 {
-    /* Speak the character under the cursor (phonetically at higher verbosity)
-     * so a callsign can be edited by ear. */
     if (state.settings.vpLevel >= vpLow)
         vp_announceInputChar(callsign.cursorChar());
 }
@@ -162,8 +160,7 @@ void M17View::callsignConfirm()
 
 bool M17View::onEditEvent(const Event &e)
 {
-    /* Only the Callsign (Custom) row owns its editing stream; CAN falls through
-     * to the base's generic stepper handling. */
+    /* CAN is a Stepper, which the base edits. */
     if (editRow != RowCallsign)
         return false;
 

@@ -48,7 +48,7 @@ private:
     enum Row : uint8_t {
         RowTone,   ///< CTCSS tone frequency
         RowEnable, ///< None, Encode, Decode or Both
-        RowCount,
+        RowCount,  ///< Number of rows
     };
 
     std::array<ListItem, RowCount> items = {}; ///< Rows

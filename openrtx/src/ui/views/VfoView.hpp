@@ -24,8 +24,7 @@ namespace ortxui
  * The home screen: the frequency and mode, the channel name or M17
  * destination, the channel index with the CAN or CTCSS tone, and the signal
  * meter at the bottom. The compact screen puts the index, name and detail on
- * one row. syncFromState() follows the shown fields change-gated and drives
- * the meter from the RX/TX status.
+ * one row.
  *
  * As the navigation root, ENTER opens the main menu. UP/DOWN or the knob tune
  * the frequency in VFO mode or step the channel in memory mode, ESC switches
@@ -64,8 +63,10 @@ public:
      */
     NavIntent onEvent(const Event &e) override;
 
-    /** Speak the channel summary in memory mode, the frequencies and mode in
-     * VFO mode. */
+    /**
+     * Speak the channel summary in memory mode, the frequencies and mode in VFO
+     * mode.
+     */
     void announce() override;
 
     /**
@@ -271,8 +272,7 @@ private:
     /** Speak the character under the cursor. */
     void announceDstChar();
 
-    /* Digits of a frequency field, 100 MHz to 100 Hz. RX pre-fills from the
-     * current frequency; TX derives from RX plus the channel's offset. */
+    /** Digits of a frequency field, 100 MHz to 100 Hz. */
     static constexpr uint8_t FREQ_DIGITS = 7;
 
     /** The part of an entry that save() keeps while the view is destroyed. */
@@ -311,8 +311,6 @@ private:
     BarRow meter;       ///< RSSI or TX power
     Flex spacer;        ///< Pushes the meter to the bottom
 
-    /* The channel line, change-gated by string compare: it depends on the
-     * tuner mode, the channel name, the mode and the M17 destination. */
     char idxCache[8] = { 0 };        ///< Index shown
     char nameCache[40] = { 0 };      ///< Name or destination shown
     char readoutBuf[12] = { 0 };     ///< Meter readout

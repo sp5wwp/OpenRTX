@@ -132,7 +132,7 @@ public:
     {
     }
 
-    /** Take back what save() stored, right after build() and before onShow(). */
+    /** Take back what save() stored, after build() and before onShow(). */
     virtual void restore()
     {
     }

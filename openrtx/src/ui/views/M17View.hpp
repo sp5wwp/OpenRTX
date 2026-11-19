@@ -90,7 +90,7 @@ private:
         RowMeta,     ///< Meta text sent with a transmission
         RowCan,      ///< Channel access number
         RowCanRx,    ///< Receive only the CAN
-        RowCount,
+        RowCount,    ///< Number of rows
     };
 
     /** A callsign edit kept while the view is destroyed. */

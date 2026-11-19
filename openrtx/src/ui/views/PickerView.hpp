@@ -15,12 +15,10 @@ namespace ortxui
 {
 
 /**
- * A full-screen character picker: a scrolling grid of code points (accented
- * Latin + symbols not on the keyboard) drawn from the custom icon/fallback
- * font. Pushed on top of the text editor; ENTER selects and pops, ESC cancels.
- * The selection and the choice go to the editor's request in UiMemory, which
- * the editor reads when it is rebuilt.
- * Navigated by arrows/knob (LEFT/RIGHT step, UP/DOWN by row).
+ * A full-screen character picker over the text editor: a scrolling grid of the
+ * accented letters and symbols the keypad does not type. LEFT/RIGHT and the
+ * knob step, UP/DOWN move by row; ENTER picks and ESC cancels. The choice goes
+ * to the editor's request in UiMemory, read when the editor is rebuilt.
  */
 class PickerView : public View
 {

@@ -103,7 +103,7 @@ private:
         RowOffset,    ///< TX/RX split
         RowDirection, ///< Sign of the split
         RowStep,      ///< VFO tuning step
-        RowCount,
+        RowCount,     ///< Number of rows
     };
 
     static constexpr size_t OFFSET_SIZE = 8; ///< Offset digits and the NUL

@@ -42,7 +42,7 @@ void FmView::onAdjust(uint8_t row, int8_t dir)
     else
         stepToneEnable(fm, dir);
 
-    requestSyncRtx(); /* re-tune the radio with the new tone/enable */
+    requestSyncRtx();
 }
 
 void FmView::announceValue(uint8_t row, const UiText &value, vpQueueFlags flags)

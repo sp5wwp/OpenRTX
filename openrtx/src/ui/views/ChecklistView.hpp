@@ -55,7 +55,7 @@ private:
         RowLatch,    ///< Keep the macro menu open after MONI
         RowVoice,    ///< Voice prompt level
         RowPhonetic, ///< Spell callsigns and text phonetically
-        RowCount,
+        RowCount,    ///< Number of rows
     };
 
     std::array<ListItem, RowCount> items = {}; ///< Rows
