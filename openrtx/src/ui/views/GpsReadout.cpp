@@ -44,8 +44,8 @@ static const char *formatCoord(int32_t coord, bool isLat, char *val,
     /* minutes * 100, rounded: frac/1e6 * 60 * 100 = frac * 6 / 1000. */
     const int32_t min100 = (frac * 6 + 500) / 1000;
 
-    snprintf(val, valSize, "%ld %ld.%02ld'", (long)deg, (long)(min100 / 100),
-             (long)(min100 % 100));
+    sniprintf(val, valSize, "%ld %ld.%02ld'", (long)deg, (long)(min100 / 100),
+              (long)(min100 % 100));
 
     if (isLat)
         return (coord < 0) ? "S" : "N";
@@ -88,7 +88,7 @@ static void formatLocator(int32_t lat, int32_t lon, char *out, size_t outSize)
     loc[5] = static_cast<char>('A' + static_cast<int>(b * 24.0));
     loc[6] = '\0';
 
-    snprintf(out, outSize, "%s", loc);
+    sniprintf(out, outSize, "%s", loc);
 }
 
 GpsReadout::GpsReadout() :
@@ -156,19 +156,19 @@ const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
             break;
         case ROW_ALT:
             if (alt_ != INT16_MIN) {
-                snprintf(val, n, "%dm", alt_);
+                sniprintf(val, n, "%dm", alt_);
                 return UNITS[row];
             }
             break;
         default:
             if (speed_ != UINT16_MAX) {
-                snprintf(val, n, "%ukm/h", speed_);
+                sniprintf(val, n, "%ukm/h", speed_);
                 return UNITS[row];
             }
             break;
     }
 
-    snprintf(val, n, "--");
+    sniprintf(val, n, "--");
     return UNITS[row];
 }
 

@@ -98,9 +98,9 @@ void MacroView::syncFromState(const state_t &s)
     const bool fmSql = (s.channel.mode == OPMODE_FM);
     char sq[8];
     if (fmSql)
-        snprintf(sq, sizeof(sq), "%u", (unsigned)s.settings.sqlLevel);
+        sniprintf(sq, sizeof(sq), "%u", (unsigned)s.settings.sqlLevel);
     else
-        snprintf(sq, sizeof(sq), "--");
+        sniprintf(sq, sizeof(sq), "--");
     if (strncmp(sq, sqlBuf_, sizeof(sqlBuf_)) != 0) {
         strncpy(sqlBuf_, sq, sizeof(sqlBuf_) - 1);
         sqlBuf_[sizeof(sqlBuf_) - 1] = '\0';

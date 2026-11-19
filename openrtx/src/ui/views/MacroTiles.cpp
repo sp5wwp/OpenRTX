@@ -98,9 +98,9 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf)
     scratch.box.setPadding(2, 1);
 
     if (KEY_LABELS[tile] != nullptr)
-        snprintf(keyBuf, KEY_SIZE, "%s", KEY_LABELS[tile]);
+        sniprintf(keyBuf, KEY_SIZE, "%s", KEY_LABELS[tile]);
     else
-        snprintf(keyBuf, KEY_SIZE, "5 %s", STR(mode).str());
+        sniprintf(keyBuf, KEY_SIZE, "5 %s", STR(mode).str());
 
     scratch.key.setFont(regular ? FONT_SIZE_6PT : FONT_SIZE_5PT);
     scratch.key.setAlign(regular ? TEXT_ALIGN_CENTER : TEXT_ALIGN_LEFT);
@@ -143,46 +143,46 @@ void MacroTiles::composeValue(uint8_t tile, const state_t &s, char *out,
         case 0: { /* tone encode/decode */
             const uint8_t enc = (uint8_t)((ch.fm.txToneEn << 1)
                                           | ch.fm.rxToneEn);
-            snprintf(out, n, "%s", fm ? ENC_DEC[enc].str() : "-");
+            sniprintf(out, n, "%s", fm ? ENC_DEC[enc].str() : "-");
             break;
         }
         case 1: /* tone down (shows the tone) */
         case 2: /* tone up */
             if (fm) {
                 const uint16_t t = ctcss_tone[ch.fm.txTone];
-                snprintf(out, n, "%u.%u", (unsigned)(t / 10),
-                         (unsigned)(t % 10));
+                sniprintf(out, n, "%u.%u", (unsigned)(t / 10),
+                          (unsigned)(t % 10));
             } else
-                snprintf(out, n, "-");
+                sniprintf(out, n, "-");
             break;
         case 3: /* bandwidth */
-            snprintf(out, n, "%s",
-                     fm ? (ch.bandwidth == BW_25 ? "WFM" : "NFM") : "-");
+            sniprintf(out, n, "%s",
+                      fm ? (ch.bandwidth == BW_25 ? "WFM" : "NFM") : "-");
             break;
         case 4: /* radio mode */
-            snprintf(out, n, "%s",
-                     (ch.mode == OPMODE_M17) ? "M17" : (fm ? "FM" : "DMR"));
+            sniprintf(out, n, "%s",
+                      (ch.mode == OPMODE_M17) ? "M17" : (fm ? "FM" : "DMR"));
             break;
         case 5: { /* power */
             const uint32_t mw = ch.power;
             if (mw >= 1000u)
-                snprintf(out, n, "%lu.%luW", (unsigned long)(mw / 1000u),
-                         (unsigned long)((mw % 1000u) / 100u));
+                sniprintf(out, n, "%lu.%luW", (unsigned long)(mw / 1000u),
+                          (unsigned long)((mw % 1000u) / 100u));
             else
-                snprintf(out, n, "%lumW", (unsigned long)mw);
+                sniprintf(out, n, "%lumW", (unsigned long)mw);
             break;
         }
         case 6: /* brightness */
         case 7:
 #ifdef CONFIG_SCREEN_BRIGHTNESS
-            snprintf(out, n, "%u%%", (unsigned)s.settings.brightness);
+            sniprintf(out, n, "%u%%", (unsigned)s.settings.brightness);
 #else
-            snprintf(out, n, "-");
+            sniprintf(out, n, "-");
 #endif
             break;
         case 8: /* keypad lock */
-            snprintf(out, n, "%s",
-                     (s.keypad_locked ? STR(on) : STR(off)).str());
+            sniprintf(out, n, "%s",
+                      (s.keypad_locked ? STR(on) : STR(off)).str());
             break;
         default:
             out[0] = '\0';

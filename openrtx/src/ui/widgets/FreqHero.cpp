@@ -20,9 +20,9 @@ void FreqHero::setFreq(uint32_t hz)
     const uint32_t khz = (hz % 1000000UL) / 1000UL; //< 3-digit kHz
     const uint32_t sub = (hz % 1000UL) / 10UL;      //< 2-digit, 10 Hz res
 
-    snprintf(mainBuf_, sizeof(mainBuf_), "%lu.%03lu", (unsigned long)mhz,
-             (unsigned long)khz);
-    snprintf(subBuf_, sizeof(subBuf_), "%02lu", (unsigned long)sub);
+    sniprintf(mainBuf_, sizeof(mainBuf_), "%lu.%03lu", (unsigned long)mhz,
+              (unsigned long)khz);
+    sniprintf(subBuf_, sizeof(subBuf_), "%02lu", (unsigned long)sub);
     textColor_ = Sem::OnSurface; //< the live readout is never left tinted
 }
 

@@ -99,7 +99,7 @@ const char *TopBar::middleText(char *clock) const
 
     clock[0] = '\0';
     if (minute_ >= 0)
-        snprintf(clock, CLOCK_SIZE, "%02u:%02u", hour_, minute_);
+        sniprintf(clock, CLOCK_SIZE, "%02u:%02u", hour_, minute_);
     return clock;
 }
 
@@ -192,7 +192,7 @@ void TopBar::draw(DrawCtx &d)
     if (showIcon_ <= 0) {
         char pct[8] = "";
         if (charge_ != 0xFF)
-            snprintf(pct, sizeof(pct), "%u%%", charge_);
+            sniprintf(pct, sizeof(pct), "%u%%", charge_);
         paintText(d, { x, textY, static_cast<uint16_t>(PCT_W), textH_ },
                   TEXT_ALIGN_RIGHT, Sem::OnSurface, pct);
         x = static_cast<int16_t>(x + PCT_W + GAP);

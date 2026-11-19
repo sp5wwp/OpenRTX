@@ -72,7 +72,7 @@ void VolumeOverlayView::HudScreen::draw(DrawCtx &d)
     /* The title mixes a glyph with a word, composed in the current
      * language. */
     char text[32];
-    snprintf(text, sizeof(text), SYMBOL_VOLUME " %s", STR(volume).str());
+    sniprintf(text, sizeof(text), SYMBOL_VOLUME " %s", STR(volume).str());
     d.pushClip(title);
     d.textInBox(title, REGULAR ? FONT_SIZE_12PT : FONT_SIZE_8PT,
                 TEXT_ALIGN_CENTER, Sem::Accent, text);
@@ -81,8 +81,8 @@ void VolumeOverlayView::HudScreen::draw(DrawCtx &d)
     const unsigned level = (volume < 0) ? 0u : static_cast<unsigned>(volume);
     char readout[8] = "";
     if (volume >= 0)
-        snprintf(readout, sizeof(readout), "%u%%",
-                 (level * 100u + 127u) / 255u);
+        sniprintf(readout, sizeof(readout), "%u%%",
+                  (level * 100u + 127u) / 255u);
 
     BarRow &row = Scratch::get<BarRow>();
     row.setLabel(UiText());

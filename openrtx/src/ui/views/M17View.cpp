@@ -69,14 +69,14 @@ void M17View::formatValue(uint8_t row, char *out, size_t cap)
 {
     /* Only CAN is a Stepper value row. */
     if ((row == RowCan) && (cap > 0u))
-        snprintf(out, cap, "%u", (unsigned)state.settings.m17_can);
+        sniprintf(out, cap, "%u", (unsigned)state.settings.m17_can);
     else if (cap > 0u)
         out[0] = '\0';
 }
 
 void M17View::setValueText(uint8_t row, const char *s)
 {
-    snprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
+    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
 }
 
 void M17View::refreshCustom(uint8_t row)
@@ -87,8 +87,8 @@ void M17View::refreshCustom(uint8_t row)
         callsign_.formatBracketed(bufs_[RowCallsign],
                                   sizeof(bufs_[RowCallsign]));
     else
-        snprintf(bufs_[RowCallsign], sizeof(bufs_[RowCallsign]), "%s",
-                 state.settings.callsign);
+        sniprintf(bufs_[RowCallsign], sizeof(bufs_[RowCallsign]), "%s",
+                  state.settings.callsign);
     list_.invalidate();
 }
 

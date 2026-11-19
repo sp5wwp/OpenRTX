@@ -33,7 +33,7 @@ void BarRow::draw(DrawCtx &d)
     char joined[32];
     const char *label = label_.str();
     if (icon_ != nullptr) {
-        snprintf(joined, sizeof(joined), "%s %s", icon_, label);
+        sniprintf(joined, sizeof(joined), "%s %s", icon_, label);
         label = joined;
     }
     if (label[0] != '\0') {

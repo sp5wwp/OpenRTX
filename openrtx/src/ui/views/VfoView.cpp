@@ -421,7 +421,7 @@ void VfoView::syncMode(const channel_t &ch)
         const bool txing = (rtx_getStatus()->opStatus == TX);
         if (txing || state.settings.m17_can_rx) {
             tag = "CAN";
-            snprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
+            sniprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
         }
     } else if (ch.mode == OPMODE_FM) {
         const bool txing = (rtx_getStatus()->opStatus == TX);
@@ -431,8 +431,8 @@ void VfoView::syncMode(const channel_t &ch)
             const uint8_t idx = showTx ? ch.fm.txTone : ch.fm.rxTone;
             const uint16_t t = ctcss_tone[idx];
             tag = "CTCSS";
-            snprintf(sub, sizeof(sub), "%u.%u", (unsigned)(t / 10),
-                     (unsigned)(t % 10));
+            sniprintf(sub, sizeof(sub), "%u.%u", (unsigned)(t / 10),
+                      (unsigned)(t % 10));
         }
     }
 
@@ -479,12 +479,12 @@ void VfoView::syncMeter(const state_t &s)
         meter_.setValue(powerToFrac(mw));
 
         if (mw >= 1000u)
-            snprintf(readoutBuf_, sizeof(readoutBuf_), "%lu.%luW",
-                     (unsigned long)(mw / 1000u),
-                     (unsigned long)((mw % 1000u) / 100u));
+            sniprintf(readoutBuf_, sizeof(readoutBuf_), "%lu.%luW",
+                      (unsigned long)(mw / 1000u),
+                      (unsigned long)((mw % 1000u) / 100u));
         else
-            snprintf(readoutBuf_, sizeof(readoutBuf_), "%lumW",
-                     (unsigned long)mw);
+            sniprintf(readoutBuf_, sizeof(readoutBuf_), "%lumW",
+                      (unsigned long)mw);
     } else {
         const uint8_t level = rssiToSlevel(s.rssi);
 
@@ -503,10 +503,10 @@ void VfoView::syncMeter(const state_t &s)
             meter_.setMarker(-1.0f);
 
         if (level > 9u)
-            snprintf(readoutBuf_, sizeof(readoutBuf_), "+%u",
-                     (unsigned)((level - 9u) * 10u));
+            sniprintf(readoutBuf_, sizeof(readoutBuf_), "+%u",
+                      (unsigned)((level - 9u) * 10u));
         else
-            snprintf(readoutBuf_, sizeof(readoutBuf_), "S%u", (unsigned)level);
+            sniprintf(readoutBuf_, sizeof(readoutBuf_), "S%u", (unsigned)level);
     }
 
     meter_.setReadout(readoutBuf_);
@@ -943,9 +943,9 @@ void VfoView::m17DstLabel(char *out, uint16_t sz)
 {
     const char *dst = state.settings.m17_dest;
     if (dst[0] == '\0')
-        snprintf(out, sz, "@ALL");
+        sniprintf(out, sz, "@ALL");
     else
-        snprintf(out, sz, "@%s", dst);
+        sniprintf(out, sz, "@%s", dst);
 }
 
 void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
@@ -957,14 +957,15 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
         /* Far-left is the "where am I" slot: "VFO" here, the memory index in
          * memory mode. In M17 the destination fills the name slot; FM has no
          * name (just the frequency). The CAN lives in the mode stack, not here. */
-        snprintf(idxOut, 8, "VFO");
+        sniprintf(idxOut, 8, "VFO");
         if (ch.mode == OPMODE_M17)
             m17DstLabel(nameOut, nameSz);
         else
             nameOut[0] = '\0';
     } else {
-        snprintf(idxOut, 8, "%03u", s.channel_index + 1);
-        snprintf(nameOut, nameSz, "%s", (ch.name[0] != '\0') ? ch.name : "---");
+        sniprintf(idxOut, 8, "%03u", s.channel_index + 1);
+        sniprintf(nameOut, nameSz, "%s",
+                  (ch.name[0] != '\0') ? ch.name : "---");
     }
 }
 
@@ -983,7 +984,7 @@ void VfoView::renderDstEdit()
 
     char body[36];
     entry_->input.formatWindow(body, sizeof(body), bodyW, font);
-    snprintf(nameCache_, sizeof(nameCache_), "@%s", body);
+    sniprintf(nameCache_, sizeof(nameCache_), "@%s", body);
     idxCache_[0] = '\0';
     chanIdx_.setText(idxCache_);
     chanName_.setText(nameCache_);

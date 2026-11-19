@@ -614,10 +614,10 @@ void TextInput::formatBracketed(char *out, size_t sz) const
             int n;
             if (i == cursor_)
                 n = (buf_[i] == kDelete) ?
-                        snprintf(o, rem, "[%s]", kDeleteGlyph) :
-                        snprintf(o, rem, "[%c]", buf_[i]);
+                        sniprintf(o, rem, "[%s]", kDeleteGlyph) :
+                        sniprintf(o, rem, "[%c]", buf_[i]);
             else
-                n = snprintf(o, rem, "%c", buf_[i]);
+                n = sniprintf(o, rem, "%c", buf_[i]);
             if (n < 0)
                 break;
             o += n;
@@ -637,7 +637,7 @@ void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
     int n;
 
     if ((lo > 0) && (rem > sizeof(SYMBOL_ELLIPSIS))) {
-        n = snprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
+        n = sniprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
         if (n > 0) {
             o += n;
             rem -= static_cast<size_t>(n);
@@ -647,10 +647,10 @@ void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
         for (uint16_t i = lo; (i < hi) && (rem > 6); i++) {
             if (i == cursor_)
                 n = (buf_[i] == kDelete) ?
-                        snprintf(o, rem, "[%s]", kDeleteGlyph) :
-                        snprintf(o, rem, "[%c]", buf_[i]);
+                        sniprintf(o, rem, "[%s]", kDeleteGlyph) :
+                        sniprintf(o, rem, "[%c]", buf_[i]);
             else
-                n = snprintf(o, rem, "%c", buf_[i]);
+                n = sniprintf(o, rem, "%c", buf_[i]);
             if (n < 0)
                 break;
             o += n;
@@ -658,7 +658,7 @@ void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
         }
     }
     if ((hi < len_) && (rem > sizeof(SYMBOL_ELLIPSIS))) {
-        n = snprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
+        n = sniprintf(o, rem, "%s", SYMBOL_ELLIPSIS);
         if (n > 0) {
             o += n;
             rem -= static_cast<size_t>(n);

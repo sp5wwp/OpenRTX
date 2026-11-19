@@ -124,28 +124,29 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 
     const uint8_t v = curValue(row);
     if ((row == RowVox) && (v == 0u))
-        snprintf(out, cap, "%s", STR(off).str());
+        sniprintf(out, cap, "%s", STR(off).str());
     else if (row == RowSquelch)
-        snprintf(out, cap, "S%u", v);
+        sniprintf(out, cap, "S%u", v);
     else if (row == RowTimer)
-        snprintf(out, cap, "%s",
-                 ((v == 0u) || (v >= 16u)) ? STR(off).str() :
-                                             kTimerLabels[v - 1u]);
+        sniprintf(out, cap, "%s",
+                  ((v == 0u) || (v >= 16u)) ? STR(off).str() :
+                                              kTimerLabels[v - 1u]);
     else if (row == RowBattery)
-        snprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
+        sniprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
 #ifdef CONFIG_PIX_FMT_RGB565
     else if (row == RowTheme)
-        snprintf(out, cap, "%s", (v ? STR(highContrast) : STR(standard)).str());
+        sniprintf(out, cap, "%s",
+                  (v ? STR(highContrast) : STR(standard)).str());
     else if (row == RowText)
-        snprintf(out, cap, "%s", (v ? STR(crisp) : STR(smooth)).str());
+        sniprintf(out, cap, "%s", (v ? STR(crisp) : STR(smooth)).str());
 #endif
     else
-        snprintf(out, cap, "%u", v);
+        sniprintf(out, cap, "%u", v);
 }
 
 void DisplayView::setValueText(uint8_t row, const char *s)
 {
-    snprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
+    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
 }
 
 void DisplayView::onAdjust(uint8_t row, int dir)

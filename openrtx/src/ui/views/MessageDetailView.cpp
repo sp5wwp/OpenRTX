@@ -150,9 +150,9 @@ void MessageDetailView::refresh(const struct message *msg, size_t idx,
 {
     const char *rcpt = (msg->recipient[0] != '\0') ? msg->recipient :
                                                      STR(broadcast).str();
-    snprintf(headerBuf_, sizeof(headerBuf_), "%s > %s", msg->sender, rcpt);
-    snprintf(positionBuf_, sizeof(positionBuf_), "%u/%u", (unsigned)(idx + 1),
-             (unsigned)messages_count());
+    sniprintf(headerBuf_, sizeof(headerBuf_), "%s > %s", msg->sender, rcpt);
+    sniprintf(positionBuf_, sizeof(positionBuf_), "%u/%u", (unsigned)(idx + 1),
+              (unsigned)messages_count());
     reply_.setText(reply ? STR(reply) : UiText(""));
     screen_.markAllDirty();
 }
@@ -167,8 +167,8 @@ void MessageDetailView::syncFromState(const state_t &s)
         /* Evicted or the inbox closed: keep a placeholder until the next
          * key goes back to the list. */
         if (shownSeq_ != 0) {
-            snprintf(headerBuf_, sizeof(headerBuf_), "%s",
-                     STR(noMessages).str());
+            sniprintf(headerBuf_, sizeof(headerBuf_), "%s",
+                      STR(noMessages).str());
             positionBuf_[0] = '\0';
             reply_.setText("");
             shownSeq_ = 0;

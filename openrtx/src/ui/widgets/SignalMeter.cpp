@@ -94,7 +94,7 @@ void SignalMeter::draw(DrawCtx &d)
             d.fillRect({ x, static_cast<int16_t>(barY + barH), 1, 1 },
                        Sem::OnSurfaceMuted);
             char num[3];
-            snprintf(num, sizeof(num), "%u", (unsigned)kScalePoints[i]);
+            sniprintf(num, sizeof(num), "%u", (unsigned)kScalePoints[i]);
             d.textInBox({ static_cast<int16_t>(x - 4), numY, 9, numH },
                         kScaleFont, TEXT_ALIGN_CENTER, Sem::OnSurfaceMuted,
                         num);

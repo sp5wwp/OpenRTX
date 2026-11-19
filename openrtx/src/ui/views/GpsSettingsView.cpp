@@ -62,12 +62,12 @@ void GpsSettingsView::formatValue(uint8_t /*row*/, char *out, size_t cap)
         hr = (int8_t)(-hr);
         mn = (int8_t)(-mn);
     }
-    snprintf(out, cap, "%c%d.%d", sign, hr, mn);
+    sniprintf(out, cap, "%c%d.%d", sign, hr, mn);
 }
 
 void GpsSettingsView::setValueText(uint8_t row, const char *s)
 {
-    snprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
+    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
 }
 
 void GpsSettingsView::onAdjust(uint8_t /*row*/, int dir)

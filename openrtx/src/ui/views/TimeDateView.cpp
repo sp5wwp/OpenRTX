@@ -75,17 +75,17 @@ void TimeDateView::showDisplay(const state_t &s, bool force)
     const datetime_t t = utcToLocalTime(s.time, s.settings.utc_timezone);
 
     char combined[32];
-    snprintf(combined, sizeof(combined), "%02d/%02d/%02d %02d:%02d:%02d",
-             t.date, t.month, t.year, t.hour, t.minute, t.second);
+    sniprintf(combined, sizeof(combined), "%02d/%02d/%02d %02d:%02d:%02d",
+              t.date, t.month, t.year, t.hour, t.minute, t.second);
     if (!force && (strncmp(combined, dispCache_, sizeof(dispCache_)) == 0))
         return;
     strncpy(dispCache_, combined, sizeof(dispCache_) - 1);
     dispCache_[sizeof(dispCache_) - 1] = '\0';
 
-    snprintf(dateBuf_, sizeof(dateBuf_), "%02d/%02d/%02d", t.date, t.month,
-             t.year);
-    snprintf(timeBuf_, sizeof(timeBuf_), "%02d:%02d:%02d", t.hour, t.minute,
-             t.second);
+    sniprintf(dateBuf_, sizeof(dateBuf_), "%02d/%02d/%02d", t.date, t.month,
+              t.year);
+    sniprintf(timeBuf_, sizeof(timeBuf_), "%02d:%02d:%02d", t.hour, t.minute,
+              t.second);
     dateLabel_.setText(dateBuf_);
     timeLabel_.setText(timeBuf_);
     dateLabel_.invalidate();
@@ -135,10 +135,10 @@ void TimeDateView::refreshEdit()
         const int v = input_.slotDigit(o);
         return (v >= 0) ? static_cast<char>('0' + v) : '_';
     };
-    snprintf(dateBuf_, sizeof(dateBuf_), "%c%c/%c%c/%c%c", d(0), d(1), d(2),
-             d(3), d(4), d(5));
-    snprintf(timeBuf_, sizeof(timeBuf_), "%c%c:%c%c:00", d(6), d(7), d(8),
-             d(9));
+    sniprintf(dateBuf_, sizeof(dateBuf_), "%c%c/%c%c/%c%c", d(0), d(1), d(2),
+              d(3), d(4), d(5));
+    sniprintf(timeBuf_, sizeof(timeBuf_), "%c%c:%c%c:00", d(6), d(7), d(8),
+              d(9));
     dateLabel_.setText(dateBuf_);
     timeLabel_.setText(timeBuf_);
     dateLabel_.invalidate();

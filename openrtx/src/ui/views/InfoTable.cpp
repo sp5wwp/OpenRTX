@@ -75,24 +75,24 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
             /* Integer volts + one decimal, rounding the mantissa to nearest. */
             const uint16_t volt = (vbat_ + 50) / 1000;
             const uint16_t mv = ((vbat_ - volt * 1000) + 50) / 100;
-            snprintf(out, n, "%u.%uV", volt, mv);
+            sniprintf(out, n, "%u.%uV", volt, mv);
             break;
         }
         case ROW_CHARGE:
-            snprintf(out, n, "%u%%", charge_);
+            sniprintf(out, n, "%u%%", charge_);
             break;
         case ROW_RSSI:
-            snprintf(out, n, "%ld dBm", (long)rssi_);
+            sniprintf(out, n, "%ld dBm", (long)rssi_);
             break;
         case ROW_HEAP:
-            snprintf(out, n, "%u B", (unsigned)heapUsed_);
+            sniprintf(out, n, "%u B", (unsigned)heapUsed_);
             break;
         case ROW_BAND:
-            snprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
-                     hw->uhf_band ? "UHF" : "");
+            sniprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
+                      hw->uhf_band ? "UHF" : "");
             break;
         default:
-            snprintf(out, n, "%u", hw->hw_version);
+            sniprintf(out, n, "%u", hw->hw_version);
             break;
     }
 }

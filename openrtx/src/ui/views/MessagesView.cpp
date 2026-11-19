@@ -74,7 +74,7 @@ void MessagesView::rowAt(uint16_t index, ListItem &out) const
     else if (msg->unread)
         mark = SYMBOL_ENVELOPE " ";
 
-    snprintf(label_, sizeof(label_), "%s%s", mark, other);
+    sniprintf(label_, sizeof(label_), "%s%s", mark, other);
     out.label = label_;
     out.value = msg->body;
 }

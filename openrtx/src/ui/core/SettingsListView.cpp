@@ -76,7 +76,7 @@ void SettingsListView::refreshValue(uint8_t row, bool speak)
      * step (the label was announced on navigation). */
     if (editing_ && (row == editRow_)) {
         char wrapped[40];
-        snprintf(wrapped, sizeof(wrapped), "<%s>", inner);
+        sniprintf(wrapped, sizeof(wrapped), "<%s>", inner);
         setValueText(row, wrapped);
         if (speak)
             vpSay(inner);

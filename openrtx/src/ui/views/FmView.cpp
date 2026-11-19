@@ -49,16 +49,16 @@ void FmView::formatValue(uint8_t row, char *out, size_t cap)
 
     if (row == RowTone) {
         const uint16_t t = ctcss_tone[fm.txTone];
-        snprintf(out, cap, "%u.%u Hz", (unsigned)(t / 10), (unsigned)(t % 10));
+        sniprintf(out, cap, "%u.%u Hz", (unsigned)(t / 10), (unsigned)(t % 10));
     } else {
         const uint8_t idx = (uint8_t)((fm.rxToneEn << 1) | fm.txToneEn);
-        snprintf(out, cap, "%s", kEnableLabels[idx].str());
+        sniprintf(out, cap, "%s", kEnableLabels[idx].str());
     }
 }
 
 void FmView::setValueText(uint8_t row, const char *s)
 {
-    snprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
+    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
 }
 
 void FmView::onAdjust(uint8_t row, int dir)

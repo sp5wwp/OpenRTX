@@ -63,7 +63,7 @@ void Compass::draw(DrawCtx &d)
      * "degrees" context. */
     char label[6] = "---";
     if (valid_)
-        snprintf(label, sizeof(label), "%03d", heading_);
+        sniprintf(label, sizeof(label), "%03d", heading_);
     const Rect lblBox = { area_.x, static_cast<int16_t>(area_.y + dialH),
                           area_.w, static_cast<uint16_t>(labelH) };
     d.textInBox(lblBox, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurface,

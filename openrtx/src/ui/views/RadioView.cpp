@@ -40,13 +40,13 @@ void formatFreq(uint32_t hz, char *buf, size_t size)
         width = 3;
         prefix = 'k';
     } else {
-        snprintf(buf, size, "%u Hz", (unsigned)hz);
+        sniprintf(buf, size, "%u Hz", (unsigned)hz);
         return;
     }
 
     char tmp[16];
-    snprintf(tmp, sizeof(tmp), "%u.%0*u", (unsigned)(hz / div), width,
-             (unsigned)(hz % div));
+    sniprintf(tmp, sizeof(tmp), "%u.%0*u", (unsigned)(hz / div), width,
+              (unsigned)(hz % div));
 
     /* Strip trailing zeros, then a bare trailing dot. */
     size_t len = strlen(tmp);
@@ -55,7 +55,7 @@ void formatFreq(uint32_t hz, char *buf, size_t size)
     if ((len > 0) && (tmp[len - 1] == '.'))
         tmp[--len] = '\0';
 
-    snprintf(buf, size, "%s %cHz", tmp, prefix);
+    sniprintf(buf, size, "%s %cHz", tmp, prefix);
 }
 
 /* Lay a decimal value into a slot field left-aligned, so it reads back as that
@@ -63,7 +63,7 @@ void formatFreq(uint32_t hz, char *buf, size_t size)
 void setSlotsDecimal(TextInput &f, uint32_t val)
 {
     char tmp[12];
-    const int n = snprintf(tmp, sizeof(tmp), "%u", (unsigned)val);
+    const int n = sniprintf(tmp, sizeof(tmp), "%u", (unsigned)val);
     f.clearSlots();
     const uint16_t cap = f.slotCount();
     uint16_t i = 0;
@@ -117,7 +117,7 @@ void RadioView::formatValue(uint8_t row, char *out, size_t cap)
 
 void RadioView::setValueText(uint8_t row, const char *s)
 {
-    snprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
+    sniprintf(bufs_[row], sizeof(bufs_[row]), "%s", s);
 }
 
 void RadioView::refreshCustom(uint8_t row)
@@ -127,9 +127,9 @@ void RadioView::refreshCustom(uint8_t row)
 
     if (editing_ && (editRow_ == RowOffset)) {
         const unsigned v = (unsigned)offsetKhz();
-        snprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "<%u kHz>", v);
+        sniprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "<%u kHz>", v);
         char clean[16];
-        snprintf(clean, sizeof(clean), "%u kHz", v);
+        sniprintf(clean, sizeof(clean), "%u kHz", v);
         vpSay(clean);
     } else {
         const channel_t &ch = state.channel;
@@ -138,7 +138,7 @@ void RadioView::refreshCustom(uint8_t row)
                                  (ch.rx_frequency - ch.tx_frequency);
         char inner[16];
         formatFreq(off, inner, sizeof(inner));
-        snprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "%s", inner);
+        sniprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "%s", inner);
     }
     list_.invalidate();
 }
@@ -177,8 +177,8 @@ void RadioView::restoreCustom(const ListEdit &e)
     offsetInput_.setCursorSlot(e.cursor);
     offsetNeg_ = e.negative;
     offsetPristine_ = e.pristine;
-    snprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "<%u kHz>",
-             (unsigned)offsetKhz());
+    sniprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "<%u kHz>",
+              (unsigned)offsetKhz());
     list_.invalidate();
 }
 
