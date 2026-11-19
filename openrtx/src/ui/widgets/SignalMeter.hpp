@@ -65,10 +65,27 @@ public:
         showScale_ = s;
     }
 
+    /**
+     * Get the width of the bar's fill, which follows the value, the area and
+     * the space the label and the readout take.
+     *
+     * @return the width in pixels.
+     */
+    uint16_t fillWidth() const;
+
     Size natural() const override;
     void draw(DrawCtx &d) override;
 
 private:
+    /**
+     * Get the bar's span: the area inside the gutters, less the label and the
+     * readout.
+     *
+     * @param left: set to the first column of the bar.
+     * @return the bar width, 0 if there is no room.
+     */
+    uint16_t track(int16_t &left) const;
+
     const char *label_ = "";
     const char *readout_ = "";
     Sem color_ = Sem::RxSuccess;

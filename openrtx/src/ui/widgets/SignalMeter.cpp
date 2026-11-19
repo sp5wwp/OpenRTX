@@ -43,11 +43,28 @@ Size SignalMeter::natural() const
              static_cast<uint16_t>(kBarH + gfx_getFontHeight(kScaleFont) + 3) };
 }
 
+uint16_t SignalMeter::track(int16_t &left) const
+{
+    left = static_cast<int16_t>(area_.x + kPad);
+    int16_t right = static_cast<int16_t>(area_.x + area_.w - kPad);
+    if (label_[0] != '\0')
+        left =
+            static_cast<int16_t>(left + gfx_getTextWidth(kFont, label_) + kGap);
+    if (readout_[0] != '\0')
+        right = static_cast<int16_t>(right - gfx_getTextWidth(kFont, readout_)
+                                     - kGap);
+
+    return (right > left) ? static_cast<uint16_t>(right - left) : 0;
+}
+
+uint16_t SignalMeter::fillWidth() const
+{
+    int16_t left;
+    return static_cast<uint16_t>(std::lround(track(left) * clamp01(value_)));
+}
+
 void SignalMeter::draw(DrawCtx &d)
 {
-    int16_t left = static_cast<int16_t>(area_.x + kPad);
-    int16_t right = static_cast<int16_t>(area_.x + area_.w - kPad);
-
     /* Reserve a band beneath the bar for the S-scale numbers (RX only). */
     const uint16_t numH = showScale_ ? gfx_getFontHeight(kScaleFont) : 0;
     const int16_t barBandH = static_cast<int16_t>(area_.h - numH);
@@ -56,21 +73,21 @@ void SignalMeter::draw(DrawCtx &d)
      * scale numbers below don't drag them down). */
     if (label_[0] != '\0') {
         const uint16_t lw = gfx_getTextWidth(kFont, label_);
-        d.textInBox({ left, area_.y, lw, (uint16_t)barBandH }, kFont,
-                    TEXT_ALIGN_LEFT, color_, label_);
-        left = static_cast<int16_t>(left + lw + kGap);
+        d.textInBox({ static_cast<int16_t>(area_.x + kPad), area_.y, lw,
+                      (uint16_t)barBandH },
+                    kFont, TEXT_ALIGN_LEFT, color_, label_);
     }
     if (readout_[0] != '\0') {
         const uint16_t rw = gfx_getTextWidth(kFont, readout_);
-        d.textInBox({ static_cast<int16_t>(right - rw), area_.y, rw,
-                      (uint16_t)barBandH },
+        d.textInBox({ static_cast<int16_t>(area_.x + area_.w - kPad - rw),
+                      area_.y, rw, (uint16_t)barBandH },
                     kFont, TEXT_ALIGN_RIGHT, color_, readout_);
-        right = static_cast<int16_t>(right - rw - kGap);
     }
 
-    if (right <= left)
+    int16_t left;
+    const uint16_t trackW = track(left);
+    if (trackW == 0)
         return;
-    const uint16_t trackW = static_cast<uint16_t>(right - left);
 
     /* Bar geometry: a rounded track vertically centred in the bar band. */
     uint16_t barH = kBarH;

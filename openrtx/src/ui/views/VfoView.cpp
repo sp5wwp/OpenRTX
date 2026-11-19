@@ -503,64 +503,76 @@ void VfoView::syncMode(const channel_t &ch)
 
 void VfoView::syncMeter(const state_t &s)
 {
-    /* Live TX/RX comes from the rtx module (state.rtxStatus is only the
-     * requested mode); this matches how the classic UI reads it. */
+    /* Live TX/RX comes from the rtx module; state.rtxStatus is only the
+     * requested mode. */
     const uint8_t status = rtx_getStatus()->opStatus;
     const uint8_t sql = s.settings.sqlLevel;
     const uint8_t mode = s.channel.mode;
-    const bool changed = (status != lastStatus_) || (s.rssi != lastRssi_)
-                      || (sql != lastSql_) || (mode != lastMode_);
-    if (!changed)
+    const bool restyle = (status != lastStatus_) || (sql != lastSql_)
+                      || (mode != lastMode_);
+    if (!restyle && (s.rssi == lastRssi_))
         return;
-
-    if (status == TX) {
-        const uint32_t mw = s.channel.power;
-
-        meter_.setLabel("TX");
-        meter_.setColor(Sem::TxDanger);
-        meter_.setShowScale(false);
-        meter_.setMarker(-1.0f); /* squelch is an RX/FM concept */
-        /* Fill on a dB power scale relative to the radio's max output. */
-        meter_.setValue(powerToFrac(mw));
-
-        if (mw >= 1000u)
-            sniprintf(readoutBuf_, sizeof(readoutBuf_), "%lu.%luW",
-                      (unsigned long)(mw / 1000u),
-                      (unsigned long)((mw % 1000u) / 100u));
-        else
-            sniprintf(readoutBuf_, sizeof(readoutBuf_), "%lumW",
-                      (unsigned long)mw);
-    } else {
-        const uint8_t level = rssiToSlevel(s.rssi);
-
-        meter_.setLabel("RX");
-        meter_.setColor(Sem::RxSuccess);
-        meter_.setShowScale(true);
-        meter_.setValue(rssiToFrac(static_cast<float>(s.rssi)));
-
-        /* FM squelch opens at squelch_rssi = -127 + sqlLevel*66/15 dBm (see
-         * OpMode_FM); feed it through the same continuous RSSI->fraction map as
-         * the fill so the red gate sits exactly where the signal has to reach.
-         * Only FM RF-gates on RSSI, so the mark is hidden in the digital modes. */
-        if (mode == OPMODE_FM)
-            meter_.setMarker(rssiToFrac(-127.0f + (sql * 66.0f) / 15.0f));
-        else
-            meter_.setMarker(-1.0f);
-
-        if (level > 9u)
-            sniprintf(readoutBuf_, sizeof(readoutBuf_), "+%u",
-                      (unsigned)((level - 9u) * 10u));
-        else
-            sniprintf(readoutBuf_, sizeof(readoutBuf_), "S%u", (unsigned)level);
-    }
-
-    meter_.setReadout(readoutBuf_);
-    meter_.invalidate();
 
     lastStatus_ = status;
     lastRssi_ = s.rssi;
     lastSql_ = sql;
     lastMode_ = mode;
+
+    char readout[sizeof(readoutBuf_)];
+    if (status == TX) {
+        const uint32_t mw = s.channel.power;
+
+        if (restyle) {
+            meter_.setLabel("TX");
+            meter_.setColor(Sem::TxDanger);
+            meter_.setShowScale(false);
+            meter_.setMarker(-1.0f); /* squelch is an RX/FM concept */
+        }
+        /* Fill on a dB power scale relative to the radio's max output. */
+        meter_.setValue(powerToFrac(mw));
+
+        if (mw >= 1000u)
+            sniprintf(readout, sizeof(readout), "%lu.%luW",
+                      (unsigned long)(mw / 1000u),
+                      (unsigned long)((mw % 1000u) / 100u));
+        else
+            sniprintf(readout, sizeof(readout), "%lumW", (unsigned long)mw);
+    } else {
+        const uint8_t level = rssiToSlevel(s.rssi);
+
+        if (restyle) {
+            meter_.setLabel("RX");
+            meter_.setColor(Sem::RxSuccess);
+            meter_.setShowScale(true);
+
+            /* FM squelch opens at -127 + sqlLevel * 66 / 15 dBm (see
+             * OpMode_FM); map it like the fill so the mark sits where the
+             * signal has to reach. Only FM gates on RSSI. */
+            if (mode == OPMODE_FM)
+                meter_.setMarker(rssiToFrac(-127.0f + (sql * 66.0f) / 15.0f));
+            else
+                meter_.setMarker(-1.0f);
+        }
+        meter_.setValue(rssiToFrac(static_cast<float>(s.rssi)));
+
+        if (level > 9u)
+            sniprintf(readout, sizeof(readout), "+%u",
+                      (unsigned)((level - 9u) * 10u));
+        else
+            sniprintf(readout, sizeof(readout), "S%u", (unsigned)level);
+    }
+
+    /* Repaint only when what the meter draws changes, the readout or the
+     * fill's width in pixels, not on every dBm of RSSI. */
+    const bool text = (strcmp(readout, readoutBuf_) != 0);
+    if (text) {
+        memcpy(readoutBuf_, readout, sizeof(readoutBuf_));
+        meter_.setReadout(readoutBuf_);
+    }
+    const uint16_t fill = meter_.fillWidth();
+    if (restyle || text || (fill != lastFill_))
+        meter_.invalidate();
+    lastFill_ = fill;
 }
 
 void VfoView::syncFromState(const state_t &s)

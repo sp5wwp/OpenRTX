@@ -227,8 +227,9 @@ private:
     int32_t lastRssi_ = INT32_MIN;
     uint8_t lastSql_ = 0xFFu;  //< squelch level last drawn on the meter marker
     uint8_t lastMode_ = 0xFFu; //< channel mode (marker only shows in FM)
+    uint16_t lastFill_ = UINT16_MAX; ///< Meter fill width last drawn
 
-    Entry *entry_ = nullptr;   ///< Open entry, on the heap; nullptr if none
+    Entry *entry_ = nullptr; ///< Open entry, on the heap; nullptr if none
 };
 
 } // namespace ortxui
