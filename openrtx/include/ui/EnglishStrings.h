@@ -160,5 +160,30 @@ const stringsTable_t englishStrings =
     .hintKnob          = N_("Knob:char ENTER:next hold:OK"),
     // i18n: time and date entry fields, in this fixed order
     .hintDateTime      = N_("dd/mm/yy hh:mm"),
+    .timer5s           = N_("5 s"),
+    .timer10s          = N_("10 s"),
+    .timer15s          = N_("15 s"),
+    .timer20s          = N_("20 s"),
+    .timer25s          = N_("25 s"),
+    .timer30s          = N_("30 s"),
+    .timer1min         = N_("1 min"),
+    .timer2min         = N_("2 min"),
+    .timer3min         = N_("3 min"),
+    .timer4min         = N_("4 min"),
+    .timer5min         = N_("5 min"),
+    .timer15min        = N_("15 min"),
+    .timer30min        = N_("30 min"),
+    .timer45min        = N_("45 min"),
+    .timer1hour        = N_("1 hour"),
+    // i18n: GPS screen, the Maidenhead locator, keep it short
+    .locator           = N_("QTH"),
+    // i18n: GPS screen, altitude, keep it short
+    .altitudeShort     = N_("ALT"),
+    // i18n: GPS screen, speed, keep it short
+    .speedShort        = N_("SPD"),
+    // i18n: unit symbol of the altitude
+    .metres            = N_("m"),
+    // i18n: unit symbol of the speed
+    .kmPerHour         = N_("km/h"),
 };
 #endif  // ENGLISHSTRINGS_H

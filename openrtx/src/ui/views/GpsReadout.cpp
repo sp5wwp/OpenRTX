@@ -6,6 +6,7 @@
 
 #include "views/GpsReadout.hpp"
 #include "core/Layout.hpp"
+#include "core/UiText.hpp"
 
 #include <climits>
 #include <cmath>
@@ -20,9 +21,10 @@ static constexpr int16_t PAD = 2;
 /* Size of a composed value. */
 static constexpr size_t VALUE_SIZE = 16;
 
-/* Unit of each row, in row order; the hemisphere replaces the first two once
+/* Label of each row, in row order; the hemisphere replaces the first two once
  * there is a fix. */
-static constexpr const char *UNITS[] = { "N", "E", "QTH", "ALT", "SPD" };
+static constexpr UiText UNITS[] = { UiText("N"), UiText("E"), STR(locator),
+                                    STR(altitudeShort), STR(speedShort) };
 
 /**
  * Format a signed coordinate (millionths of a degree) as degrees and decimal
@@ -150,25 +152,25 @@ const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
         case ROW_LOC:
             if (fixed) {
                 formatLocator(lat_, lon_, val, n);
-                return UNITS[row];
+                return UNITS[row].str();
             }
             break;
         case ROW_ALT:
             if (alt_ != INT16_MIN) {
-                sniprintf(val, n, "%dm", alt_);
-                return UNITS[row];
+                sniprintf(val, n, "%d%s", alt_, STR(metres).str());
+                return UNITS[row].str();
             }
             break;
         default:
             if (speed_ != UINT16_MAX) {
-                sniprintf(val, n, "%ukm/h", speed_);
-                return UNITS[row];
+                sniprintf(val, n, "%u%s", speed_, STR(kmPerHour).str());
+                return UNITS[row].str();
             }
             break;
     }
 
     sniprintf(val, n, "--");
-    return UNITS[row];
+    return UNITS[row].str();
 }
 
 void GpsReadout::draw(DrawCtx &d)

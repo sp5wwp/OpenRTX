@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: https://github.com/OpenRTX/OpenRTX/issues\n"
-"POT-Creation-Date: 2026-11-18 16:43-0600\n"
+"POT-Creation-Date: 2026-11-19 10:47-0600\n"
 "PO-Revision-Date: 2025-11-10 13:03+0000\n"
 "Last-Translator: Ryan Turner <ryan@turnrye.com>\n"
 "Language-Team: Italian <https://hosted.weblate.org/projects/openrtx/openrtx/"
@@ -522,4 +522,99 @@ msgstr ""
 #. i18n: asks for the transmit frequency to be typed
 #: openrtx/include/ui/EnglishStrings.h
 msgid "ENTER TX"
+msgstr ""
+
+#. i18n: time and date entry fields, in this fixed order
+#: openrtx/include/ui/EnglishStrings.h
+msgid "dd/mm/yy hh:mm"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "5 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "10 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "15 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "20 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "25 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "30 s"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "1 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "2 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "3 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "4 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "5 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "15 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "30 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "45 min"
+msgstr ""
+
+#: openrtx/include/ui/EnglishStrings.h
+msgid "1 hour"
+msgstr ""
+
+#. i18n: GPS screen, the Maidenhead locator, keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "QTH"
+msgstr ""
+
+#. i18n: GPS screen, altitude, keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "ALT"
+msgstr ""
+
+#. i18n: GPS screen, speed, keep it short
+#: openrtx/include/ui/EnglishStrings.h
+msgid "SPD"
+msgstr ""
+
+#. i18n: unit symbol of the altitude
+#: openrtx/include/ui/EnglishStrings.h
+msgid "m"
+msgstr ""
+
+#. i18n: unit symbol of the speed
+#: openrtx/include/ui/EnglishStrings.h
+msgid "km/h"
+msgstr ""
+
+#. i18n: key hint, keep the key names; one line on a 128 px screen
+#: openrtx/include/ui/EnglishStrings.h
+msgid "Up/Dn L/R"
 msgstr ""

@@ -145,6 +145,26 @@ typedef struct
     const char* hintArrowsShort;
     const char* hintKnob;
     const char* hintDateTime;
+    const char* timer5s;
+    const char* timer10s;
+    const char* timer15s;
+    const char* timer20s;
+    const char* timer25s;
+    const char* timer30s;
+    const char* timer1min;
+    const char* timer2min;
+    const char* timer3min;
+    const char* timer4min;
+    const char* timer5min;
+    const char* timer15min;
+    const char* timer30min;
+    const char* timer45min;
+    const char* timer1hour;
+    const char* locator;
+    const char* altitudeShort;
+    const char* speedShort;
+    const char* metres;
+    const char* kmPerHour;
 }
 stringsTable_t;
 

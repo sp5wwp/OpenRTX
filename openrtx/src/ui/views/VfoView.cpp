@@ -418,7 +418,7 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
     char sub[sizeof(modeSub_)] = "";
     if (ch.mode == OPMODE_M17) {
         if (txing || state.settings.m17_can_rx) {
-            tag = "CAN";
+            tag = STR(CAN).str();
             sniprintf(sub, sizeof(sub), "%u", (unsigned)state.settings.m17_can);
         }
     } else if (ch.mode == OPMODE_FM) {

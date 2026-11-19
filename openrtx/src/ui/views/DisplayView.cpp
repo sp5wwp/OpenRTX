@@ -40,15 +40,19 @@ static constexpr RowInfo ROWS[] = {
 #endif
 };
 
-/** Standby timer labels from TIMER_5S on; TIMER_OFF shows Off. */
-static constexpr const char *TIMER_LABELS[] = {
-    "5 s",   "10 s",  "15 s",  "20 s",   "25 s",   "30 s",   "1 min",  "2 min",
-    "3 min", "4 min", "5 min", "15 min", "30 min", "45 min", "1 hour",
+/** Standby timer labels, indexed by display_timer_t. */
+static constexpr UiText TIMER_LABELS[] = {
+    STR(off),        STR(timer5s),    STR(timer10s),   STR(timer15s),
+    STR(timer20s),   STR(timer25s),   STR(timer30s),   STR(timer1min),
+    STR(timer2min),  STR(timer3min),  STR(timer4min),  STR(timer5min),
+    STR(timer15min), STR(timer30min), STR(timer45min), STR(timer1hour),
 };
 
 void DisplayView::build()
 {
     static_assert(ARRAY_SIZE(ROWS) == RowCount, "a row has no label");
+    static_assert(ARRAY_SIZE(TIMER_LABELS) == TIMER_1H + 1,
+                  "a timer has no label");
 
     for (uint8_t i = 0; i < RowCount; i++)
         items_[i].label = ROWS[i].label;
@@ -130,9 +134,7 @@ void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
     const uint8_t v = curValue(row);
     if (row == RowTimer)
-        sniprintf(out, cap, "%s",
-                  ((v == TIMER_OFF) || (v > TIMER_1H)) ? STR(off).str() :
-                                                         TIMER_LABELS[v - 1u]);
+        sniprintf(out, cap, "%s", TIMER_LABELS[v].str());
     else if (row == RowBattery)
         sniprintf(out, cap, "%s", (v ? STR(icon) : STR(percent)).str());
 #ifdef CONFIG_PIX_FMT_RGB565
