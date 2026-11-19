@@ -158,10 +158,6 @@ endif
 openrtx_src += ['lib/minmea/minmea.c']
 openrtx_inc += ['lib/minmea/include']
 
-# QRCode, QR Code generation library
-openrtx_src += ['lib/QRCode/qrcode.c']
-openrtx_inc += ['lib/QRCode/include']
-
 # QDEC, a very simple, header only, quadrature decoding library
 openrtx_inc += ['lib/qdec/include']
 
@@ -1444,7 +1440,6 @@ gfx_text_test = executable('gfx_text_test',
 gfx_band_src = ['openrtx/src/core/graphics.c',
                 'openrtx/src/core/fonts/lv_font_bin.c',
                 'openrtx/src/core/fontData.c',
-                'lib/QRCode/qrcode.c',
                 'tests/unit/gfx_band.cpp']
 gfx_band_def = ['-UCONFIG_GFX_BAND_ROWS', '-DCONFIG_GFX_BAND_ROWS=16']
 gfx_band_test = executable('gfx_band_test',
