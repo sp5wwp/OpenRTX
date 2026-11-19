@@ -397,10 +397,7 @@ void VfoView::restore(UiMemory &m)
     Entry &n = *entry_;
     if (e.destination) {
         memcpy(n.dst, e.text[0], sizeof(n.dst));
-        n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
-                          TextInput::Mode::SingleLine, FONT_SIZE_8PT);
-        n.input.setMultiTap(MTAP_CALLSIGN);
-        n.input.resume(e.cursor[0], 0);
+        bindDst(e.cursor[0]);
         renderDstEdit();
         return;
     }
@@ -1017,11 +1014,8 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
 
 void VfoView::renderDstEdit()
 {
-    /* Compose "@W1[A]W" with the cursor character in brackets, straight into
-     * the channel-line name slot (no custom cursor rendering needed). The '@'
-     * marks it as an M17 destination address and stays pinned while the
-     * callsign body scrolls within the remaining width -- a leading/trailing
-     * ellipsis marks where it is truncated, so the cursor is always visible. */
+    /* The '@' stays pinned while the rest scrolls to keep the cursor in view,
+     * so a full-length destination keeps the channel line's font. */
     const fontSize_t font = chanName_.font();
     const uint16_t atW = gfx_getTextWidth(font, "@");
     const uint16_t boxW = chanName_.area().w;
@@ -1035,6 +1029,15 @@ void VfoView::renderDstEdit()
     chanName_.setText(nameCache_);
     chanIdx_.invalidate();
     chanName_.invalidate();
+}
+
+void VfoView::bindDst(uint16_t cursor)
+{
+    Entry &n = *entry_;
+    n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
+                      TextInput::Mode::SingleLine, FONT_SIZE_8PT);
+    n.input.setMultiTap(MTAP_CALLSIGN);
+    n.input.resume(cursor, 0);
 }
 
 void VfoView::announceDstChar()
@@ -1051,13 +1054,7 @@ void VfoView::beginDstEdit()
     Entry &n = *entry_;
     strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
     n.dst[sizeof(n.dst) - 1] = '\0';
-    n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
-                      TextInput::Mode::SingleLine, FONT_SIZE_8PT);
-    n.input.setMultiTap(MTAP_CALLSIGN);
-    n.input.begin();
-    /* The channel-name font stays at its display size: renderDstEdit() scrolls
-     * a cursor-visible window of the "@W1[A]W" string within the box instead of
-     * shrinking the whole field to make a full-length destination fit. */
+    bindDst(0);
     renderDstEdit();
     screen_.markAllDirty();
     announceDstChar();

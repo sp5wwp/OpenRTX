@@ -124,13 +124,37 @@ private:
     void composeChanLine(const state_t &s, char *idxOut, char *nameOut,
                          uint16_t nameSz); //< build the index + name slot text
     void m17DstLabel(char *out, uint16_t sz); //< "@<dest>" (or "@ALL")
-    NavIntent
-    onDstEditEvent(const Event &e); //< key handling while editing dest
-    void beginDstEdit();            //< open the destination editor
-    void endDstEdit(bool commit);   //< commit/cancel the destination
-    void
-    renderDstEdit(); //< write the bracket-cursor dest into the channel line
-    void announceDstChar(); //< speak the char under the cursor
+
+    /**
+     * Handle an event while the destination is edited.
+     *
+     * @param e: event.
+     * @return the navigation intent.
+     */
+    NavIntent onDstEditEvent(const Event &e);
+
+    /** Open the destination editor on the stored destination. */
+    void beginDstEdit();
+
+    /**
+     * Close the destination editor.
+     *
+     * @param commit: store the edited destination rather than drop it.
+     */
+    void endDstEdit(bool commit);
+
+    /**
+     * Bind the entry's field to its destination buffer.
+     *
+     * @param cursor: cursor position.
+     */
+    void bindDst(uint16_t cursor);
+
+    /** Show "@W1[A]W" with the bracketed cursor in the channel line. */
+    void renderDstEdit();
+
+    /** Speak the character under the cursor. */
+    void announceDstChar();
 
     /* Frequency keypad entry (mirrors the classic MAIN_VFO_INPUT screen), now on
      * the shared TextInput slot engine: two 7-slot numeric fields (RX then TX,
