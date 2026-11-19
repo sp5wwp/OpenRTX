@@ -27,17 +27,16 @@ struct ListPos {
 };
 
 /**
- * A vertical, single-selection list of rows (mockups 2-4).
+ * A vertical, single-selection list of rows.
  *
  * The whole list is one focusable Object owning the selected index and scroll
- * offset, so a menu of any length stays within the Screen focus ring and maps
- * to the rotary knob / arrow keys. Encoder steps and UP/DOWN move the selection
- * (wrapping) and scroll to keep it visible; ENTER/ESC are left for the owning
- * view (which reads selected()/item() to navigate or toggle). A list without a
- * selection scrolls by a row instead, stopping at either end. The selected row
- * is a solid blue fill with black text; rows are separated by thin dividers.
+ * offset, so a menu of any length stays within the Screen focus ring. The knob
+ * and UP/DOWN move the selection, wrapping, and scroll to keep it visible;
+ * ENTER and ESC are left to the owning view. A list without a selection
+ * scrolls by a row instead, stopping at either end. Rows are separated by thin
+ * dividers and the selected row is filled with the primary colour.
  *
- * The item table is borrowed, not copied, matching the no-heap discipline.
+ * The item table or model is borrowed, not copied.
  */
 class List : public Object
 {
@@ -48,28 +47,54 @@ public:
     /** Destructor. */
     ~List() = default;
 
-    /** Back the list with a borrowed static item array (small, fixed menus). */
+    /**
+     * Show a fixed table of rows, from the top.
+     *
+     * @param items: rows, kept alive by the caller.
+     * @param count: number of rows.
+     */
     void setItems(const ListItem *items, uint16_t count);
-    /** Back the list with an on-demand model (large / lazily-read lists). */
+
+    /**
+     * Show the rows of a model, read on demand, from the top.
+     *
+     * @param model: model, kept alive by the caller.
+     */
     void setModel(const ListModel *model);
-    /** Per-row vertical content inset and label/value gutter. Rows size
-     *  themselves to their content plus this inset, so a value row is taller
-     *  than a plain/checkbox row but every row keeps the same padding. */
-    void setContentPad(int16_t padY, int16_t gap = 2)
+
+    /**
+     * Set the vertical inset of each row's content; rows size themselves to
+     * their content plus this inset.
+     *
+     * @param padY: inset above and below, in pixels.
+     */
+    void setContentPad(int16_t padY)
     {
         padY_ = padY;
-        gap_ = gap;
     }
+
+    /**
+     * Set whether the list has a selection, or only scrolls.
+     *
+     * @param s: true for a selection.
+     */
     void setSelectable(bool s)
     {
         selectable_ = s;
     }
 
+    /** Get the selected row. */
     uint16_t selected() const
     {
         return selected_;
     }
-    /** Select row `i`; `announce` false keeps a background re-sync silent. */
+
+    /**
+     * Select a row and scroll it into view.
+     *
+     * @param i: row, clamped to the last one.
+     * @param announce: false keeps a background re-sync silent.
+     */
     void setSelected(uint16_t i, bool announce = true);
 
     /**
@@ -86,19 +111,51 @@ public:
      */
     void setPosition(const ListPos &p);
 
-    /** Mutable access to the selected item (e.g. to toggle a checkbox). */
+    /**
+     * Get the selected row of a fixed table, to change it in place.
+     *
+     * @return the row, or nullptr for a model.
+     */
     ListItem *selectedItem();
 
-    /** Speak the current row via voice prompts (no-op unless vpLevel >= vpLow).
-     * Called automatically on selection change; views call it on entry too. */
-    void announceSelection() const;
-
+    /**
+     * Move the selection, or the window of a list without one.
+     *
+     * @param e: event.
+     * @return true for a knob step or an UP/DOWN press.
+     */
     bool onEvent(const Event &e) override;
+
+    /**
+     * Paint the rows in the window and the scroll bar.
+     *
+     * @param d: drawing context.
+     */
     void draw(DrawCtx &d) override;
 
+    /**
+     * Paint a scroll bar at the right edge of an area: a track, with a thumb
+     * for the part shown.
+     *
+     * @param d: drawing context.
+     * @param area: area scrolled.
+     * @param offset: start of the part shown.
+     * @param shown: length of the part shown.
+     * @param total: total length, in the same unit.
+     */
+    static void drawScrollBar(DrawCtx &d, const Rect &area, int32_t offset,
+                              int32_t shown, int32_t total);
+
 private:
+    /** Pull the window to the selection, reading at most one window of rows. */
     void scrollToSelected();
-    void moveSelection(int dir);
+
+    /**
+     * Move the selection by a row, wrapping at either end.
+     *
+     * @param dir: +1 down, -1 up.
+     */
+    void moveSelection(int8_t dir);
 
     /**
      * Move the window of a list without a selection by a row, keeping the
@@ -106,7 +163,7 @@ private:
      *
      * @param dir: +1 down, -1 up.
      */
-    void scroll(int dir);
+    void scroll(int8_t dir);
 
     /**
      * Get the scroll offset that shows the last row at the bottom.
@@ -122,24 +179,52 @@ private:
      */
     bool plainRows() const;
 
+    /**
+     * Read a row from the table or the model.
+     *
+     * @param i: row.
+     * @param out: the row.
+     */
     void getItem(uint16_t i, ListItem &out) const;
+
+    /**
+     * Get the shape of a row.
+     *
+     * @param it: row.
+     * @return the row kind.
+     */
     static SettingRow::Kind kindOf(const ListItem &it);
+
+    /**
+     * Get the height of a row, without reading it for plain rows.
+     *
+     * @param i: row.
+     * @return the height in pixels.
+     */
     int16_t rowHeight(uint16_t i) const;
 
-    /** Effective row count from whichever backing (model or static array). */
+    /** Speak the selected row, when voice prompts are on. */
+    void announceSelection() const;
+
+    /** Get the number of rows of the table or the model. */
     uint16_t rows() const
     {
         return (model_ != nullptr) ? model_->rowCount() : count_;
     }
 
-    const ListItem *items_ = nullptr;
-    const ListModel *model_ = nullptr;
-    uint16_t count_ = 0;
-    uint16_t selected_ = 0;
-    uint16_t top_ = 0; //< index of the first visible row (scroll offset)
-    int16_t padY_ = 4; //< per-row vertical content inset
-    int16_t gap_ = 2;  //< label/value gutter in a value row
-    bool selectable_ = true;
+    /** Space between a row's label and its value line. */
+    static constexpr int16_t VALUE_GAP = 2;
+
+    /** Width of the scroll bar, and the shortest thumb. */
+    static constexpr uint16_t SCROLL_BAR_W = 2;
+
+    const ListItem *items_ = nullptr;  ///< Fixed table, or nullptr
+    const ListModel *model_ = nullptr; ///< Model, or nullptr
+    uint16_t count_ = 0;               ///< Rows of the fixed table
+    uint16_t selected_ = 0;            ///< Selected row
+    uint16_t top_ = 0;                 ///< First visible row
+    int16_t padY_ = 4;                 ///< Vertical inset of each row
+    bool selectable_ = true;           ///< The list has a selection
 };
 
 } // namespace ortxui

@@ -85,7 +85,7 @@ bool List::plainRows() const
 int16_t List::rowHeight(uint16_t i) const
 {
     SettingRow &row = Scratch::get<SettingRow>();
-    row.setPad(padY_, gap_);
+    row.setPad(padY_, VALUE_GAP);
     if (plainRows())
         return row.heightFor(SettingRow::Kind::Plain, UiText(), UiText(),
                              area_.w);
@@ -135,16 +135,17 @@ void List::setSelected(uint16_t i, bool announce)
         announceSelection();
 }
 
-void List::moveSelection(int dir)
+void List::moveSelection(int8_t dir)
 {
-    const int n = static_cast<int>(rows());
+    const int32_t n = rows();
     if (n == 0)
         return;
-    int idx = static_cast<int>(selected_) + ((dir >= 0) ? 1 : -1);
+
+    int32_t idx = selected_ + ((dir >= 0) ? 1 : -1);
     if (idx < 0)
-        idx = n - 1; /* wrap to the bottom */
+        idx = n - 1;
     else if (idx >= n)
-        idx = 0;     /* wrap to the top */
+        idx = 0;
 
     selected_ = static_cast<uint16_t>(idx);
     scrollToSelected();
@@ -152,7 +153,7 @@ void List::moveSelection(int dir)
     announceSelection();
 }
 
-void List::scroll(int dir)
+void List::scroll(int8_t dir)
 {
     const uint16_t last = maxTop();
     uint16_t top = top_;
@@ -188,24 +189,14 @@ uint16_t List::maxTop() const
 
 void List::announceSelection() const
 {
-    /* Speak the freshly-selected row (label, then value or checkbox state) when
-     * voice prompts are enabled — the one place that covers navigation in every
-     * list-backed view. Dormant at the default vpNone level. */
-    if (!selectable_ || (state.settings.vpLevel < vpLow))
-        return;
-
-    const uint16_t n = rows();
-    if (selected_ >= n)
+    /* Label, then value or checkbox state: the one place that speaks list
+     * navigation in every view. */
+    if (!selectable_ || (state.settings.vpLevel < vpLow)
+        || (selected_ >= rows()))
         return;
 
     ListItem it;
-    if (model_ != nullptr)
-        model_->rowAt(selected_, it);
-    else if (items_ != nullptr)
-        it = items_[selected_];
-    else
-        return;
-
+    getItem(selected_, it);
     if (it.label.empty())
         return;
 
@@ -221,7 +212,7 @@ void List::announceSelection() const
 
 bool List::onEvent(const Event &e)
 {
-    int dir = 0;
+    int8_t dir = 0;
     if (e.kind == EvKind::Encoder) {
         dir = e.encoder;
     } else if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
@@ -245,7 +236,7 @@ bool List::onEvent(const Event &e)
 void List::draw(DrawCtx &d)
 {
     const uint16_t n = rows();
-    if ((n == 0) || ((items_ == nullptr) && (model_ == nullptr)))
+    if (n == 0)
         return;
 
     /* Paint each visible row through the scratch SettingRow: bind it to the
@@ -255,7 +246,7 @@ void List::draw(DrawCtx &d)
     const bool plain = plainRows();
     const int16_t plainH = plain ? rowHeight(top_) : 0;
     SettingRow &scratchRow = Scratch::get<SettingRow>();
-    scratchRow.setPad(padY_, gap_);
+    scratchRow.setPad(padY_, VALUE_GAP);
 
     int16_t y = area_.y;
     uint16_t i = top_;
@@ -287,25 +278,25 @@ void List::draw(DrawCtx &d)
         scratchRow.paintTree(d);
     }
 
-    /* Scroll indicator when the list overflows the viewport (there is a row
-     * above the window or one that did not fit below). The scrolling lists are
-     * uniform-height, so a count-based thumb tracks the pixels exactly. */
-    const bool overflow = (top_ > 0) || (i < n);
-    if (overflow) {
-        const uint16_t vis = static_cast<uint16_t>(i - top_);
-        const int16_t barX = static_cast<int16_t>(area_.right() - 1);
-        const int trackH = static_cast<int>(area_.h);
-        int thumbH = (n > 0) ? trackH * vis / n : trackH;
-        if (thumbH < 2)
-            thumbH = 2;
-        const int16_t thumbY =
-            static_cast<int16_t>(area_.y + trackH * top_ / n);
+    /* The thumb is sized by rows, which is exact when they share a height. */
+    if ((top_ > 0) || (i < n))
+        drawScrollBar(d, area_, top_, i - top_, n);
+}
 
-        const Rect track = { barX, area_.y, 2, area_.h };
-        d.fillRect(track, Sem::Surface);
-        const Rect thumb = { barX, thumbY, 2, static_cast<uint16_t>(thumbH) };
-        d.fillRect(thumb, Sem::OnSurfaceMuted);
-    }
+void List::drawScrollBar(DrawCtx &d, const Rect &area, int32_t offset,
+                         int32_t shown, int32_t total)
+{
+    const int16_t x = static_cast<int16_t>(area.right() - 1);
+    const int32_t trackH = area.h;
+    int32_t thumbH = trackH * shown / total;
+    if (thumbH < SCROLL_BAR_W)
+        thumbH = SCROLL_BAR_W;
+    const int16_t thumbY =
+        static_cast<int16_t>(area.y + trackH * offset / total);
+
+    d.fillRect({ x, area.y, SCROLL_BAR_W, area.h }, Sem::Surface);
+    d.fillRect({ x, thumbY, SCROLL_BAR_W, static_cast<uint16_t>(thumbH) },
+               Sem::OnSurfaceMuted);
 }
 
 } // namespace ortxui
