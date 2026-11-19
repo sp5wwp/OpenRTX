@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_CODEPLUGVIEW_HPP
 #define ORTX_UI_CODEPLUGVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include "core/View.hpp"
 #include "layout/Flex.hpp"

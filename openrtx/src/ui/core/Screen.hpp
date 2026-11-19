@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_SCREEN_HPP
 #define ORTX_UI_SCREEN_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include "core/Object.hpp"
 
 namespace ortxui

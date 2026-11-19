@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_MESSAGEDETAILVIEW_HPP
 #define ORTX_UI_MESSAGEDETAILVIEW_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 #include <cstddef>
 #include "core/View.hpp"

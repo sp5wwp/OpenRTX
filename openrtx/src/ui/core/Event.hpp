@@ -7,6 +7,10 @@
 #ifndef ORTX_UI_EVENT_HPP
 #define ORTX_UI_EVENT_HPP
 
+#ifndef __cplusplus
+#error This header is C++ only!
+#endif
+
 #include <cstdint>
 
 namespace ortxui
