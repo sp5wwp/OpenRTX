@@ -52,6 +52,7 @@ typedef struct
     bool    showBatteryIcon;      // Battery display true: icon, false: percentage
     bool    gpsSetTime;           // Use GPS to ajust RTC time
     char    M17_meta_text[53];    // M17 Meta Text to send
+    int16_t tetraAfcOffset;       // TETRA frequency correction learned, Hz
 }
 __attribute__((packed)) settings_t;
 
@@ -81,6 +82,7 @@ static const settings_t default_settings =
     false,                        // Display battery icon
     false,                        // Update RTC with GPS
     "OpenRTX",                    // Default M17 meta text
+    0,                            // No TETRA frequency correction learned
 };
 
 #endif /* SETTINGS_H */
