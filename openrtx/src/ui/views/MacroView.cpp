@@ -105,10 +105,20 @@ void MacroView::build()
 
     screen_.addChild(&root_);
     root_.onLayout();
+    screen_.markAllDirty();
+}
+
+void MacroView::save() const
+{
+    uiMemory.macroTile = selected_;
+}
+
+void MacroView::restore()
+{
+    selected_ = uiMemory.macroTile;
 #if defined(CONFIG_UI_NO_KEYBOARD)
     tiles_.select(selected_);
 #endif
-    screen_.markAllDirty();
 }
 
 void MacroView::syncFromState(const state_t &s)

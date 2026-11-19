@@ -62,6 +62,12 @@ public:
         return screen_;
     }
 
+    /** Keep the tile the knob picked for the next time the menu opens. */
+    void save() const override;
+
+    /** Pick the tile the knob picked last time. */
+    void restore() override;
+
 private:
     /**
      * Run a macro action and speak its result.
