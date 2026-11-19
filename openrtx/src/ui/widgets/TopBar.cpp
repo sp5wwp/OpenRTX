@@ -76,10 +76,6 @@ TopBar::TopBar()
     setBasis(BAR_H);
 }
 
-TopBar::~TopBar()
-{
-}
-
 void TopBar::reset(const UiText &title)
 {
     title_ = title;

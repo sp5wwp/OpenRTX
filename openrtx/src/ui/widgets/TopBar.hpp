@@ -35,7 +35,7 @@ public:
     TopBar();
 
     /** Destructor. */
-    ~TopBar();
+    ~TopBar() = default;
 
     /**
      * Ready the bar for a new screen, as if freshly built: set the title and
