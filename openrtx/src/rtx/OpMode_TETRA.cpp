@@ -35,7 +35,7 @@ static struct tetra_tmo_rx tmo;
 
 /* Diagnostics and remote control (see TetraStatus.h) */
 static uint32_t crcBase; /* CRC passes of earlier tmo contexts */
-static uint32_t lastCrc;
+static uint32_t lastCrc; /* CRC passes the demodulator was told of */
 #ifdef CONFIG_TETRA_AFC
 /*
  * Automatic frequency correction: every AFC_PERIOD_MS, the mean carrier
@@ -58,14 +58,50 @@ static uint32_t lastCrc;
  * have the wrong sign
  */
 #define AFC_ERROR_MAX 35
-/* Nothing decoded this long: go back to no correction, and start again */
+/*
+ * Nothing decoded this long: the correction may be wrong for this signal
+ * (another cell, a jump). Go back to the stored one, or from the stored one
+ * to none, and start again.
+ */
 #define AFC_LOST_MS 8000
+/*
+ * Only with a signal this strong (dBm): a wrong correction leaves most of a
+ * strong signal in the receive filter, but a weak signal that does not
+ * decode is just weak, and moving the tuning only makes it worse
+ */
+#define AFC_LOST_RSSI -90
+/*
+ * The correction found is stored in the settings, so that a radio turned on
+ * with a signal too weak for the loop to steer (above AFC_ERROR_MAX) starts
+ * corrected; only moves of this much are stored, to spare the flash.
+ */
+#define AFC_STORE_STEP 200
 static int32_t afcOffset;
 static float afcSum;
 static uint32_t afcCount;
 static long long afcStart;
 static long long lastCrcTick;
 static int32_t afcApplied;
+static bool afcLoaded; /* Stored correction read, once per power on */
+
+static int32_t afcStored(void)
+{
+    return state.settings.tetraAfcOffset;
+}
+
+/**
+ * Store the correction in the settings when it has moved far enough; they
+ * are saved to flash a few seconds later (CONFIG_NVM_SAVE_ON_CHANGE).
+ */
+static void afcStore(void)
+{
+    int32_t delta = afcOffset - afcStored();
+    if (delta < AFC_STORE_STEP && delta > -AFC_STORE_STEP)
+        return;
+    pthread_mutex_lock(&state_mutex);
+    state.settings.tetraAfcOffset = (int16_t)afcOffset;
+    pthread_mutex_unlock(&state_mutex);
+}
 
 static bool afcEnabled(void)
 {
@@ -108,9 +144,14 @@ static void afcUpdate(void)
      * Lost for long, maybe because the correction is wrong for this signal
      * (another cell, a jump): from no correction it can be found again
      */
-    if ((now - lastCrcTick) > AFC_LOST_MS && afcOffset != 0) {
-        afcOffset = 0;
-        afcApply(0);
+    if ((now - lastCrcTick) > AFC_LOST_MS && rtx_getRssi() > AFC_LOST_RSSI) {
+        int32_t stored = afcStored();
+        int32_t next = (afcOffset != stored) ? stored : 0;
+        if (next == afcOffset)
+            return;
+        afcOffset = next;
+        afcApply(afcOffset);
+        lastCrcTick = now; /* Give it the time to decode */
         afcSum = 0;
         afcCount = 0;
         afcStart = now;
@@ -139,8 +180,9 @@ static void afcUpdate(void)
         next = -AFC_RANGE;
     afcOffset = (next / 10) * 10; /* The BK4819 tunes in 10 Hz steps */
     afcApply(afcOffset);
+    afcStore();
 }
-#endif                              /* CRC passes the demodulator was told of */
+#endif
 static volatile bool resetRequest;
 static volatile bool eqSeed = true; /* Start from CONFIG_TETRA_EQ_INIT */
 
@@ -196,6 +238,14 @@ void OpMode_TETRA::resync(bool overrun)
 void OpMode_TETRA::enable()
 {
 #ifdef CONFIG_TETRA_AFC
+    /* The stored correction, once per power on */
+    if (!afcLoaded) {
+        int32_t stored = afcStored();
+        if (stored > AFC_RANGE || stored < -AFC_RANGE)
+            stored = 0;
+        afcOffset = (stored / 10) * 10;
+        afcLoaded = true;
+    }
     /* Before receiving starts: no retune once it has settled */
     afcApply(afcEnabled() ? afcOffset : 0);
     afcSum = 0;
