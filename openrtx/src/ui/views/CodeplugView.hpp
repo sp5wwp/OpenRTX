@@ -50,6 +50,12 @@ public:
         return screen_;
     }
 
+    /** The list, whose position UiMemory keeps. */
+    List *list() override
+    {
+        return &list_;
+    }
+
     /** Get the number of rows: the fixed row, if any, and the entries. */
     uint16_t rowCount() const override;
 
