@@ -5,6 +5,7 @@
 # codeplug: channels.rtxc
 
 # Main-menu Banks browser: "All channels" entry plus the codeplug banks.
+rssi 0
 wait_stable 5000 3
 key ENTER
 wait_stable
@@ -16,9 +17,9 @@ screenshot_sync banks_list.bmp
 key DOWN
 wait_stable
 screenshot_sync banks_selected.bmp
-# ENTER enables the bank and loads its first channel, popping to the VFO.
-# Not asserted (post-load VFO S-meter is RSSI-timing-flaky); manually
-# verified to load 146.520 (2m Calling, first channel of the bank).
+# ENTER enables the bank and loads its first channel, popping to the VFO:
+# 2m Calling, 146.520. A strong signal keeps the S-meter steady.
 key ENTER
 wait_stable
+screenshot_sync banks_loaded.bmp
 quit
