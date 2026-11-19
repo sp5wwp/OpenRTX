@@ -197,6 +197,7 @@ target_sources(app
     openrtx/src/ui/views/M17View.cpp
     openrtx/src/ui/views/GpsSettingsView.cpp
     openrtx/src/ui/views/DefaultsView.cpp
+    openrtx/src/ui/views/CodeplugView.cpp
     openrtx/src/ui/views/ChannelsView.cpp
     openrtx/src/ui/views/ContactsView.cpp
     openrtx/src/ui/views/BanksView.cpp

@@ -8,62 +8,30 @@
 #define ORTX_UI_CHANNELSVIEW_HPP
 
 #include <cstdint>
-#include "core/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/Label.hpp"
-#include "widgets/TopBar.hpp"
-#include "widgets/List.hpp"
-#include "core/cps.h"
+#include "views/CodeplugView.hpp"
 
 namespace ortxui
 {
 
 /**
- * The main-menu Channels browser: a scrollable list of the codeplug's channel
- * names (read on entry via cps_readChannel). ENTER loads the selected channel
- * into state.channel, requests an rtx resync, and unwinds to the home screen;
- * ESC goes back. When the codeplug has no channels a centred "No channels"
- * line is shown instead of the list.
- *
- * Rows are read on demand through a ListModel (only the visible window hits
- * the codeplug), so there is no per-channel storage regardless of codeplug
- * size — just one scratch name buffer.
+ * The main-menu channel browser. ENTER loads the selected channel, leaves
+ * any bank and goes back to the home screen in memory mode.
  */
-class ChannelsView : public View, public ListModel
+class ChannelsView : public CodeplugView
 {
 public:
     /** Constructor. */
-    ChannelsView() = default;
+    ChannelsView();
 
     /** Destructor. */
     ~ChannelsView() = default;
 
-    void build() override;
-    void onShow() override;
-    NavIntent onEvent(const Event &e) override;
-
-    Screen &screen() override
-    {
-        return screen_;
-    }
-
-    /* ListModel: the channel names, read lazily from the codeplug. */
-    uint16_t rowCount() const override
-    {
-        return count_;
-    }
-    void rowAt(uint16_t index, ListItem &out) const override;
-
 private:
-    void reload();
+    /** Read a channel's name. */
+    int readName(uint16_t index, char *name) const override;
 
-    Screen screen_;
-    Flex root_;
-    List list_;
-    Label empty_;
-
-    uint16_t count_ = 0;
-    mutable char scratch_[CPS_STR_SIZE] = {};
+    /** Load the channel on the row. */
+    NavIntent pick(uint16_t row) override;
 };
 
 } // namespace ortxui

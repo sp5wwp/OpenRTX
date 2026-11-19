@@ -8,60 +8,26 @@
 #define ORTX_UI_CONTACTSVIEW_HPP
 
 #include <cstdint>
-#include "core/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/Label.hpp"
-#include "widgets/TopBar.hpp"
-#include "widgets/List.hpp"
-#include "core/cps.h"
+#include "views/CodeplugView.hpp"
 
 namespace ortxui
 {
 
 /**
- * The main-menu Contacts browser: a scrollable list of the codeplug's contact
- * names (read on entry via cps_readContact). A read-only viewer, mirroring the
- * classic Contacts menu — ENTER has no action, ESC goes back. When the codeplug
- * has no contacts a centred "No contacts" line is shown instead.
- *
- * Rows are read on demand through a ListModel (see ChannelsView), so contact
- * names are never all held in RAM.
+ * The main-menu contact browser, read only: ENTER does nothing.
  */
-class ContactsView : public View, public ListModel
+class ContactsView : public CodeplugView
 {
 public:
     /** Constructor. */
-    ContactsView() = default;
+    ContactsView();
 
     /** Destructor. */
     ~ContactsView() = default;
 
-    void build() override;
-    void onShow() override;
-    NavIntent onEvent(const Event &e) override;
-
-    Screen &screen() override
-    {
-        return screen_;
-    }
-
-    /* ListModel: the contact names, read lazily from the codeplug. */
-    uint16_t rowCount() const override
-    {
-        return count_;
-    }
-    void rowAt(uint16_t index, ListItem &out) const override;
-
 private:
-    void reload();
-
-    Screen screen_;
-    Flex root_;
-    List list_;
-    Label empty_;
-
-    uint16_t count_ = 0;
-    mutable char scratch_[CPS_STR_SIZE] = {};
+    /** Read a contact's name. */
+    int readName(uint16_t index, char *name) const override;
 };
 
 } // namespace ortxui

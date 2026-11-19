@@ -8,60 +8,31 @@
 #define ORTX_UI_BANKSVIEW_HPP
 
 #include <cstdint>
-#include "core/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/TopBar.hpp"
-#include "widgets/List.hpp"
-#include "core/cps.h"
+#include "views/CodeplugView.hpp"
 
 namespace ortxui
 {
 
 /**
- * The main-menu Banks browser: an "All channels" entry followed by the
- * codeplug's bank names (read on entry via cps_readBankHeader). ENTER on "All
- * channels" clears the active bank; ENTER on a bank enables it and loads its
- * first channel; either way it requests an rtx resync and unwinds to the VFO
- * home. ESC goes back. The list always has at least the "All channels" row, so
- * there is no empty state.
- *
- * Rows are read on demand through a ListModel (see ChannelsView): row 0 is a
- * fixed "All channels" entry, the rest are bank names read lazily.
+ * The main-menu bank browser: an "All channels" row, then the codeplug's
+ * banks. ENTER on "All channels" leaves the bank, on a bank enables it; both
+ * load the first channel and go back to the home screen in memory mode.
  */
-class BanksView : public View, public ListModel
+class BanksView : public CodeplugView
 {
 public:
     /** Constructor. */
-    BanksView() = default;
+    BanksView();
 
     /** Destructor. */
     ~BanksView() = default;
 
-    void build() override;
-    void onShow() override;
-    NavIntent onEvent(const Event &e) override;
-
-    Screen &screen() override
-    {
-        return screen_;
-    }
-
-    /* ListModel: "All channels" (row 0) + the bank names. */
-    uint16_t rowCount() const override
-    {
-        return (uint16_t)(bankCount_ + 1);
-    }
-    void rowAt(uint16_t index, ListItem &out) const override;
-
 private:
-    void reload();
+    /** Read a bank's name. */
+    int readName(uint16_t index, char *name) const override;
 
-    Screen screen_;
-    Flex root_;
-    List list_;
-
-    uint16_t bankCount_ = 0;
-    mutable char scratch_[CPS_STR_SIZE] = {};
+    /** Enable the bank on the row, or none, and load its first channel. */
+    NavIntent pick(uint16_t row) override;
 };
 
 } // namespace ortxui
