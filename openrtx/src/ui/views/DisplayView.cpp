@@ -128,9 +128,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
 void DisplayView::formatValue(uint8_t row, char *out, size_t cap)
 {
     const uint8_t v = curValue(row);
-    if (row == RowSquelch)
-        sniprintf(out, cap, "S%u", v);
-    else if (row == RowTimer)
+    if (row == RowTimer)
         sniprintf(out, cap, "%s",
                   ((v == TIMER_OFF) || (v > TIMER_1H)) ? STR(off).str() :
                                                          TIMER_LABELS[v - 1u]);
