@@ -87,13 +87,10 @@ void Object::addChild(Object *child)
     child->parent_ = this;
     child->nextSibling_ = nullptr;
 
-    if (lastChild_ == nullptr) {
-        firstChild_ = child;
-        lastChild_ = child;
-    } else {
-        lastChild_->nextSibling_ = child;
-        lastChild_ = child;
-    }
+    Object **link = &firstChild_;
+    while (*link != nullptr)
+        link = &(*link)->nextSibling_;
+    *link = child;
 }
 
 void Object::setFlag(ObjFlag f, bool on)

@@ -52,6 +52,13 @@ public:
     virtual bool onEvent(const Event &e);
 
     /* ---- Tree ---- */
+
+    /**
+     * Append a child, walking the siblings to the end: trees are built once
+     * per screen, so no last-child pointer is kept for it.
+     *
+     * @param child: object to append.
+     */
     void addChild(Object *child);
     Object *parent() const
     {
@@ -145,7 +152,6 @@ protected:
 
     Object *parent_ = nullptr;
     Object *firstChild_ = nullptr;
-    Object *lastChild_ = nullptr;
     Object *nextSibling_ = nullptr;
     Rect area_ = { 0, 0, 0, 0 };
     uint8_t flags_ = 0;
