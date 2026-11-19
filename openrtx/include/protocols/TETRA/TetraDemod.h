@@ -103,6 +103,7 @@ struct tetraDemod {
     float errFast;       /* The same over a few ms: fades, glitches */
     uint32_t badSymbols; /* Consecutive symbols with a high phase error */
     uint32_t holdLeft;   /* Symbols left without re-acquiring (okHold) */
+    uint32_t failedAcq;  /* Re-acquisitions since the last good block */
     uint32_t reacquired; /* Number of re-acquisitions */
     uint32_t slips;      /* Number of timing jumps followed */
 };

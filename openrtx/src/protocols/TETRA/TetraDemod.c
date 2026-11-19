@@ -52,6 +52,15 @@
 /* Follow a timing jump of 2 or more samples when its cost is this lower */
 #define SLIP_RATIO 0.5f
 #define POLARITY_WINDOW 16384
+/*
+ * After this many re-acquisitions without a good block decoded between
+ * them, start from scratch: the kept gain, carrier offset and clock rate
+ * are wrong (estimated on noise during a long loss of signal, or on the
+ * transient of a receiver that has just been turned on).
+ */
+#define FULL_RESET_AFTER 3
+/* Largest plausible sample clock offset: 200 ppm, in samples per symbol */
+#define RATE_MAX (200e-6f * SPS)
 
 /* Synchronisation training sequence y, 38 bits, first bit in bit 37 */
 static const uint64_t SYNC_SEQ = 0x30673A7067ULL;
@@ -141,7 +150,17 @@ void tetraDemod_init(struct tetraDemod *dm)
  */
 static void reacquire(struct tetraDemod *dm)
 {
-    dm->symbols = WARMUP_SYMBOLS + TETRA_DEMOD_EQ_TAPS;
+    if (++dm->failedAcq >= FULL_RESET_AFTER) {
+        /* From scratch: estimate gain and offset again, clock rate zero */
+        dm->failedAcq = 0;
+        dm->symbols = 0;
+        dm->sx = dm->sxx = dm->st = dm->sxt = 0;
+        dm->gain = 1.0f;
+        dm->offset = 0;
+        dm->rate = 0;
+    } else {
+        dm->symbols = WARMUP_SYMBOLS + TETRA_DEMOD_EQ_TAPS;
+    }
     dm->acquired = false;
     memset(dm->cost, 0, sizeof(dm->cost));
     memset(dm->energy, 0, sizeof(dm->energy));
@@ -403,7 +422,16 @@ static void timing(struct tetraDemod *dm)
         return;
     }
 
-    dm->rate += P.timingKi * vertex;
+    /*
+     * Clock rate: integrate only on a usable signal, within plausible
+     * bounds, or noise winds it up to values the loop cannot leave
+     */
+    if (dm->errFast < BAD_ERROR * BAD_ERROR)
+        dm->rate += P.timingKi * vertex;
+    if (dm->rate > RATE_MAX)
+        dm->rate = RATE_MAX;
+    else if (dm->rate < -RATE_MAX)
+        dm->rate = -RATE_MAX;
     float step = P.timingKp * vertex + dm->rate;
     advance(dm, step);
     dm->drift += step;
@@ -469,6 +497,7 @@ void tetraDemod_setEqualizer(struct tetraDemod *dm, const float *taps)
 
 void tetraDemod_signalOk(struct tetraDemod *dm)
 {
+    dm->failedAcq = 0;
     uint32_t hold = (uint32_t)(P.okHold * SYMBOL_RATE);
     if (P.okHold > 0 && hold > dm->holdLeft)
         dm->holdLeft = hold;
