@@ -149,6 +149,8 @@ target_sources(app
 
     openrtx/src/ui/ui_shim.cpp
     openrtx/src/ui/core/Object.cpp
+    openrtx/src/ui/core/Screen.cpp
+    openrtx/src/ui/core/Event.cpp
     openrtx/src/ui/core/UiText.cpp
     openrtx/src/ui/core/View.cpp
     openrtx/src/ui/core/Navigator.cpp

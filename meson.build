@@ -82,6 +82,8 @@ openrtx_inc = ['openrtx/include', 'platform', 'openrtx/src/ui']
 
 ui_src = ['openrtx/src/ui/ui_shim.cpp',
                'openrtx/src/ui/core/Object.cpp',
+               'openrtx/src/ui/core/Screen.cpp',
+               'openrtx/src/ui/core/Event.cpp',
                'openrtx/src/ui/core/UiText.cpp',
                'openrtx/src/ui/core/View.cpp',
                'openrtx/src/ui/core/SettingsListView.cpp',
