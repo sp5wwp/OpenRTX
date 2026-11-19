@@ -46,8 +46,11 @@ constexpr char CHARS_TEXT[] =
     " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     ".,?!-/@#'()&:;+*=";
 
+/** Character set of a callsign. */
 constexpr Charset CHARSET_CALLSIGN{ CHARS_CALLSIGN,
                                     sizeof(CHARS_CALLSIGN) - 1 };
+
+/** Character set of free text. */
 constexpr Charset CHARSET_TEXT{ CHARS_TEXT, sizeof(CHARS_TEXT) - 1 };
 
 /**

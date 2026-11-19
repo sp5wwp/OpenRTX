@@ -99,7 +99,7 @@ void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
     tapActive = false;
     tapKeyIdx = -1;
     enterDown = false;
-    /* Leave any prior slot-mode state behind so a reused widget accepts text. */
+    /* Drop any slot mask, so a reused field takes text. */
     slotMode = false;
     numSlots = 0;
     slotCursor = 0;
@@ -129,7 +129,7 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     for (; (mask[i] != '\0') && (i + 1 < capacity); i++) {
         if (mask[i] == '9') {
             if (numSlots >= MAX_SLOTS)
-                break; /* mask has more slots than we can track */
+                break;
             textBuf[i] = placeholderChar;
             slotPos[numSlots++] = i;
         } else {
@@ -149,8 +149,6 @@ int TextInput::slotToPos(uint16_t ordinal) const
 
 void TextInput::syncSlotCursor()
 {
-    /* Keep the render cursor on the active slot; when the cursor has run off the
-     * end (all slots filled) rest the bracket on the last slot. */
     uint16_t ord = slotCursor;
     if (ord >= numSlots)
         ord = (numSlots > 0) ? static_cast<uint16_t>(numSlots - 1) : 0;
@@ -177,8 +175,7 @@ void TextInput::setSlotDigit(uint16_t ordinal, int d)
     const int p = slotToPos(ordinal);
     if (p < 0)
         return;
-    /* Out-of-range digits fall back to the placeholder rather than wrapping to a
-     * wrong digit (e.g. 15 must not become '5'). */
+    /* An out-of-range digit clears the slot rather than wrapping. */
     textBuf[p] = ((d < 0) || (d > 9)) ? placeholderChar :
                                         static_cast<char>('0' + d);
 }
@@ -283,8 +280,6 @@ uint16_t TextInput::prevCell(uint16_t pos) const
 
 void TextInput::spliceCell(uint16_t pos, const char *enc, int n)
 {
-    /* Replace the cell at pos (its cellLen bytes) with the n bytes at enc,
-     * shifting the tail and adjusting len. No-op if it would not fit. */
     if ((textBuf == nullptr) || (pos > len))
         return;
     const uint16_t old = cellLen(pos);
@@ -305,20 +300,20 @@ void TextInput::cycle(int dir)
         return;
 
     /* The cycle is the character set plus a delete slot, reached from either
-     * end, so every radio can delete; a move or commit applies it. */
+     * end, so every radio can delete; a move or commit applies it. A
+     * multibyte cell starts the cycle afresh. */
     const int n = static_cast<int>(charset->len);
     const int total = n + 1;
     const uint16_t clen = cellLen(cursorPos);
     int idx = (textBuf[cursorPos] == DELETE_CELL) ? n :
               (clen == 1) ? charset->indexOf(textBuf[cursorPos]) :
-                            -1; /* multibyte cell: start fresh */
+                            -1;
     idx = ((idx + dir) % total + total) % total;
     const char rep = (idx == n) ? DELETE_CELL : charset->at(idx);
     if (clen == 1)
-        textBuf[cursorPos] = rep; /* fast path, no length change */
+        textBuf[cursorPos] = rep;
     else
-        spliceCell(cursorPos, &rep,
-                   1); /* collapse a multibyte cell to one byte */
+        spliceCell(cursorPos, &rep, 1);
 }
 
 void TextInput::deleteAt(uint16_t pos)
@@ -327,7 +322,7 @@ void TextInput::deleteAt(uint16_t pos)
         return;
     const uint16_t clen = cellLen(pos);
     memmove(textBuf + pos, textBuf + pos + clen,
-            static_cast<size_t>(len - pos - clen) + 1); /* incl NUL */
+            static_cast<size_t>(len - pos - clen) + 1); /* include NUL */
     len = static_cast<uint16_t>(len - clen);
     if (cursorPos > len)
         cursorPos = len;
@@ -351,7 +346,6 @@ void TextInput::moveCursor(int dir)
         return;
     commitPending();
     if (slotMode) {
-        /* Move over editable slots only; separators are skipped by slotToPos. */
         if ((dir < 0) && (slotCursor > 0))
             slotCursor--;
         else if ((dir > 0) && (slotCursor + 1 < numSlots))
@@ -359,8 +353,7 @@ void TextInput::moveCursor(int dir)
         syncSlotCursor();
         return;
     }
-    /* A move key applied while sitting on the ⌫ slot performs the delete
-     * (consuming the keypress) rather than moving. */
+    /* A move off the delete slot applies it instead of moving. */
     if ((cursorPos < len) && (textBuf[cursorPos] == DELETE_CELL)) {
         deleteAt(cursorPos);
         return;
@@ -384,8 +377,6 @@ void TextInput::moveCursor(int dir)
 
 void TextInput::putCodePoint(uint32_t cp)
 {
-    /* Replace the cell under the cursor and leave the cursor on it, as a typed
-     * character would. */
     if (textBuf == nullptr)
         return;
     char enc[3];
@@ -408,7 +399,7 @@ void TextInput::backspace()
         syncSlotCursor();
         return;
     }
-    /* On the ⌫ slot, '*' deletes that slot; otherwise it backspaces. */
+    /* On the delete slot, '*' deletes that slot; otherwise it backspaces. */
     if ((cursorPos < len) && (textBuf[cursorPos] == DELETE_CELL)) {
         deleteAt(cursorPos);
         return;
@@ -431,7 +422,7 @@ void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
         return;
     const char *str = tapTable->keys[keyIndex];
     if ((str == nullptr) || (str[0] == '\0'))
-        return; /* action / unused key — nothing to type */
+        return; /* the key types nothing */
 
     const size_t n = strlen(str);
     const bool cont = tapActive && (tapKeyIdx == static_cast<int8_t>(keyIndex))
@@ -440,13 +431,12 @@ void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
         /* Same key within the window: cycle the character in place. */
         tapSet = static_cast<uint8_t>((tapSet + 1) % n);
     } else {
-        /* The previous character is committed; advance to a fresh slot
-         * (moveCursor extends at the end) and overwrite it. */
+        /* Keep the previous character and type on the next cell. */
         if (tapActive)
             moveCursor(+1);
         tapSet = 0;
     }
-    textBuf[cursorPos] = str[tapSet]; /* set the character under the cursor */
+    textBuf[cursorPos] = str[tapSet];
     tapActive = true;
     tapKeyIdx = static_cast<int8_t>(keyIndex);
     tapTick = nowTick;
@@ -519,7 +509,7 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
     }
     if ((keys & (KEY_UP | KEY_DOWN)) != 0u) {
         if (slotMode)
-            return KeyResult::NotHandled; /* host owns UP/DOWN (e.g. field swap) */
+            return KeyResult::NotHandled; /* the host owns UP/DOWN */
         /* Without LEFT/RIGHT, UP/DOWN are what moves the cursor. */
         const int dir = ((keys & KEY_UP) != 0u) ? +1 : -1;
         if (kbdHasArrows())
@@ -549,7 +539,7 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
             return handleKey(e.keys & REPEAT_KEYS, nowTick);
 
         case EvKind::KeyLong:
-            /* The press that opened the editor is not this field's to commit. */
+            /* The press that opened the editor does not commit it. */
             if (knobOnly() && enterDown && ((e.keys & KEY_ENTER) != 0u))
                 return commit();
             return KeyResult::NotHandled;
@@ -579,7 +569,7 @@ void TextInput::stripTrailingSpaces()
 {
     if (textBuf == nullptr)
         return;
-    resolvePendingDelete(); /* a pending ⌫ at commit deletes its slot */
+    resolvePendingDelete();
     while ((len > 0) && (textBuf[len - 1] == ' '))
         textBuf[--len] = '\0';
     if (cursorPos > len)
@@ -621,9 +611,8 @@ void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
     if (gfx_getTextWidth(font, out) <= maxW)
         return;
 
-    /* Grow a [lo, hi) cell window outward from the cursor, alternately left and
-     * right, while the composed window (with its ellipses) still fits, so the
-     * cursor cell stays visible and the field scrolls with it. */
+    /* Grow a window of cells out from the cursor while it fits, so the
+     * cursor stays visible. */
     uint16_t lo = cursorPos;
     uint16_t hi = nextCell(lo);
     char cand[LINE_BUF];
@@ -671,7 +660,7 @@ static uint16_t lineEnd(const char *buf, uint16_t start, uint16_t len, int maxW,
     bool haveSpace = false;
     while (i < len) {
         if (spanWidth(buf, start, static_cast<uint16_t>(i + 1), font) > maxW) {
-            /* One glyph too wide: still advance by one to guarantee progress. */
+            /* A glyph wider than the line gets a line of its own. */
             if (i == start)
                 return static_cast<uint16_t>(start + 1);
             if (haveSpace)
@@ -779,9 +768,9 @@ void TextInput::draw(DrawCtx &d)
                 n = sizeof(tmp) - 1;
             memcpy(tmp, textBuf + pos, n);
             tmp[n] = '\0';
+            /* The cursor draws the delete slot. */
             for (uint16_t j = 0; j < n; j++)
-                if (tmp[j]
-                    == DELETE_CELL) /* the ⌫ slot is drawn by the cursor */
+                if (tmp[j] == DELETE_CELL)
                     tmp[j] = ' ';
             d.textInBox(lineBox, textFont, TEXT_ALIGN_LEFT, Sem::OnSurface,
                         tmp);

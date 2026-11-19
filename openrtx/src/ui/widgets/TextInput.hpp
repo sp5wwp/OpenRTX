@@ -21,12 +21,12 @@ namespace ortxui
 /**
  * A text field over a caller-owned buffer, edited in place.
  *
- * In text mode the character under the cursor is changed by cycling it through
- * a Charset or typed by multi-tap on a numeric keypad; the end of the cycle is a
- * delete slot, so every radio can delete. In slot mode the field is a fixed
- * mask of digit slots (frequency, offset, time). An inline editor shows it with
- * formatBracketed() or formatWindow(); a modal one draws it with draw(), which
- * wraps and scrolls a MultiLine field.
+ * In text mode the character under the cursor is changed by cycling it
+ * through a Charset or typed by multi-tap on a numeric keypad; the end of the
+ * cycle is a delete slot, so every radio can delete. In slot mode the field is
+ * a fixed mask of digit slots (frequency, offset, time). An inline editor
+ * shows it with formatBracketed() or formatWindow(); a modal one draws it with
+ * draw(), which wraps and scrolls a MultiLine field.
  */
 class TextInput : public Object
 {
@@ -156,13 +156,13 @@ public:
      */
     int slotDigit(uint16_t ordinal) const;
 
-    /** Number of slots. */
+    /** Get the number of slots. */
     uint16_t slotCount() const
     {
         return numSlots;
     }
 
-    /** Number of filled slots from the first one on. */
+    /** Get the number of filled slots from the first one on. */
     uint16_t filledSlots() const;
 
     /**
@@ -204,7 +204,7 @@ public:
      */
     void handlePrefilledKey(uint32_t keys, bool &pristine, long long nowTick);
 
-    /** Cursor position in the buffer. */
+    /** Get the cursor position in the buffer. */
     uint16_t cursor() const
     {
         return cursorPos;
@@ -291,7 +291,11 @@ private:
     /** End a multi-tap, so the next tap starts a new character. */
     void commitPending();
 
-    /** Finish the edit: end multi-tap and drop trailing blanks. */
+    /**
+     * Finish the edit: end multi-tap and drop trailing blanks.
+     *
+     * @return KeyResult::Committed.
+     */
     KeyResult commit();
 
     /**
@@ -325,7 +329,7 @@ private:
     /** Apply a delete slot under the cursor. */
     void resolvePendingDelete();
 
-    /** Put an editable blank in an empty field, so a cell is under the cursor. */
+    /** Put an editable blank in an empty field, so the cursor has a cell. */
     void seedBlank();
 
     /**

@@ -12,9 +12,7 @@ namespace ortxui
 
 Size Label::natural() const
 {
-    /* Reserve the full line height (ascent + descent), not just the ascent, so
-     * a layout that centres the label leaves room for descenders below the
-     * baseline instead of clipping them at the frame edge. */
+    /* The full line height, so a centred label keeps its descenders. */
     return { gfx_getTextWidth(textFont, labelText.str()),
              gfx_getFontLineHeight(textFont) };
 }

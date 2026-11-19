@@ -12,8 +12,7 @@
 namespace ortxui
 {
 
-/* Pickable code points: the Latin-1 supplement (accented letters + symbols),
- * matching the range baked into the custom icon/fallback font. */
+/* Pickable code points: the Latin-1 supplement the fonts carry. */
 static constexpr uint32_t FIRST_CP = 0xA1; ///< First pickable code point
 static constexpr uint32_t LAST_CP = 0xFF;  ///< Last pickable code point
 static constexpr uint16_t CELL_COUNT =

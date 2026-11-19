@@ -67,11 +67,12 @@ public:
         textFont = f;
     }
 
-    /** Font the text is drawn in. */
+    /** Get the font the text is drawn in. */
     fontSize_t font() const
     {
         return textFont;
     }
+
     /** Set the horizontal alignment in the box. */
     void setAlign(textAlign_t a)
     {
@@ -84,7 +85,7 @@ public:
         overflow = o;
     }
 
-    /** The text's width by the font's line height. */
+    /** Get the text's width by the font's line height. */
     Size natural() const override;
 
     /** Paint the text in the box. */

@@ -38,13 +38,13 @@ public:
         topRow = top;
     }
 
-    /** Selected cell. */
+    /** Get the selected cell. */
     uint16_t selected() const
     {
         return selectedCell;
     }
 
-    /** First visible row. */
+    /** Get the first visible row. */
     uint16_t top() const
     {
         return topRow;
@@ -57,10 +57,10 @@ public:
      */
     void move(int delta);
 
-    /** Code point of the selected cell. */
+    /** Get the code point of the selected cell. */
     uint32_t selectedCodePoint() const;
 
-    /** Cells in a row. */
+    /** Get the number of cells in a row. */
     uint16_t cols() const;
 
     /** Paint the visible rows, the selection highlighted. */

@@ -30,7 +30,7 @@ public:
     /** Destructor. */
     ~TextBlock() = default;
 
-    /** Point at new text, keeping the scroll position. */
+    /** Point at new text, borrowed, keeping the scroll position. */
     void setText(const char *t)
     {
         text = (t != nullptr) ? t : "";
@@ -48,7 +48,12 @@ public:
         color = c;
     }
 
-    /** Scroll by `lines` rows; returns false if already at that end. */
+    /**
+     * Scroll by whole lines.
+     *
+     * @param lines: lines to scroll, negative for up.
+     * @return false if already at that end.
+     */
     bool scroll(int lines);
 
     /** Show the first line. */
