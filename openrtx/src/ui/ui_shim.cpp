@@ -247,6 +247,50 @@ static bool isToneBurstKey(const kbd_msg_t &msg)
 }
 
 /**
+ * Check whether the home screen is shown with no menu or entry open on it.
+ *
+ * @return true if PTT may key up and F1 speaks the channel.
+ */
+static bool atHome()
+{
+    if (macroOpen || (nav.activeId() != ViewId::Vfo))
+        return false;
+
+    /* The slot holds the home screen while it tops the stack. */
+    const VfoView *vfo = static_cast<const VfoView *>(viewSlot.view());
+    return !vfo->freqEntryOpen();
+}
+
+/**
+ * Speak on F1: a press replays the last prompt, a long press speaks the
+ * channel summary on the home screen or the GPS status on the GPS screen.
+ *
+ * @param msg: F1 key event.
+ */
+static void speakF1(const kbd_msg_t &msg)
+{
+    if (msg.repeat)
+        return;
+
+    if (msg.long_press && atHome()) {
+        const uint16_t index = (state.tuner_mode == VFO) ?
+                                   0 :
+                                   (state.channel_index + 1);
+        vp_announceChannelSummary(&state.channel, index, state.bank, vpAllInfo);
+        return;
+    }
+
+#ifdef CONFIG_GPS
+    if (msg.long_press && (nav.activeId() == ViewId::Gps)) {
+        vp_announceGPSInfo(vpGPSAll);
+        return;
+    }
+#endif
+
+    vp_replayLastPrompt();
+}
+
+/**
  * Click a key press at the Beep voice level, where nothing else speaks it.
  *
  * @param msg: key event.
@@ -279,10 +323,8 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
     if (nav.overlay() == &volumeOverlay)
         nav.dismissOverlay();
 
-    /* F1 replays the last voice prompt, once however long it is held. */
     if (((msg.keys & KEY_F1) != 0u) && (state.settings.vpLevel > vpBeep)) {
-        if (!msg.repeat)
-            vp_replayLastPrompt();
+        speakF1(msg);
         return false;
     }
 
@@ -394,21 +436,6 @@ static void handleTick(long long now, bool *sync_rtx)
 }
 
 /**
- * Check whether the home screen is shown with no menu or entry open on it.
- *
- * @return true if PTT may key up.
- */
-static bool txAllowed()
-{
-    if (macroOpen || (nav.activeId() != ViewId::Vfo))
-        return false;
-
-    /* The slot holds the home screen while it tops the stack. */
-    const VfoView *vfo = static_cast<const VfoView *>(viewSlot.view());
-    return !vfo->freqEntryOpen();
-}
-
-/**
  * Allow transmitting only from the home screen, so a PTT press in a menu or
  * editor never keys up.
  *
@@ -416,7 +443,7 @@ static bool txAllowed()
  */
 static void updatePttGate(bool *sync_rtx)
 {
-    const bool disable = !txAllowed();
+    const bool disable = !atHome();
     if (disable != state.pttDisable) {
         state.pttDisable = disable;
         *sync_rtx = true;
