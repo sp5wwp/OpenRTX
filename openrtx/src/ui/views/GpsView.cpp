@@ -86,9 +86,8 @@ void GpsView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(gps));
-    setTopBar(&topBar_);
-    root_.addChild(&topBar_);
+    TopBar &bar = useTopBar(STR(gps));
+    root_.addChild(&bar);
 
     /* Body: compass on the left, the readout column on the right. */
     body_.setAxis(Axis::Row);

@@ -57,7 +57,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex body_;
     Compass compass_;
     Flex statsCol_;

@@ -27,10 +27,9 @@ void MessageComposeView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const int16_t topH = (sizeClass() == SizeClass::Regular) ? 16 : 12;
 
-    topBar_.init(uiMemory.draftReply ? STR(reply) : STR(newMessage));
-    topBar_.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
-    topBar_.onLayout();
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(uiMemory.draftReply ? STR(reply) : STR(newMessage));
+    bar.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
+    bar.onLayout();
 
     items_[ROW_TO].label = STR(to);
     items_[ROW_BODY].label = STR(message);
@@ -42,7 +41,7 @@ void MessageComposeView::build()
     list_.setItems(items_, ROW_COUNT);
     list_.setFlag(FLAG_FOCUSABLE, true);
 
-    screen_.addChild(&topBar_);
+    screen_.addChild(&bar);
     screen_.addChild(&list_);
     screen_.focusFirst();
     screen_.markAllDirty();
@@ -81,7 +80,7 @@ void MessageComposeView::announce()
 
     const ListItem *it = list_.selectedItem();
     vp_flush();
-    topBar_.title().announce(vp_getVoiceLevelQueueFlags());
+    topBar().title().announce(vp_getVoiceLevelQueueFlags());
     it->label.announce(vpqDefault);
     it->value.announce(vpqDefault);
     vp_play();

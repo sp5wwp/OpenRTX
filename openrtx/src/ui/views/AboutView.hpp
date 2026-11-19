@@ -44,7 +44,6 @@ public:
 private:
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex header_;
     Label brand_;
     Label version_;

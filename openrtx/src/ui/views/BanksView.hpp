@@ -52,7 +52,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     List list_;
 
     uint16_t bankCount_ = 0;

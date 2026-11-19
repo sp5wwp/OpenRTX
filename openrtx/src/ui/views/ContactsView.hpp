@@ -51,7 +51,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     List list_;
     Label empty_;
 

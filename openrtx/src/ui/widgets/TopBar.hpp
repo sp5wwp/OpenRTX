@@ -24,18 +24,26 @@ namespace ortxui
  * messages, on every screen. The right cluster shows the battery as EITHER a
  * percentage or an icon, per settings.showBatteryIcon. A left pad balances the
  * cluster so the centre lands near the true middle while long titles still fit.
- * init() sizes the bar for the active SizeClass; update() refreshes the live
- * clock/battery/lock from the state snapshot, change-gated.
+ * The constructor sizes the bar for the active SizeClass; reset() readies it
+ * for a new screen; update() refreshes the live clock/battery/lock from the
+ * state snapshot, change-gated.
  */
 class TopBar : public Flex
 {
 public:
+    /** Constructor. */
+    TopBar();
+
+    /** Destructor. */
+    ~TopBar();
+
     /**
-     * Build the bar.
+     * Ready the bar for a new screen, as if freshly built: set the title and
+     * forget what update() last showed, so it refreshes everything.
      *
      * @param title: page title; empty shows the clock instead.
      */
-    void init(const UiText &title);
+    void reset(const UiText &title);
 
     /**
      * Change the page title.

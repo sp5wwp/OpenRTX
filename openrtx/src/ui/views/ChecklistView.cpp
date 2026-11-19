@@ -25,8 +25,7 @@ void ChecklistView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(accessibility));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(accessibility));
 
     for (uint8_t i = 0; i < RowCount; i++) {
         items_[i].label = kLabels[i];
@@ -38,7 +37,7 @@ void ChecklistView::build()
     list_.setFlag(FLAG_FOCUSABLE, true);
     list_.setGrow(1);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&list_);
     screen_.addChild(&root_);
     root_.onLayout();

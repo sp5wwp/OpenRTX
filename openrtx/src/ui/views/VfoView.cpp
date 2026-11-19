@@ -179,8 +179,7 @@ void VfoView::build()
     root_.setAxis(Axis::Column);
 
     /* Shared top bar with a blank title (VFO shows only the status cluster). */
-    topBar_.init("");
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar("");
 
     /* Frequency hero. On the roomy screen it is a little taller than the text
      * needs so the mode stack breathes; on the tiny mono screen it is trimmed
@@ -236,7 +235,7 @@ void VfoView::build()
     meter_.setLabel("RX");
     spacer_.setGrow(1);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&hero_);
 
     if (regular) {

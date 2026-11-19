@@ -29,8 +29,7 @@ void MessageDetailView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(message));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(message));
 
     header_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     header_.setColor(Sem::Accent);
@@ -60,7 +59,7 @@ void MessageDetailView::build()
     footer_.addChild(&reply_);
     footer_.addChild(&position_);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&header_);
     root_.addChild(&body_);
     root_.addChild(&footer_);

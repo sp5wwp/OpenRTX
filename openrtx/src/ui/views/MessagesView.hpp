@@ -83,8 +83,6 @@ private:
     Screen screen_;
     /** Column: top bar over the list or the empty-state line. */
     Flex root_;
-    /** Title bar. */
-    TopBar topBar_;
     /** Message rows. */
     List list_;
     /** "No messages" line. */

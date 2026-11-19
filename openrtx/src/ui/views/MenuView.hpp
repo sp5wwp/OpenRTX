@@ -66,7 +66,6 @@ public:
 
 private:
     Screen screen_;
-    TopBar topBar_;
     List list_;
 
     const MenuRow *rows_ = nullptr; ///< Static row table

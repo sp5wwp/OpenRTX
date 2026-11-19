@@ -14,18 +14,33 @@
 namespace ortxui
 {
 
+/* One top bar serves every screen, since only one view exists at a time. */
+static TopBar sharedTopBar;
+
+TopBar &View::topBar()
+{
+    return sharedTopBar;
+}
+
+TopBar &View::useTopBar(const UiText &title)
+{
+    sharedTopBar.reset(title);
+    hasTopBar_ = true;
+    return sharedTopBar;
+}
+
 void View::syncFromState(const state_t &s)
 {
-    if (topBar_ != nullptr)
-        topBar_->update(s);
+    if (hasTopBar_)
+        sharedTopBar.update(s);
 }
 
 void View::announce()
 {
     /* Default: speak the screen's top-bar title on entry (titled screens get
      * this for free; List navigation is announced by the List). */
-    if (topBar_ != nullptr)
-        vpSay(topBar_->title());
+    if (hasTopBar_)
+        vpSay(sharedTopBar.title());
 }
 
 void View::vpSay(const UiText &text)

@@ -35,8 +35,7 @@ void MessagesView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(messages));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(messages));
 
     list_.setContentPad(1);
     list_.setFlag(FLAG_FOCUSABLE, true);
@@ -48,7 +47,7 @@ void MessagesView::build()
     empty_.setText(STR(noMessages));
     empty_.setGrow(1);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&list_);
     root_.addChild(&empty_);
     screen_.addChild(&root_);

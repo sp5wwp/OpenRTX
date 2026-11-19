@@ -88,8 +88,6 @@ private:
     Screen screen_;
     /** Column: top bar, header, body, footer. */
     Flex root_;
-    /** Title bar. */
-    TopBar topBar_;
     /** "sender > recipient" line. */
     Label header_;
     /** Scrollable message body. */

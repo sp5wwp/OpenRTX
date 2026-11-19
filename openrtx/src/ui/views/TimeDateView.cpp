@@ -36,8 +36,7 @@ void TimeDateView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(timeAndDate));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(timeAndDate));
 
     /* Centred date-over-time stack with a small hint below. */
     body_.setAxis(Axis::Column);
@@ -67,7 +66,7 @@ void TimeDateView::build()
     body_.addChild(&timeLabel_);
     body_.addChild(&hint_);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&body_);
     screen_.addChild(&root_);
     root_.onLayout();

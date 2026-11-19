@@ -42,7 +42,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex body_;
     Label prompt_;
     Label hint_;

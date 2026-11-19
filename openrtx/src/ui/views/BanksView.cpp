@@ -27,14 +27,13 @@ void BanksView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(banks));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(banks));
 
     list_.setContentPad(1);
     list_.setFlag(FLAG_FOCUSABLE, true);
     list_.setGrow(1);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&list_);
     screen_.addChild(&root_);
 

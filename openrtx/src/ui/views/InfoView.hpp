@@ -51,7 +51,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex rows_[RowCount];
     Label keys_[RowCount];
     Label vals_[RowCount];

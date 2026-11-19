@@ -54,7 +54,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     List list_;
 
     ListItem items_[RowCount] = {};

@@ -21,7 +21,7 @@ static constexpr const char *LEFT_GLYPHS[] = {
     SYMBOL_LOCK SYMBOL_ENVELOPE,
 };
 
-void TopBar::init(const UiText &title)
+TopBar::TopBar()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
     const int16_t barH = regular ? 16 : 12;
@@ -65,6 +65,24 @@ void TopBar::init(const UiText &title)
     addChild(&middle_);
     addChild(&pct_);
     addChild(&battery_);
+}
+
+TopBar::~TopBar()
+{
+}
+
+void TopBar::reset(const UiText &title)
+{
+    clockBuf_[0] = '\0';
+    pctBuf_[0] = '\0';
+    lastMinute_ = -1;
+    lastCharge_ = 0xFFu;
+    lastLocked_ = false;
+    lastUnread_ = false;
+    lastShowIcon_ = -1;
+    lock_.setText("");
+    pct_.setFlag(FLAG_HIDDEN, false);
+    battery_.setFlag(FLAG_HIDDEN, false);
 
     titleStr_ = title;
     hasTitle_ = !titleStr_.empty();

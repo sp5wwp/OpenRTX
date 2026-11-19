@@ -22,15 +22,14 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
                     (uint16_t)CONFIG_SCREEN_HEIGHT });
     root_.setAxis(Axis::Column);
 
-    bar_.init(title);
-    setTopBar(&bar_);
+    TopBar &bar = useTopBar(title);
 
     list_.setItems(items, count);
     list_.setContentPad(4);
     list_.setFlag(FLAG_FOCUSABLE, true);
     list_.setGrow(1);
 
-    root_.addChild(&bar_);
+    root_.addChild(&bar);
     root_.addChild(&list_);
     screen_.addChild(&root_);
     root_.onLayout();

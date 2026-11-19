@@ -29,9 +29,8 @@ void InfoView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(info));
-    setTopBar(&topBar_);
-    root_.addChild(&topBar_);
+    TopBar &bar = useTopBar(STR(info));
+    root_.addChild(&bar);
 
     for (uint8_t i = 0; i < RowCount; i++) {
         rows_[i].setAxis(Axis::Row);

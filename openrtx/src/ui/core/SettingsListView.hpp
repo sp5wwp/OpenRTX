@@ -140,7 +140,6 @@ protected:
 
     Screen screen_;
     Flex root_;
-    TopBar bar_;
     List list_;
     bool editing_ = false;
     uint8_t editRow_ = 0;

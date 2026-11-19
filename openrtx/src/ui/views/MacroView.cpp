@@ -61,9 +61,8 @@ void MacroView::build()
     root_.setAxis(Axis::Column);
 
     /* Shared top bar (clock/battery/lock), same as every other screen. */
-    topBar_.init(STR(macroMenu));
-    setTopBar(&topBar_);
-    root_.addChild(&topBar_);
+    TopBar &bar = useTopBar(STR(macroMenu));
+    root_.addChild(&bar);
 
     /* Labels mixing a key or a glyph with a word, composed in the current
      * language. */

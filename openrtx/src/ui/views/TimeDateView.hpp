@@ -49,7 +49,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex body_;
     Label dateLabel_;
     Label timeLabel_;

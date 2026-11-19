@@ -67,10 +67,9 @@ void MenuView::build()
     }
 
     /* Shared top bar (title + clock + battery). */
-    topBar_.init(title_);
-    topBar_.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
-    topBar_.onLayout();
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(title_);
+    bar.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
+    bar.onLayout();
 
     /* Scrollable list fills the space below the top bar (plain label rows). */
     list_.setArea({ 0, topH, (uint16_t)W, (uint16_t)(H - topH) });
@@ -78,7 +77,7 @@ void MenuView::build()
     list_.setModel(this);
     list_.setFlag(FLAG_FOCUSABLE, true);
 
-    screen_.addChild(&topBar_);
+    screen_.addChild(&bar);
     screen_.addChild(&list_);
     screen_.focusFirst();
     screen_.markAllDirty();

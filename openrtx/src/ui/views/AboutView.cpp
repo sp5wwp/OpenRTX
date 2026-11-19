@@ -26,8 +26,7 @@ void AboutView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(about));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(about));
 
     /* Brand + version block. */
     header_.setAxis(Axis::Column);
@@ -64,7 +63,7 @@ void AboutView::build()
     authors_.setGrow(1);
     authors_.setFlag(FLAG_FOCUSABLE, true);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&header_);
     root_.addChild(&authors_);
     screen_.addChild(&root_);

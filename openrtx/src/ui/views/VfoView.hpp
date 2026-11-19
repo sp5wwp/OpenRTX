@@ -99,7 +99,6 @@ private:
     Screen screen_;
 
     Flex root_;
-    TopBar topBar_;
     FreqHero hero_;
     Flex chanRow_; //< compact only: index + name + detail on one row
     Flex nameRow_; //< regular: full-width destination / name headline

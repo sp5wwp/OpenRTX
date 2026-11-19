@@ -21,8 +21,7 @@ void DefaultsView::build()
     root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
     root_.setAxis(Axis::Column);
 
-    topBar_.init(STR(defaultSettings));
-    setTopBar(&topBar_);
+    TopBar &bar = useTopBar(STR(defaultSettings));
 
     /* Centred prompt + hint stack (Label is single-line, so two of them). */
     body_.setAxis(Axis::Column);
@@ -46,7 +45,7 @@ void DefaultsView::build()
     body_.addChild(&prompt_);
     body_.addChild(&hint_);
 
-    root_.addChild(&topBar_);
+    root_.addChild(&bar);
     root_.addChild(&body_);
     screen_.addChild(&root_);
     root_.onLayout();

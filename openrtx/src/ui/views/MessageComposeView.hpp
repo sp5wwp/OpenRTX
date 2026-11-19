@@ -79,8 +79,6 @@ private:
 
     /** Widget-tree root. */
     Screen screen_;
-    /** Title bar: "New Message" or "Reply". */
-    TopBar topBar_;
     /** The To / Message / Send rows. */
     List list_;
     /** Row items, values borrowed from the draft. */

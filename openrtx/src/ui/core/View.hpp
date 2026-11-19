@@ -167,11 +167,22 @@ public:
     }
 
 protected:
-    /** Register the shared top bar so the base syncFromState() refreshes it. */
-    void setTopBar(TopBar *t)
-    {
-        topBar_ = t;
-    }
+    /**
+     * Take the shared top bar for this screen: set its title, make it repaint
+     * fully, and have the base syncFromState() refresh it. The view adds it to
+     * its widget tree like any child.
+     *
+     * @param title: page title; empty shows the clock instead.
+     * @return the top bar.
+     */
+    TopBar &useTopBar(const UiText &title);
+
+    /**
+     * Get the top bar shared by every screen.
+     *
+     * @return the top bar.
+     */
+    static TopBar &topBar();
 
     /** Ask ui_shim to reconfigure the radio from state.channel (see above). */
     void requestSyncRtx()
@@ -188,11 +199,10 @@ protected:
      */
     void vpSay(const UiText &text);
 
-    TopBar *topBar_ = nullptr;
-
 private:
     friend class ViewSlot;
 
+    bool hasTopBar_ = false;    ///< The screen shows the shared top bar
     bool syncRtx_ = false;
     ViewId id_ = ViewId::Count; ///< Screen this view was built as
 };

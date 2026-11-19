@@ -50,7 +50,6 @@ private:
 
     Screen screen_;
     Flex root_;
-    TopBar topBar_;
     Flex rows_[3];
     Flex tiles_[kTiles];
     Label keyLbl_[kTiles]; //< "N" + icon (static)
