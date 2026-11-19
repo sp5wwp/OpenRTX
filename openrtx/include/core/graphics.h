@@ -197,13 +197,15 @@ typedef enum {
 
 /**
  * Use a font from outside the firmware, e.g. a font pack, instead of the
- * built-in one. The data is borrowed and must stay valid while installed.
+ * built-in one. The data is borrowed and must stay valid while installed. The
+ * first font installed allocates the table of installed fonts on the heap.
  *
  * @param set: font set.
  * @param size: font size.
  * @param data: LVGL binary font, or NULL to restore the built-in font.
  * @param len: data length in bytes.
- * @return false, leaving the font unchanged, if the data is not a valid font.
+ * @return false, leaving the font unchanged, if the data is not a valid font
+ * or the table cannot be allocated.
  */
 bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
                        uint32_t len);

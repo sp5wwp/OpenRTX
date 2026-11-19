@@ -128,8 +128,10 @@ static const fontBlob_t *const builtinBlobs[FONT_SLOT_NUM] = {
     iconBlobs,     // FONT_SLOT_ICONS
 };
 
-/* Fonts installed with gfx_setFontSource(); a NULL start means built-in. */
-static fontBlob_t fontSources[FONT_SLOT_NUM][FONT_SIZE_NUM];
+/* Fonts installed with gfx_setFontSource(), a NULL start meaning built-in.
+ * The table is allocated when the first font is installed, so a firmware
+ * that installs none does not carry it. */
+static fontBlob_t (*fontSources)[FONT_SIZE_NUM] = NULL;
 
 /* What a decoded font is used for: drawing text, or as the icon fallback
  * layered onto the text font. */
@@ -198,10 +200,11 @@ static lvFont_t *load_font(fontSet_t set, fontSize_t size)
     lvFont_t *font = &g_fonts[role];
 
     if (g_font_key[role] != key) {
-        const fontBlob_t *src = &fontSources[slot][size];
-        if (src->start != NULL)
-            decode_blob(font, src);
-        if ((src->start == NULL) || !font->valid)
+        const bool installed = (fontSources != NULL)
+                            && (fontSources[slot][size].start != NULL);
+        if (installed)
+            decode_blob(font, &fontSources[slot][size]);
+        if (!installed || !font->valid)
             decode_blob(font, &builtinBlobs[slot][size]);
         g_font_key[role] = key;
     }
@@ -250,6 +253,16 @@ bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
         lvFont_t probe;
         lvFont_init(&probe, data, len);
         if (!probe.valid)
+            return false;
+    }
+
+    /* With no table, every font is already the built-in one. */
+    if ((fontSources == NULL) && (data == NULL))
+        return true;
+
+    if (fontSources == NULL) {
+        fontSources = calloc(FONT_SLOT_NUM, sizeof(*fontSources));
+        if (fontSources == NULL)
             return false;
     }
 
