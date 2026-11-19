@@ -4,14 +4,10 @@
 # variants: default smallscreen
 
 wait_stable 5000 3
-# Menu > Info: version, battery voltage and charge, RSSI
+# Menu > Info: battery voltage and charge, RSSI, heap, bands, hardware version
 key ENTER
 wait_stable
 key DOWN DOWN DOWN DOWN DOWN DOWN ENTER
 wait_stable
 screenshot_sync info_top.bmp
-# Scroll down: heap, bands, hardware version
-key DOWN DOWN DOWN DOWN
-wait_stable
-screenshot_sync info_scrolled.bmp
 quit
