@@ -41,6 +41,10 @@ static struct tetraDemod demod;
 static struct tetra_tmo_rx tmo;
 static int verbose;
 static unsigned nTraffic, nCalls, nSds;
+#define ERR_LOG_MAX 100000
+static unsigned short errLog[ERR_LOG_MAX];
+static unsigned nFrames, nBadFrames; /* Clear speech frames, CRC failed */
+static struct tetra_speech_ws speechWs;
 static int trace;
 static uint32_t crcTotal;
 
@@ -48,9 +52,17 @@ static void onEvent(void *user, const struct tetra_event *ev)
 {
     (void)user;
     switch (ev->type) {
-        case TETRA_EV_TRAFFIC:
+        case TETRA_EV_TRAFFIC: {
             nTraffic++;
+            const struct tetra_traffic *t = &ev->u.traffic;
+            if (!t->encrypted && t->circuit_type == 0) {
+                struct tetra_speech sp;
+                tetra_speech_decode(&speechWs, t, &sp);
+                nFrames += 2;
+                nBadFrames += sp.bfi[0] + sp.bfi[1];
+            }
             break;
+        }
         case TETRA_EV_CALL:
             nCalls++;
             break;
@@ -90,6 +102,8 @@ static bool setParam(const char *arg)
         { "fitHold", &tetraDemodParams.fitHold },
         { "acqEnergy", &tetraDemodParams.acqEnergy },
         { "okHold", &tetraDemodParams.okHold },
+        { "ctxMu", &tetraDemodParams.ctxMu },
+        { "ctxSpan", &tetraDemodParams.ctxSpan },
     };
     const char *eq = strchr(arg, '=');
     if (eq == NULL)
@@ -200,6 +214,8 @@ int main(int argc, char **argv)
         if (samples > 48000) {
             errSum += tetraDemod_phaseError(&demod);
             errN++;
+            if (errN <= ERR_LOG_MAX)
+                errLog[errN - 1] = tetraDemod_phaseError(&demod);
         }
         if (tetra_tmo_locked(&tmo))
             syncBlocks++;
@@ -214,14 +230,23 @@ int main(int argc, char **argv)
                    demod.eq[5]);
     }
     crcTotal += tetra_tmo_crc_ok(&tmo);
+    /* Steady state: mean phase error over the second half of the run */
+    unsigned logged = errN < ERR_LOG_MAX ? errN : ERR_LOG_MAX;
+    double errLate = 0;
+    for (unsigned i = logged / 2; i < logged; i++)
+        errLate += errLog[i];
+    if (logged > 1)
+        errLate /= logged - logged / 2;
     double secs = samples / 48000.0;
     printf("secs %.1f crc %u crc/s %.1f sync %.0f%% err %.1f%% "
            "reacq %u slips %u inits %u realign %u cfo %d clk %d "
-           "traffic %u calls %u sds %u eq %.3f %.3f %.3f biasHz %.0f\n",
+           "traffic %u calls %u sds %u eq %.3f %.3f %.3f biasHz %.0f "
+           "frames %u bad %u errLate %.2f%%\n",
            secs, crcTotal, crcTotal / secs, 100.0 * syncBlocks / blocks,
            errN ? errSum / errN : 0, demod.reacquired, demod.slips, inits,
            tetra_tmo_realigned(&tmo, NULL), tetraDemod_carrierOffset(&demod),
            tetraDemod_clockOffset(&demod), nTraffic, nCalls, nSds, demod.eq[3],
-           demod.eq[4], demod.eq[5], demod.eqBias * 18000 / (2 * 3.14159265));
+           demod.eq[4], demod.eq[5], demod.eqBias * 18000 / (2 * 3.14159265),
+           nFrames, nBadFrames, errLate);
     return 0;
 }
