@@ -16,16 +16,19 @@
 namespace ortxui
 {
 
-namespace
-{
-
 /* KEY_0..KEY_9 occupy bits 0..9, so a set digit bit's position is its value. */
-constexpr uint32_t kDigitMask = 0x03FFu;
+static constexpr uint32_t kDigitMask = 0x03FFu;
 
-/* Format a frequency in Hz as a compact "N.NN kHz/MHz" (trailing zeros
+/**
+ * Format a frequency in Hz as a compact "N.NN kHz/MHz" (trailing zeros
  * stripped), e.g. 600000 -> "600 kHz", 6250 -> "6.25 kHz", 5000000 -> "5 MHz".
- * Sub-kHz values fall back to "N Hz". */
-void formatFreq(uint32_t hz, char *buf, size_t size)
+ * Sub-kHz values fall back to "N Hz".
+ *
+ * @param hz: frequency in Hz.
+ * @param buf: output buffer.
+ * @param size: output buffer size.
+ */
+static void formatFreq(uint32_t hz, char *buf, size_t size)
 {
     uint32_t div;
     int width;
@@ -58,9 +61,14 @@ void formatFreq(uint32_t hz, char *buf, size_t size)
     sniprintf(buf, size, "%s %cHz", tmp, prefix);
 }
 
-/* Lay a decimal value into a slot field left-aligned, so it reads back as that
- * integer via its filled prefix (filled slot count = number of digits). */
-void setSlotsDecimal(TextInput &f, uint32_t val)
+/**
+ * Lay a decimal value into a slot field left-aligned, so it reads back as that
+ * integer via its filled prefix (filled slot count = number of digits).
+ *
+ * @param f: slot field.
+ * @param val: value.
+ */
+static void setSlotsDecimal(TextInput &f, uint32_t val)
 {
     char tmp[12];
     const int n = sniprintf(tmp, sizeof(tmp), "%u", (unsigned)val);
@@ -71,8 +79,6 @@ void setSlotsDecimal(TextInput &f, uint32_t val)
         f.setSlotDigit(i, tmp[i] - '0');
     f.setCursorSlot(i);
 }
-
-} // namespace
 
 void RadioView::build()
 {

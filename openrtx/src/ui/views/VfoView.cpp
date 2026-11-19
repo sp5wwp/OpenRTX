@@ -30,19 +30,16 @@
 namespace ortxui
 {
 
-namespace
-{
-
 /* Slot mask for keypad frequency entry: 7 editable digits, no separators
  * (FreqHero composes the MHz.kHz layout). Slot 0 = 100 MHz .. slot 6 = 100 Hz. */
-constexpr char kFreqMask[] = "9999999";
+static constexpr char kFreqMask[] = "9999999";
 
 /* Slots of a frequency field, and what an empty one shows. */
-constexpr uint16_t kFreqSlots = sizeof(kFreqMask) - 1;
-constexpr char kPlaceholder = '-';
+static constexpr uint16_t kFreqSlots = sizeof(kFreqMask) - 1;
+static constexpr char kPlaceholder = '-';
 
 /* How long an out-of-band entry error stays on screen before it self-clears. */
-constexpr long long kInputErrorMs = 1500;
+static constexpr long long kInputErrorMs = 1500;
 
 /* The TX power meter is a dB (log) scale relative to the radio's maximum
  * output. There is no per-device max-power field yet (hwInfo_t only carries
@@ -50,10 +47,16 @@ constexpr long long kInputErrorMs = 1500;
  * radio; when a hwInfo max-power field lands, read it here instead. The meter
  * empties kPowerSpanDb below the max, so full power fills every dot and each
  * halving of power (~3 dB) drops a few dots. */
-constexpr uint32_t kMaxPowerMw = 5000;
-constexpr float kPowerSpanDb = 10.0f;
+static constexpr uint32_t kMaxPowerMw = 5000;
+static constexpr float kPowerSpanDb = 10.0f;
 
-float clampFrac(float f)
+/**
+ * Clamp a fraction to [0, 1].
+ *
+ * @param f: fraction.
+ * @return the clamped fraction.
+ */
+static float clampFrac(float f)
 {
     if (f < 0.0f)
         return 0.0f;
@@ -62,9 +65,14 @@ float clampFrac(float f)
     return f;
 }
 
-/* Meter fill fraction [0,1] for a TX power on the dB scale. Any nonzero power
- * shows at least a sliver (you are transmitting something). */
-float powerToFrac(uint32_t mw)
+/**
+ * Get the meter fill fraction for a TX power on the dB scale. Any nonzero
+ * power shows at least a sliver (you are transmitting something).
+ *
+ * @param mw: power in mW.
+ * @return the fraction, [0, 1].
+ */
+static float powerToFrac(uint32_t mw)
 {
     if (mw == 0u)
         return 0.0f;
@@ -74,11 +82,17 @@ float powerToFrac(uint32_t mw)
     return clampFrac(1.0f + db / kPowerSpanDb);
 }
 
-/* Meter fill fraction [0,1] for an RSSI, a continuous mirror of rssiToSlevel()
- * normalised to S11 (the meter's full scale, matching the classic S-meter). By
- * mapping in the dB domain the bar keeps full resolution instead of snapping to
- * whole S-points, so the squelch mark (fed the same way) lands precisely. */
-float rssiToFrac(float rssi)
+/**
+ * Get the meter fill fraction for an RSSI, a continuous mirror of
+ * rssiToSlevel() normalised to S11 (the meter's full scale, matching the
+ * classic S-meter). By mapping in the dB domain the bar keeps full resolution
+ * instead of snapping to whole S-points, so the squelch mark (fed the same
+ * way) lands precisely.
+ *
+ * @param rssi: RSSI in dBm.
+ * @return the fraction, [0, 1].
+ */
+static float rssiToFrac(float rssi)
 {
     /* S1..S9 rise 6 dB/point (-121..-73), S9..S11 rise 10 dB/point (-73..-53). */
     float s;
@@ -93,9 +107,13 @@ float rssiToFrac(float rssi)
     return clampFrac(s / 11.0f);
 }
 
-/* Return the 0-based digit for a bare number key (KEY_0..KEY_9 are bits 0..9),
- * or -1 if the mask holds no digit key. */
-int digitFromKeys(uint32_t keys)
+/**
+ * Get the digit of a bare number key (KEY_0..KEY_9 are bits 0..9).
+ *
+ * @param keys: keyboard bitmask.
+ * @return the lowest digit pressed, -1 for none.
+ */
+static int digitFromKeys(uint32_t keys)
 {
     const uint32_t digits = keys & 0x3FFu;
     if (digits == 0u)
@@ -103,9 +121,15 @@ int digitFromKeys(uint32_t keys)
     return __builtin_ctz(digits);
 }
 
-/* Place value of slot ordinal `o` in an N-slot field: the last slot is 100 Hz,
- * each earlier slot ten times larger (slot 0 of 7 = 100 MHz). */
-freq_t slotCoeff(uint16_t o, uint16_t n)
+/**
+ * Get the place value of a slot in a frequency field: the last slot is 100 Hz,
+ * each earlier slot ten times larger (slot 0 of 7 = 100 MHz).
+ *
+ * @param o: slot ordinal.
+ * @param n: slots in the field.
+ * @return the place value in Hz.
+ */
+static freq_t slotCoeff(uint16_t o, uint16_t n)
 {
     freq_t c = 100;
     for (uint16_t i = 0; i + 1 + o < n; i++)
@@ -113,16 +137,27 @@ freq_t slotCoeff(uint16_t o, uint16_t n)
     return c;
 }
 
-/* Digit in slot `o` of a field's buffer, or -1 if the slot is empty. The mask
- * has no separators, so slot `o` is character `o`. */
-int slotDigit(const char *digits, uint16_t o)
+/**
+ * Get the digit in a slot of a field's buffer. The mask has no separators, so
+ * slot `o` is character `o`.
+ *
+ * @param digits: field buffer.
+ * @param o: slot ordinal.
+ * @return the digit, -1 if the slot is empty.
+ */
+static int slotDigit(const char *digits, uint16_t o)
 {
     return (digits[o] != kPlaceholder) ? (digits[o] - '0') : -1;
 }
 
-/* Read a slot field back as a frequency in Hz. Un-entered (placeholder) slots
- * contribute 0, so a partial entry keeps its automatic trailing zeros. */
-freq_t freqFromSlots(const char *digits)
+/**
+ * Read a slot field back as a frequency. Un-entered (placeholder) slots
+ * contribute 0, so a partial entry keeps its automatic trailing zeros.
+ *
+ * @param digits: field buffer.
+ * @return the frequency in Hz.
+ */
+static freq_t freqFromSlots(const char *digits)
 {
     freq_t v = 0;
     for (uint16_t o = 0; o < kFreqSlots; o++) {
@@ -133,18 +168,29 @@ freq_t freqFromSlots(const char *digits)
     return v;
 }
 
-/* Fill a slot field from a frequency, snapping to the field's 100 Hz grid. */
-void slotsFromFreq(char *digits, freq_t hz)
+/**
+ * Fill a slot field from a frequency, snapping to the field's 100 Hz grid.
+ *
+ * @param digits: field buffer.
+ * @param hz: frequency in Hz.
+ */
+static void slotsFromFreq(char *digits, freq_t hz)
 {
     for (uint16_t o = 0; o < kFreqSlots; o++)
         digits[o] =
             static_cast<char>('0' + (hz / slotCoeff(o, kFreqSlots)) % 10);
 }
 
-/* Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
+/**
+ * Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
  * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with '-' for un-entered
- * slots so the operator sees exactly how many digits remain. */
-void composeEntry(const char *digits, char *main, char *sub)
+ * slots so the operator sees exactly how many digits remain.
+ *
+ * @param digits: field buffer.
+ * @param main: main text output, 8 bytes.
+ * @param sub: sub text output, 3 bytes.
+ */
+static void composeEntry(const char *digits, char *main, char *sub)
 {
     auto sc = [&](uint16_t o) -> char {
         const int d = slotDigit(digits, o);
@@ -165,9 +211,14 @@ void composeEntry(const char *digits, char *main, char *sub)
     sub[2] = '\0';
 }
 
-/* True if a frequency falls inside one of the radio's supported bands
- * (ported from the classic _ui_freq_check_limits). */
-bool freqInBand(freq_t freq)
+/**
+ * Check whether a frequency falls inside one of the radio's supported bands
+ * (ported from the classic _ui_freq_check_limits).
+ *
+ * @param freq: frequency in Hz.
+ * @return true if in band.
+ */
+static bool freqInBand(freq_t freq)
 {
     const hwInfo_t *hw = platform_getHwInfo();
     if (hw->vhf_band && (freq >= (freq_t)hw->vhf_minFreq * 1000000u)
@@ -178,8 +229,6 @@ bool freqInBand(freq_t freq)
         return true;
     return false;
 }
-
-} // namespace
 
 VfoView::VfoView()
 {

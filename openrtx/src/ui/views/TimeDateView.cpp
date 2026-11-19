@@ -16,11 +16,8 @@
 namespace ortxui
 {
 
-namespace
-{
 /* KEY_0..KEY_9 occupy bits 0..9, so a set digit bit's position is its value. */
-constexpr uint32_t kDigitMask = 0x03FFu;
-} // namespace
+static constexpr uint32_t kDigitMask = 0x03FFu;
 
 void TimeDateView::build()
 {

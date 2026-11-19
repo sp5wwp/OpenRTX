@@ -15,21 +15,30 @@
 namespace ortxui
 {
 
-namespace
-{
 /* Pickable code points: the Latin-1 supplement (accented letters + symbols),
  * matching the range baked into the custom icon/fallback font. */
-constexpr uint32_t kFirst = 0xA1;
-constexpr uint32_t kLast = 0xFF;
-constexpr uint16_t kCount = static_cast<uint16_t>(kLast - kFirst + 1);
+static constexpr uint32_t kFirst = 0xA1;
+static constexpr uint32_t kLast = 0xFF;
+static constexpr uint16_t kCount = static_cast<uint16_t>(kLast - kFirst + 1);
 
-uint32_t codePointAt(uint16_t i)
+/**
+ * Get the code point of a grid cell.
+ *
+ * @param i: cell index.
+ * @return the code point.
+ */
+static uint32_t codePointAt(uint16_t i)
 {
     return kFirst + i;
 }
 
-/* Encode a BMP code point to a NUL-terminated UTF-8 string in `out` (>=5). */
-void utf8(uint32_t cp, char *out)
+/**
+ * Encode a BMP code point to a NUL-terminated UTF-8 string.
+ *
+ * @param cp: code point.
+ * @param out: output, at least 5 bytes.
+ */
+static void utf8(uint32_t cp, char *out)
 {
     if (cp < 0x80u) {
         out[0] = static_cast<char>(cp);
@@ -46,11 +55,15 @@ void utf8(uint32_t cp, char *out)
     }
 }
 
-int16_t cellH()
+/**
+ * Get the height of a grid cell for the screen size.
+ *
+ * @return the height in pixels.
+ */
+static int16_t cellH()
 {
     return (sizeClass() == SizeClass::Regular) ? 20 : 14;
 }
-} // namespace
 
 uint16_t PickerGrid::cols() const
 {

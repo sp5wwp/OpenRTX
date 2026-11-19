@@ -12,12 +12,9 @@
 namespace ortxui
 {
 
-namespace
-{
-constexpr int16_t kPad = 3;   //< outer gutter
-constexpr int16_t kGap = 5;   //< gap around the label / readout
-constexpr uint16_t kBarH = 8; //< track thickness
-} // namespace
+static constexpr int16_t kPad = 3;   ///< Outer gutter
+static constexpr int16_t kGap = 5;   ///< Gap around the label / readout
+static constexpr uint16_t kBarH = 8; ///< Track thickness
 
 Size BarRow::natural() const
 {

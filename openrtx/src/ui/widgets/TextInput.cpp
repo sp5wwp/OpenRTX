@@ -15,26 +15,30 @@
 namespace ortxui
 {
 
-namespace
-{
 /* Longest wrapped line we measure/copy at once (a screen row never approaches
  * this many glyphs). */
-constexpr uint16_t kLineBuf = 128;
+static constexpr uint16_t kLineBuf = 128;
 
 /* Multi-tap window: a same-key press within this many ms cycles the character
  * in place; longer commits it. Matches the classic input_longPressTimeout. */
-constexpr long long kMultiTapMs = 700;
+static constexpr long long kMultiTapMs = 700;
 
 /* Sentinel stored in the buffer when the cursor character is cycled to the
  * "delete" slot in the wheel. It only ever exists at the cursor (transient) and
  * is resolved into an actual deletion on the next move / commit; it is rendered
  * as the ⌫ glyph. */
-constexpr char kDelete = 0x7F;
-constexpr char kDeleteGlyph[] = SYMBOL_BACKSPACE;
+static constexpr char kDelete = 0x7F;
+static constexpr char kDeleteGlyph[] = SYMBOL_BACKSPACE;
 
-/* Minimal UTF-8 encoder (BMP) for insert(); built-in charsets are ASCII so the
- * one-byte path is what runs today. Returns the byte count. */
-int utf8Encode(uint32_t cp, char out[4])
+/**
+ * Minimal UTF-8 encoder (BMP) for insert(); built-in charsets are ASCII so the
+ * one-byte path is what runs today.
+ *
+ * @param cp: code point.
+ * @param out: output bytes.
+ * @return the byte count.
+ */
+static int utf8Encode(uint32_t cp, char out[4])
 {
     if (cp < 0x80u) {
         out[0] = static_cast<char>(cp);
@@ -51,9 +55,17 @@ int utf8Encode(uint32_t cp, char out[4])
     return 3;
 }
 
-/* Pixel width of buf[start, end) at the given font. */
-uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
-                   fontSize_t font)
+/**
+ * Measure a span of a buffer.
+ *
+ * @param buf: text.
+ * @param start: first byte of the span.
+ * @param end: byte after the span.
+ * @param font: font.
+ * @return the pixel width of buf[start, end).
+ */
+static uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
+                          fontSize_t font)
 {
     char tmp[kLineBuf];
     uint16_t n = static_cast<uint16_t>(end - start);
@@ -63,7 +75,6 @@ uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
     tmp[n] = '\0';
     return gfx_getTextWidth(font, tmp);
 }
-} // namespace
 
 void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
                           CursorStyle cursor, fontSize_t font)

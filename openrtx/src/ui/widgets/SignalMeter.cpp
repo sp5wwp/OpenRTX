@@ -13,18 +13,22 @@
 namespace ortxui
 {
 
-namespace
-{
-constexpr int16_t kPad = 3;                  //< outer gutter
-constexpr int16_t kGap = 5;                  //< gap around the label / readout
-constexpr uint16_t kBarH = 7;                //< preferred bar thickness
-const fontSize_t kFont = FONT_SIZE_6PT;      //< label / readout
-const fontSize_t kScaleFont = FONT_SIZE_5PT; //< S-scale numbers
+static constexpr int16_t kPad = 3;   ///< Outer gutter
+static constexpr int16_t kGap = 5;   ///< Gap around the label / readout
+static constexpr uint16_t kBarH = 7; ///< Preferred bar thickness
+static const fontSize_t kFont = FONT_SIZE_6PT;      ///< Label / readout
+static const fontSize_t kScaleFont = FONT_SIZE_5PT; ///< S-scale numbers
 
 /* S-points labelled beneath the bar; positioned by S/11 to match the axis. */
-const uint8_t kScalePoints[] = { 1, 3, 5, 7, 9 };
+static const uint8_t kScalePoints[] = { 1, 3, 5, 7, 9 };
 
-float clamp01(float v)
+/**
+ * Clamp a value to [0, 1].
+ *
+ * @param v: value.
+ * @return the clamped value.
+ */
+static float clamp01(float v)
 {
     if (v < 0.0f)
         return 0.0f;
@@ -32,7 +36,6 @@ float clamp01(float v)
         return 1.0f;
     return v;
 }
-} // namespace
 
 Size SignalMeter::natural() const
 {

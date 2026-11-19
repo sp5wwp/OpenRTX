@@ -15,13 +15,10 @@
 namespace ortxui
 {
 
-namespace
-{
 /* Encode/decode enable label, indexed by (rxToneEn << 1) | txToneEn — the same
  * order the classic UI uses (tx tone = encode, rx tone = decode). */
-const UiText kEnableLabels[4] = { STR(None), STR(Encode), STR(Decode),
-                                  STR(Both) };
-} // namespace
+static const UiText kEnableLabels[4] = { STR(None), STR(Encode), STR(Decode),
+                                         STR(Both) };
 
 void FmView::build()
 {

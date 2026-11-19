@@ -170,15 +170,17 @@ void Screen::setFocus(Object *obj)
     }
 }
 
-namespace
-{
-
-/*
+/**
  * Collect the focusable, non-hidden objects of a subtree in paint (pre-order)
  * order. Traversal is recursive so focusables nested inside layout containers
  * (Flex/Grid) are reached, not just the Screen's direct children.
+ *
+ * @param node: subtree root.
+ * @param out: collected objects.
+ * @param n: number collected so far, updated.
+ * @param max: capacity of out.
  */
-void collectFocusables(Object *node, Object **out, int &n, int max)
+static void collectFocusables(Object *node, Object **out, int &n, int max)
 {
     for (Object *c = node->firstChild(); (c != nullptr) && (n < max);
          c = c->nextSibling()) {
@@ -190,9 +192,7 @@ void collectFocusables(Object *node, Object **out, int &n, int max)
     }
 }
 
-constexpr int kMaxFocusables = 32;
-
-} // namespace
+static constexpr int kMaxFocusables = 32;
 
 void Screen::focusFirst()
 {

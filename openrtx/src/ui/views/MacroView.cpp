@@ -18,16 +18,17 @@
 namespace ortxui
 {
 
-namespace
-{
-
-int digitFromKeys(uint32_t keys)
+/**
+ * Get the digit of a number key, ignoring the MONI bit.
+ *
+ * @param keys: keyboard bitmask.
+ * @return the lowest digit pressed, -1 for none.
+ */
+static int digitFromKeys(uint32_t keys)
 {
     const uint32_t digits = keys & 0x3FFu;
     return (digits == 0u) ? -1 : __builtin_ctz(digits);
 }
-
-} // namespace
 
 /**
  * Check whether a macro action steps a value, so that it repeats while held.

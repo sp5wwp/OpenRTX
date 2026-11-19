@@ -45,43 +45,40 @@
 
 using namespace ortxui;
 
-namespace
-{
-
 /* Classic UI event ring: single-thread producer/consumer (all in the UI
  * thread), so no locking is required. */
-constexpr uint8_t MAX_NUM_EVENTS = 16;
+static constexpr uint8_t MAX_NUM_EVENTS = 16;
 
-event_t evQueue[MAX_NUM_EVENTS];
-uint8_t evQueue_rdPos = 0;
-uint8_t evQueue_wrPos = 0;
+static event_t evQueue[MAX_NUM_EVENTS];
+static uint8_t evQueue_rdPos = 0;
+static uint8_t evQueue_wrPos = 0;
 
 /* UI-thread-local snapshot of the radio state. ui_saveState() copies the
  * global `state` here under state_mutex; drawing reads only this snapshot. */
-state_t last_state;
+static state_t last_state;
 
 /* The one live view, the screen stack over it, and the volume HUD, which
  * stays built because it draws over the screen without replacing it. */
-ViewSlot viewSlot;
-Navigator nav(viewSlot, uiMemory);
-VolumeOverlayView volumeOverlay;
+static ViewSlot viewSlot;
+static Navigator nav(viewSlot, uiMemory);
+static VolumeOverlayView volumeOverlay;
 
 /* Display standby (backlight timeout) — parity with the classic default UI.
  * On `settings.display_timer` of idle the backlight is blanked and drawing is
  * suspended; any keypress (or RF/volume activity) wakes it again. */
-bool standby = false;
-long long last_event_tick = 0;
+static bool standby = false;
+static long long last_event_tick = 0;
 
 /* Macro menu overlay (shown while MONI is held; long-press latches it open when
  * settings.macroMenuLatch is set). Managed here because it is triggered by a
  * global held key, not a view's own navigation intent. */
-bool macroOpen = false;
-bool macroLatched = false;
+static bool macroOpen = false;
+static bool macroLatched = false;
 
 /* Transient volume HUD: shown while the user turns the physical volume knob,
  * auto-dismissed this many ms after the level stops changing. Driven here (not
  * by a view) because the knob is a polled analogue value, not an input event. */
-constexpr uint32_t kVolumeOverlayMs = 500;
+static constexpr uint32_t kVolumeOverlayMs = 500;
 
 /**
  * Draw the whole screen and send it to the display: in one go, or a band at a
@@ -91,7 +88,7 @@ constexpr uint32_t kVolumeOverlayMs = 500;
  * @param paint: draws the screen content with the DrawCtx it is given.
  */
 template <typename Paint>
-void drawScreen(Paint paint)
+static void drawScreen(Paint paint)
 {
     for (uint16_t y = 0; y < CONFIG_SCREEN_HEIGHT; y += GFX_BAND_ROWS) {
         gfx_beginBand(static_cast<uint8_t>(y));
@@ -104,7 +101,10 @@ void drawScreen(Paint paint)
     }
 }
 
-void enterStandby()
+/**
+ * Blank the backlight and stop drawing until the next wake-up.
+ */
+static void enterStandby()
 {
     if (standby)
         return;
@@ -112,9 +112,14 @@ void enterStandby()
     display_setBacklightLevel(0);
 }
 
-/* Returns true if this call actually left standby (used to swallow the wake
- * keypress, matching the classic behaviour). */
-bool exitStandby(long long now)
+/**
+ * Refresh the idle timer and leave standby if in it.
+ *
+ * @param now: current tick.
+ * @return true if this call left standby, so the wake keypress is swallowed
+ * (classic behaviour).
+ */
+static bool exitStandby(long long now)
 {
     last_event_tick = now;
     if (!standby)
@@ -125,8 +130,6 @@ bool exitStandby(long long now)
         v->screen().markAllDirty(); /* repaint fully on wake */
     return true;
 }
-
-} // namespace
 
 /* Pure idle-timeout predicate — C linkage so the unit test (ui_check_standby)
  * links against it exactly as it did the classic implementation. Mirrors the
