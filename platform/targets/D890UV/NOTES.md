@@ -35,7 +35,7 @@ signal generator and spectrum analyser.
 | M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). Microphone through band B's chip (3.8): speech and blowing heard in the decoded audio, weak |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
-| GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either |
+| GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either; the module is fitted, its ribbon was cramped and has been realigned (3.8) |
 
 ## 2. Building and flashing
 
@@ -743,6 +743,21 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
 - The development radio is an early AnyTone sample. Weak speech on air with
   both firmwares and no mic signal at PA7 may be a fault of this unit; a
   retail radio would tell.
+- **Opened** (2026-11-18): the GNSS module is fitted, its ribbon cable
+  looked cramped; the ribbon carrying the microphone signal looked intact.
+  Both were realigned. Not retested yet (GNSS data on PA3; FM and M17
+  speech level against `sdr_recordings/dev29.npy`).
+- **Signs pointing at this unit** (to check first on another radio):
+  - FM speech: none measurable on air with stock's own firmware either
+    (15-22 Hz deviation in the voice band, breath noise only);
+  - no microphone signal at PA7 (the board's mic input) in any routing;
+  - microphone at band B's AFOUT only just above the ADC noise, with an
+    analog noise floor left after oversampling;
+  - GNSS: module fitted, no data on PA3, stock reports "GPS Not Turn On";
+  - band B's `0x30` bit 6 makes its chip oscillate (2176 Hz or broadband)
+    only with the radio mic attached.
+  Not the unit: the receiver noise floor (external, open item 2) and the
+  carrier drift after FM (a design property, 3.11).
 
 ### 3.9 Other stock firmware facts
 
@@ -1223,9 +1238,10 @@ Pitfalls met so far:
 
 1. **Weak FM speech.** The port matches stock on air (3.5, 3.6); speech
    is weak in stock too, also with the chip on A6 (3.7): only breath noise
-   modulates. No mic signal reaches PA7 (3.8). Next: compare with a retail
-   radio, or inspect the microphone path (needs a T8 screwdriver). Then
-   check deviation (narrow/wide, CTCSS).
+   modulates. No mic signal reaches PA7 (3.8). The radio was opened: the
+   microphone ribbon looked intact (3.8). Next: retest after the ribbons
+   were realigned, then compare with a retail radio. Then check deviation
+   (narrow/wide, CTCSS).
 2. ~~Receiver noise floor~~: external. With the antenna the raw RSSI at
    435 MHz was about 250 (S8), flat over +-500 kHz, against about 130 in a
    quiet period. Detuning the UHF input filter (DAC1 channel 2 to 4095)
