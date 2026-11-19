@@ -196,7 +196,7 @@ TEST_CASE("Escape restores the callsign being edited", "[ui][textinput]")
     strcpy(state.settings.callsign, "N0CALL");
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::M17);
+    nav.openModal(ViewId::M17);
     nav.dispatch(press(KEY_ENTER)); /* edit the callsign */
     nav.dispatch(press(KEY_2));
     nav.dispatch(press(KEY_ESC));
@@ -216,7 +216,7 @@ TEST_CASE("Only a long digit opens the character picker", "[ui][textinput]")
     strcpy(state.settings.M17_meta_text, "ABC");
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::M17);
+    nav.openModal(ViewId::M17);
     nav.dispatch(press(KEY_DOWN)); /* Meta Txt */
     nav.dispatch(press(KEY_ENTER));
     REQUIRE(nav.active()->id() == ViewId::TextInput);

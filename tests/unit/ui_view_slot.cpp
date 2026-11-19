@@ -164,7 +164,7 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     forgetLists();
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::Radio);
+    nav.openModal(ViewId::Radio);
     REQUIRE(nav.active()->id() == ViewId::Radio);
 
     /* Edit the Step row. */
@@ -173,12 +173,12 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     nav.dispatch(key(KEY_ENTER));
     const uint8_t step = state.step_index;
 
-    nav.openOverlay(ViewId::Macro);
+    nav.openModal(ViewId::Macro);
     REQUIRE(nav.activeId() == ViewId::Macro);
     REQUIRE(nav.active()->id() == ViewId::Macro);
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Radio);
 
-    nav.closeOverlay();
+    nav.closeModal();
     REQUIRE(nav.active()->id() == ViewId::Radio);
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
     REQUIRE(selectedRow(nav) == 2);
@@ -203,7 +203,7 @@ TEST_CASE("Dismissing an overlay leaves the screen below as it was",
     ProbeOverlay probe;
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::TimeDate);
+    nav.openModal(ViewId::TimeDate);
     nav.dispatch(key(KEY_ENTER)); /* opens the time editor */
 
     nav.presentOverlay(&probe, 0, 500);
@@ -235,10 +235,10 @@ TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")
     nav.dispatch(key(KEY_4)); /* opens the entry, retyping RX */
     nav.dispatch(key(KEY_3));
 
-    nav.openOverlay(ViewId::Macro);
+    nav.openModal(ViewId::Macro);
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Vfo);
 
-    nav.closeOverlay();
+    nav.closeModal();
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
 
     nav.dispatch(key(KEY_5));
@@ -261,15 +261,15 @@ TEST_CASE("A Time & Date entry survives the macro menu", "[ui][slot]")
     state.time = {};
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::TimeDate);
+    nav.openModal(ViewId::TimeDate);
     nav.dispatch(key(KEY_ENTER)); /* opens the entry */
     for (const uint32_t k : { KEY_2, KEY_5, KEY_1, KEY_2 })
         nav.dispatch(key(k));
 
-    nav.openOverlay(ViewId::Macro);
+    nav.openModal(ViewId::Macro);
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::TimeDate);
 
-    nav.closeOverlay();
+    nav.closeModal();
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
 
     for (const uint32_t k : { KEY_8, KEY_0, KEY_1, KEY_3, KEY_4, KEY_5 })
@@ -294,7 +294,7 @@ TEST_CASE("The editor survives the picker", "[ui][slot]")
            sizeof(state.settings.M17_meta_text));
 
     nav.setRoot(ViewId::Vfo);
-    nav.openOverlay(ViewId::M17);
+    nav.openModal(ViewId::M17);
     nav.dispatch(key(KEY_DOWN)); /* Meta Txt */
     nav.dispatch(key(KEY_ENTER));
     REQUIRE(nav.active()->id() == ViewId::TextInput);

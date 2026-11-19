@@ -234,7 +234,7 @@ extern "C" void ui_saveState()
  */
 static void closeMacro()
 {
-    nav.closeOverlay();
+    nav.closeModal();
     macroOpen = false;
     macroLatched = false;
 }
@@ -398,7 +398,7 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
         return false;
     }
     if (moniPress && !macroOpen) {
-        nav.openOverlay(ViewId::Macro);
+        nav.openModal(ViewId::Macro);
         macroOpen = true;
     }
     if (moni && msg.long_press && macroOpen && !macroLatched
@@ -414,7 +414,7 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
 #if defined(CONFIG_UI_NO_KEYBOARD)
     /* Without MONI, a long VOLDOWN press opens the macro menu latched. */
     if (!macroOpen && msg.long_press && ((msg.keys & KEY_VOLDOWN) != 0u)) {
-        nav.openOverlay(ViewId::Macro);
+        nav.openModal(ViewId::Macro);
         macroOpen = true;
         macroLatched = true;
         return false;

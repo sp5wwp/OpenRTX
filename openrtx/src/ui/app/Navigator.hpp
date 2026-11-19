@@ -84,13 +84,13 @@ public:
 
     /**
      * Open a modal screen (e.g. the macro menu) on top of the current one. It
-     * replaces the current view until closeOverlay() rebuilds it. Public so
+     * replaces the current view until closeModal() rebuilds it. Public so
      * ui_shim can open a screen triggered globally (a held key), outside a
      * view's onEvent intent.
      *
      * @param id: screen to open.
      */
-    void openOverlay(ViewId id)
+    void openModal(ViewId id)
     {
         push(id);
     }
@@ -99,7 +99,7 @@ public:
      * Close the modal screen and rebuild the one below it, without announcing
      * it again: it is the screen the user was already on.
      */
-    void closeOverlay();
+    void closeModal();
 
     /**
      * Show a view over the current screen, which stays built, until

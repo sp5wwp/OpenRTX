@@ -62,7 +62,7 @@ void Navigator::popToRoot()
     rebuild();
 }
 
-void Navigator::closeOverlay()
+void Navigator::closeModal()
 {
     if (depth <= 1)
         return;
