@@ -63,7 +63,7 @@ If you retune a size, re-check the golden screenshots and the tight spots
 A curated FontAwesome subset is merged into every font. Use the icons like text:
 
 ```c
-gfx_print(pos, FONT_SIZE_8PT, TEXT_ALIGN_LEFT, color, SYMBOL_WIFI " " SYMBOL_GPS);
+gfx_print(pos, FONT_SIZE_8PT, TEXT_ALIGN_LEFT, color, SYMBOL_LOCK " " SYMBOL_SIGNAL);
 ```
 
 To add an icon: append its FontAwesome codepoint to `ICONS` in

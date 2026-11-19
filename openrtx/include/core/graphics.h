@@ -103,26 +103,17 @@ typedef enum {
 /*
  * Icon glyphs, as UTF-8 strings, from the FontAwesome codepoints merged into
  * each UI font. Pass them to gfx_print() like any other text (the text path
- * decodes UTF-8), e.g. gfx_print(pos, FONT_SIZE_8PT, ..., SYMBOL_WIFI). Extend
+ * decodes UTF-8), e.g. gfx_print(pos, FONT_SIZE_8PT, ..., SYMBOL_LOCK). Extend
  * the set by adding codepoints to scripts/gen_fonts.sh and regenerating.
  */
-#define SYMBOL_SIGNAL "\xEF\x80\x92"        /* 0xF012 */
-#define SYMBOL_SETTINGS "\xEF\x80\x93"      /* 0xF013 */
-#define SYMBOL_LOCK "\xEF\x80\xA3"          /* 0xF023 */
-#define SYMBOL_MUTE "\xEF\x80\xA6"          /* 0xF026 */
-#define SYMBOL_VOLUME "\xEF\x80\xA8"        /* 0xF028 */
-#define SYMBOL_WARNING "\xEF\x81\xB1"       /* 0xF071 */
-#define SYMBOL_CALL "\xEF\x82\x95"          /* 0xF095 */
-#define SYMBOL_MENU "\xEF\x83\x89"          /* 0xF0C9 */
-#define SYMBOL_ENVELOPE "\xEF\x83\xA0"      /* 0xF0E0 */
-#define SYMBOL_CHARGE "\xEF\x83\xA7"        /* 0xF0E7 */
-#define SYMBOL_BELL "\xEF\x83\xB3"          /* 0xF0F3 */
-#define SYMBOL_GPS "\xEF\x84\xA4"           /* 0xF124 */
-#define SYMBOL_BRIGHTNESS "\xEF\x86\x85"    /* 0xF185 */
-#define SYMBOL_WIFI "\xEF\x87\xAB"          /* 0xF1EB */
-#define SYMBOL_BATTERY_FULL "\xEF\x89\x80"  /* 0xF240 */
-#define SYMBOL_BATTERY_HALF "\xEF\x89\x82"  /* 0xF242 */
-#define SYMBOL_BATTERY_EMPTY "\xEF\x89\x84" /* 0xF244 */
+#define SYMBOL_SIGNAL "\xEF\x80\x92"     /* 0xF012 */
+#define SYMBOL_LOCK "\xEF\x80\xA3"       /* 0xF023 */
+#define SYMBOL_VOLUME "\xEF\x80\xA8"     /* 0xF028 */
+#define SYMBOL_WARNING "\xEF\x81\xB1"    /* 0xF071 */
+#define SYMBOL_ENVELOPE "\xEF\x83\xA0"   /* 0xF0E0 */
+#define SYMBOL_CHARGE "\xEF\x83\xA7"     /* 0xF0E7 */
+#define SYMBOL_BELL "\xEF\x83\xB3"       /* 0xF0F3 */
+#define SYMBOL_BRIGHTNESS "\xEF\x86\x85" /* 0xF185 */
 
 /**
  * This function calls the correspondent method of the low level interface display.h
