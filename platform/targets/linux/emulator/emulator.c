@@ -77,10 +77,10 @@ enum shell_retvals {
 static int32_t screenshotRequests;
 
 /** Iterations of the UI main loop, counted by emulator_getKeys(). */
-static _Atomic uint32_t uiLoops;
+static uint32_t uiLoops;
 
 /** Keys held down by 'keyhold', reported on every keyboard scan. */
-static _Atomic keyboard_t heldKeys;
+static keyboard_t heldKeys;
 
 /* Key states typed by the shell, one read per keyboard scan. The shell thread
  * writes an entry and then counts it in _skq_in; the UI thread reads it and
@@ -89,8 +89,8 @@ static keyboard_t _shellkeyq[25] = { 0 };
 static int _skq_cap = 25;
 static int _skq_head;
 static int _skq_tail;
-static _Atomic int _skq_in;
-static _Atomic int _skq_out;
+static int _skq_in;
+static int _skq_out;
 
 /**
  * Queue a key state for the next free keyboard scan. A 0 entry is a release,
@@ -100,13 +100,15 @@ static _Atomic int _skq_out;
  */
 static void shellkeyq_put(keyboard_t keys)
 {
-    if ((_skq_in - _skq_out) >= _skq_cap) {
+    if ((__atomic_load_n(&_skq_in, __ATOMIC_ACQUIRE)
+         - __atomic_load_n(&_skq_out, __ATOMIC_ACQUIRE))
+        >= _skq_cap) {
         printf("too many keys!\n");
         return;
     }
 
     _shellkeyq[_skq_tail] = keys;
-    _skq_in++;
+    __atomic_fetch_add(&_skq_in, 1, __ATOMIC_RELEASE);
     _skq_tail = (_skq_tail + 1) % _skq_cap;
 }
 
@@ -119,9 +121,10 @@ static void shellkeyq_put(keyboard_t keys)
  */
 static void waitScans(uint32_t scans)
 {
-    const uint32_t start = uiLoops;
+    const uint32_t start = __atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE);
 
-    while (((uiLoops - start) < scans) && !emulator_state.powerOff)
+    while (((__atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE) - start) < scans)
+           && !emulator_state.powerOff)
         usleep(KEY_POLL_MS * 1000);
 }
 
@@ -132,7 +135,9 @@ static void waitScans(uint32_t scans)
  */
 static void waitKeysRead(void)
 {
-    while ((_skq_in > _skq_out) && !emulator_state.powerOff)
+    while ((__atomic_load_n(&_skq_in, __ATOMIC_ACQUIRE)
+            > __atomic_load_n(&_skq_out, __ATOMIC_ACQUIRE))
+           && !emulator_state.powerOff)
         usleep(KEY_POLL_MS * 1000);
 
     waitScans(2);
@@ -270,7 +275,7 @@ static int holdKeys(void *_self, int _argc, char **_argv)
             combo |= keyname2keyboard(_argv[i]);
     }
 
-    heldKeys = combo;
+    __atomic_store_n(&heldKeys, combo, __ATOMIC_RELEASE);
     printf("Hold keys: 0x%08X\n", (unsigned)combo);
     waitScans(2);
     return SH_CONTINUE; // continue
@@ -292,7 +297,7 @@ static int releaseKeys(void *_self, int _argc, char **_argv)
     (void)_argv;
 
     waitScans(2);
-    heldKeys = 0;
+    __atomic_store_n(&heldKeys, 0, __ATOMIC_RELEASE);
     printf("Release held keys\n");
     waitScans(2);
     return SH_CONTINUE; // continue
@@ -336,13 +341,13 @@ static int queueScreenshot(int argc, char **argv, bool sync)
     /* The SDL thread waits for the UI thread to take each frame, so only time
      * in which the UI ran counts toward the timeout. */
     int err = -ETIMEDOUT;
-    uint32_t lastLoops = uiLoops;
+    uint32_t lastLoops = __atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE);
     for (uint32_t waited = 0;
          (err == -ETIMEDOUT) && (waited < SCREENSHOT_SYNC_TIMEOUT_MS);) {
         err = sdlEngine_waitScreenshot(e.user.code, SCREENSHOT_SYNC_POLL_MS);
-        if (uiLoops != lastLoops)
+        if (__atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE) != lastLoops)
             waited += SCREENSHOT_SYNC_POLL_MS;
-        lastLoops = uiLoops;
+        lastLoops = __atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE);
     }
 
     if (err == -ETIMEDOUT) {
@@ -455,7 +460,7 @@ static int shell_waitStable(void *_self, int _argc, char **_argv)
     }
 
     // Only frames rendered and UI loops run from now on count
-    uint32_t startLoop = uiLoops;
+    uint32_t startLoop = __atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE);
     uint32_t lastCount;
     uint64_t lastHash = sdlEngine_getFrameHash(&lastCount);
     uint32_t identical = 0;
@@ -482,7 +487,8 @@ static int shell_waitStable(void *_self, int _argc, char **_argv)
         }
 
         bool settled = (identical >= frames) || (quiet >= WAIT_STABLE_QUIET_MS);
-        uint32_t loops = uiLoops - startLoop;
+        uint32_t loops = __atomic_load_n(&uiLoops, __ATOMIC_ACQUIRE)
+                       - startLoop;
         if ((loops >= WAIT_STABLE_UI_LOOPS) && settled) {
             return SH_CONTINUE;
         }
@@ -771,16 +777,17 @@ void emulator_start()
 keyboard_t emulator_getKeys()
 {
     // The UI thread calls this once per iteration of its main loop
-    uiLoops++;
+    __atomic_fetch_add(&uiLoops, 1, __ATOMIC_RELEASE);
 
     /* Keys held by 'keyhold' are reported on every scan, with any momentary
      * key from the shell queue. */
-    keyboard_t out = heldKeys;
+    keyboard_t out = __atomic_load_n(&heldKeys, __ATOMIC_ACQUIRE);
 
-    if (_skq_in > _skq_out) {
+    if (__atomic_load_n(&_skq_in, __ATOMIC_ACQUIRE)
+        > __atomic_load_n(&_skq_out, __ATOMIC_ACQUIRE)) {
         out |= _shellkeyq[_skq_head];
         _shellkeyq[_skq_head] = 0;
-        _skq_out++;
+        __atomic_fetch_add(&_skq_out, 1, __ATOMIC_RELEASE);
         _skq_head = (_skq_head + 1) % _skq_cap;
     }
 

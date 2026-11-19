@@ -20,10 +20,10 @@ static SDL_Renderer *renderer;
 static SDL_Texture *displayTexture;
 
 /** Id of the last synchronous screenshot request served by the SDL thread. */
-static _Atomic int32_t screenshotDoneId;
+static int32_t screenshotDoneId;
 
 /** Outcome of that request: zero, or -EIO if saving failed. */
-static _Atomic int screenshotResult;
+static int screenshotResult;
 
 /** Lock of frameHash and frameCount. */
 static SDL_mutex *frameLock;
@@ -372,8 +372,10 @@ void sdlEngine_run()
 
                 // A synchronous request is waiting for its outcome
                 if (ev.user.code != 0) {
-                    screenshotResult = (err == 0) ? 0 : -EIO;
-                    screenshotDoneId = ev.user.code;
+                    __atomic_store_n(&screenshotResult, (err == 0) ? 0 : -EIO,
+                                     __ATOMIC_RELAXED);
+                    __atomic_store_n(&screenshotDoneId, ev.user.code,
+                                     __ATOMIC_RELEASE);
                 }
             } else if (ev.type == SDL_Backlight_Event) {
                 set_brightness(*((uint8_t *)ev.user.data1));
@@ -422,8 +424,8 @@ int sdlEngine_waitScreenshot(int32_t id, uint32_t timeout)
      * the wall clock frozen, for example under faketime.
      */
     for (uint32_t waited = 0; waited < timeout; waited++) {
-        if (screenshotDoneId == id) {
-            return screenshotResult;
+        if (__atomic_load_n(&screenshotDoneId, __ATOMIC_ACQUIRE) == id) {
+            return __atomic_load_n(&screenshotResult, __ATOMIC_RELAXED);
         }
 
         SDL_Delay(1);
