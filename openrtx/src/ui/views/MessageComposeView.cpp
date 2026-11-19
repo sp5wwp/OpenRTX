@@ -65,19 +65,6 @@ void MessageComposeView::refresh()
     items_[ROW_BODY].value = (d != nullptr) ? d->body : "";
 }
 
-void MessageComposeView::announce()
-{
-    if (state.settings.vpLevel < vpLow)
-        return;
-
-    const ListItem *it = list_.selectedItem();
-    vp_flush();
-    topBar().title().announce(vp_getVoiceLevelQueueFlags());
-    it->label.announce(vpqDefault);
-    it->value.announce(vpqDefault);
-    vp_play();
-}
-
 bool MessageComposeView::send()
 {
     const ComposeDraft *d = uiMemory.draft;

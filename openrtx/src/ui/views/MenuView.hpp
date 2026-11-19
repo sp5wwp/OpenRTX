@@ -46,9 +46,6 @@ public:
     /** Open the selected row's screen, or go back on ESC. */
     NavIntent onEvent(const Event &e) override;
 
-    /** Speak the menu title and the selected row. */
-    void announce() override;
-
     /** The view's widget-tree root. */
     Screen &screen() override
     {
@@ -76,7 +73,6 @@ private:
     List list_;                     ///< Menu rows
 
     const MenuRow *rows_ = nullptr; ///< Static row table
-    UiText title_;                  ///< Menu title
     uint8_t count_ = 0;             ///< Number of rows
 };
 

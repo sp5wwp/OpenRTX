@@ -116,6 +116,14 @@ public:
     void setPosition(const ListPos &p);
 
     /**
+     * Speak a title, then the selected row's label and its value or checkbox
+     * state, when voice prompts are on.
+     *
+     * @param title: text spoken first, such as the screen title; may be empty.
+     */
+    void announceSelection(const UiText &title = UiText()) const;
+
+    /**
      * Get the selected row of a fixed table, to change it in place.
      *
      * @return the row, or nullptr for a model.
@@ -209,9 +217,6 @@ private:
      * @return the height in pixels.
      */
     int16_t rowHeight(uint16_t i) const;
-
-    /** Speak the selected row, when voice prompts are on. */
-    void announceSelection() const;
 
     /** Get the number of rows of the table or the model. */
     uint16_t rows() const

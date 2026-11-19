@@ -6,6 +6,7 @@
 
 #include "core/View.hpp"
 #include "core/Event.hpp"
+#include "widgets/List.hpp"
 #include "widgets/TopBar.hpp"
 #include "interfaces/keyboard.h"
 #include "core/voicePrompts.h"
@@ -37,10 +38,11 @@ void View::syncFromState(const state_t &s)
 
 void View::announce()
 {
-    /* Default: speak the screen's top-bar title on entry (titled screens get
-     * this for free; List navigation is announced by the List). */
-    if (hasTopBar_)
-        vpSay(sharedTopBar.title());
+    const UiText title = hasTopBar_ ? sharedTopBar.title() : UiText();
+    if (const List *l = list())
+        l->announceSelection(title);
+    else
+        vpSay(title);
 }
 
 void View::vpSay(const UiText &text)

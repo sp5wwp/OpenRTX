@@ -154,8 +154,9 @@ public:
 
     /**
      * Announce this screen via voice prompts on entry, after onShow(). The
-     * default speaks the top-bar title; views with richer content override it.
-     * Not called when the screen comes back from the macro menu.
+     * default speaks the top-bar title, then the selected row of list(); views
+     * with richer content override it. Not called when the screen comes back
+     * from the macro menu.
      */
     virtual void announce();
 

@@ -8,9 +8,6 @@
 #include "core/Event.hpp"
 #include "core/utils.h"
 #include "interfaces/keyboard.h"
-#include "core/state.h"
-#include "core/voicePrompts.h"
-#include "core/voicePromptUtils.h"
 #include "hwconfig.h"
 
 namespace ortxui
@@ -51,22 +48,16 @@ static constexpr MenuRow SETTINGS_MENU[] = {
 
 void MenuView::build()
 {
-    if (id() == ViewId::SettingsMenu) {
-        title_ = STR(settings);
-        rows_ = SETTINGS_MENU;
-        count_ = ARRAY_SIZE(SETTINGS_MENU);
-    } else {
-        title_ = STR(menu);
-        rows_ = MAIN_MENU;
-        count_ = ARRAY_SIZE(MAIN_MENU);
-    }
+    const bool settings = (id() == ViewId::SettingsMenu);
+    rows_ = settings ? SETTINGS_MENU : MAIN_MENU;
+    count_ = settings ? ARRAY_SIZE(SETTINGS_MENU) : ARRAY_SIZE(MAIN_MENU);
 
     root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
                     static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
     root_.setAxis(Axis::Column);
 
     /* The list of plain label rows fills the space below the top bar. */
-    TopBar &bar = useTopBar(title_);
+    TopBar &bar = useTopBar(settings ? STR(settings) : STR(menu));
     list_.setContentPad(1);
     list_.setModel(this);
     list_.setFlag(FLAG_FOCUSABLE, true);
@@ -83,23 +74,6 @@ void MenuView::build()
 void MenuView::rowAt(uint16_t index, ListItem &out) const
 {
     out.label = rows_[index].label;
-}
-
-void MenuView::announce()
-{
-    /* On entry speak the menu title then the current row (one utterance, so no
-     * intermediate flush — List::announceSelection flushes and is for nav). */
-    if (state.settings.vpLevel < vpLow)
-        return;
-
-    const enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
-    vp_flush();
-    title_.announce(flags);
-
-    const UiText &label = rows_[list_.selected()].label;
-    if (!label.empty())
-        label.announce(vpqDefault);
-    vp_play();
 }
 
 NavIntent MenuView::onEvent(const Event &e)

@@ -188,26 +188,31 @@ uint16_t List::maxTop() const
     return top;
 }
 
-void List::announceSelection() const
+void List::announceSelection(const UiText &title) const
 {
-    /* Label, then value or checkbox state: the one place that speaks list
-     * navigation in every view. */
-    if (!selectable_ || (state.settings.vpLevel < vpLow)
-        || (selected_ >= rows()))
+    if (state.settings.vpLevel < vpLow)
         return;
 
     ListItem it;
-    getItem(selected_, it);
-    if (it.label.empty())
+    if (selectable_ && (selected_ < rows()))
+        getItem(selected_, it);
+    if (title.empty() && it.label.empty())
         return;
 
-    const enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
+    /* One utterance: only its first part takes the level's flags. */
+    enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
     vp_flush();
-    it.label.announce(flags);
-    if (it.checkbox)
-        (it.checked ? STR(on) : STR(off)).announce(vpqDefault);
-    else if (!it.value.empty())
-        it.value.announce(vpqDefault);
+    if (!title.empty()) {
+        title.announce(flags);
+        flags = vpqDefault;
+    }
+    if (!it.label.empty()) {
+        it.label.announce(flags);
+        if (it.checkbox)
+            (it.checked ? STR(on) : STR(off)).announce(vpqDefault);
+        else if (!it.value.empty())
+            it.value.announce(vpqDefault);
+    }
     vp_play();
 }
 

@@ -50,9 +50,6 @@ public:
      */
     static bool open(const char *recipient, bool reply);
 
-    /** Speak the title and the selected row. */
-    void announce() override;
-
     /** Handle row activation, ESC and list navigation. */
     NavIntent onEvent(const Event &e) override;
 
