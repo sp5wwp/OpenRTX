@@ -12,33 +12,41 @@
 namespace ortxui
 {
 
+/** Space between the prompt and the hint. */
+static constexpr uint8_t LINE_GAP = 6;
+
+/** Height of the prompt line. */
+static constexpr int16_t PROMPT_H = (sizeClass() == SizeClass::Regular) ? 18 :
+                                                                          14;
+
+/** Height of the hint line. */
+static constexpr int16_t HINT_H = 12;
+
 void DefaultsView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(defaultSettings));
 
-    /* Centred prompt + hint stack (Label is single-line, so two of them). */
+    /* Two single-line labels, centred as one block. */
     body_.setAxis(Axis::Column);
     body_.setAlign(Align::Stretch);
     body_.setJustify(Justify::Center);
-    body_.setGap(6);
+    body_.setGap(LINE_GAP);
     body_.setGrow(1);
 
     prompt_.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
     prompt_.setAlign(TEXT_ALIGN_CENTER);
     prompt_.setColor(Sem::OnSurface);
-    prompt_.setBasis(regular ? 18 : 14);
+    prompt_.setBasis(PROMPT_H);
 
     hint_.setFont(FONT_SIZE_6PT);
     hint_.setAlign(TEXT_ALIGN_CENTER);
     hint_.setColor(Sem::OnSurfaceMuted);
-    hint_.setBasis(12);
+    hint_.setBasis(HINT_H);
 
     updateText();
 
@@ -49,12 +57,10 @@ void DefaultsView::build()
     root_.addChild(&body_);
     screen_.addChild(&root_);
     root_.onLayout();
-    screen_.markAllDirty();
 }
 
 void DefaultsView::updateText()
 {
-    /* Keep both lines within the 160px width (no wrap/clip). */
     if (armed_) {
         prompt_.setText(STR(areYouSure));
         hint_.setText(STR(hintConfirmReset));
@@ -66,15 +72,6 @@ void DefaultsView::updateText()
     hint_.invalidate();
 }
 
-void DefaultsView::onShow()
-{
-    /* Never resume in the armed state. */
-    if (armed_) {
-        armed_ = false;
-        updateText();
-    }
-}
-
 void DefaultsView::announce()
 {
     vpSay(prompt_.text());
@@ -83,10 +80,8 @@ void DefaultsView::announce()
 NavIntent DefaultsView::onEvent(const Event &e)
 {
     if (e.kind == EvKind::Key) {
-        if ((e.keys & KEY_ESC) != 0u) {
-            armed_ = false;
+        if ((e.keys & KEY_ESC) != 0u)
             return NavIntent::pop();
-        }
         if ((e.keys & KEY_ENTER) != 0u) {
             if (!armed_) {
                 armed_ = true;
@@ -95,7 +90,6 @@ NavIntent DefaultsView::onEvent(const Event &e)
                 return NavIntent::none();
             }
             state_resetSettingsAndVfo();
-            armed_ = false;
             return NavIntent::pop();
         }
     }

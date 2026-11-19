@@ -10,6 +10,7 @@
 #include <array>
 #include <cstdint>
 #include "core/View.hpp"
+#include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/List.hpp"
 #include "core/messages.h"
@@ -44,9 +45,6 @@ public:
      * @return false if the draft could not be allocated (do not push).
      */
     static bool open(const char *recipient, bool reply);
-
-    /** Refresh the row values after the editor returns. */
-    void onShow() override;
 
     /** Speak the title and the selected row. */
     void announce() override;
@@ -86,6 +84,8 @@ private:
 
     /** Widget-tree root. */
     Screen screen_;
+    /** Column: top bar over the rows. */
+    Flex root_;
     /** The To / Message / Send rows. */
     List list_;
     /** Row items, values borrowed from the draft. */

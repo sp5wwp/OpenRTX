@@ -45,7 +45,7 @@ public:
     /** Take back the pinned entry, which the detail view may have moved. */
     void restore(UiMemory &m) override;
 
-    /** Reload the rows, keeping the selection on the pinned entry. */
+    /** Load the rows, with the selection on the pinned entry. */
     void onShow() override;
 
     /** Reload the rows when the inbox changed since the last frame. */

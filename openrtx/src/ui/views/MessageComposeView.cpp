@@ -23,28 +23,26 @@ namespace ortxui
 
 void MessageComposeView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-    const int16_t topH = (sizeClass() == SizeClass::Regular) ? 16 : 12;
+    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
+    root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(uiMemory.draftReply ? STR(reply) : STR(newMessage));
-    bar.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
-    bar.onLayout();
 
     items_[ROW_TO].label = STR(to);
     items_[ROW_BODY].label = STR(message);
     items_[ROW_SEND].label = STR(send);
     refresh();
 
-    list_.setArea({ 0, topH, (uint16_t)W, (uint16_t)(H - topH) });
     list_.setContentPad(1);
     list_.setItems(items_.data(), ROW_COUNT);
     list_.setFlag(FLAG_FOCUSABLE, true);
+    list_.setGrow(1);
 
-    screen_.addChild(&bar);
-    screen_.addChild(&list_);
+    root_.addChild(&bar);
+    root_.addChild(&list_);
+    screen_.addChild(&root_);
+    root_.onLayout();
     screen_.focusFirst();
-    screen_.markAllDirty();
 }
 
 bool MessageComposeView::open(const char *recipient, bool reply)
@@ -65,12 +63,6 @@ void MessageComposeView::refresh()
     const bool to = (d != nullptr) && (d->recipient[0] != '\0');
     items_[ROW_TO].value = to ? UiText(d->recipient) : STR(broadcast);
     items_[ROW_BODY].value = (d != nullptr) ? d->body : "";
-    list_.invalidate();
-}
-
-void MessageComposeView::onShow()
-{
-    refresh();
 }
 
 void MessageComposeView::announce()
@@ -122,7 +114,6 @@ bool MessageComposeView::send()
 NavIntent MessageComposeView::close()
 {
     uiMemory.closeDraft();
-    refresh();
     return NavIntent::pop();
 }
 

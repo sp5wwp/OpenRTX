@@ -28,11 +28,9 @@ static constexpr uint32_t FNV_PRIME = 16777619u;
 
 void MessagesView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
     root_.setAxis(Axis::Column);
 
     TopBar &bar = useTopBar(STR(messages));
@@ -51,8 +49,6 @@ void MessagesView::build()
     root_.addChild(&list_);
     root_.addChild(&empty_);
     screen_.addChild(&root_);
-
-    reload(state.channel.mode);
 }
 
 void MessagesView::rowAt(uint16_t index, ListItem &out) const
@@ -85,11 +81,12 @@ uint32_t MessagesView::digest(uint8_t mode) const
      * so walking it once per frame is cheap. */
     const size_t n = messages_count();
     uint32_t h = FNV_BASIS;
-    h = (h ^ (uint32_t)n) * FNV_PRIME;
+    h = (h ^ static_cast<uint32_t>(n)) * FNV_PRIME;
     h = (h ^ (messages_canCompose(mode) ? 1u : 0u)) * FNV_PRIME;
     for (size_t i = 0; i < n; i++) {
         const struct message *msg = messages_get(i);
-        const uint32_t flags = ((uint32_t)msg->status << 1) | msg->unread;
+        const uint32_t flags = (static_cast<uint32_t>(msg->status) << 1)
+                             | msg->unread;
         h = (h ^ msg->sequence) * FNV_PRIME;
         h = (h ^ flags) * FNV_PRIME;
     }

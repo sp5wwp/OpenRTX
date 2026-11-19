@@ -19,9 +19,8 @@ namespace ortxui
 /**
  * The Settings > Default Settings screen: a two-step confirmation that resets
  * all settings and the VFO channel to their factory defaults. ENTER arms the
- * confirmation, a second ENTER performs the reset (state_resetSettingsAndVfo)
- * and pops back; ESC cancels at any point. onShow() re-arms to the initial
- * prompt so a fresh entry never starts armed.
+ * confirmation, a second ENTER performs the reset and goes back; ESC cancels
+ * at any point.
  */
 class DefaultsView : public View
 {
@@ -32,26 +31,31 @@ public:
     /** Destructor. */
     ~DefaultsView() = default;
 
+    /** Build the widget tree. */
     void build() override;
-    void onShow() override;
+
+    /** Speak the prompt shown. */
     void announce() override;
 
+    /** Arm, reset or cancel. */
     NavIntent onEvent(const Event &e) override;
 
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
 
 private:
+    /** Show the prompt and hint of the current step. */
     void updateText();
 
-    Screen screen_;
-    Flex root_;
-    Flex body_;
-    Label prompt_;
-    Label hint_;
-    bool armed_ = false;
+    Screen screen_;      ///< Widget-tree root
+    Flex root_;          ///< Column: top bar over the body
+    Flex body_;          ///< Centred prompt over the hint
+    Label prompt_;       ///< What a confirmation does
+    Label hint_;         ///< Keys to press
+    bool armed_ = false; ///< The next ENTER resets
 };
 
 } // namespace ortxui
