@@ -35,7 +35,7 @@ signal generator and spectrum analyser.
 | M17 TX | Working (3.11): +-2395/799 Hz, EVM 4.8%, decoded by an SDR M17 decoder. The first M17 transmission after FM drifts for about 4 s (3.11). Microphone through band B's chip (3.8): speech and blowing heard in the decoded audio, weak |
 | M17 RX | Not done: PC0 is flat with stock's DMR RX set-up (3.8); the receive input is a silent placeholder |
 | Beeps and voice prompts | Working (3.12): PB9 PWM, level from the volume knob, receive audio muted under prompts |
-| GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either; the module is fitted, its ribbon was cramped and has been realigned (3.8) |
+| GNSS | Driver as stock (3.13), untested: the development radio's receiver gives no data, in stock either; the module is fitted, its ribbon was cramped, realigning it did not help (3.8) |
 
 ## 2. Building and flashing
 
@@ -746,14 +746,16 @@ going through OpenRTX's own SPI link instead of AnyTone's bridge.
 - **Opened** (2026-11-18): the GNSS module is fitted, its ribbon cable
   looked cramped; the ribbon carrying the microphone signal looked intact.
   Both were realigned. The microphone retested by the operator after
-  that: no change. GNSS not retested yet (data on PA3).
+  that: no change. GNSS retested by the operator after that: still no
+  data.
 - **Signs pointing at this unit** (to check first on another radio):
   - FM speech: none measurable on air with stock's own firmware either
     (15-22 Hz deviation in the voice band, breath noise only);
   - no microphone signal at PA7 (the board's mic input) in any routing;
   - microphone at band B's AFOUT only just above the ADC noise, with an
     analog noise floor left after oversampling;
-  - GNSS: module fitted, no data on PA3, stock reports "GPS Not Turn On";
+  - GNSS: module fitted, no data on PA3, stock reports "GPS Not Turn On",
+    unchanged after realigning its ribbon;
   - band B's `0x30` bit 6 makes its chip oscillate (2176 Hz or broadband)
     only with the radio mic attached.
   Not the unit: the receiver noise floor (external, open item 2) and the
