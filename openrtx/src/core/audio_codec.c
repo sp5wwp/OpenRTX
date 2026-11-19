@@ -55,6 +55,7 @@ static void *encodeFunc(void *arg);
 static void *decodeFunc(void *arg);
 static bool startThread(const pathId path, void *(*func)(void *));
 static void stopThread();
+static void threadStopped();
 
 void codec_init()
 {
@@ -129,10 +130,16 @@ int codec_popFrame(uint8_t *frame, const bool blocking)
     if ((numElements == 0) && (blocking == false))
         return -EAGAIN;
 
-    // Blocking call: wait until some data is pushed
+    // Blocking call: wait until some data is pushed, or the codec thread has
+    // stopped
     pthread_mutex_lock(&data_mutex);
-    while (numElements == 0) {
+    while ((numElements == 0) && running) {
         pthread_cond_wait(&wakeup_cond, &data_mutex);
+    }
+
+    if (numElements == 0) {
+        pthread_mutex_unlock(&data_mutex);
+        return -EPERM;
     }
 
     element = dataBuffer[readPos];
@@ -161,10 +168,16 @@ int codec_pushFrame(const uint8_t *frame, const bool blocking)
     if ((numElements >= BUF_SIZE) && (blocking == false))
         return -EAGAIN;
 
-    // Blocking call: wait until there is some free space
+    // Blocking call: wait until there is some free space, or the codec thread
+    // has stopped
     pthread_mutex_lock(&data_mutex);
-    while (numElements >= BUF_SIZE) {
+    while ((numElements >= BUF_SIZE) && running) {
         pthread_cond_wait(&wakeup_cond, &data_mutex);
+    }
+
+    if (numElements >= BUF_SIZE) {
+        pthread_mutex_unlock(&data_mutex);
+        return -EPERM;
     }
 
     // There is free space, push data into the queue
@@ -265,7 +278,7 @@ exit:
     if (reqStop == false)
         pthread_detach(pthread_self());
 
-    running = false;
+    threadStopped();
     return NULL;
 }
 
@@ -282,7 +295,7 @@ static void *decodeFunc(void *arg)
                                 STREAM_OUTPUT | BUF_CIRC_DOUBLE);
     if (oStream < 0) {
         pthread_detach(pthread_self());
-        running = false;
+        threadStopped();
         return NULL;
     }
 
@@ -346,7 +359,7 @@ static void *decodeFunc(void *arg)
     if (reqStop == false)
         pthread_detach(pthread_self());
 
-    running = false;
+    threadStopped();
     return NULL;
 }
 
@@ -410,6 +423,19 @@ static bool startThread(const pathId path, void *(*func)(void *))
         running = false;
 
     return running;
+}
+
+/**
+ * Mark the codec thread as stopped and wake a caller waiting on its queue,
+ * which would otherwise wait forever when the thread ends on its own, as it
+ * does when its audio stream cannot start.
+ */
+static void threadStopped()
+{
+    pthread_mutex_lock(&data_mutex);
+    running = false;
+    pthread_cond_broadcast(&wakeup_cond);
+    pthread_mutex_unlock(&data_mutex);
 }
 
 static void stopThread()
