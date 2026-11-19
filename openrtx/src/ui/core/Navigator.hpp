@@ -102,11 +102,11 @@ public:
         push(id);
     }
 
-    /** Close the modal screen and rebuild the one below it. */
-    void closeOverlay()
-    {
-        pop();
-    }
+    /**
+     * Close the modal screen and rebuild the one below it, without announcing
+     * it again: it is the screen the user was already on.
+     */
+    void closeOverlay();
 
     /**
      * Present `v` as a *managed* overlay above the current screen and drive its
@@ -154,15 +154,20 @@ private:
     /** Pop every screen but the root and rebuild it. */
     void popToRoot();
 
-    /** Save and destroy the built view, then build the top of the stack. */
-    void rebuild();
+    /**
+     * Save and destroy the built view, then build the top of the stack.
+     *
+     * @param announce: whether the new view announces itself.
+     */
+    void rebuild(bool announce = true);
 
     /**
      * Run a view's entry hooks and mark it for a full repaint.
      *
      * @param v: view becoming active.
+     * @param announce: whether the view announces itself.
      */
-    static void activate(View *v);
+    static void activate(View *v, bool announce);
 
     static constexpr uint8_t kMaxDepth = 8;
 

@@ -64,6 +64,27 @@ static void forgetLists()
     uiMemory.lists.fill({ 0, 0 });
 }
 
+/**
+ * An empty view to present as an overlay.
+ */
+class ProbeOverlay : public View
+{
+public:
+    /** Build nothing. */
+    void build() override
+    {
+    }
+
+    /** The view's widget-tree root. */
+    Screen &screen() override
+    {
+        return screen_;
+    }
+
+private:
+    Screen screen_; ///< Widget-tree root
+};
+
 TEST_CASE("The view slot fits every view", "[ui][slot]")
 {
     STATIC_REQUIRE(sizeof(VfoView) <= ViewSlot::SIZE);
@@ -199,6 +220,34 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     REQUIRE(nav.active()->id() == ViewId::Radio);
     nav.dispatch(key(KEY_ESC));
     REQUIRE(nav.active()->id() == ViewId::Vfo);
+}
+
+TEST_CASE("Dismissing an overlay leaves the screen below as it was",
+          "[ui][slot]")
+{
+    ViewSlot slot;
+    Navigator nav(slot, uiMemory);
+    ProbeOverlay probe;
+
+    nav.setRoot(ViewId::Vfo);
+    nav.openOverlay(ViewId::TimeDate);
+    nav.dispatch(key(KEY_ENTER)); /* opens the time editor */
+
+    nav.presentOverlay(&probe, OverlayDismiss::Transient, 0, 500);
+    REQUIRE(nav.active() == &probe);
+    View *below = slot.view();
+    below->screen().clearDirty();
+
+    nav.tickOverlay(500);
+    REQUIRE(nav.overlay() == nullptr);
+    REQUIRE(nav.active() == below);
+    REQUIRE(below->screen().dirty());
+
+    /* Still editing: ESC closes the editor instead of leaving the screen. */
+    nav.dispatch(key(KEY_ESC));
+    REQUIRE(nav.activeId() == ViewId::TimeDate);
+    nav.dispatch(key(KEY_ESC));
+    REQUIRE(nav.activeId() == ViewId::Vfo);
 }
 
 TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")

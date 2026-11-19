@@ -143,17 +143,15 @@ public:
         (void)m;
     }
 
-    /** Called each time this view becomes the active (top-of-stack) screen. */
+    /** Called once the view is built and restored, before it is drawn. */
     virtual void onShow()
     {
     }
 
     /**
-     * Announce this screen via voice prompts on entry (called by the Navigator
-     * after onShow(), gated by state.settings.vpLevel). The default speaks the
-     * registered top-bar title, which covers every titled screen; views with
-     * richer content (VFO summary, menu title+item, confirm prompt) override it.
-     * List navigation is announced by the List itself, not here.
+     * Announce this screen via voice prompts on entry, after onShow(). The
+     * default speaks the top-bar title; views with richer content override it.
+     * Not called when the screen comes back from the macro menu.
      */
     virtual void announce();
 

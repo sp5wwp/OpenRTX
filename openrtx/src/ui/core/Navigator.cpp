@@ -63,7 +63,16 @@ void Navigator::popToRoot()
     rebuild();
 }
 
-void Navigator::rebuild()
+void Navigator::closeOverlay()
+{
+    if (depth_ <= 1)
+        return;
+
+    depth_--;
+    rebuild(false);
+}
+
+void Navigator::rebuild(bool announce)
 {
     View *old = slot_.view();
     if (old != nullptr) {
@@ -81,13 +90,14 @@ void Navigator::rebuild()
         l->setPosition(mem_.lists[static_cast<uint8_t>(built_)]);
     v->restore(mem_);
 
-    activate(v);
+    activate(v, announce);
 }
 
-void Navigator::activate(View *v)
+void Navigator::activate(View *v, bool announce)
 {
     v->onShow();
-    v->announce();
+    if (announce)
+        v->announce();
     v->screen().markAllDirty();
 }
 
@@ -150,7 +160,7 @@ void Navigator::presentOverlay(View *v, OverlayDismiss policy, long long now,
     overlayTimeoutMs_ = timeoutMs;
     overlayCond_ = cond;
     overlayPoke_ = now;
-    activate(v);
+    activate(v, true);
 }
 
 void Navigator::dismissOverlay()
@@ -161,10 +171,8 @@ void Navigator::dismissOverlay()
     overlay_ = nullptr;
     overlayCond_ = nullptr;
 
-    /* The screen below stayed built: show it again as a pop would. */
-    View *v = slot_.view();
-    if (v != nullptr)
-        activate(v);
+    /* The screen below stayed built and active: only repaint it. */
+    slot_.view()->screen().markAllDirty();
 }
 
 void Navigator::tickOverlay(long long now)

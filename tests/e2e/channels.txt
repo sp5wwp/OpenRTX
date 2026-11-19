@@ -16,6 +16,12 @@ screenshot_sync channels_list.bmp
 key DOWN DOWN
 wait_stable
 screenshot_sync channels_selected.bmp
+# Turning the volume shows the volume bar over the list; once it closes the
+# list is still on the same row.
+volume 100
+sleep 2000
+wait_stable
+screenshot_sync channels_after_volume.bmp
 # ENTER loads the channel and pops to the VFO home. Not asserted with a
 # screenshot: the VFO S-meter reading is RSSI-timing-dependent after the
 # channel's rtx reconfigure. Manually verified to load 433.475 (M17 CQ).
