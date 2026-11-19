@@ -51,6 +51,9 @@ extern const struct gpsDevice gps;
 /* Draw the screen 16 rows at a time instead of keeping a framebuffer */
 #define CONFIG_GFX_BAND_ROWS 16
 
+/* Draw text with the anti-aliased fonts */
+#define CONFIG_FONT_AA
+
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 

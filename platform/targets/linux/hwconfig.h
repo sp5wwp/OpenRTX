@@ -20,6 +20,12 @@ enum Mod17Flags {
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 
+/* The colour emulator draws text with the anti-aliased fonts, as the colour
+ * radios do; its pixel format comes from the build. */
+#ifdef CONFIG_PIX_FMT_RGB565
+#define CONFIG_FONT_AA
+#endif
+
 /* Battery type */
 #define CONFIG_BAT_LIPO
 #define CONFIG_BAT_NCELLS 2

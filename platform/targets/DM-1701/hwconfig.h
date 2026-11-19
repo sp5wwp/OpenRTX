@@ -43,6 +43,9 @@ extern const struct Adc adc1;
 /* Draw the screen 16 rows at a time instead of keeping a framebuffer */
 #define CONFIG_GFX_BAND_ROWS 16
 
+/* Draw text with the anti-aliased fonts */
+#define CONFIG_FONT_AA
+
 /* Battery type */
 #define CONFIG_BAT_LIION
 #define CONFIG_BAT_NCELLS 2
