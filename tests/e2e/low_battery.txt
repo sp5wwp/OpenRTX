@@ -7,7 +7,9 @@
 # press declares emergency use, which goes back to the home screen.
 wait_stable 5000 3
 vbat 0
-sleep 2000
+# The battery reading is filtered, 2% of the way every 100 ms: 4 s takes it
+# to empty with room for a busy host.
+sleep 4000
 wait_stable
 screenshot_sync low_battery.bmp
 key ENTER
