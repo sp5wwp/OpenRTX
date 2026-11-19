@@ -91,6 +91,6 @@ extern const struct gpsDevice gps;
 
 /* Keypad keys */
 #define CONFIG_KBD_HAS_NUMERIC
-#define CONFIG_KBD_SPACE_ON_HASH /* space is on '#', not '0' */
+#define CONFIG_KBD_SPACE_ON_HASH
 
-#endif                           /* HWCONFIG_H */
+#endif /* HWCONFIG_H */
