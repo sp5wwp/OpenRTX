@@ -21,8 +21,9 @@
 #include "core/utils.h"
 #include "rtx/rtx.h"
 
-/** How long screenshot_sync waits, generous as the SDL thread may be busy. */
+/* screenshot_sync timeout and poll period, generous as SDL may be busy. */
 #define SCREENSHOT_SYNC_TIMEOUT_MS 5000
+#define SCREENSHOT_SYNC_POLL_MS 10
 
 /*
  * wait_stable gives up after a timeout unless enough consecutive frames are
@@ -332,7 +333,18 @@ static int queueScreenshot(int argc, char **argv, bool sync)
         return SH_CONTINUE;
     }
 
-    int err = sdlEngine_waitScreenshot(e.user.code, SCREENSHOT_SYNC_TIMEOUT_MS);
+    /* The SDL thread waits for the UI thread to take each frame, so only time
+     * in which the UI ran counts toward the timeout. */
+    int err = -ETIMEDOUT;
+    uint32_t lastLoops = uiLoops;
+    for (uint32_t waited = 0;
+         (err == -ETIMEDOUT) && (waited < SCREENSHOT_SYNC_TIMEOUT_MS);) {
+        err = sdlEngine_waitScreenshot(e.user.code, SCREENSHOT_SYNC_POLL_MS);
+        if (uiLoops != lastLoops)
+            waited += SCREENSHOT_SYNC_POLL_MS;
+        lastLoops = uiLoops;
+    }
+
     if (err == -ETIMEDOUT) {
         printf("screenshot_sync: timed out after %d ms waiting for %s\n",
                SCREENSHOT_SYNC_TIMEOUT_MS, filename);
