@@ -85,7 +85,7 @@ bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size)
     while ((off + 8u) <= size) {
         uint32_t tlen = rd_u32(data + off);
         const uint8_t *tag = data + off + 4;
-        if (tlen == 0u || (off + tlen) > size)
+        if ((tlen == 0u) || ((off + tlen) > size))
             break;
         if (memcmp(tag, "cmap", 4) == 0)
             f->cmap_off = off;
@@ -97,7 +97,7 @@ bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size)
         off += tlen;
     }
 
-    if (f->cmap_off == 0u || f->loca_off == 0u || f->glyf_off == 0u)
+    if ((f->cmap_off == 0u) || (f->loca_off == 0u) || (f->glyf_off == 0u))
         return false;
 
     f->valid = true;
@@ -126,7 +126,7 @@ static uint32_t cmap_lookup(const struct lvFont *f, uint32_t code)
         uint16_t entries = rd_u16(sh + 12);
         uint8_t fmt = sh[14];
 
-        if (code < range_start || code >= (range_start + range_len))
+        if ((code < range_start) || (code >= (range_start + range_len)))
             continue;
 
         uint32_t rel = code - range_start;
@@ -169,7 +169,7 @@ bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g)
         return false;
 
     uint32_t gid = cmap_lookup(f, code);
-    if (gid == 0u || gid >= f->glyph_cnt) {
+    if ((gid == 0u) || (gid >= f->glyph_cnt)) {
         /* Not in this font: walk the fallback chain (LVGL-style), so an app or
          * icon font layered on the base text font answers transparently. */
         if (f->fallback != NULL)
@@ -242,7 +242,7 @@ uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
     /* Decode with the font the glyph came from (a fallback may differ from f). */
     if (g->src != NULL)
         f = g->src;
-    if (x >= g->box_w || y >= g->box_h)
+    if ((x >= g->box_w) || (y >= g->box_h))
         return 0;
     uint32_t idx = (uint32_t)y * g->box_w + x;
     uint32_t v = rd_bits(g->bmp, g->bmp_bit + idx * f->bpp, f->bpp);
@@ -255,7 +255,11 @@ uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
  * flag chain, collapsing to a 6-bit counter after 11 repeats. compression == 1
  * additionally XOR-prefilters each line against the previous one. */
 
-enum { RLE_SINGLE = 0, RLE_REPEAT, RLE_COUNTER };
+enum {
+    RLE_SINGLE = 0,
+    RLE_REPEAT,
+    RLE_COUNTER,
+};
 
 static uint8_t rle_next(struct lvGlyphRows *r)
 {
