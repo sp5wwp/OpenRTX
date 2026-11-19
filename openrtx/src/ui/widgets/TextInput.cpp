@@ -405,7 +405,7 @@ void TextInput::moveCursor(int dir)
             cursor_ = prevCell(cursor_);
     } else {
         const uint16_t nxt = nextCell(cursor_);
-        if (nxt < len_ || (cursor_ < len_ && nxt == len_)) {
+        if ((nxt < len_) || ((cursor_ < len_) && (nxt == len_))) {
             /* Insert mode allows the caret to rest just past the last cell; in
              * Overtype we keep the cursor on a cell and extend to add one. */
             cursor_ = (editMode_ == EditMode::Insert) ? nxt :

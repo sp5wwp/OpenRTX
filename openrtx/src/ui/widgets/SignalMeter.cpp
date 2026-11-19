@@ -88,7 +88,7 @@ void SignalMeter::draw(DrawCtx &d)
         d.fillRoundRect({ left, barY, fillW, barH }, radius, color_);
 
     /* S-scale: a faint tick under the bar plus the number, at S/11 positions. */
-    if (showScale_ && numH > 0) {
+    if (showScale_ && (numH > 0)) {
         const int16_t numY = static_cast<int16_t>(area_.y + barBandH);
         for (uint8_t i = 0; i < sizeof(kScalePoints); i++) {
             const float frac = kScalePoints[i] / 11.0f;

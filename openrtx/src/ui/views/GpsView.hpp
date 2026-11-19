@@ -31,7 +31,13 @@ class GpsView : public View
 {
 public:
     /* Coarse presentation state; a change re-lays-out body vs. status line. */
-    enum class FixKind : uint8_t { NoGps, GpsOff, NoFix, FixLost, Fixed };
+    enum class FixKind : uint8_t {
+        NoGps,
+        GpsOff,
+        NoFix,
+        FixLost,
+        Fixed,
+    };
 
     /** Constructor. */
     GpsView() = default;

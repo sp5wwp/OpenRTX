@@ -45,7 +45,10 @@ public:
     /** Runs a row holds: a value and its tag or unit. */
     static constexpr uint8_t kMaxRuns = 2;
 
-    enum class Side : uint8_t { Left, Right };
+    enum class Side : uint8_t {
+        Left,
+        Right,
+    };
 
     /** Horizontal inset kept clear at both edges (0 = flush). */
     void setIndent(int16_t px)

@@ -48,7 +48,10 @@ public:
     /** Destructor. */
     ~TextInput() = default;
 
-    enum class Mode : uint8_t { SingleLine, MultiLine };
+    enum class Mode : uint8_t {
+        SingleLine,
+        MultiLine,
+    };
     enum class CursorStyle : uint8_t {
         Bracket, //< inline "[X]" (formatBracketed); parity with the old editors
         Block,   //< inverse cell drawn by draw() (modal)
@@ -61,7 +64,10 @@ public:
      * the cursor is a thin bar (a block only while a freshly inserted cell is
      * being dialed). Only the modal editor exposes a toggle between the two.
      */
-    enum class EditMode : uint8_t { Overtype, Insert };
+    enum class EditMode : uint8_t {
+        Overtype,
+        Insert,
+    };
 
     /**
      * Bind the field to `buf` (holds up to `cap`-1 chars + NUL) with charset

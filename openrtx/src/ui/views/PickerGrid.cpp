@@ -79,7 +79,7 @@ void PickerGrid::ensureVisible()
         static_cast<uint16_t>(area_.h / static_cast<uint16_t>(cellH()));
     if (row < top_)
         top_ = row;
-    else if (visRows > 0 && row >= top_ + visRows)
+    else if ((visRows > 0) && (row >= top_ + visRows))
         top_ = static_cast<uint16_t>(row - visRows + 1);
 }
 

@@ -35,7 +35,10 @@ public:
      *   Ellipsize - the text is kept to one line, truncated to fit with a
      *               trailing ellipsis glyph (…).
      */
-    enum class Overflow : uint8_t { Wrap, Ellipsize };
+    enum class Overflow : uint8_t {
+        Wrap,
+        Ellipsize,
+    };
 
     /**
      * Set the text; plain text is borrowed, not copied.
