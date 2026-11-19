@@ -177,8 +177,8 @@ static void slotsFromFreq(char *digits, freq_t hz)
 
 /**
  * Compose the FreqHero entry strings from a 7-slot field: "MMM.KKK" main and a
- * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with '-' for un-entered
- * slots so the operator sees exactly how many digits remain.
+ * 2-digit sub (the 100 Hz slot + a fixed 10 Hz zero), with kPlaceholder for
+ * un-entered slots so the operator sees how many digits remain.
  *
  * @param digits: field buffer.
  * @param main: main text output, 8 bytes.
@@ -197,8 +197,8 @@ static void composeEntry(const char *digits, char *main, char *sub)
     main[7] = '\0';
 
     const int d6 = slotDigit(digits, 6);
-    sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : '-';
-    sub[1] = (d6 >= 0) ? '0' : '-';
+    sub[0] = (d6 >= 0) ? static_cast<char>('0' + d6) : kPlaceholder;
+    sub[1] = (d6 >= 0) ? '0' : kPlaceholder;
     sub[2] = '\0';
 }
 
@@ -302,7 +302,7 @@ void VfoView::build()
     screen_.addChild(&root_);
     root_.onLayout();
 
-    screen_.markAllDirty();
+    invalidateReadout();
 }
 
 void VfoView::save() const
@@ -648,11 +648,8 @@ NavIntent VfoView::onInputEvent(const Event &e)
                                getTick());
 
     n.errorAt = 0;
-    if ((digit >= 0) && (state.settings.vpLevel >= vpLow)) {
-        vp_flush();
-        vp_queueInteger(digit);
-        vp_play();
-    }
+    if (digit >= 0)
+        announceDigit(static_cast<uint8_t>(digit));
     refreshInput();
     return NavIntent::none();
 }
@@ -771,11 +768,7 @@ void VfoView::beginInput(uint8_t firstDigit)
     entry_->rxPristine = false;
     entry_->input.clearSlots();
     entry_->input.putDigit(firstDigit);
-    if (state.settings.vpLevel >= vpLow) {
-        vp_flush();
-        vp_queueInteger(firstDigit);
-        vp_play();
-    }
+    announceDigit(firstDigit);
     refreshInput();
 }
 
@@ -865,8 +858,12 @@ void VfoView::confirmInput()
 void VfoView::exitInput()
 {
     closeEntry();
+    invalidateReadout();
+}
 
-    /* Force the change-gated readout to repaint from live state next sync. */
+void VfoView::invalidateReadout()
+{
+    /* No shown text starts with \1, so the next sync repaints them all. */
     lastFreq_ = UINT32_MAX;
     shownMode_ = nullptr;
     idxCache_[0] = '\1';
@@ -974,6 +971,12 @@ void VfoView::bindDst(uint16_t cursor)
     n.input.resume(cursor, 0);
 }
 
+void VfoView::announceDigit(uint8_t d)
+{
+    if (state.settings.vpLevel >= vpLow)
+        vp_announceInputChar(static_cast<char>('0' + d));
+}
+
 void VfoView::announceDstChar()
 {
     if (state.settings.vpLevel >= vpLow)
@@ -1006,10 +1009,7 @@ void VfoView::endDstEdit(bool commit)
 
     closeEntry();
     showDstEdit(false);
-    /* Force the channel line to recompose from live state next sync. */
-    idxCache_[0] = '\1';
-    nameCache_[0] = '\1';
-    screen_.markAllDirty();
+    invalidateReadout();
 }
 
 NavIntent VfoView::onDstEditEvent(const Event &e)

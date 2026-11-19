@@ -186,6 +186,9 @@ private:
     /** Close the frequency entry and show the live readout again. */
     void exitInput();
 
+    /** Repaint the change-gated readout from live state at the next sync. */
+    void invalidateReadout();
+
     /** Show the entry in the frequency and channel line. */
     void refreshInput();
 
@@ -258,6 +261,13 @@ private:
     /** Show "@W1[A]W" with the bracketed cursor in the channel line. */
     void renderDstEdit();
 
+    /**
+     * Speak a digit typed in the frequency entry.
+     *
+     * @param d: digit, 0-9.
+     */
+    void announceDigit(uint8_t d);
+
     /** Speak the character under the cursor. */
     void announceDstChar();
 
@@ -303,8 +313,8 @@ private:
 
     /* The channel line, change-gated by string compare: it depends on the
      * tuner mode, the channel name, the mode and the M17 destination. */
-    char idxCache_[8] = { 1, 0 };     ///< Index shown, 1 forces a paint
-    char nameCache_[40] = { 1, 0 };   ///< Name or destination shown
+    char idxCache_[8] = { 0 };        ///< Index shown
+    char nameCache_[40] = { 0 };      ///< Name or destination shown
     char readoutBuf_[12] = { 0 };     ///< Meter readout
     char modeSub_[8] = { 0 };         ///< Detail value: CAN (M17) or tone (FM)
     const char *shownMode_ = nullptr; ///< Mode label shown, nullptr to repaint
