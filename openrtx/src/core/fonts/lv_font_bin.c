@@ -451,13 +451,11 @@ uint8_t lvGlyph_pixelRaw(const struct lvGlyph *g, uint16_t x, uint16_t y)
     return opa_scale((uint8_t)v, bpp);
 }
 
-/* ---- RLE (modified I3BN) decompressor ----
- * Ported from rle_next() and decompress_line() in LVGL's
- * src/font/fmt_txt/lv_font_fmt_txt.c (https://github.com/lvgl/lvgl), MIT
- * licence. The glyph bitstream stores a run when a pixel value repeats the
- * previous one: a 1-bit flag chain, collapsing to a 6-bit counter after 11
- * repeats. compression == 1 additionally XOR-prefilters each line against the
- * previous one. */
+/*
+ * RLE (modified I3BN) decoder, ported from rle_next() and decompress_line() in
+ * LVGL's src/font/fmt_txt/lv_font_fmt_txt.c (https://github.com/lvgl/lvgl),
+ * MIT licence.
+ */
 
 /**
  * States of the RLE decoder.

@@ -190,7 +190,7 @@ enum fontSet {
     FONT_SET_CRISP,    ///< Crisp text font, see gfx_setFontCrisp(); the text
                        ///< font itself on monochrome targets
     FONT_SET_ICONS,    ///< App icon glyphs, fallback of the text fonts
-    FONT_SET_NUM
+    FONT_SET_NUM       ///< Number of font sets
 };
 
 /**

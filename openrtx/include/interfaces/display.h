@@ -64,11 +64,9 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb);
 
 /**
  * Copy a band of rows to the display from a buffer holding only those rows,
- * for colour targets that draw the screen a band at a time instead of keeping
- * a framebuffer. This function blocks the caller until the band is sent, so
- * the buffer can be drawn again right after; the driver may change its
- * content. The emulator shows the frame once the band ending on the last row
- * arrives, so that the window and screenshots never mix two frames.
+ * for colour targets that draw the screen a band at a time. This function
+ * blocks the caller until the band is sent, so the buffer can be drawn again
+ * right after; the driver may change its content.
  *
  * @param startRow: first screen row of the band.
  * @param endRow: screen row after the last one of the band.
