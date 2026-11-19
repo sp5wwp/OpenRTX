@@ -201,6 +201,36 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     REQUIRE(nav.active()->id() == ViewId::Vfo);
 }
 
+TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")
+{
+    ViewSlot slot;
+    Navigator nav(slot, uiMemory);
+    state.tuner_mode = VFO;
+    state.channel.rx_frequency = 430000000;
+    state.channel.tx_frequency = 430000000;
+
+    nav.setRoot(ViewId::Vfo);
+    nav.dispatch(key(KEY_4)); /* opens the entry, retyping RX */
+    nav.dispatch(key(KEY_3));
+
+    nav.openOverlay(ViewId::Macro);
+    REQUIRE(uiMemory.inlineEdit.owner == ViewId::Vfo);
+
+    nav.closeOverlay();
+    REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
+
+    nav.dispatch(key(KEY_5));
+    nav.dispatch(key(KEY_ENTER)); /* RX done, TX derived from the offset */
+    nav.dispatch(key(KEY_ENTER)); /* commit both */
+    REQUIRE(state.channel.rx_frequency == 435000000);
+    REQUIRE(state.channel.tx_frequency == 435000000);
+
+    /* The entry closed: a digit opens a new one. */
+    nav.dispatch(key(KEY_1));
+    nav.dispatch(key(KEY_ESC));
+    REQUIRE(state.channel.rx_frequency == 435000000);
+}
+
 TEST_CASE("The editor survives the picker", "[ui][slot]")
 {
     ViewSlot slot;

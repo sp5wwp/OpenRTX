@@ -42,6 +42,12 @@ namespace ortxui
 class VfoView : public View
 {
 public:
+    /** Constructor. */
+    VfoView();
+
+    /** Destructor. */
+    ~VfoView();
+
     void build() override;
 
     /** Keep an open frequency or destination entry while destroyed. */
@@ -71,7 +77,24 @@ private:
     void stepChannel(int dir);       //< MEM: load the next/prev channel
     void toggleVfoMem();             //< switch between VFO and memory mode
     bool loadChannel(int16_t index); //< bank-aware channel load into state
-    void openInput(); //< set up the RX/TX slot fields, pre-filled from state
+
+    /**
+     * Open an entry, allocating its state.
+     *
+     * @param destination: edit the destination rather than the frequency.
+     * @return false if the entry could not be allocated.
+     */
+    bool openEntry(bool destination);
+
+    /** Close the entry and free its state. */
+    void closeEntry();
+
+    /**
+     * Open a frequency entry with the RX/TX slot fields pre-filled from state.
+     *
+     * @return false if the entry could not be allocated.
+     */
+    bool openInput();
     void beginInput(uint8_t firstDigit); //< open entry with a digit (type-over)
     void beginInputTweak(); //< open entry to edit the current freq in place (*)
     void switchField();     //< toggle RX/TX entry, deriving TX from RX + offset
@@ -137,25 +160,28 @@ private:
      * 100 MHz..100 Hz), rendered through FreqHero. RX pre-fills from the current
      * frequency; TX auto-derives from RX plus the channel's existing offset. */
     static constexpr uint8_t kFreqDigits = 7;
-    bool inputActive_ = false; //< keypad entry in progress
-    bool inputTxSet_ = false;  //< false = editing RX, true = TX
-    bool rxPristine_ = true; //< RX pre-filled/untouched -> first digit retypes
-    bool txPristine_ = true; //< TX still derived from RX + offset (not edited)
-    int64_t inputShift_ = 0; //< tx - rx captured at open (the repeater offset)
-    long long inputErrorAt_ =
-        0; //< getTick() of the last out-of-band commit; 0=none
-    char rxBuf_[kFreqDigits + 1] = { 0 };
-    char txBuf_[kFreqDigits + 1] = { 0 };
-    uint8_t rxSlot_ = 0; //< RX cursor slot while TX is edited
-    uint8_t txSlot_ = 0; //< TX cursor slot while RX is edited
 
-    /* M17 destination editor (classic MAIN_VFO # -> dst input): edited in place
-     * through the shared TextInput widget (inline bracket rendering). */
-    bool dstEditing_ = false; //< destination editor active
-    char dstBuf_[10] = { 0 }; //< settings.m17_dest is char[10]
+    /**
+     * A frequency or M17 destination entry (classic MAIN_VFO # -> dst input),
+     * edited in place through one TextInput. It exists only while open, so
+     * the screen does not carry it the rest of the time.
+     */
+    struct Entry {
+        TextInput input;               ///< The RX or TX digits, or the dest
+        long long errorAt = 0;         ///< getTick() of an out-of-band commit
+        int64_t shift = 0;             ///< TX - RX at open (repeater offset)
+        char rx[kFreqDigits + 1] = {}; ///< RX digits
+        char tx[kFreqDigits + 1] = {}; ///< TX digits
+        char dst[10] = {};             ///< Destination, as settings.m17_dest
+        uint8_t rxSlot = 0;            ///< RX cursor slot while TX is edited
+        uint8_t txSlot = 0;            ///< TX cursor slot while RX is edited
+        bool destination = false;      ///< Editing the dest, not the freq
+        bool txField = false;          ///< Editing TX rather than RX
+        bool rxPristine = true;        ///< RX untouched: a digit retypes it
+        bool txPristine = true;        ///< TX still derived from RX + offset
+    };
 
-    /* The one field being edited: the RX or TX digits, or the destination. */
-    TextInput entry_;
+    Entry *entry_ = nullptr; ///< Open entry, on the heap; nullptr if none
 };
 
 } // namespace ortxui

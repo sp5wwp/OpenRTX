@@ -23,7 +23,9 @@
 
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
+#include <new>
 
 namespace ortxui
 {
@@ -179,6 +181,16 @@ bool freqInBand(freq_t freq)
 
 } // namespace
 
+VfoView::VfoView()
+{
+}
+
+VfoView::~VfoView()
+{
+    if (entry_ != nullptr)
+        closeEntry();
+}
+
 void VfoView::build()
 {
     const int16_t W = CONFIG_SCREEN_WIDTH;
@@ -296,29 +308,30 @@ void VfoView::build()
 void VfoView::save(UiMemory &m) const
 {
     InlineEdit &ie = m.inlineEdit;
-    if (!inputActive_ && !dstEditing_) {
+    if (entry_ == nullptr) {
         if (ie.owner == id())
             ie.owner = ViewId::Count;
         return;
     }
 
+    const Entry &n = *entry_;
     VfoEdit &e = ie.vfo;
-    e.input = inputActive_;
-    e.destination = dstEditing_;
-    e.txField = inputTxSet_;
-    e.rxPristine = rxPristine_;
-    e.txPristine = txPristine_;
-    e.shift = static_cast<int32_t>(inputShift_);
-    e.errorAt = inputErrorAt_;
-    if (dstEditing_) {
-        memcpy(e.text[0], dstBuf_, sizeof(dstBuf_));
-        e.cursor[0] = static_cast<uint8_t>(entry_.cursor());
+    e.input = !n.destination;
+    e.destination = n.destination;
+    e.txField = n.txField;
+    e.rxPristine = n.rxPristine;
+    e.txPristine = n.txPristine;
+    e.shift = static_cast<int32_t>(n.shift);
+    e.errorAt = n.errorAt;
+    if (n.destination) {
+        memcpy(e.text[0], n.dst, sizeof(n.dst));
+        e.cursor[0] = static_cast<uint8_t>(n.input.cursor());
     } else {
-        const uint8_t slot = static_cast<uint8_t>(entry_.cursorSlot());
-        memcpy(e.text[0], rxBuf_, sizeof(rxBuf_));
-        memcpy(e.text[1], txBuf_, sizeof(txBuf_));
-        e.cursor[0] = inputTxSet_ ? rxSlot_ : slot;
-        e.cursor[1] = inputTxSet_ ? slot : txSlot_;
+        const uint8_t slot = static_cast<uint8_t>(n.input.cursorSlot());
+        memcpy(e.text[0], n.rx, sizeof(n.rx));
+        memcpy(e.text[1], n.tx, sizeof(n.tx));
+        e.cursor[0] = n.txField ? n.rxSlot : slot;
+        e.cursor[1] = n.txField ? slot : n.txSlot;
     }
     ie.owner = id();
 }
@@ -331,30 +344,50 @@ void VfoView::restore(UiMemory &m)
     ie.owner = ViewId::Count;
 
     const VfoEdit &e = ie.vfo;
+    if (!openEntry(e.destination))
+        return;
+
+    Entry &n = *entry_;
     if (e.destination) {
-        memcpy(dstBuf_, e.text[0], sizeof(dstBuf_));
-        entry_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
-                         TextInput::Mode::SingleLine,
-                         TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-        entry_.setMultiTap(MTAP_CALLSIGN);
-        entry_.resume(e.cursor[0], 0);
-        dstEditing_ = true;
+        memcpy(n.dst, e.text[0], sizeof(n.dst));
+        n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
+                          TextInput::Mode::SingleLine,
+                          TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+        n.input.setMultiTap(MTAP_CALLSIGN);
+        n.input.resume(e.cursor[0], 0);
         renderDstEdit();
         return;
     }
 
-    memcpy(rxBuf_, e.text[0], sizeof(rxBuf_));
-    memcpy(txBuf_, e.text[1], sizeof(txBuf_));
-    rxSlot_ = e.cursor[0];
-    txSlot_ = e.cursor[1];
-    bindField(e.txField, e.txField ? txSlot_ : rxSlot_);
-    inputActive_ = true;
-    inputTxSet_ = e.txField;
-    rxPristine_ = e.rxPristine;
-    txPristine_ = e.txPristine;
-    inputShift_ = e.shift;
-    inputErrorAt_ = e.errorAt;
+    memcpy(n.rx, e.text[0], sizeof(n.rx));
+    memcpy(n.tx, e.text[1], sizeof(n.tx));
+    n.rxSlot = e.cursor[0];
+    n.txSlot = e.cursor[1];
+    bindField(e.txField, e.txField ? n.txSlot : n.rxSlot);
+    n.txField = e.txField;
+    n.rxPristine = e.rxPristine;
+    n.txPristine = e.txPristine;
+    n.shift = e.shift;
+    n.errorAt = e.errorAt;
     refreshInput();
+}
+
+bool VfoView::openEntry(bool destination)
+{
+    void *mem = malloc(sizeof(Entry));
+    if (mem == nullptr)
+        return false;
+
+    entry_ = new (mem) Entry();
+    entry_->destination = destination;
+    return true;
+}
+
+void VfoView::closeEntry()
+{
+    entry_->~Entry();
+    free(entry_);
+    entry_ = nullptr;
 }
 
 void VfoView::syncMode(const channel_t &ch)
@@ -490,7 +523,8 @@ void VfoView::syncFromState(const state_t &s)
 
     /* While entering a frequency, the hero and channel line show the keypad
      * buffer (driven by refreshInput()); don't let live state overwrite them. */
-    if (!inputActive_) {
+    const bool input = (entry_ != nullptr) && !entry_->destination;
+    if (!input) {
         const channel_t &ch = s.channel;
 
         /* While actually transmitting a channel with an RX/TX split (repeater
@@ -513,7 +547,7 @@ void VfoView::syncFromState(const state_t &s)
          * directly): VFO mode shows "VFO" (or the M17 destination) with no
          * index; memory mode shows the 1-based index + channel name. Compose
          * the slot text and repaint only on a string change. */
-        if (!dstEditing_) {
+        if (entry_ == nullptr) {
             char idxText[8];
             char nameText[40];
             composeChanLine(s, idxText, nameText, sizeof(nameText));
@@ -531,10 +565,10 @@ void VfoView::syncFromState(const state_t &s)
                 chanName_.invalidate();
             }
         }
-    } else if (inputErrorAt_ != 0) {
+    } else if (entry_->errorAt != 0) {
         /* Expire a transient out-of-band error (this runs every GUI frame). */
-        if ((getTick() - inputErrorAt_) >= kInputErrorMs) {
-            inputErrorAt_ = 0;
+        if ((getTick() - entry_->errorAt) >= kInputErrorMs) {
+            entry_->errorAt = 0;
             refreshInput();
         }
     }
@@ -544,11 +578,8 @@ void VfoView::syncFromState(const state_t &s)
 
 NavIntent VfoView::onEvent(const Event &e)
 {
-    if (dstEditing_)
-        return onDstEditEvent(e);
-
-    if (inputActive_)
-        return onInputEvent(e);
+    if (entry_ != nullptr)
+        return entry_->destination ? onDstEditEvent(e) : onInputEvent(e);
 
     /* The knob tunes in VFO mode and steps channels in memory mode. */
     if (e.kind == EvKind::Encoder) {
@@ -639,8 +670,9 @@ NavIntent VfoView::onInputEvent(const Event &e)
     if (!mutating)
         return NavIntent::none();
 
-    TextInput &f = entry_;
-    bool &pristine = inputTxSet_ ? txPristine_ : rxPristine_;
+    Entry &n = *entry_;
+    TextInput &f = n.input;
+    bool &pristine = n.txField ? n.txPristine : n.rxPristine;
     if (pristine) {
         if (digit >= 0)
             f.clearSlots(); /* first digit retypes the whole frequency */
@@ -648,7 +680,7 @@ NavIntent VfoView::onInputEvent(const Event &e)
     }
     f.handleKey(k, getTick()); /* a known-mutating key always edits the field */
 
-    inputErrorAt_ = 0;
+    n.errorAt = 0;
     if ((digit >= 0) && (state.settings.vpLevel >= vpLow)) {
         vp_flush();
         vp_queueInteger(digit);
@@ -735,33 +767,34 @@ bool VfoView::loadChannel(int16_t index)
     return true;
 }
 
-void VfoView::openInput()
+bool VfoView::openInput()
 {
-    inputActive_ = true;
-    inputTxSet_ = false;
-    inputErrorAt_ = 0;
+    if (!openEntry(false))
+        return false;
 
+    Entry &n = *entry_;
     const channel_t &ch = state.channel;
-    inputShift_ = (int64_t)ch.tx_frequency - (int64_t)ch.rx_frequency;
+    n.shift = (int64_t)ch.tx_frequency - (int64_t)ch.rx_frequency;
 
-    /* TX starts empty; RX is fully pre-filled with the cursor at the end. */
-    memset(txBuf_, kPlaceholder, kFreqSlots);
-    txBuf_[kFreqSlots] = '\0';
-    txSlot_ = 0;
-    slotsFromFreq(rxBuf_, ch.rx_frequency);
-    rxBuf_[kFreqSlots] = '\0';
+    /* TX starts empty; RX is fully pre-filled with the cursor at the end. TX
+     * is derived lazily on the first switch / commit. */
+    memset(n.tx, kPlaceholder, kFreqSlots);
+    n.tx[kFreqSlots] = '\0';
+    slotsFromFreq(n.rx, ch.rx_frequency);
+    n.rx[kFreqSlots] = '\0';
     bindField(false, kFreqSlots);
-    rxPristine_ = true;
-    txPristine_ = true; /* TX derived lazily on the first switch / commit */
+    return true;
 }
 
 void VfoView::beginInput(uint8_t firstDigit)
 {
-    openInput();
+    if (!openInput())
+        return;
+
     /* First digit retypes from the top (the pre-filled RX is pristine). */
-    rxPristine_ = false;
-    entry_.clearSlots();
-    entry_.putDigit(firstDigit);
+    entry_->rxPristine = false;
+    entry_->input.clearSlots();
+    entry_->input.putDigit(firstDigit);
     if (state.settings.vpLevel >= vpLow) {
         vp_flush();
         vp_queueInteger(firstDigit);
@@ -775,49 +808,52 @@ void VfoView::beginInputTweak()
     /* '*' opens the keypad on the full current frequency, cursor at the last
      * digit. The field stays pristine: the next '*' backspaces the trailing kHz
      * to correct in place, while a digit retypes the whole value from the top. */
-    openInput();
-    refreshInput();
+    if (openInput())
+        refreshInput();
 }
 
 void VfoView::switchField()
 {
-    if (!inputTxSet_ && txPristine_)
+    Entry &n = *entry_;
+    if (!n.txField && n.txPristine)
         deriveTx(); /* refresh TX from the latest RX + offset before showing it */
 
     /* Keep the cursor of the field left, and edit the other one. */
-    const uint8_t slot = static_cast<uint8_t>(entry_.cursorSlot());
-    if (inputTxSet_)
-        txSlot_ = slot;
+    const uint8_t slot = static_cast<uint8_t>(n.input.cursorSlot());
+    if (n.txField)
+        n.txSlot = slot;
     else
-        rxSlot_ = slot;
-    inputTxSet_ = !inputTxSet_;
-    bindField(inputTxSet_, inputTxSet_ ? txSlot_ : rxSlot_);
-    inputErrorAt_ = 0;
+        n.rxSlot = slot;
+    n.txField = !n.txField;
+    bindField(n.txField, n.txField ? n.txSlot : n.rxSlot);
+    n.errorAt = 0;
     refreshInput();
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputReceiveOrTransmit(inputTxSet_, vpqDefault);
+        vp_announceInputReceiveOrTransmit(n.txField, vpqDefault);
 }
 
 void VfoView::deriveTx()
 {
-    const freq_t rx = freqFromSlots(rxBuf_);
-    int64_t tx = (int64_t)rx + inputShift_;
+    Entry &n = *entry_;
+    const freq_t rx = freqFromSlots(n.rx);
+    int64_t tx = (int64_t)rx + n.shift;
     if (tx < 0)
         tx = 0; /* an underflowing offset is rejected in band at commit */
-    slotsFromFreq(txBuf_, (freq_t)tx);
-    txSlot_ = kFreqSlots;
+    slotsFromFreq(n.tx, (freq_t)tx);
+    n.txSlot = kFreqSlots;
 }
 
 void VfoView::bindField(bool tx, uint8_t slot)
 {
     /* Binding lays the mask over the buffer: put the digits back after. */
-    char *buf = tx ? txBuf_ : rxBuf_;
+    Entry &n = *entry_;
+    char *buf = tx ? n.tx : n.rx;
     char digits[kFreqDigits + 1];
     memcpy(digits, buf, sizeof(digits));
-    entry_.configureSlots(buf, kFreqDigits + 1, kFreqMask, kPlaceholder,
-                          TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    n.input.configureSlots(buf, kFreqDigits + 1, kFreqMask, kPlaceholder,
+                           TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
     memcpy(buf, digits, sizeof(digits));
-    entry_.setCursorSlot(slot);
+    n.input.setCursorSlot(slot);
 }
 
 void VfoView::confirmInput()
@@ -825,13 +861,14 @@ void VfoView::confirmInput()
     /* ENTER on the RX field advances to TX (deriving it from the offset) so the
      * operator sees and confirms the TX frequency before anything is applied,
      * instead of silently committing on the first ENTER. ENTER on TX commits. */
-    if (!inputTxSet_) {
+    Entry &n = *entry_;
+    if (!n.txField) {
         switchField();
         return;
     }
 
-    const freq_t rx = freqFromSlots(rxBuf_);
-    const freq_t tx = freqFromSlots(txBuf_);
+    const freq_t rx = freqFromSlots(n.rx);
+    const freq_t tx = freqFromSlots(n.tx);
     if (freqInBand(rx) && freqInBand(tx)) {
         state.channel.rx_frequency = rx;
         state.channel.tx_frequency = tx;
@@ -845,15 +882,14 @@ void VfoView::confirmInput()
     } else {
         /* Keep the buffer and flag the error; syncFromState clears it shortly,
          * or the next edit does. */
-        inputErrorAt_ = getTick();
+        n.errorAt = getTick();
         refreshInput();
     }
 }
 
 void VfoView::exitInput()
 {
-    inputActive_ = false;
-    inputErrorAt_ = 0;
+    closeEntry();
 
     /* Force the change-gated readout to repaint from live state next sync. */
     lastFreq_ = 0xFFFFFFFFu;
@@ -865,19 +901,20 @@ void VfoView::exitInput()
 
 void VfoView::refreshInput()
 {
+    const Entry &n = *entry_;
     char main[16];
     char sub[6];
-    composeEntry(inputTxSet_ ? txBuf_ : rxBuf_, main, sub);
+    composeEntry(n.txField ? n.tx : n.rx, main, sub);
 
-    const bool err = (inputErrorAt_ != 0);
+    const bool err = (n.errorAt != 0);
     hero_.setEntry(main, sub);
-    hero_.setMode(inputTxSet_ ? "TX" : "RX");
+    hero_.setMode(n.txField ? "TX" : "RX");
     hero_.setTextColor(err ? Sem::Mark : Sem::Accent);
     hero_.invalidate();
 
     chanIdx_.setText("");
     chanName_.setText(err ? STR(outOfBand) :
-                            (inputTxSet_ ? STR(enterTx) : STR(enterRx)));
+                            (n.txField ? STR(enterTx) : STR(enterRx)));
     chanDetail_.setText(0, "");
     chanDetail_.setText(1, "");
     chanIdx_.invalidate();
@@ -936,7 +973,7 @@ void VfoView::renderDstEdit()
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;
 
     char body[36];
-    entry_.formatWindow(body, sizeof(body), bodyW, font);
+    entry_->input.formatWindow(body, sizeof(body), bodyW, font);
     snprintf(nameCache_, sizeof(nameCache_), "@%s", body);
     idxCache_[0] = '\0';
     chanIdx_.setText(idxCache_);
@@ -948,19 +985,22 @@ void VfoView::renderDstEdit()
 void VfoView::announceDstChar()
 {
     if (state.settings.vpLevel >= vpLow)
-        vp_announceInputChar(entry_.cursorChar());
+        vp_announceInputChar(entry_->input.cursorChar());
 }
 
 void VfoView::beginDstEdit()
 {
-    strncpy(dstBuf_, state.settings.m17_dest, sizeof(dstBuf_) - 1);
-    dstBuf_[sizeof(dstBuf_) - 1] = '\0';
-    entry_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
-                     TextInput::Mode::SingleLine,
-                     TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
-    entry_.setMultiTap(MTAP_CALLSIGN);
-    entry_.begin();
-    dstEditing_ = true;
+    if (!openEntry(true))
+        return;
+
+    Entry &n = *entry_;
+    strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
+    n.dst[sizeof(n.dst) - 1] = '\0';
+    n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
+                      TextInput::Mode::SingleLine,
+                      TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    n.input.setMultiTap(MTAP_CALLSIGN);
+    n.input.begin();
     /* The channel-name font stays at its display size: renderDstEdit() scrolls
      * a cursor-visible window of the "@W1[A]W" string within the box instead of
      * shrinking the whole field to make a full-length destination fit. */
@@ -971,14 +1011,14 @@ void VfoView::beginDstEdit()
 
 void VfoView::dstCycle(int dir)
 {
-    entry_.cycle(dir);
+    entry_->input.cycle(dir);
     renderDstEdit();
     announceDstChar();
 }
 
 void VfoView::dstMove(int dir)
 {
-    entry_.moveCursor(dir);
+    entry_->input.moveCursor(dir);
     renderDstEdit();
     announceDstChar();
 }
@@ -987,14 +1027,14 @@ void VfoView::endDstEdit(bool commit)
 {
     if (commit) {
         /* Strip trailing spaces, then store the destination. */
-        entry_.stripTrailingSpaces();
-        strncpy(state.settings.m17_dest, dstBuf_,
+        entry_->input.stripTrailingSpaces();
+        strncpy(state.settings.m17_dest, entry_->dst,
                 sizeof(state.settings.m17_dest) - 1);
         state.settings.m17_dest[sizeof(state.settings.m17_dest) - 1] = '\0';
         requestSyncRtx(); /* the destination feeds the M17 LSF */
     }
 
-    dstEditing_ = false;
+    closeEntry();
     /* Force the channel line to recompose from live state next sync. */
     idxCache_[0] = '\1';
     nameCache_[0] = '\1';
@@ -1018,7 +1058,7 @@ NavIntent VfoView::onDstEditEvent(const Event &e)
         else if (!kbdSpaceOnHash() && ((k & KEY_HASH) != 0u)) {
             /* # clears the field (unified across the text editors); ENTER then
              * commits an empty destination as @ALL. */
-            entry_.clear();
+            entry_->input.clear();
             renderDstEdit();
             announceDstChar();
         } else if ((k & KBD_CHAR_MASK) != 0u) {
@@ -1026,9 +1066,9 @@ NavIntent VfoView::onDstEditEvent(const Event &e)
             const uint8_t ki =
                 static_cast<uint8_t>(__builtin_ctz(k & KBD_CHAR_MASK));
             if (ki == 10u)
-                entry_.backspace();
+                entry_->input.backspace();
             else
-                entry_.tapKey(ki, getTick());
+                entry_->input.tapKey(ki, getTick());
             renderDstEdit();
             announceDstChar();
         } else if ((k & KEY_UP) != 0u)
