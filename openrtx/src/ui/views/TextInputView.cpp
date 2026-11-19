@@ -75,10 +75,9 @@ void TextInputView::configureField()
     field_.configure(r.work, r.cap, *r.charset,
                      r.multiline ? TextInput::Mode::MultiLine :
                                    TextInput::Mode::SingleLine,
-                     TextInput::CursorStyle::Block, f);
+                     f);
     field_.setMultiTap(*r.tap);
     field_.resume(r.cursor, r.topRow);
-    field_.setEditMode(TextInput::EditMode::Overtype); /* the only model now */
 }
 
 void TextInputView::save(UiMemory &m) const
@@ -92,7 +91,7 @@ void TextInputView::onShow()
     /* Back from the character picker: insert the chosen code point. */
     EditRequest &r = uiMemory.edit;
     if (r.picked != 0) {
-        field_.putCodePoint(r.picked); /* insert or overwrite, per the mode */
+        field_.putCodePoint(r.picked);
         field_.invalidate();
         r.picked = 0;
     }

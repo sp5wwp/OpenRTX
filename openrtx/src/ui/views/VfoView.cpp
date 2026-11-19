@@ -398,8 +398,7 @@ void VfoView::restore(UiMemory &m)
     if (e.destination) {
         memcpy(n.dst, e.text[0], sizeof(n.dst));
         n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
-                          TextInput::Mode::SingleLine,
-                          TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                          TextInput::Mode::SingleLine, FONT_SIZE_8PT);
         n.input.setMultiTap(MTAP_CALLSIGN);
         n.input.resume(e.cursor[0], 0);
         renderDstEdit();
@@ -907,7 +906,7 @@ void VfoView::bindField(bool tx, uint8_t slot)
     char digits[kFreqDigits + 1];
     memcpy(digits, buf, sizeof(digits));
     n.input.configureSlots(buf, kFreqDigits + 1, kFreqMask, kPlaceholder,
-                           TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                           FONT_SIZE_8PT);
     memcpy(buf, digits, sizeof(digits));
     n.input.setCursorSlot(slot);
 }
@@ -1054,8 +1053,7 @@ void VfoView::beginDstEdit()
     strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
     n.dst[sizeof(n.dst) - 1] = '\0';
     n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
-                      TextInput::Mode::SingleLine,
-                      TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                      TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     n.input.setMultiTap(MTAP_CALLSIGN);
     n.input.begin();
     /* The channel-name font stays at its display size: renderDstEdit() scrolls

@@ -99,8 +99,7 @@ void M17View::onBeginEdit(uint8_t row)
     strncpy(callBuf_, state.settings.callsign, sizeof(callBuf_) - 1);
     callBuf_[sizeof(callBuf_) - 1] = '\0';
     callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
-                        TextInput::Mode::SingleLine,
-                        TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                        TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     callsign_.setMultiTap(MTAP_CALLSIGN);
     callsign_.begin();
 }
@@ -115,8 +114,7 @@ void M17View::restoreCustom(const ListEdit &e)
 {
     memcpy(callBuf_, e.text, sizeof(callBuf_));
     callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
-                        TextInput::Mode::SingleLine,
-                        TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                        TextInput::Mode::SingleLine, FONT_SIZE_8PT);
     callsign_.setMultiTap(MTAP_CALLSIGN);
     callsign_.resume(e.cursor, 0);
     refreshCustom(RowCallsign);

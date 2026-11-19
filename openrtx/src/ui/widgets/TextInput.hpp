@@ -36,8 +36,8 @@ namespace ortxui
  * Deletion works on every radio: the cursor wheel has a trailing ⌫ slot, and
  * cycling a character to it then moving/committing removes it (keypad radios
  * also get '*' as a backspace shortcut). `putCodePoint()` is the UTF-8 character
- * picker seam for accented/symbol code points not on the keyboard; it inserts or
- * overwrites per the active EditMode, just like a typed character would.
+ * picker seam for accented/symbol code points not on the keyboard; it
+ * overwrites the cell under the cursor, just like a typed character would.
  */
 class TextInput : public Object
 {
@@ -52,29 +52,13 @@ public:
         SingleLine,
         MultiLine,
     };
-    enum class CursorStyle : uint8_t {
-        Bracket, //< inline "[X]" (formatBracketed); parity with the old editors
-        Block,   //< inverse cell drawn by draw() (modal)
-    };
-    /**
-     * Character-entry model. Overtype (the default, and the only model for the
-     * inline editors) keeps a cell under the cursor and replaces it in place;
-     * the cursor is a block. Insert places the cursor as a caret *between* cells
-     * and pushes text right to make room, so characters can be added mid-string;
-     * the cursor is a thin bar (a block only while a freshly inserted cell is
-     * being dialed). Only the modal editor exposes a toggle between the two.
-     */
-    enum class EditMode : uint8_t {
-        Overtype,
-        Insert,
-    };
 
     /**
      * Bind the field to `buf` (holds up to `cap`-1 chars + NUL) with charset
      * `cs`. `font` is used only by draw(). Call begin() next to seed the cursor.
      */
     void configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
-                   CursorStyle cursor, fontSize_t font);
+                   fontSize_t font);
 
     /**
      * Configure a fixed-width masked field over `buf` (numeric slot entry:
@@ -87,14 +71,12 @@ public:
      * slotDigit() (which returns -1 for an unfilled slot) rather than the raw
      * buffer string, and may bypass draw() with their own renderer.
      *
-     * handleKey()'s ENTER commits whatever is entered -- unfilled trailing slots
-     * stay as placeholders, which a trailing-zero field (frequency) reads as
-     * zero. A field that instead requires full entry (time/date) must reject a
-     * partial value with a validator via setHooks() (e.g. filledSlots() ==
-     * slotCount()); there is deliberately no built-in fullness gate.
+     * Unfilled trailing slots stay as placeholders, which a trailing-zero field
+     * (frequency) reads as zero; a host that needs full entry (time/date)
+     * checks filledSlots() == slotCount() before committing.
      */
     void configureSlots(char *buf, uint16_t cap, const char *mask,
-                        char placeholder, CursorStyle cursor, fontSize_t font);
+                        char placeholder, fontSize_t font);
 
     /** Seed length/cursor from the current buffer; an empty buffer starts as a
      *  single editable blank so there is always a character under the cursor. */
@@ -115,31 +97,17 @@ public:
         tapTable_ = &t;
     }
 
-    /* ---- Mode ---- */
-    void setEditMode(EditMode m); //< Overtype (default) or Insert
-    EditMode editMode() const
-    {
-        return editMode_;
-    }
-    void toggleEditMode()
-    {
-        setEditMode(editMode_ == EditMode::Overtype ? EditMode::Insert :
-                                                      EditMode::Overtype);
-    }
-
     /* ---- Edit ops (driven by the host's key mapping) ---- */
-    void cycle(int dir);      //< dial the cell (Insert: insert+dial a new cell)
-    void moveCursor(int dir); //< move the cursor by one cell
-    void
-    putCodePoint(uint32_t cp); //< picker seam: insert or overwrite per mode
-    void insert(uint32_t cp);  //< insert a code point (UTF-8), advancing
-    void backspace();          //< delete the cell before the cursor
-    void clear();              //< empty the buffer
+    void cycle(int dir);            //< dial the cell under the cursor
+    void moveCursor(int dir);       //< move the cursor by one cell
+    void putCodePoint(uint32_t cp); //< picker seam: overwrite the cell
+    void backspace();               //< delete the cell before the cursor
+    void clear();                   //< empty the buffer
     void stripTrailingSpaces();
 
     /** ETSI multi-tap: press of keypad key `keyIndex` (0-9, *=10, #=11) at tick
      *  `nowTick`. Same key within the window cycles the character in place; a
-     *  different key or a lapsed window commits and advances (overwrite model).*/
+     *  different key or a lapsed window commits and advances. */
     void tapKey(uint8_t keyIndex, long long nowTick);
     /** Finalize any in-progress multi-tap character (call before a cursor move
      *  or on commit) so the next tap starts a fresh character. */
@@ -169,22 +137,10 @@ public:
     }
     void clearSlots(); //< reset every slot to the placeholder, cursor to slot 0
 
-    /* ---- Validation + commit/cancel hooks (used by handleKey) ---- */
-    using Predicate = bool (*)(void *ctx); //< return false to reject a commit
-    using Action = void (*)(void *ctx);
-    void setHooks(void *ctx, Predicate validate, Action onCommit,
-                  Action onCancel)
-    {
-        hookCtx_ = ctx;
-        validate_ = validate;
-        onCommit_ = onCommit;
-        onCancel_ = onCancel;
-    }
-
     /**
      * Centralized key contract so every editor behaves identically: '*' =
-     * backspace, '#' = clear the field (text mode only), ENTER = validate +
-     * commit, ESC = cancel, digits = type (multi-tap in text mode, slot fill in
+     * backspace, '#' = clear the field (text mode only), ENTER = commit,
+     * ESC = cancel, digits = type (multi-tap in text mode, slot fill in
      * slot mode), LEFT/RIGHT = move cursor, UP/DOWN = cycle the char (text mode).
      * Keys the widget does not own (UP/DOWN in slot mode, e.g. an RX/TX field
      * switch) return NotHandled so the host view can act on them.
@@ -198,10 +154,6 @@ public:
     KeyResult handleKey(uint32_t keys, long long nowTick);
 
     /* ---- Accessors ---- */
-    uint16_t length() const
-    {
-        return len_;
-    }
     uint16_t cursor() const
     {
         return cursor_;
@@ -219,10 +171,6 @@ public:
     char cursorChar() const
     {
         return (buf_ != nullptr && cursor_ < len_) ? buf_[cursor_] : ' ';
-    }
-    const char *text() const
-    {
-        return (buf_ != nullptr) ? buf_ : "";
     }
 
     /** Compose the buffer with the cursor character wrapped in brackets into
@@ -263,8 +211,6 @@ private:
     uint16_t prevCell(uint16_t pos) const; //< start of the cell before pos
     void spliceCell(uint16_t pos, const char *enc,
                     int n);                //< replace cell w/ enc
-    void
-    insertBlankAt(uint16_t pos); //< open a ' ' cell at pos (Insert dialing)
 
     static constexpr uint16_t kMaxSlots = 16; ///< Most slots of a masked field
 
@@ -274,9 +220,6 @@ private:
     uint16_t cursor_ = 0;
     const Charset *cs_ = nullptr;
     Mode mode_ = Mode::SingleLine;
-    CursorStyle cursorStyle_ = CursorStyle::Bracket;
-    EditMode editMode_ = EditMode::Overtype;
-    bool insertPending_ = false; //< Insert: cell at cursor_ is being dialed
     fontSize_t font_ = FONT_SIZE_8PT;
     uint16_t topRow_ = 0; //< first visible wrapped row (MultiLine scroll)
 
@@ -295,12 +238,6 @@ private:
     uint16_t slotCount_ = 0;  //< number of editable slots laid into the buffer
     uint16_t slotCursor_ = 0; //< active slot ordinal, in [0, slotCount_]
     std::array<uint16_t, kMaxSlots> slotPos_ = {}; //< buffer offset of each slot
-
-    /* Validation + commit/cancel hooks (handleKey). */
-    void *hookCtx_ = nullptr;
-    Predicate validate_ = nullptr;
-    Action onCommit_ = nullptr;
-    Action onCancel_ = nullptr;
 };
 
 } // namespace ortxui

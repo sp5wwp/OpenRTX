@@ -31,8 +31,7 @@ static constexpr char kDelete = 0x7F;
 static constexpr char kDeleteGlyph[] = SYMBOL_BACKSPACE;
 
 /**
- * Minimal UTF-8 encoder (BMP) for insert(); built-in charsets are ASCII so the
- * one-byte path is what runs today.
+ * Minimal UTF-8 encoder (BMP) for putCodePoint().
  *
  * @param cp: code point.
  * @param out: output bytes.
@@ -77,13 +76,12 @@ static uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
 }
 
 void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
-                          CursorStyle cursor, fontSize_t font)
+                          fontSize_t font)
 {
     buf_ = buf;
     cap_ = cap;
     cs_ = &cs;
     mode_ = mode;
-    cursorStyle_ = cursor;
     font_ = font;
     len_ = 0;
     cursor_ = 0;
@@ -97,8 +95,7 @@ void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
 }
 
 void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
-                               char placeholder, CursorStyle cursor,
-                               fontSize_t font)
+                               char placeholder, fontSize_t font)
 {
     if ((buf == nullptr) || (cap == 0) || (mask == nullptr))
         return;
@@ -107,9 +104,7 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     cap_ = cap;
     cs_ = nullptr;
     mode_ = Mode::SingleLine;
-    cursorStyle_ = cursor;
     font_ = font;
-    editMode_ = EditMode::Overtype;
     slotMode_ = true;
     placeholder_ = placeholder;
     tapActive_ = false;
@@ -287,41 +282,10 @@ void TextInput::spliceCell(uint16_t pos, const char *enc, int n)
     len_ = static_cast<uint16_t>(len_ - old + n);
 }
 
-void TextInput::insertBlankAt(uint16_t pos)
-{
-    if ((buf_ == nullptr) || (pos > len_) || (len_ + 1 >= cap_))
-        return;
-    memmove(buf_ + pos + 1, buf_ + pos,
-            static_cast<size_t>(len_ - pos) + 1); /* include NUL */
-    buf_[pos] = ' ';
-    len_++;
-}
-
-void TextInput::setEditMode(EditMode m)
-{
-    editMode_ = m;
-    insertPending_ = false;
-    /* Overtype always sits on a cell; if the caret was at the end, pull it back
-     * onto the last character. */
-    if ((m == EditMode::Overtype) && (cursor_ >= len_) && (len_ > 0))
-        cursor_ = prevCell(len_);
-}
-
 void TextInput::cycle(int dir)
 {
     if ((buf_ == nullptr) || (cs_ == nullptr))
         return;
-    /* Insert mode: the caret sits between cells; the first dial opens a fresh
-     * blank cell here (pushing text right) and then dials it, subsequent dials
-     * keep editing that same cell. Moving the caret commits it. */
-    if (editMode_ == EditMode::Insert) {
-        if (!insertPending_) {
-            if (len_ + 1 >= cap_)
-                return;
-            insertBlankAt(cursor_);
-            insertPending_ = true;
-        }
-    }
     /* Cycling on an empty field starts a fresh editable blank. */
     if (len_ == 0) {
         if (cap_ < 2)
@@ -363,13 +327,12 @@ void TextInput::deleteAt(uint16_t pos)
     len_ = static_cast<uint16_t>(len_ - clen);
     if (cursor_ > len_)
         cursor_ = len_;
-    /* Overtype keeps the cursor on a cell; Insert may rest as a caret at len_. */
-    if ((editMode_ == EditMode::Overtype) && (cursor_ >= len_) && (len_ > 0))
+    /* Keep the cursor on a cell. */
+    if ((cursor_ >= len_) && (len_ > 0))
         cursor_ = prevCell(len_);
     if (len_ == 0)
         cursor_ = 0;
     tapActive_ = false;
-    insertPending_ = false;
 }
 
 void TextInput::resolvePendingDelete()
@@ -397,23 +360,14 @@ void TextInput::moveCursor(int dir)
         deleteAt(cursor_);
         return;
     }
-    /* Leaving a freshly inserted cell commits it (it is already in the buffer);
-     * the caret then floats between committed cells again. */
-    insertPending_ = false;
     if (dir < 0) {
         if (cursor_ > 0)
             cursor_ = prevCell(cursor_);
     } else {
         const uint16_t nxt = nextCell(cursor_);
-        if ((nxt < len_) || ((cursor_ < len_) && (nxt == len_))) {
-            /* Insert mode allows the caret to rest just past the last cell; in
-             * Overtype we keep the cursor on a cell and extend to add one. */
-            cursor_ = (editMode_ == EditMode::Insert) ? nxt :
-                      (nxt < len_)                    ? nxt :
-                                                        cursor_;
-        }
-        if ((editMode_ == EditMode::Overtype) && (nxt >= len_)
-            && (len_ + 1 < cap_)) {
+        if (nxt < len_) {
+            cursor_ = nxt;
+        } else if (len_ + 1 < cap_) {
             /* Extend with a blank and step onto it. */
             buf_[len_] = ' ';
             buf_[len_ + 1] = '\0';
@@ -423,35 +377,12 @@ void TextInput::moveCursor(int dir)
     }
 }
 
-void TextInput::insert(uint32_t cp)
-{
-    if (buf_ == nullptr)
-        return;
-    char enc[4];
-    const int n = utf8Encode(cp, enc);
-    if (len_ + n + 1 > cap_) /* no room for the bytes plus the NUL */
-        return;
-    memmove(buf_ + cursor_ + n, buf_ + cursor_,
-            static_cast<size_t>(len_ - cursor_) + 1); /* include NUL */
-    for (int i = 0; i < n; i++)
-        buf_[cursor_ + i] = enc[i];
-    len_ = static_cast<uint16_t>(len_ + n);
-    cursor_ = static_cast<uint16_t>(cursor_ + n);
-    insertPending_ = false;
-}
-
 void TextInput::putCodePoint(uint32_t cp)
 {
-    /* The character picker respects the edit mode so it lands exactly like a
-     * typed character: Insert pushes text right at the caret (advancing past
-     * the new glyph); Overtype replaces the cell under the cursor in place and
-     * leaves the cursor on it -- seeding an empty field first if needed. */
+    /* Replace the cell under the cursor and leave the cursor on it, as a typed
+     * character would. */
     if (buf_ == nullptr)
         return;
-    if (editMode_ == EditMode::Insert) {
-        insert(cp);
-        return;
-    }
     if (len_ == 0) {
         if (cap_ < 2)
             return;
@@ -463,7 +394,6 @@ void TextInput::putCodePoint(uint32_t cp)
     char enc[4];
     const int n = utf8Encode(cp, enc);
     spliceCell(cursor_, enc, n);
-    insertPending_ = false;
 }
 
 void TextInput::backspace()
@@ -495,7 +425,6 @@ void TextInput::backspace()
     len_ = static_cast<uint16_t>(len_ - clen);
     cursor_ = prev;
     tapActive_ = false;
-    insertPending_ = false;
 }
 
 void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
@@ -513,17 +442,9 @@ void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
     if (cont) {
         /* Same key within the window: cycle the character in place. */
         tapSet_ = static_cast<uint8_t>((tapSet_ + 1) % n);
-    } else if (editMode_ == EditMode::Insert) {
-        /* Insert: commit the previous tap (step the caret past it) and open a
-         * fresh cell at the caret, pushing the rest of the text right. */
-        if (tapActive_)
-            cursor_ = nextCell(cursor_);
-        insertPending_ = false;
-        insertBlankAt(cursor_);
-        tapSet_ = 0;
     } else {
-        /* Overtype: the previous character is committed; advance to a fresh
-         * slot (moveCursor extends at the end) and overwrite it. */
+        /* The previous character is committed; advance to a fresh slot
+         * (moveCursor extends at the end) and overwrite it. */
         if (tapActive_)
             moveCursor(+1);
         tapSet_ = 0;
@@ -544,19 +465,12 @@ TextInput::KeyResult TextInput::handleKey(uint32_t keys, long long nowTick)
 {
     if ((keys & KEY_ENTER) != 0u) {
         commitPending();
-        if ((validate_ != nullptr) && !validate_(hookCtx_))
-            return KeyResult::Editing; /* rejected: keep editing, host shows why */
         if (!slotMode_)
             stripTrailingSpaces();
-        if (onCommit_ != nullptr)
-            onCommit_(hookCtx_);
         return KeyResult::Committed;
     }
-    if ((keys & KEY_ESC) != 0u) {
-        if (onCancel_ != nullptr)
-            onCancel_(hookCtx_);
+    if ((keys & KEY_ESC) != 0u)
         return KeyResult::Cancelled;
-    }
     if ((keys & KEY_STAR) != 0u) {
         backspace();
         return KeyResult::Editing;
@@ -772,16 +686,6 @@ void TextInput::draw(DrawCtx &d)
     auto drawCursor = [&](const Rect &lineBox, uint16_t lineStart) {
         const uint16_t preW = spanWidth(buf_, lineStart, cursor_, font_);
         const int16_t cx = static_cast<int16_t>(area_.x + preW);
-
-        /* Insert mode shows a thin caret *between* cells, except while a fresh
-         * cell is being dialed/tapped -- then the composing cell gets the block,
-         * same as overtype. */
-        const bool composing = insertPending_ || tapActive_;
-        if ((editMode_ == EditMode::Insert) && !composing) {
-            const Rect bar = { cx, lineBox.y, 2u, lineBox.h };
-            d.fillRect(bar, Sem::Primary);
-            return;
-        }
 
         /* Block over the whole cell (a picker-inserted accent is one cell). */
         const uint16_t clen = cellLen(cursor_);

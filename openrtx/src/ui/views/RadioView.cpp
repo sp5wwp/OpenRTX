@@ -162,7 +162,7 @@ void RadioView::onBeginEdit(uint8_t row)
                                        ch.tx_frequency - ch.rx_frequency)
                        / 1000u;
     offsetInput_.configureSlots(offsetBuf_, sizeof(offsetBuf_), "999999", '-',
-                                TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                                FONT_SIZE_8PT);
     setSlotsDecimal(offsetInput_, mag);
     offsetPristine_ = true;
 }
@@ -178,7 +178,7 @@ void RadioView::saveCustom(ListEdit &e) const
 void RadioView::restoreCustom(const ListEdit &e)
 {
     offsetInput_.configureSlots(offsetBuf_, sizeof(offsetBuf_), "999999", '-',
-                                TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                                FONT_SIZE_8PT);
     memcpy(offsetBuf_, e.text, sizeof(offsetBuf_));
     offsetInput_.setCursorSlot(e.cursor);
     offsetNeg_ = e.negative;

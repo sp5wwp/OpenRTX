@@ -118,7 +118,7 @@ void TimeDateView::beginEdit()
     /* 10 blank digit slots (dd mm yy hh mm); '*' backspaces, digits fill left to
      * right. Seconds are not editable (fixed 00). */
     input_.configureSlots(inputBuf_, sizeof(inputBuf_), "9999999999", '_',
-                          TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+                          FONT_SIZE_8PT);
     hint_.setText("dd/mm/yy hh:mm");
     hint_.invalidate();
     refreshEdit();
