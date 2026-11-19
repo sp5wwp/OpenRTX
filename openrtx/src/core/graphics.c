@@ -825,7 +825,7 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
          * displays each glyph is decoded to 8-bit coverage and alpha-blended
          * (anti-aliasing); on 1bpp displays the coverage is thresholded. */
 #ifdef CONFIG_PIX_FMT_RGB565
-        static uint8_t cov[64 * 64];
+        static uint8_t cov[FONT_MAX_GLYPH_AREA];
         bool decoded = ((uint32_t)w * h <= sizeof(cov))
                     && lvFont_decodeGlyph(f, &glyph, cov);
 #endif

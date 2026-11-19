@@ -1392,9 +1392,14 @@ dsp_oversampling_test = executable('dsp_oversampling_test',
                                     sources : unit_test_src + ['tests/unit/dsp_oversampling.cpp'],
                                     kwargs  : unit_test_opts)
 
+# The test reads the built-in font blobs, so it gets their directory as an
+# absolute path.
+gfx_text_test_opts = unit_test_opts + {'include_directories' : linux_inc + ['openrtx/src/core'],
+                                       'cpp_args' : linux_cpp_args +
+      ['-DFONT_DIR="' + meson.project_source_root() / 'openrtx/fonts' + '"']}
 gfx_text_test = executable('gfx_text_test',
                             sources : unit_test_src + ['tests/unit/gfx_text.cpp'],
-                            kwargs  : unit_test_opts)
+                            kwargs  : gfx_text_test_opts)
 
 audio_codec_test = executable('audio_codec_test',
                               sources : unit_test_src + ['tests/unit/audio_codec.cpp'],
