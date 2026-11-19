@@ -253,6 +253,38 @@ TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")
     REQUIRE(state.channel.rx_frequency == 435000000);
 }
 
+TEST_CASE("A Time & Date entry survives the macro menu", "[ui][slot]")
+{
+    ViewSlot slot;
+    Navigator nav(slot, uiMemory);
+    state.settings.utc_timezone = 0;
+    state.time = {};
+
+    nav.setRoot(ViewId::Vfo);
+    nav.openOverlay(ViewId::TimeDate);
+    nav.dispatch(key(KEY_ENTER)); /* opens the entry */
+    for (const uint32_t k : { KEY_2, KEY_5, KEY_1, KEY_2 })
+        nav.dispatch(key(k));
+
+    nav.openOverlay(ViewId::Macro);
+    REQUIRE(uiMemory.inlineEdit.owner == ViewId::TimeDate);
+
+    nav.closeOverlay();
+    REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
+
+    for (const uint32_t k : { KEY_8, KEY_0, KEY_1, KEY_3, KEY_4, KEY_5 })
+        nav.dispatch(key(k));
+    nav.dispatch(key(KEY_ENTER)); /* commit */
+    REQUIRE(state.time.date == 25);
+    REQUIRE(state.time.month == 12);
+    REQUIRE(state.time.year == 80);
+    REQUIRE(state.time.hour == 13);
+    REQUIRE(state.time.minute == 45);
+
+    nav.dispatch(key(KEY_ESC));
+    REQUIRE(nav.activeId() == ViewId::Vfo);
+}
+
 TEST_CASE("The editor survives the picker", "[ui][slot]")
 {
     ViewSlot slot;

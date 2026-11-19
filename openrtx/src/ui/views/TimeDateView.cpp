@@ -6,6 +6,7 @@
 
 #include "views/TimeDateView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"
@@ -112,7 +113,30 @@ void TimeDateView::announce()
 #endif
 }
 
-void TimeDateView::beginEdit()
+void TimeDateView::save() const
+{
+    if (!editing_)
+        return;
+
+    DateEdit e;
+    memcpy(e.digits, inputBuf_, sizeof(e.digits));
+    e.slot = input_.cursorSlot();
+    uiMemory.inlineEdit.keep(id(), e);
+}
+
+void TimeDateView::restore()
+{
+    DateEdit e;
+    if (!uiMemory.inlineEdit.take(id(), e))
+        return;
+
+    openEntry();
+    memcpy(inputBuf_, e.digits, sizeof(inputBuf_));
+    input_.setCursorSlot(e.slot);
+    refreshEdit();
+}
+
+void TimeDateView::openEntry()
 {
     editing_ = true;
     input_.configureSlots(inputBuf_, sizeof(inputBuf_), ENTRY_MASK, '_',
@@ -120,7 +144,11 @@ void TimeDateView::beginEdit()
     hint_.setText(STR(hintDateTime));
     hint_.invalidate();
     refreshEdit();
+}
 
+void TimeDateView::beginEdit()
+{
+    openEntry();
     if (state.settings.vpLevel >= vpLow)
         vp_announceBuffer(&currentLanguage->timeAndDate, true, false,
                           STR(hintDateTime).str());

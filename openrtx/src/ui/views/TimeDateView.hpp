@@ -39,6 +39,12 @@ public:
     /** Speak the title, date and time. */
     void announce() override;
 
+    /** Keep an open entry while destroyed. */
+    void save() const override;
+
+    /** Reopen an entry kept by save(). */
+    void restore() override;
+
     /** Follow the clock while not editing. */
     void syncFromState(const state_t &s) override;
 
@@ -68,8 +74,11 @@ private:
      */
     static void showText(Label &label, char *buf, const char *text);
 
-    /** Open the entry, empty. */
+    /** Open the entry, empty, and speak its format. */
     void beginEdit();
+
+    /** Open the entry, empty. */
+    void openEntry();
 
     /** Close the entry and show the clock. */
     void endEdit();
@@ -91,19 +100,26 @@ private:
      */
     int8_t field(uint8_t first) const;
 
-    static constexpr size_t TEXT_SIZE = 16; ///< Size of a shown text
+    static constexpr size_t TEXT_SIZE = 16;  ///< Size of a shown text
+    static constexpr size_t ENTRY_SIZE = 12; ///< Entry digits and the NUL
 
-    Screen screen_;                         ///< Widget tree root
-    Flex root_;                             ///< Top bar over the body
-    Flex body_;                             ///< Date over time over the hint
-    Label dateLabel_;                       ///< Date, or its entry
-    Label timeLabel_;                       ///< Time, or its entry
-    Label hint_;                            ///< Key hint
-    TextInput input_;                       ///< Digit entry: dd mm yy hh mm
-    char inputBuf_[12] = {};                ///< Entry digits
-    char dateBuf_[TEXT_SIZE] = {};          ///< Date text shown
-    char timeBuf_[TEXT_SIZE] = {};          ///< Time text shown
-    bool editing_ = false;                  ///< The entry is open
+    /** An entry kept while the view is destroyed. */
+    struct DateEdit {
+        char digits[ENTRY_SIZE]; ///< Entry digits
+        uint16_t slot;           ///< Cursor slot
+    };
+
+    Screen screen_;                  ///< Widget tree root
+    Flex root_;                      ///< Top bar over the body
+    Flex body_;                      ///< Date over time over the hint
+    Label dateLabel_;                ///< Date, or its entry
+    Label timeLabel_;                ///< Time, or its entry
+    Label hint_;                     ///< Key hint
+    TextInput input_;                ///< Digit entry: dd mm yy hh mm
+    char inputBuf_[ENTRY_SIZE] = {}; ///< Entry digits
+    char dateBuf_[TEXT_SIZE] = {};   ///< Date text shown
+    char timeBuf_[TEXT_SIZE] = {};   ///< Time text shown
+    bool editing_ = false;           ///< The entry is open
 };
 
 } // namespace ortxui
