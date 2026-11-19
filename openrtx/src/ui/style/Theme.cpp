@@ -63,30 +63,22 @@ static constexpr color_t instrumentColor(Sem role)
         case Sem::OnAccent:
             return palette::black;
         case Sem::Accent:
-        case Sem::FocusRing:
             return palette::brandGold;
         case Sem::TxDanger:
             return palette::txOrange;
         case Sem::RxSuccess:
-        case Sem::ModeDMR:
             return palette::rxGreen;
         case Sem::Warning:
             return palette::warnOrange;
         case Sem::Mark:
             return palette::markRed;
-        case Sem::ModeM17:
-            return palette::m17Red;
-        case Sem::ModeM17Accent:
-            return palette::m17Grey;
-        case Sem::ModeFM:
-            return palette::fmCyanGrey;
         default:
             return palette::onSurface;
     }
 }
 
 /**
- * Build a theme table from a role mapping, at compile time.
+ * Build a theme table from a role mapping and the list of role indices.
  *
  * @param map: role to colour mapping.
  * @return the table.
@@ -131,11 +123,7 @@ color_t themeColor(Sem role)
         theme = &THEME_INSTRUMENT;
 #endif
 
-    int i = static_cast<int>(role);
-    if ((i < 0) || (i >= static_cast<int>(Sem::Count)))
-        i = static_cast<int>(Sem::OnSurface);
-
-    return theme->colors[i];
+    return theme->colors[static_cast<size_t>(role)];
 }
 
 } // namespace ortxui

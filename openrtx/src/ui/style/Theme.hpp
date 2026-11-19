@@ -33,8 +33,9 @@ extern const ThemeTable THEME_INSTRUMENT;
 extern const ThemeTable THEME_HIGH_CONTRAST;
 
 /**
- * Use a theme from outside the firmware, e.g. a theme pack, on colour
- * targets. The table is borrowed and must stay valid while installed.
+ * Use a theme from outside the firmware on colour targets: the hook for
+ * installable theme packs. The table is borrowed and must stay valid while
+ * installed.
  *
  * @param theme: theme to use, or NULL for the built-in theme picked by
  * settings.highContrast.

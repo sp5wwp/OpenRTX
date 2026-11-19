@@ -14,9 +14,7 @@ namespace ortxui
 {
 
 /**
- * A character set ("keyboard") for the cursor-cycle text input. The platform
- * gives only a raw key bitmask (no T9 / tap-repeat), so text is entered by
- * cycling the character under the cursor through one of these ordered sets.
+ * Characters the cursor cycles through on targets without a numeric keypad.
  * Space is first so a fresh slot reads as blank and cycles up into letters.
  */
 struct Charset {
@@ -36,15 +34,11 @@ struct Charset {
         return chars[((i % n) + n) % n];
     }
 
-    const char *chars; //< ordered characters, NUL-terminated string body
-    uint16_t len;      //< number of characters (excludes the NUL)
-    const char *name;  //< short label (for a future keyboard-picker UI)
+    const char *chars; ///< Ordered characters, NUL-terminated string body
+    uint16_t len;      ///< Number of characters (excludes the NUL)
 };
 
-/* Callsign / M17 destination: space + uppercase + digits + a few separators
- * (the historic callsign alphabet). namespace-scope constexpr has internal
- * linkage, so each translation unit gets its own read-only copy (no C++17
- * inline-variable dependency). */
+/* Callsign / M17 destination: space + uppercase + digits + a few separators. */
 constexpr char kCharsCallsign[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
 /* Free text (M17 meta, SMS): adds lowercase and common punctuation. */
@@ -52,25 +46,21 @@ constexpr char kCharsText[] =
     " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     ".,?!-/@#'()&:;+*=";
 
-/* Numeric / DTMF. */
-constexpr char kCharsNumeric[] = "0123456789*#";
-
-constexpr Charset CHARSET_CALLSIGN{ kCharsCallsign, sizeof(kCharsCallsign) - 1,
-                                    "Callsign" };
-constexpr Charset CHARSET_TEXT{ kCharsText, sizeof(kCharsText) - 1, "Text" };
-constexpr Charset CHARSET_NUMERIC{ kCharsNumeric, sizeof(kCharsNumeric) - 1,
-                                   "Numeric" };
+constexpr Charset CHARSET_CALLSIGN{ kCharsCallsign,
+                                    sizeof(kCharsCallsign) - 1 };
+constexpr Charset CHARSET_TEXT{ kCharsText, sizeof(kCharsText) - 1 };
 
 /**
  * ETSI phone-style multi-tap table for numeric-keypad radios: repeated presses
- * of one key cycle through its string (in place); a different key or a >700ms
- * pause commits the character and advances. Indexed by key 0-9, then '*' = 10,
- * '#' = 11. An empty string means the key produces no character (it is an
- * action key — '*' is backspace, handled by the host). The space character
- * lives on '0' or '#' per the target's CONFIG_KBD_SPACE_ON_HASH silkscreen.
+ * of one key cycle through its string (in place); a different key, or a pause
+ * of input_longPressTimeout, commits the character and advances. Indexed by
+ * key 0-9, then '*' = 10, '#' = 11. An empty string means the key produces no
+ * character (it is an action key — '*' is backspace, handled by the host). The
+ * space character lives on '0' or '#' per the target's CONFIG_KBD_SPACE_ON_HASH
+ * silkscreen.
  */
 struct MultiTapTable {
-    const char *keys[12];
+    const char *keys[12]; ///< Characters of keys 0-9, '*' and '#'
 };
 
 /* Callsign (M17 base-40: A-Z 0-9 - / . and space). Uppercase only, digit last

@@ -22,25 +22,20 @@ namespace ortxui
  * the 128x64 mono panels with no per-widget branching.
  */
 enum class Sem : uint8_t {
-    Background = 0, //< Base app background (true black)
-    Surface,        //< Top bar / card surface, one step above background
-    SurfaceHigh,    //< Raised surface / meter track
-    Separator,      //< Thin divider line between rows
-    OnSurface,      //< Primary foreground text (white)
-    OnSurfaceMuted, //< Secondary / unit / value text (grey)
-    Primary,        //< Interactive accent (blue): selection fill, channel name
-    OnPrimary,      //< Text/icon drawn on top of a Primary (blue) fill (black)
-    Accent,         //< Secondary brand accent (gold): splash, headers, focus
-    OnAccent,       //< Text/icon drawn on top of an Accent (gold) fill (black)
-    TxDanger,       //< Transmit (orange): TX meter dots + label + power
-    RxSuccess,      //< Receive / squelch-open (green): RX meter dots + label
-    Warning,        //< Battery-low / caution (orange)
-    Mark,           //< Checklist tick / alert (red-orange)
-    ModeM17,        //< (transitional) M17 mode badge colour
-    ModeM17Accent,  //< (transitional) M17 logo secondary grey
-    ModeFM,         //< (transitional) FM mode badge
-    ModeDMR,        //< (transitional) DMR mode badge (reuses RxSuccess green)
-    FocusRing,      //< Focus highlight (reuses Accent gold)
+    Background = 0, ///< Base app background
+    Surface,        ///< Top bar and card surface, one step above background
+    SurfaceHigh,    ///< Raised surface and meter track
+    Separator,      ///< Thin divider line between rows
+    OnSurface,      ///< Primary foreground text
+    OnSurfaceMuted, ///< Secondary, unit and value text
+    Primary,        ///< Interactive accent: selection fill, channel name
+    OnPrimary,      ///< Text and icons drawn on a Primary fill
+    Accent,         ///< Secondary brand accent: splash, headers
+    OnAccent,       ///< Text and icons drawn on an Accent fill
+    TxDanger,       ///< Transmit: TX meter, label and power
+    RxSuccess,      ///< Receive and squelch open: RX meter and label
+    Warning,        ///< Battery low and other cautions
+    Mark,           ///< Checklist tick and alerts
 
     Count
 };

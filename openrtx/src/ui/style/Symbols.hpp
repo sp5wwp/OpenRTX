@@ -8,18 +8,9 @@
 #define ORTX_UI_SYMBOLS_HPP
 
 /*
- * UTF-8 glyph strings for toolkit-specific marks baked into the custom icon
- * font at Private-Use-Area code points. These are a UI concern (what a glyph is
- * called), distinct from the font/gfx backend (which just owns glyphs at code
- * points), so they live here rather than in core/graphics.h alongside the
- * generic FontAwesome icon macros.
- *
- * The custom icon font is a fallback layer separate from both the Ubuntu text
- * glyphs and the FontAwesome subset. Its marks are produced from committed SVGs
- * (e.g. openrtx/fonts/m17_logo.svg) by scripts/gen_fonts.sh (see docs/fonts.md)
- * and rendered like any other glyph, so they inherit the anti-aliased blit,
- * sizing, alignment and theme colour of text — single-colour silhouettes that
- * work on colour and 1bpp targets.
+ * UTF-8 strings of the glyphs the UI draws from the icon font blobs, the
+ * fallback layer of every text font (docs/fonts.md). The FontAwesome icons
+ * merged into the text fonts are named in core/graphics.h.
  */
 
 /** The M17 wordmark logo (U+E900), drawn in place of the "M17" mode label. */
