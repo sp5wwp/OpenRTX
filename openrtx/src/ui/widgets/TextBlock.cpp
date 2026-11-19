@@ -5,6 +5,7 @@
  */
 
 #include "widgets/TextBlock.hpp"
+#include "widgets/List.hpp"
 #include "render/DrawCtx.hpp"
 
 #include <cstdint>
@@ -13,12 +14,9 @@
 namespace ortxui
 {
 
-/** Width of the scroll indicator, matching List. */
-static constexpr int16_t BAR_W = 2;
-
 int16_t TextBlock::wrapX() const
 {
-    return static_cast<int16_t>(area_.x + area_.w - BAR_W - 1);
+    return static_cast<int16_t>(area_.x + area_.w - List::SCROLL_BAR_W - 1);
 }
 
 uint16_t TextBlock::textHeight() const
@@ -79,18 +77,8 @@ void TextBlock::draw(DrawCtx &d)
     d.textWrapped(at, font_, color_, text_, wrapX(), area_.y, area_.bottom());
 
     const uint16_t h = textHeight();
-    if (h <= area_.h)
-        return;
-
-    const int16_t barX = static_cast<int16_t>(area_.right() - 1);
-    int thumbH = area_.h * area_.h / h;
-    if (thumbH < 2)
-        thumbH = 2;
-    const int16_t thumbY = static_cast<int16_t>(area_.y + area_.h * off / h);
-    const Rect track = { barX, area_.y, BAR_W, area_.h };
-    d.fillRect(track, Sem::Surface);
-    const Rect thumb = { barX, thumbY, BAR_W, static_cast<uint16_t>(thumbH) };
-    d.fillRect(thumb, Sem::OnSurfaceMuted);
+    if (h > area_.h)
+        List::drawScrollBar(d, area_, static_cast<uint16_t>(off), area_.h, h);
 }
 
 } // namespace ortxui

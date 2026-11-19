@@ -16,8 +16,8 @@ namespace ortxui
 {
 
 /**
- * Read-only wrapped text that scrolls vertically one line at a time, with the
- * same scroll indicator as List. The text is borrowed; the owner may re-point
+ * Read-only wrapped text that scrolls vertically one line at a time, with
+ * List's scroll indicator. The text is borrowed; the owner may re-point
  * it every frame (the message body moves inside the inbox pool), and the scroll
  * position is kept across re-points.
  */

@@ -150,6 +150,9 @@ public:
     static void drawScrollBar(DrawCtx &d, const Rect &area, int32_t offset,
                               int32_t shown, int32_t total);
 
+    /** Width of the scroll bar, and the shortest thumb. */
+    static constexpr uint16_t SCROLL_BAR_W = 2;
+
 private:
     /** Pull the window to the selection, reading at most one window of rows. */
     void scrollToSelected();
@@ -218,9 +221,6 @@ private:
 
     /** Space between a row's label and its value line. */
     static constexpr int16_t VALUE_GAP = 2;
-
-    /** Width of the scroll bar, and the shortest thumb. */
-    static constexpr uint16_t SCROLL_BAR_W = 2;
 
     const ListItem *items_ = nullptr;  ///< Fixed table, or nullptr
     const ListModel *model_ = nullptr; ///< Model, or nullptr
