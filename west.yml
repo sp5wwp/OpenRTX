@@ -116,7 +116,7 @@ manifest:
     - name: openacelp
       remote: sp5wwp
       repo-path: OpenACELP
-      revision: 93c33b9ef852e4fd787c23a5168fa5220cf070cf
+      revision: 54999153be87a99f684c837c376b0fefc2462bda
       path: modules/lib/openacelp
       groups:
         - csk6
