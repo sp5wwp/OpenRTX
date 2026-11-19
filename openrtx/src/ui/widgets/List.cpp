@@ -77,32 +77,45 @@ SettingRow::Kind List::kindOf(const ListItem &it)
     return SettingRow::Kind::Plain;
 }
 
+bool List::plainRows() const
+{
+    return (model_ != nullptr) && model_->plainRows();
+}
+
 int16_t List::rowHeight(uint16_t i) const
 {
-    ListItem it;
-    getItem(i, it);
     SettingRow &row = Scratch::get<SettingRow>();
     row.setPad(padY_, gap_);
+    if (plainRows())
+        return row.heightFor(SettingRow::Kind::Plain, UiText(), UiText(),
+                             area_.w);
+
+    ListItem it;
+    getItem(i, it);
     return row.heightFor(kindOf(it), it.label, it.value, area_.w);
 }
 
 void List::scrollToSelected()
 {
-    /* Rows are variable height, so scroll by pixels: pull the top down to the
-     * selection if it is above the window, else advance the top until the
-     * selection's row fits within the viewport height. */
     if (selected_ < top_) {
         top_ = selected_;
         return;
     }
-    while (top_ < selected_) {
-        int sum = 0;
-        for (uint16_t i = top_; i <= selected_; i++)
-            sum += rowHeight(i);
-        if (sum <= static_cast<int>(area_.h))
+
+    /* Find the first row from which the rows down to the selection fit,
+     * walking up from the selection: only the rows of one window are read. */
+    uint16_t first = selected_;
+    int32_t sum = rowHeight(selected_);
+    while (first > top_) {
+        const int32_t h = rowHeight(static_cast<uint16_t>(first - 1));
+        if ((sum + h) > area_.h)
             break;
-        top_++;
+
+        sum += h;
+        first--;
     }
+
+    top_ = first;
 }
 
 void List::setSelected(uint16_t i, bool announce)
@@ -159,10 +172,10 @@ uint16_t List::maxTop() const
     /* Walk up from the last row while the rows below still fit. */
     const uint16_t n = rows();
     uint16_t top = n;
-    int sum = 0;
+    int32_t sum = 0;
     while (top > 0) {
         sum += rowHeight(static_cast<uint16_t>(top - 1));
-        if (sum > static_cast<int>(area_.h))
+        if (sum > area_.h)
             break;
         top--;
     }
@@ -239,27 +252,34 @@ void List::draw(DrawCtx &d)
      * item, size it to the item's content, lay it out and paint its subtree.
      * Rows stack by their own heights, so a two-line value row is taller than
      * a plain / checkbox row while keeping the same padding. */
+    const bool plain = plainRows();
+    const int16_t plainH = plain ? rowHeight(top_) : 0;
     SettingRow &scratchRow = Scratch::get<SettingRow>();
     scratchRow.setPad(padY_, gap_);
 
     int16_t y = area_.y;
     uint16_t i = top_;
-    for (; i < n; i++) {
+    for (; (i < n) && (y <= area_.bottom()); i++) {
+        /* Plain rows are placed without reading them, so a row outside the
+         * clip, as in another band, is never read. */
         ListItem it;
-        getItem(i, it);
-        const SettingRow::Kind kind = kindOf(it);
-        const int16_t h = scratchRow.heightFor(kind, it.label, it.value,
-                                               area_.w);
-        if (y > area_.bottom())
-            break;
+        if (!plain)
+            getItem(i, it);
+        const SettingRow::Kind kind = plain ? SettingRow::Kind::Plain :
+                                              kindOf(it);
+        const int16_t h = plain ? plainH :
+                                  scratchRow.heightFor(kind, it.label, it.value,
+                                                       area_.w);
 
-        /* A row outside the clip, as in another band, draws nothing, but
-         * still moves the next rows down and counts as shown. */
+        /* A row outside the clip draws nothing, but still moves the next rows
+         * down and counts as shown. */
         const Rect row = { area_.x, y, area_.w, static_cast<uint16_t>(h) };
         y = static_cast<int16_t>(y + h);
-        if (!row.empty() && intersect(d.clip(), row).empty())
+        if (intersect(d.clip(), row).empty())
             continue;
 
+        if (plain)
+            getItem(i, it);
         const bool selected = selectable_ && (i == selected_);
         scratchRow.bind(kind, it.label, it.value, it.checked, selected);
         scratchRow.setArea(row);

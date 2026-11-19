@@ -115,6 +115,13 @@ private:
      */
     uint16_t maxTop() const;
 
+    /**
+     * Check whether the model says every row is a plain label.
+     *
+     * @return true if rows can be placed without reading them.
+     */
+    bool plainRows() const;
+
     void getItem(uint16_t i, ListItem &out) const;
     static SettingRow::Kind kindOf(const ListItem &it);
     int16_t rowHeight(uint16_t i) const;

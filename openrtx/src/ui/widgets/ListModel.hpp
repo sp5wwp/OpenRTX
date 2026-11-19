@@ -41,9 +41,30 @@ public:
     /** Constructor. */
     ListModel() = default;
 
+    /** Destructor. */
     virtual ~ListModel() = default;
+
+    /** Get the number of rows. */
     virtual uint16_t rowCount() const = 0;
+
+    /**
+     * Fill a row.
+     *
+     * @param index: row index.
+     * @param out: the row.
+     */
     virtual void rowAt(uint16_t index, ListItem &out) const = 0;
+
+    /**
+     * Check whether every row is a plain label: the rows then share one
+     * height, so the List places them without reading them.
+     *
+     * @return true if every row is a plain label.
+     */
+    virtual bool plainRows() const
+    {
+        return false;
+    }
 };
 
 } // namespace ortxui
