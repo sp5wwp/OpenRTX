@@ -28,6 +28,7 @@
 #include "interfaces/delays.h"
 #include "interfaces/display.h"
 #include "interfaces/keyboard.h"
+#include "interfaces/platform.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 #include "rtx/rtx.h"
@@ -186,6 +187,8 @@ extern "C" void ui_init()
 
     standby = false;
     last_event_tick = getTick();
+    macroOpen = false;
+    macroLatched = false;
 }
 
 extern "C" void ui_drawSplashScreen()
@@ -210,6 +213,16 @@ extern "C" void ui_drawSplashScreen()
 extern "C" void ui_saveState()
 {
     last_state = state;
+}
+
+/**
+ * Close the macro menu and show the screen below it again.
+ */
+static void closeMacro()
+{
+    nav.closeOverlay();
+    macroOpen = false;
+    macroLatched = false;
 }
 
 /**
@@ -245,6 +258,10 @@ static void handleTick(long long now, bool *sync_rtx)
     /* Apply managed-overlay dismiss policies every tick (unconditionally, for
      * the same empty-queue reason as above). */
     nav.tickOverlay(now);
+
+    /* Keying up closes a latched macro menu, so PTT is not left blocked. */
+    if (macroLatched && platform_getPttStatus())
+        closeMacro();
 
     if (evQueue_rdPos != evQueue_wrPos) {
         /* Pop one event per tick, matching the classic loop cadence. */
@@ -292,16 +309,13 @@ static void handleTick(long long now, bool *sync_rtx)
                     macroOpen = true;
                     macroLatched = false;
                 } else if (macroLatched) {
-                    nav.closeOverlay();
-                    macroOpen = false;
-                    macroLatched = false;
+                    closeMacro();
                     return;
                 }
                 if (msg.long_press && (state.settings.macroMenuLatch != 0u))
                     macroLatched = true;
             } else if (!moni && macroOpen && !macroLatched) {
-                nav.closeOverlay();
-                macroOpen = false;
+                closeMacro();
                 return; /* consume the closing (key-release) event */
             }
         }

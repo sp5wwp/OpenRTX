@@ -13,6 +13,7 @@ extern "C" {
 #include "core/settings.h"
 #include "core/state.h"
 #include "core/ui.h"
+#include "emulator/emulator.h"
 #include "interfaces/keyboard.h"
 #include "rtx/rtx.h"
 }
@@ -25,13 +26,15 @@ static pthread_mutex_t rtxMutex = PTHREAD_MUTEX_INITIALIZER; ///< For rtx_init()
  * Queue a keyboard event and run one UI tick.
  *
  * @param keys: keys held, 0 for a release.
+ * @param longPress: report the keys as held past the long-press timeout.
  * @return true if the tick asked for the radio configuration to be applied.
  */
-static bool pressKeys(uint32_t keys)
+static bool pressKeys(uint32_t keys, bool longPress = false)
 {
     kbd_msg_t msg;
     msg.value = 0;
     msg.keys = keys;
+    msg.long_press = longPress ? 1 : 0;
     REQUIRE(ui_pushEvent(EVENT_KBD, msg.value));
 
     bool sync = false;
@@ -77,6 +80,20 @@ TEST_CASE("PTT is gated outside the home screen", "[ui]")
 
         pressKeys(0);
         pressKeys(KEY_ESC);
+        REQUIRE_FALSE(state.pttDisable);
+    }
+
+    SECTION("keying up closes a latched macro menu")
+    {
+        state.settings.macroMenuLatch = 1;
+        pressKeys(KEY_MONI);
+        pressKeys(KEY_MONI, true);
+        pressKeys(0);
+        REQUIRE(state.pttDisable);
+
+        emulator_state.PTTstatus = true;
+        ui_updateFSM(&sync);
+        emulator_state.PTTstatus = false;
         REQUIRE_FALSE(state.pttDisable);
     }
 }
