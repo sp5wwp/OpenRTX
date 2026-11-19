@@ -49,6 +49,9 @@ enum uiScreen
     SETTINGS_GPS,
     SETTINGS_RADIO,
     SETTINGS_M17,
+#ifdef CONFIG_TETRA_AFC
+    SETTINGS_TETRA,
+#endif
     SETTINGS_FM,
     SETTINGS_ACCESSIBILITY,
     SETTINGS_RESET2DEFAULTS,
@@ -88,6 +91,9 @@ enum settingsItems
     S_RADIO,
 #ifdef CONFIG_M17
     S_M17,
+#endif
+#ifdef CONFIG_TETRA_AFC
+    S_TETRA,
 #endif
     S_FM,
     S_ACCESSIBILITY,
@@ -144,6 +150,13 @@ enum settingsM17Items
     M17_CAN,
     M17_CAN_RX
 };
+
+#ifdef CONFIG_TETRA_AFC
+enum settingsTetraItems
+{
+    T_AFC = 0
+};
+#endif
 
 enum settingsFMItems
 {
@@ -247,6 +260,10 @@ extern const char *settings_gps_items[];
 extern const char *settings_radio_items[];
 extern const char *settings_m17_items[];
 extern const char *settings_fm_items[];
+#ifdef CONFIG_TETRA_AFC
+extern const char *settings_tetra_items[];
+extern const uint8_t settings_tetra_num;
+#endif
 extern const char * settings_accessibility_items[];
 extern const char *backup_restore_items[];
 extern const char *info_items[];

@@ -450,6 +450,33 @@ int _ui_getM17ValueName(char *buf, uint8_t max_len, uint8_t index)
 }
 #endif
 
+#ifdef CONFIG_TETRA_AFC
+int _ui_getTetraEntryName(char *buf, uint8_t max_len, uint8_t index)
+{
+    if (index >= settings_tetra_num)
+        return -1;
+
+    sniprintf(buf, max_len, "%s", settings_tetra_items[index]);
+    return 0;
+}
+
+int _ui_getTetraValueName(char *buf, uint8_t max_len, uint8_t index)
+{
+    if (index >= settings_tetra_num)
+        return -1;
+
+    switch (index) {
+        case T_AFC:
+            sniprintf(buf, max_len, "%s",
+                      last_state.settings.tetraAfcOff ? currentLanguage->off
+                                                      : currentLanguage->on);
+            break;
+    }
+
+    return 0;
+}
+#endif
+
 int _ui_getFMEntryName(char* buf, uint8_t max_len, uint8_t index)
 {
     if (index >= settings_fm_num)
@@ -1042,6 +1069,17 @@ void _ui_drawSettingsM17(ui_state_t* ui_state)
         _ui_drawMenuListValue(ui_state, ui_state->menu_selected, _ui_getM17EntryName,
                               _ui_getM17ValueName);
     }
+}
+#endif
+
+#ifdef CONFIG_TETRA_AFC
+void _ui_drawSettingsTetra(ui_state_t *ui_state)
+{
+    gfx_clearScreen();
+    gfx_print(layout.top_pos, layout.top_font, TEXT_ALIGN_CENTER, color_white,
+              "TETRA");
+    _ui_drawMenuListValue(ui_state, ui_state->menu_selected,
+                          _ui_getTetraEntryName, _ui_getTetraValueName);
 }
 #endif
 
