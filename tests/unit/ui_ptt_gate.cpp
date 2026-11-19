@@ -47,6 +47,7 @@ TEST_CASE("PTT is gated outside the home screen", "[ui]")
     /* The UI tick reads the squelch through rtx; no platform state is needed. */
     rtx_init(&rtxMutex);
     state.settings = default_settings;
+    state.charge = 100; /* an empty battery shows the low-battery warning */
     ortxui::uiMemory.keypadLocked = false;
     state.pttDisable = false;
     ui_init();
@@ -102,6 +103,7 @@ TEST_CASE("Keypad lock lets the FM tone burst through", "[ui]")
 {
     rtx_init(&rtxMutex);
     state.settings = default_settings;
+    state.charge = 100; /* an empty battery shows the low-battery warning */
     state.channel.mode = OPMODE_FM;
     state.channel.rx_frequency = 430000000;
     state.channel.tx_frequency = 430000000;

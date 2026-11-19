@@ -1,0 +1,16 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# Low battery: an empty battery replaces the screen with a warning until a key
+# press declares emergency use, which goes back to the home screen.
+wait_stable 5000 3
+vbat 0
+sleep 2000
+wait_stable
+screenshot_sync low_battery.bmp
+key ENTER
+wait_stable
+screenshot_sync low_battery_dismissed.bmp
+quit

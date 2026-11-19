@@ -40,6 +40,7 @@
 #include "core/UiMemory.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
+#include "views/LowBatteryScreen.hpp"
 #include "views/VfoView.hpp"
 #include "views/ViewSlot.hpp"
 #include "views/VolumeOverlayView.hpp"
@@ -76,6 +77,12 @@ static long long last_event_tick = 0;
  * global held key, not a view's own navigation intent. */
 static bool macroOpen = false;
 static bool macroLatched = false;
+
+#if !defined(PLATFORM_TTWRPLUS)
+/* The low-battery warning, drawn instead of the active screen while shown. */
+static LowBatteryScreen lowBattery;
+static bool lowBatteryShown = false;
+#endif
 
 /* Transient volume HUD: shown while the user turns the physical volume knob,
  * auto-dismissed this many ms after the level stops changing. Driven here (not
@@ -195,6 +202,9 @@ extern "C" void ui_init()
     last_event_tick = getTick();
     macroOpen = false;
     macroLatched = false;
+#if !defined(PLATFORM_TTWRPLUS)
+    lowBatteryShown = false;
+#endif
 }
 
 extern "C" void ui_drawSplashScreen()
@@ -230,6 +240,47 @@ static void closeMacro()
     macroOpen = false;
     macroLatched = false;
 }
+
+#if !defined(PLATFORM_TTWRPLUS)
+/**
+ * Show the low-battery warning while the battery is empty and no emergency
+ * use has been declared. Not while transmitting, as the PA load drops the
+ * battery voltage.
+ */
+static void updateLowBattery()
+{
+    const bool empty = !state.emergency && !platform_getPttStatus()
+                    && (state.charge == 0u);
+    if (empty == lowBatteryShown)
+        return;
+
+    lowBatteryShown = empty;
+    if (empty)
+        lowBattery.markAllDirty();
+    else if (View *v = nav.active())
+        v->screen().markAllDirty();
+}
+
+/**
+ * Handle an event while the low-battery warning shows: a key press declares
+ * emergency use and goes back to the home screen.
+ *
+ * @param msg: key event.
+ * @param now: current tick.
+ */
+static void lowBatteryKey(const kbd_msg_t &msg, long long now)
+{
+    if (msg.keys == 0u)
+        return;
+
+    exitStandby(now);
+    state.emergency = true;
+    lowBatteryShown = false;
+    macroOpen = false;
+    macroLatched = false;
+    nav.setRoot(ViewId::Vfo);
+}
+#endif
 
 /**
  * Check whether a key event keys or ends the FM 1750 Hz tone burst on the
@@ -401,6 +452,10 @@ static void handleTick(long long now, bool *sync_rtx)
     if (macroLatched && platform_getPttStatus())
         closeMacro();
 
+#if !defined(PLATFORM_TTWRPLUS)
+    updateLowBattery();
+#endif
+
     if (evQueue_rdPos != evQueue_wrPos) {
         /* Pop one event per tick. */
         const event_t raw = evQueue[evQueue_rdPos];
@@ -409,6 +464,12 @@ static void handleTick(long long now, bool *sync_rtx)
         kbd_msg_t msg;
         msg.value = raw.payload;
         const bool key = (raw.type == EVENT_KBD);
+#if !defined(PLATFORM_TTWRPLUS)
+        if (key && lowBatteryShown) {
+            lowBatteryKey(msg, now);
+            return;
+        }
+#endif
         if (key && !filterKey(msg, now))
             return;
 
@@ -460,6 +521,16 @@ extern "C" bool ui_updateGUI()
 {
     if (standby)
         return false; /* backlight off — nothing to draw */
+
+#if !defined(PLATFORM_TTWRPLUS)
+    if (lowBatteryShown) {
+        if (!lowBattery.dirty())
+            return false;
+        drawScreen([&](DrawCtx &d) { lowBattery.paintTree(d); });
+        lowBattery.clearDirty();
+        return true;
+    }
+#endif
 
     View *view = nav.active();
     if (view == nullptr)
