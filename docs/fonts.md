@@ -10,13 +10,15 @@ LVGL's `lv_font_fmt_txt.c` (MIT).
 
 | Piece | Where |
 |---|---|
-| Committed font blobs | `openrtx/fonts/ubuntu_<pt>_<bpp>.bin` |
+| Committed text font blobs | `openrtx/fonts/ubuntu_<pt>_<bpp>.bin` |
+| Committed icon font blobs | `openrtx/fonts/icons_<pt>_<bpp>.bin` |
 | Regeneration script | `scripts/gen_fonts.sh` |
 | Decoder (format reader + RLE) | `openrtx/src/core/fonts/lv_font_bin.{c,h}` |
 | Embedding (`.incbin`) | `openrtx/src/core/fontData.c` |
 | Text rendering + `SYMBOL_*` | `openrtx/src/core/graphics.c`, `core/graphics.h` |
 
-Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one blob. Colour
+Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one text blob
+and one icon blob. Colour
 (RGB565) targets embed the anti-aliased **4bpp** set; monochrome (BW) targets
 embed the compact **1bpp** set. The choice is made in `fontData.c` from
 `CONFIG_FONT_AA`, which the colour targets define in their `hwconfig.h` (the
@@ -46,10 +48,10 @@ Sources:
 
 ## "pt" is a slot name, not a size — the ppem calibration
 
-The `FONT_SIZE_*PT` names are historical. `lv_font_conv --size N` sizes a font
-to **N pixels** (ppem), which is **not** the nominal point value. `gen_fonts.sh`
-pins a ppem per slot, calibrated so each font's digit advance and cap height
-match the previous Adafruit GFXfont metrics — otherwise every layout reflows:
+`lv_font_conv --size N` sizes a font to **N pixels** (ppem), which is **not**
+the point value in the `FONT_SIZE_*PT` name. `gen_fonts.sh` pins a ppem per
+slot, which sets each slot's digit advance and cap height; every layout is
+sized against these:
 
 | slot | 5PT | 6PT | 8PT | 9PT | 10PT | 12PT | 16PT |
 |---|---|---|---|---|---|---|---|
@@ -74,9 +76,12 @@ UTF-8 encoding of the codepoint), regenerate, and commit.
 
 App-specific marks that are **not** FontAwesome live in a separate *custom icon
 font* rather than being merged into the text blobs: the M17 wordmark logo
-(`SYMBOL_M17`, U+E900) and the Latin-1 supplement (U+00A1–U+00FF: accented
-letters + symbols) that backs the UTF-8 character picker (`PickerView`). Each text font is given the
-same-size custom-icon font as a `fallback` (mirroring LVGL's
+(`SYMBOL_M17`, U+E900), the Latin-1 supplement (U+00A1–U+00FF: accented
+letters + symbols) that backs the UTF-8 character picker (`PickerView`), the
+ellipsis (U+2026) that ends truncated text, and the FontAwesome backspace
+(U+F55A) of the picker's delete slot. The blobs therefore carry the M17 logo's
+GPL-3.0, the Ubuntu Font Licence and the OFL (see `REUSE.toml`). Each text font
+is given the same-size custom-icon font as a `fallback` (mirroring LVGL's
 `lv_font_t.fallback`), so `lvFont_getGlyph` walks the chain and those code
 points render like any other glyph — a single-colour, theme-tinted silhouette
 that also works on 1bpp targets. Keeping it separate means the `ubuntu_*.bin`
@@ -98,12 +103,10 @@ To add a custom icon: give it a Private-Use code point, add its SVG to the
 `gen_fonts.sh` icon-font step (extend `svg_to_glyph_font.py` for multiple
 glyphs), add a `SYMBOL_*` macro in `Symbols.hpp`, regenerate, and commit.
 
-## UTF-8 and non-Latin (roadmap)
+## UTF-8
 
-The text path decodes UTF-8, and the decoder reads the font `cmap` generically
-(all four `lv_font_conv` subtable formats), so a font containing non-Latin
-ranges already renders. What is not done yet: shipping such fonts (the committed
-set is ASCII + icons only) and **loading font blobs at runtime** from
-storage — the natural next step for CJK, where compiling every glyph into flash
-is impractical. The `.bin` pipeline and `lvFont_init(data, size)` entry point
-are the enablers already in place.
+The text path decodes UTF-8, and the decoder reads all four `lv_font_conv`
+cmap subtable formats, so any code point a blob holds renders. The committed
+blobs hold ASCII, Latin-1 (in the icon blobs) and the icons above.
+`gfx_setFontSource()` installs a blob from outside the firmware in place of a
+built-in one; it is the hook for installable font packs.

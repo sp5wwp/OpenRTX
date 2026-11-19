@@ -23,12 +23,19 @@ repository is authoritative.
 
 ```
 openrtx/           Core firmware (hardware-agnostic)
-├── include/        Public headers (calibration, core, fonts, interfaces, peripherals, protocols, rtx, ui)
+├── fonts/          Font blobs embedded in the firmware (docs/fonts.md)
+├── include/        Public headers (calibration, core, interfaces, peripherals, protocols, rtx, ui)
 └── src/
     ├── core/       State, graphics, audio, voice prompts, battery
     ├── protocols/  Protocol implementations (M17, etc.) — structured per OSI layers 1-3
     ├── rtx/        Operational adapters integrating protocols with audio, PTT, squelch
-    └── ui/         UI implementations (default/ and module17/)
+    └── ui/         UI toolkit, shared by every target
+        ├── core/       Object tree, screens, events, navigation, View base
+        ├── layout/     Flex layout
+        ├── render/     Theme-aware drawing over core/graphics.h
+        ├── style/      Colour themes, character sets, glyph names
+        ├── views/      The screens
+        └── widgets/    Reusable controls (labels, lists, meters, text input)
 platform/           Hardware-specific code
 ├── drivers/        Device drivers organized by component type
 ├── mcu/            MCU-specific implementations (STM32F4xx, STM32H7xx, MK22FN512, x86_64)
@@ -43,7 +50,7 @@ scripts/            Build and utility scripts
 
 - Never put hardware-specific code in `openrtx/` — use `platform/` and the interfaces layer
 - Protocol code in `openrtx/src/protocols/` must be structured per OSI layers 1-3
-- UI code is split between `default/` (standard radios) and `module17/` (Module17 device)
+- UI code is one toolkit for every target; screens adapt to the display size and keypad instead of forking per device
 
 ## Build and Test
 
@@ -167,7 +174,7 @@ about the layer directly below it, and generic layers never learn a specific pro
 - **Know the `radio_*` call contract.** The rtx thread calls `radio_setOpmode()` only when the mode really changes, before it disables the old OpMode (`openrtx/src/rtx/rtx.cpp`), so the driver does not re-check for a change. Settings that apply to the whole mode go in `radio_setOpmode()`; only RX- or TX-specific settings go in `radio_enableRx()` and `radio_enableTx()`. `radio_MD3x0.cpp` is laid out this way. This is trusting callers inside the firmware (#509; see [Reuse Before Reimplementation](#reuse-before-reimplementation)) applied to the radio interface (#542).
 - **The UI never calls the radio API.** Set the `sync_rtx` flag that `ui_updateFSM` takes and let the rtx thread do the reconfiguration (#335).
 - **LED state is set only in the dedicated FSM**, never from an OpMode (#360).
-- State used by exactly one subsystem lives in that subsystem's state struct. A field only the UI reads belongs in the UI state (`ui_default.h`), not in the global `state` (#429).
+- State used by exactly one subsystem lives in that subsystem's state struct. A field only the UI reads belongs in the UI (`openrtx/src/ui/`, e.g. `core/UiMemory.hpp`), not in the global `state` (#429).
 - Generic structures stay generic. `struct pktDesc` must not grow a mode-specific field such as an M17 destination callsign; mode-specific configuration goes through `rtx_configure`. Likewise a minimum-packet-size check belongs in the OpMode, not in the generic rtx entry point (#427).
 - Signal chains are split the way M17 is split: demodulator produces raw frames and knows only about syncwords; a separate deframer/decoder does unstuffing, CRC and protocol semantics. Keeping framing out of the demodulator is what lets a target with a hardware demodulator reuse the upper half (#396).
 - Anything general-purpose belongs in the library, not in the module that first needed it. Date arithmetic goes to `core/datetime.h`, CRCs to `core/crc.h`, coordinate conversions to `core/gps.h` or `core/utils.h` — even when the only current caller is one driver (#360, #456, #498).
@@ -304,7 +311,7 @@ they conflict.
 
 ### String Table
 
-The `stringsTable_t` in `openrtx/include/ui/ui_strings.h` defines UI strings and is indexed by voice prompts. **Never reorder existing entries** — only append new strings at the end (before the closing brace), and add the matching entry to every language table. See [Persistent Data](#persistent-data).
+The `stringsTable_t` in `openrtx/include/ui/ui_strings.h` defines UI strings and is indexed by voice prompts. **Never reorder existing entries** — only append new strings at the end (before the closing brace), with the English text at the same position in `EnglishStrings.h`. See [Persistent Data](#persistent-data).
 
 ### Commits and PRs
 

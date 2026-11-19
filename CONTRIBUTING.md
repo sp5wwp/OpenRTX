@@ -42,10 +42,10 @@ The main directories for the project are described below:
 
 ```text
 openrtx           # The core program, including its UI, common utilities, and features
+├── fonts         # Font blobs embedded in the firmware; see docs/fonts.md
 ├── include       # Public header files used throughout the project; details are only given where there are special cases
 | ├── calibration # Headers for calibration data used in platform code
 | ├── core        # Headers for core
-| ├── fonts       # Definitions for symbol and font tables
 | ├── interfaces  # Headers for interfaces
 | ├── peripherals # Headers for peripherals
 | ├── protocols   # Headers for protocols
@@ -55,7 +55,13 @@ openrtx           # The core program, including its UI, common utilities, and fe
   ├── core        # Features used across the entire app, such as state, graphics, voice prompts, etc
   ├── protocols   # Protocol implementations that are hardware agnostic; focusing on things like frame structures, encoding, and signal processing
   ├── rtx         # Operational adapters that integrate a protocol, such as handling audio routing, PTT, squelch, etc
-  └── ui          # The user interfaces, which are divided into a default and a module17 implementation
+  └── ui          # The user interface toolkit, shared by every target
+    ├── core      # Object tree, screens, events, navigation, and the base View
+    ├── layout    # Flex layout
+    ├── render    # Theme-aware drawing on top of core/graphics.h
+    ├── style     # Colour themes, character sets, and glyph names
+    ├── views     # The screens
+    └── widgets   # Reusable controls such as labels, lists, meters, and text input
 platform          # Hardware specific implementations, including things like drivers for specific components, details of specific hardware targets, and low-level implementations of hardware specific needs
 ├── drivers       # Drivers for specific hardware platforms, organized by the type of device
 ├── mcu           # Micro-controller specific handlings such as drivers and abstractions
