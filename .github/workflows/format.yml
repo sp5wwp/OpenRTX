@@ -26,7 +26,7 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v3
-      - name: Check UI string tables are in sync with stringsTable_t and English
+      - name: Check the English string table matches stringsTable_t
         run: python3 ./scripts/check_strings.py
       - name: Check the translation template is up to date
         run: |
