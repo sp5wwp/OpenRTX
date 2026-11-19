@@ -262,10 +262,12 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
             if (nav.overlay() == &volumeOverlay)
                 nav.dismissOverlay();
 
-            /* F1 replays the last voice prompt (global, matches classic). */
+            /* F1 replays the last voice prompt (global, matches classic),
+             * once however long it is held. */
             if (((msg.keys & KEY_F1) != 0u)
                 && (state.settings.vpLevel > vpBeep)) {
-                vp_replayLastPrompt();
+                if (!msg.repeat)
+                    vp_replayLastPrompt();
                 return;
             }
 
@@ -277,9 +279,9 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
 
             /* Macro menu: shown while MONI is held. A long-press latches it open
              * (if enabled); a MONI press while latched, or releasing MONI when
-             * not latched, closes it. */
+             * not latched, closes it. MONI repeating while held does neither. */
             const bool moni = ((msg.keys & KEY_MONI) != 0u);
-            if (moni) {
+            if (moni && !msg.repeat) {
                 if (!macroOpen) {
                     nav.openOverlay(ViewId::Macro);
                     macroOpen = true;
@@ -292,7 +294,7 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
                 }
                 if (msg.long_press && (state.settings.macroMenuLatch != 0u))
                     macroLatched = true;
-            } else if (macroOpen && !macroLatched) {
+            } else if (!moni && macroOpen && !macroLatched) {
                 nav.closeOverlay();
                 macroOpen = false;
                 return; /* consume the closing (key-release) event */

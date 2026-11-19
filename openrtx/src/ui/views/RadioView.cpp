@@ -294,6 +294,12 @@ bool RadioView::onEditEvent(const Event &e)
     int dir = 0;
     if (e.kind == EvKind::Encoder) {
         dir = e.encoder; /* knob nudges the offset by the tuning step */
+    } else if (e.kind == EvKind::KeyRepeat) {
+        /* A held arrow keeps nudging; every other key acts once. */
+        if ((e.keys & (KEY_UP | KEY_RIGHT)) != 0u)
+            dir = +1;
+        else if ((e.keys & (KEY_DOWN | KEY_LEFT)) != 0u)
+            dir = -1;
     } else if (e.kind == EvKind::Key) {
         const uint32_t k = e.keys;
         if ((k & KEY_ENTER) != 0u) {

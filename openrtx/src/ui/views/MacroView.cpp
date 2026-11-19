@@ -29,6 +29,17 @@ int digitFromKeys(uint32_t keys)
 
 } // namespace
 
+/**
+ * Check whether a macro action steps a value, so that it repeats while held.
+ *
+ * @param number: number key of the action.
+ * @return true for the tone and brightness steps.
+ */
+static bool isStepAction(uint8_t number)
+{
+    return (number == 2) || (number == 3) || (number == 7) || (number == 8);
+}
+
 void MacroView::build()
 {
     const int16_t W = CONFIG_SCREEN_WIDTH;
@@ -199,7 +210,10 @@ NavIntent MacroView::onEvent(const Event &e)
         return NavIntent::none();
     }
 
-    if (e.kind == EvKind::Key) {
+    /* Held keys keep stepping the squelch, the tone and the brightness; the
+     * toggles and cycles act once. */
+    const bool repeat = (e.kind == EvKind::KeyRepeat);
+    if ((e.kind == EvKind::Key) || repeat) {
         const uint32_t k = e.keys;
         if ((k & (KEY_LEFT | KEY_DOWN)) != 0u)
             stepSquelch(-1);
@@ -207,7 +221,8 @@ NavIntent MacroView::onEvent(const Event &e)
             stepSquelch(+1);
         else {
             const int d = digitFromKeys(k);
-            if (d >= 1 && d <= 9)
+            const bool acts = (d >= 1) && (d <= 9);
+            if (acts && (!repeat || isStepAction((uint8_t)d)))
                 doAction((uint8_t)d);
         }
     }

@@ -585,10 +585,16 @@ NavIntent VfoView::onEvent(const Event &e)
     /* The knob tunes in VFO mode and steps channels in memory mode. */
     if (e.kind == EvKind::Encoder) {
         clearFmTone(); /* any input other than # drops the momentary tone */
-        if (state.tuner_mode == VFO)
-            stepFreq(e.encoder);
-        else
-            stepChannel(e.encoder);
+        step(e.encoder);
+        return NavIntent::none();
+    }
+
+    /* A held arrow keeps tuning; every other key acts once. */
+    if (e.kind == EvKind::KeyRepeat) {
+        if ((e.keys & KEY_UP) != 0u)
+            step(+1);
+        else if ((e.keys & KEY_DOWN) != 0u)
+            step(-1);
         return NavIntent::none();
     }
 
@@ -614,15 +620,9 @@ NavIntent VfoView::onEvent(const Event &e)
                 requestSyncRtx();
             }
         } else if ((k & KEY_UP) != 0u) {
-            if (state.tuner_mode == VFO)
-                stepFreq(+1);
-            else
-                stepChannel(+1);
+            step(+1);
         } else if ((k & KEY_DOWN) != 0u) {
-            if (state.tuner_mode == VFO)
-                stepFreq(-1);
-            else
-                stepChannel(-1);
+            step(-1);
         } else if ((k & KEY_STAR) != 0u) {
             /* '*' opens the keypad on the current frequency for an in-place
              * edit (backspace the trailing kHz); a digit retypes from scratch. */
@@ -689,6 +689,14 @@ NavIntent VfoView::onInputEvent(const Event &e)
     }
     refreshInput();
     return NavIntent::none();
+}
+
+void VfoView::step(int dir)
+{
+    if (state.tuner_mode == VFO)
+        stepFreq(dir);
+    else
+        stepChannel(dir);
 }
 
 void VfoView::stepFreq(int dir)

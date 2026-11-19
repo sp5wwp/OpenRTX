@@ -17,10 +17,11 @@ namespace ortxui
  */
 enum class EvKind : uint8_t {
     None = 0,
-    Key,     //< Key press; `keys` holds the raw keyboard bitmask
-    KeyLong, //< Long key press; `keys` holds the raw keyboard bitmask
-    Encoder, //< Rotary knob step; `encoder` is -1 (left) or +1 (right)
-    Status,  //< Periodic status-change tick (battery, GPS, RTC, ...)
+    Key,       //< Key press; `keys` holds the raw keyboard bitmask
+    KeyLong,   //< Long key press; `keys` holds the raw keyboard bitmask
+    KeyRepeat, ///< Auto-repeat of held keys, for handlers that scroll or tune
+    Encoder,   //< Rotary knob step; `encoder` is -1 (left) or +1 (right)
+    Status,    //< Periodic status-change tick (battery, GPS, RTC, ...)
 };
 
 /**

@@ -177,7 +177,8 @@ bool List::onEvent(const Event &e)
         moveSelection(e.encoder);
         return true;
     }
-    if (e.kind == EvKind::Key) {
+    /* A held arrow keeps scrolling. */
+    if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
         if ((e.keys & KEY_DOWN) != 0u) {
             moveSelection(1);
             return true;

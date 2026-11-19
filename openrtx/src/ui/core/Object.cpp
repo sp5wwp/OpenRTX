@@ -30,11 +30,13 @@ Event Event::decode(uint8_t type, uint32_t payload)
     kbd_msg_t msg;
     msg.value = payload;
 
-    /* No view acts on a held key's repeats yet. */
-    if (msg.repeat)
-        return ev;
-
     const uint32_t keys = msg.keys;
+    if (msg.repeat) {
+        ev.kind = EvKind::KeyRepeat;
+        ev.keys = keys;
+        return ev;
+    }
+
     if (keys & KNOB_LEFT) {
         ev.kind = EvKind::Encoder;
         ev.encoder = -1;

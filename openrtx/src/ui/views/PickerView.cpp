@@ -152,16 +152,18 @@ NavIntent PickerView::onEvent(const Event &e)
         grid_.move(e.encoder);
         return NavIntent::none();
     }
-    if (e.kind != EvKind::Key)
+    /* A held arrow keeps moving; ENTER and ESC act once. */
+    const bool repeat = (e.kind == EvKind::KeyRepeat);
+    if ((e.kind != EvKind::Key) && !repeat)
         return NavIntent::none();
 
     const uint32_t k = e.keys;
     const int c = static_cast<int>((sizeClass() == SizeClass::Regular) ? 8 : 6);
-    if ((k & KEY_ENTER) != 0u) {
+    if (!repeat && ((k & KEY_ENTER) != 0u)) {
         uiMemory.edit.picked = grid_.selectedCodePoint();
         return NavIntent::pop();
     }
-    if ((k & KEY_ESC) != 0u)
+    if (!repeat && ((k & KEY_ESC) != 0u))
         return NavIntent::pop();
     if ((k & KEY_LEFT) != 0u)
         grid_.move(-1);

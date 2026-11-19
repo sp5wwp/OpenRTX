@@ -201,14 +201,16 @@ NavIntent MessageDetailView::onEvent(const Event &e)
         scrollOrStep(idx, e.encoder);
         return NavIntent::none();
     }
-    if (e.kind != EvKind::Key)
+    /* A held arrow keeps scrolling; ESC and ENTER act once. */
+    const bool repeat = (e.kind == EvKind::KeyRepeat);
+    if ((e.kind != EvKind::Key) && !repeat)
         return NavIntent::none();
 
     const uint32_t k = e.keys;
-    if ((k & KEY_ESC) != 0u)
+    if (!repeat && ((k & KEY_ESC) != 0u))
         return NavIntent::pop();
 
-    if ((k & KEY_ENTER) != 0u) {
+    if (!repeat && ((k & KEY_ENTER) != 0u)) {
         if (canReply(msg, state.channel.mode)
             && MessageComposeView::open(msg->sender, true))
             return NavIntent::push(ViewId::MessageCompose);

@@ -118,8 +118,10 @@ NavIntent SettingsListView::onEvent(const Event &e)
         int dir = 0;
         if (e.kind == EvKind::Encoder) {
             dir = e.encoder;
-        } else if (e.kind == EvKind::Key) {
-            if ((e.keys & (KEY_ENTER | KEY_ESC)) != 0u) {
+        } else if ((e.kind == EvKind::Key) || (e.kind == EvKind::KeyRepeat)) {
+            /* A held arrow keeps adjusting; ENTER and ESC act once. */
+            const bool repeat = (e.kind == EvKind::KeyRepeat);
+            if (!repeat && ((e.keys & (KEY_ENTER | KEY_ESC)) != 0u)) {
                 endEdit();
                 return NavIntent::none();
             }

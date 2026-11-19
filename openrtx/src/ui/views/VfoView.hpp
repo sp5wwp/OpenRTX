@@ -72,7 +72,14 @@ private:
 
     /* --- interaction --- */
     NavIntent
-    onInputEvent(const Event &e);    //< key handling while entering a freq
+    onInputEvent(const Event &e); //< key handling while entering a freq
+
+    /**
+     * Step the frequency in VFO mode, the channel in memory mode.
+     *
+     * @param dir: +1 up, -1 down.
+     */
+    void step(int dir);
     void stepFreq(int dir);          //< VFO: tune RX+TX by one freq step
     void stepChannel(int dir);       //< MEM: load the next/prev channel
     void toggleVfoMem();             //< switch between VFO and memory mode

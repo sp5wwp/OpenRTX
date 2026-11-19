@@ -156,8 +156,10 @@ NavIntent TextInputView::onEvent(const Event &e)
         return NavIntent::none();
     }
 
-    /* A long-press opens the UTF-8 character picker (accented Latin, symbols). */
-    if (e.kind == EvKind::KeyLong) {
+    /* A long-press opens the UTF-8 character picker (accented Latin, symbols).
+     * Not an arrow's: an arrow is held to step, as on every other screen. */
+    const uint32_t arrows = KEY_UP | KEY_DOWN | KEY_LEFT | KEY_RIGHT;
+    if ((e.kind == EvKind::KeyLong) && ((e.keys & arrows) == 0u)) {
         PickerView::open();
         return NavIntent::push(ViewId::Picker);
     }
