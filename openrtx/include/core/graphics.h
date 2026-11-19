@@ -177,7 +177,7 @@ void gfx_setPixel(point_t pos, color_t color);
 /**
  * Restrict all subsequent drawing to a rectangle (screen space). Pixels outside
  * it are suppressed by gfx_setPixel, so text, fills, lines and circles are all
- * clipped. Used by the UI toolkit to clip each widget to its box.
+ * clipped.
  * @param x,y: top-left corner.
  * @param width,height: rectangle size (a zero dimension clips out everything).
  */
@@ -209,9 +209,10 @@ enum fontSet {
 };
 
 /**
- * Use a font from outside the firmware, e.g. a font pack, instead of the
- * built-in one. The data is borrowed and must stay valid while installed. The
- * first font installed allocates the table of installed fonts on the heap.
+ * Use a font from outside the firmware instead of the built-in one: the hook
+ * for installable font packs. The data is borrowed and must stay valid while
+ * installed. The first font installed allocates the table of installed fonts
+ * on the heap.
  *
  * @param set: font set.
  * @param size: font size.

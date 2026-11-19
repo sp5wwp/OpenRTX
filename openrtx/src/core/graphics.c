@@ -48,10 +48,8 @@ DECL_FONT_BLOB(12);
 DECL_FONT_BLOB(16);
 
 #ifdef CONFIG_FONT_AA
-/* Colour targets embed the anti-aliased 4bpp text set above and, in parallel,
- * the compact 1bpp text set below, so the user can switch to a crisp
- * non-anti-aliased font at run time (Display > Text). Mono targets already ship
- * only the 1bpp set, so there is nothing to add there. Icons stay 4bpp. */
+/* Colour targets also embed the 1bpp text set, the crisp font selected at run
+ * time. Mono targets ship only the 1bpp set. Icons stay 4bpp. */
 #define DECL_FONT_MONO_BLOB(pt)                     \
     extern const uint8_t _font_mono_##pt##_start[]; \
     extern const uint8_t _font_mono_##pt##_end[]
@@ -80,10 +78,7 @@ static const struct fontBlob fontBlobs[FONT_SIZE_NUM] = {
     { _font_16_start, _font_16_end }, // FONT_SIZE_16PT
 };
 
-/* Custom icon font: per-size fallback blobs (parallel to fontBlobs) holding
- * app-specific glyphs like the M17 logo (U+E900) — kept separate from the
- * FontAwesome subset merged into the text font. Layered onto each text font so
- * those code points resolve through the fallback chain (see lv_font_bin). */
+/* Icon font blobs, parallel to fontBlobs: the fallback of each text font. */
 static const struct fontBlob iconBlobs[FONT_SIZE_NUM] = {
     { _icons_5_start, _icons_5_end },   // FONT_SIZE_5PT
     { _icons_6_start, _icons_6_end },   // FONT_SIZE_6PT
@@ -649,17 +644,12 @@ void gfx_drawCircle(point_t start, uint16_t r, color_t color)
 }
 
 /**
- * Compute the pixel size of the first text line
- * @param f: font used as the source of glyphs
- * @param text: the input text
- * @param length: the length of the input text, used for boundary checking
- * @param max_width: right-edge pixel limit for line measurement
- */
-/*
- * Decode one UTF-8 codepoint at `s` (never reading past a NUL); returns the
- * number of bytes consumed (>= 1). Malformed or truncated sequences fall back
- * to a single byte. This lets ASCII, the FontAwesome symbol strings, and future
- * non-Latin text share one text path.
+ * Decode one UTF-8 code point, never reading past a NUL; a malformed sequence
+ * decodes as its first byte.
+ *
+ * @param s: text.
+ * @param cp: decoded code point.
+ * @return bytes consumed, at least 1.
  */
 static uint8_t utf8_decode(const char *s, uint32_t *cp)
 {
@@ -688,6 +678,13 @@ static uint8_t utf8_decode(const char *s, uint32_t *cp)
     return 1;
 }
 
+/**
+ * Compute the pixel size of the first text line
+ * @param f: font used as the source of glyphs
+ * @param text: the input text
+ * @param length: the length of the input text, used for boundary checking
+ * @param max_width: right-edge pixel limit for line measurement
+ */
 static inline uint16_t get_line_size(const struct lvFont *f, const char *text,
                                      uint16_t length, uint16_t max_width)
 {
@@ -732,7 +729,7 @@ static inline uint16_t get_reset_x(textAlign_t alignment, uint16_t line_size,
 
 uint8_t gfx_getFontHeight(fontSize_t size)
 {
-    /* Historic semantics: the cap height, proxied by the '|' glyph box. */
+    /* The cap height, proxied by the '|' glyph box. */
     const struct lvFont *f = get_font(size);
     struct lvGlyph glyph;
     if (lvFont_getGlyph(f, '|', &glyph))

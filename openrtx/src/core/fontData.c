@@ -33,11 +33,8 @@
     ".popsection\n"
 
 /**
- * Assembly embedding a custom icon font blob as _icons_<name>_start/_end.
- * These hold app-specific glyphs (today just the M17 logo, U+E900), layered
- * onto the base text font as a fallback so they draw without touching the
- * ubuntu blobs. Kept separate from the FontAwesome subset that is merged into
- * the text font. Same 1bpp/4bpp split as the text fonts.
+ * Assembly embedding an icon font blob, the fallback of the same-size text
+ * font, as _icons_<name>_start/_end.
  *
  * @param name: blob name.
  * @param path: blob file, relative to the build directory.
@@ -68,9 +65,8 @@ __asm__(ICON_BLOB(10, "../openrtx/fonts/icons_10_4.bin"));
 __asm__(ICON_BLOB(12, "../openrtx/fonts/icons_12_4.bin"));
 __asm__(ICON_BLOB(16, "../openrtx/fonts/icons_16_4.bin"));
 
-/* Colour targets also embed the compact 1bpp text set as _font_mono_*, so the
- * user can switch to a crisp (non-anti-aliased) font at run time. Text only —
- * the M17 icon glyph keeps its 4bpp blob. ~19 KB of extra flash. */
+/* Colour targets also embed the 1bpp text set as _font_mono_*, the crisp font
+ * selected at run time. The icon blobs stay 4bpp. */
 __asm__(FONT_BLOB(mono_5, "../openrtx/fonts/ubuntu_5_1.bin"));
 __asm__(FONT_BLOB(mono_6, "../openrtx/fonts/ubuntu_6_1.bin"));
 __asm__(FONT_BLOB(mono_8, "../openrtx/fonts/ubuntu_8_1.bin"));
