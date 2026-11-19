@@ -14,66 +14,65 @@ namespace ortxui
 {
 
 /**
- * Characters the cursor cycles through on targets without a numeric keypad.
- * Space is first so a fresh slot reads as blank and cycles up into letters.
+ * Characters the cursor cycles through when the character under it is changed
+ * with the arrows or the knob. Space is first, so a new cell reads as blank.
  */
 struct Charset {
     /** Index of `c` in the set, or 0 (space) when absent. */
-    int indexOf(char c) const
+    int16_t indexOf(char c) const
     {
         for (uint16_t i = 0; i < len; i++)
             if (chars[i] == c)
-                return static_cast<int>(i);
+                return static_cast<int16_t>(i);
         return 0;
     }
 
-    /** Character at `i`, wrapping modulo the set length (handles cycling). */
-    char at(int i) const
+    /** Character at `i`, wrapping modulo the set length. */
+    char at(int16_t i) const
     {
-        const int n = static_cast<int>(len);
+        const int16_t n = static_cast<int16_t>(len);
         return chars[((i % n) + n) % n];
     }
 
-    const char *chars; ///< Ordered characters, NUL-terminated string body
-    uint16_t len;      ///< Number of characters (excludes the NUL)
+    const char *chars; ///< Ordered characters
+    uint16_t len;      ///< Number of characters, without the NUL
 };
 
-/* Callsign / M17 destination: space + uppercase + digits + a few separators. */
-constexpr char kCharsCallsign[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
+/** Callsign and M17 destination: the M17 base-40 alphabet. */
+constexpr char CHARS_CALLSIGN[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
-/* Free text (M17 meta, SMS): adds lowercase and common punctuation. */
-constexpr char kCharsText[] =
+/** Free text (M17 meta, SMS): adds lowercase and common punctuation. */
+constexpr char CHARS_TEXT[] =
     " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
     ".,?!-/@#'()&:;+*=";
 
-constexpr Charset CHARSET_CALLSIGN{ kCharsCallsign,
-                                    sizeof(kCharsCallsign) - 1 };
-constexpr Charset CHARSET_TEXT{ kCharsText, sizeof(kCharsText) - 1 };
+constexpr Charset CHARSET_CALLSIGN{ CHARS_CALLSIGN,
+                                    sizeof(CHARS_CALLSIGN) - 1 };
+constexpr Charset CHARSET_TEXT{ CHARS_TEXT, sizeof(CHARS_TEXT) - 1 };
 
 /**
- * ETSI phone-style multi-tap table for numeric-keypad radios: repeated presses
- * of one key cycle through its string (in place); a different key, or a pause
- * of input_longPressTimeout, commits the character and advances. Indexed by
- * key 0-9, then '*' = 10, '#' = 11. An empty string means the key produces no
- * character (it is an action key — '*' is backspace, handled by the host). The
- * space character lives on '0' or '#' per the target's CONFIG_KBD_SPACE_ON_HASH
- * silkscreen.
+ * ETSI phone-style multi-tap table for numeric keypads: repeated presses of one
+ * key cycle through its string in place; a different key, or a pause of
+ * input_longPressTimeout, keeps the character and advances. Indexed by key 0-9,
+ * then '*' = 10, '#' = 11. An empty string types nothing ('*' deletes). Space
+ * is on '0' or '#', as CONFIG_KBD_SPACE_ON_HASH says the keypad prints it.
  */
 struct MultiTapTable {
-    const char *keys[12]; ///< Characters of keys 0-9, '*' and '#'
+    static constexpr uint8_t KEY_COUNT = 12; ///< Keys 0-9, '*' and '#'
+
+    const char *keys[KEY_COUNT]; ///< Characters of each key, in tap order
 };
 
-/* Callsign (M17 base-40: A-Z 0-9 - / . and space). Uppercase only, digit last
- * in each group so a quick tap gives the letter. */
+/** Callsign: uppercase only, digit last in each group. */
 constexpr MultiTapTable MTAP_CALLSIGN = { {
-    CONFIG_KBD_SPACE_ON_HASH ? "0" : "0 ", //< 0 (+ space unless space is on #)
-    "1-/.",                                //< 1 and the M17 symbols
+    CONFIG_KBD_SPACE_ON_HASH ? "0" : "0 ", /* 0, and space unless on '#' */
+    "1-/.",                                /* 1 and the M17 symbols */
     "ABC2", "DEF3", "GHI4", "JKL5", "MNO6", "PQRS7", "TUV8", "WXYZ9",
-    "",                                    //< '*' = backspace (host action)
-    CONFIG_KBD_SPACE_ON_HASH ? " " : "",   //< '#' = space when space is on #
+    "",                                    /* '*' deletes */
+    CONFIG_KBD_SPACE_ON_HASH ? " " : "",   /* '#' is space where printed so */
 } };
 
-/* Free text (M17 meta / SMS): lowercase-first, then uppercase, then digit. */
+/** Free text: lowercase first, then the digit, then uppercase. */
 constexpr MultiTapTable MTAP_TEXT = { {
     CONFIG_KBD_SPACE_ON_HASH ? "0" : " 0",
     ".,?!1-/@",
