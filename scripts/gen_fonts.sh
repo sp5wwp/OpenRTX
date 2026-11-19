@@ -31,13 +31,10 @@ command -v npx >/dev/null || { echo "npx (Node.js) is required"; exit 1; }
 [ -f "$TTF" ] || { echo "Ubuntu TTF not found: $TTF"; exit 1; }
 [ -f "$FA" ]  || { echo "FontAwesome woff not found: $FA"; exit 1; }
 
-# The "custom icon font" is the fallback layer of every text font, kept apart
-# from the FontAwesome subset merged into the text fonts. Its M17 wordmark logo
-# (U+E900), drawn in place of the "M17" mode label, comes from a 3-colour
-# *stroked* SVG, so flatten the strokes to fills (Inkscape), drop the
-# drop-shadow layer, and wrap the result in a one-glyph TTF that lv_font_conv
-# can bake. Needs inkscape + python3-fonttools on top of npx; if the SVG is
-# absent the text fonts are still baked, just without the icons.
+# The M17 logo (U+E900) of the custom icon font comes from a stroked SVG:
+# flatten the strokes (Inkscape), drop the shadow layer and wrap it in a
+# one-glyph TTF for lv_font_conv. Needs inkscape and fonttools; without the
+# SVG only the text fonts are baked.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 M17_SVG="$OUT/m17_logo.svg"
 M17_CP=0xE900
@@ -81,14 +78,9 @@ for slot in $SLOTS; do
         -o "$OUT/ubuntu_${pt}_4.bin"
     echo "ubuntu_${pt}  (ppem $p): $(wc -c < "$OUT/ubuntu_${pt}_1.bin" | tr -d " ")B 1bpp, $(wc -c < "$OUT/ubuntu_${pt}_4.bin" | tr -d " ")B 4bpp"
 
-    # The custom icon font lives in its OWN per-size blobs, embedded as a
-    # fallback so the base ubuntu blobs stay byte-for-byte unchanged (see
-    # docs/fonts.md). It holds the M17 logo plus the Latin-1 supplement
-    # (0xA1-0xFF: accented letters + symbols) from Ubuntu, so the UTF-8
-    # character picker and any inserted accented text render. Per-glyph baseline
-    # offsets keep them aligned with the base text. Same 1bpp/4bpp split.
-    # Also the ellipsis (U+2026, from Ubuntu) for text truncation and a
-    # FontAwesome backspace (U+F55A) for the character-wheel delete slot.
+    # The custom icon font, in blobs of its own so the text blobs do not change
+    # with it (docs/fonts.md): the M17 logo, Latin-1 and the ellipsis from
+    # Ubuntu, and the FontAwesome backspace.
     if [ -n "${ICON_TTF:-}" ]; then
         npx --yes "$LV_FONT_CONV" --font "$ICON_TTF" -r "$M17_CP" \
             --font "$TTF" -r 0xA1-0xFF -r 0x2026 --font "$FA" -r 0xF55A \

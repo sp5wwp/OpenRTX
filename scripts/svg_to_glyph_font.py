@@ -3,14 +3,9 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Convert a single monochrome SVG (e.g. the M17 logo) into a one-glyph TTF so
-# lv_font_conv can bake it into the icon font blobs. lv_font_conv only ingests
-# font files (TTF/OTF/WOFF), not raw SVGs, so this bridges an SVG asset into
-# that pipeline.
-#
-# The glyph is placed at a Private-Use-Area codepoint (default 0xE900) and
-# scaled to sit on the baseline at roughly cap height, so it drops into a line
-# of text like any other icon glyph.
+# Convert a single monochrome SVG (e.g. the M17 logo) into a one-glyph TTF, as
+# lv_font_conv reads only font files. The glyph sits on the baseline at a
+# Private Use Area code point (default 0xE900), like any other icon glyph.
 #
 # Usage:  scripts/svg_to_glyph_font.py IN.svg OUT.ttf [--codepoint 0xE900]
 #
@@ -27,9 +22,7 @@ from fontTools.pens.ttGlyphPen import TTGlyphPen
 from fontTools.svgLib.path import parse_path
 
 UPEM = 1000       # units per em
-CAP_H = 950       # glyph height in em units; tuned so the mark reads at a
-                  # weight comparable to the mode-label text it sits beside
-                  # (a thin wordmark needs more height than nominal cap height)
+CAP_H = 950       # glyph height in em units, tall as the wordmark is thin
 SIDE = 80         # left/right side bearing in em units
 _SVG_NS = "{http://www.w3.org/2000/svg}"
 
@@ -50,6 +43,7 @@ def _iter_paths(root, exclude=()):
 
 
 def convert(svg_path, ttf_path, codepoint, exclude=()):
+    """Write the paths of an SVG, minus the excluded colours, as one glyph."""
     tree = ET.parse(svg_path)
     root = tree.getroot()
 
@@ -57,12 +51,8 @@ def convert(svg_path, ttf_path, codepoint, exclude=()):
     if not paths:
         raise SystemExit(f"{svg_path}: no <path> elements found")
 
-    # Fit the actual drawn geometry (not the viewBox, which may carry large
-    # empty margins) to CAP_H, so the mark renders at cap height like adjacent
-    # text. NOTE: ancestor <g transform> values are assumed to be translations
-    # only (the usual Inkscape export) — they shift position, which we discard
-    # by re-anchoring to the baseline, so they do not affect the fitted size.
-    # A group scale/rotation would need flattening in the source SVG first.
+    # Fit the drawn geometry, not the viewBox, to CAP_H. Group transforms are
+    # taken to be translations, as Inkscape exports them; flatten any other.
     bp = BoundsPen(glyphSet=None)
     for d in paths:
         parse_path(d, bp)
@@ -80,9 +70,7 @@ def convert(svg_path, ttf_path, codepoint, exclude=()):
     s = CAP_H / ch
     xform = (s, 0, 0, -s, -minx * s + SIDE, maxy * s)
 
-    # Replay each path outline through the flip/scale transform into one TT
-    # glyph. parse_path() draws a single "d" string; TransformPen applies the
-    # SVG-to-font coordinate mapping on the way.
+    # Draw every path through the transform into one glyph.
     pen = TTGlyphPen(glyphSet=None)
     rec = RecordingPen()
     tpen = TransformPen(rec, xform)
@@ -112,6 +100,7 @@ def convert(svg_path, ttf_path, codepoint, exclude=()):
 
 
 def main():
+    """Parse the command line and convert."""
     ap = argparse.ArgumentParser(description="SVG -> one-glyph TTF for lv_font_conv")
     ap.add_argument("svg")
     ap.add_argument("ttf")
