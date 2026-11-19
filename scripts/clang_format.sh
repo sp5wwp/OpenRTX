@@ -84,8 +84,6 @@ openrtx/include/protocols/M17/Utils.hpp
 openrtx/include/protocols/M17/Viterbi.hpp
 openrtx/include/rtx/OpMode_FM.hpp
 openrtx/include/ui/EnglishStrings.h
-openrtx/include/ui/ui_default.h
-openrtx/include/ui/ui_mod17.h
 openrtx/include/ui/ui_strings.h
 openrtx/src/core/audio_path.cpp
 openrtx/src/core/audio_stream.c

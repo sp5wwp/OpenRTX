@@ -17,7 +17,6 @@
 #include <string.h>
 #include "core/utils.h"
 #include <inttypes.h>
-#include "ui/ui_default.h"
 #include "core/beeps.h"
 #include "interfaces/cps_io.h"
 
@@ -785,52 +784,6 @@ void vp_announceSettingsInt(const char *const *stringTableStringPtr,
     vp_queueInteger(val);
 
     playIfNeeded(flags);
-}
-
-void vp_announceScreen(uint8_t ui_screen)
-{
-    const enum vpSummaryInfoFlags infoFlags = vpChannelNameOrVFO | vpFrequencies
-                                            | vpRadioMode;
-
-    switch (ui_screen) {
-        case MAIN_VFO:
-            vp_announceChannelSummary(&state.channel, 0, state.bank, infoFlags);
-            break;
-
-        case MAIN_MEM:
-            vp_announceChannelSummary(&state.channel, state.channel_index + 1,
-                                      state.bank, infoFlags);
-            break;
-
-#ifdef CONFIG_GPS
-        case MENU_GPS:
-            vp_announceGPSInfo(vpGPSAll);
-            break;
-#endif
-
-        case MENU_BACKUP:
-            vp_announceBackupScreen();
-            break;
-
-        case MENU_RESTORE:
-            vp_announceRestoreScreen();
-            break;
-
-        case MENU_ABOUT:
-            vp_announceAboutScreen();
-            break;
-
-#ifdef CONFIG_RTC
-        case SETTINGS_TIMEDATE:
-            vp_announceSettingsTimeDate();
-            break;
-#endif
-
-        case SETTINGS_M17:
-            vp_announceBuffer(&currentLanguage->callsign, false, true,
-                              state.settings.callsign);
-            break;
-    }
 }
 
 void vp_announceBuffer(const char *const *stringTableStringPtr, bool editMode,

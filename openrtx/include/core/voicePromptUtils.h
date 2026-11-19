@@ -204,11 +204,6 @@ void vp_announceSettingsInt(const char *const *stringTableStringPtr,
                             const enum vpQueueFlags flags, int val);
 
 /**
- * This function is called from  ui_updateFSM to speak informational screens.
- */
-void vp_announceScreen(uint8_t ui_screen);
-
-/**
  * This function is called from  ui_updateFSM to speak string buffers.
  */
 void vp_announceBuffer(const char *const *stringTableStringPtr, bool editMode,
