@@ -12,7 +12,7 @@
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"
 #include "widgets/TextInput.hpp"
-#include "style/Charsets.hpp"
+#include "widgets/Charsets.hpp"
 
 namespace ortxui
 {

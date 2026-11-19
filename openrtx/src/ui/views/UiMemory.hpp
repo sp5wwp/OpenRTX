@@ -19,7 +19,7 @@
 #include "views/ViewId.hpp"
 #include "base/UiText.hpp"
 #include "core/messages.h"
-#include "style/Charsets.hpp"
+#include "widgets/Charsets.hpp"
 #include "widgets/List.hpp"
 
 namespace ortxui

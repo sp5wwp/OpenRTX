@@ -6,7 +6,7 @@
 
 #include "views/VfoView.hpp"
 #include "style/Symbols.hpp"
-#include "style/Charsets.hpp"
+#include "widgets/Charsets.hpp"
 #include "base/Event.hpp"
 #include "base/UiFormat.hpp"
 #include "views/UiMemory.hpp"

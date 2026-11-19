@@ -12,7 +12,7 @@
 #include "core/state.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
-#include "style/Charsets.hpp"
+#include "widgets/Charsets.hpp"
 
 #include <cstdio>
 #include <cstring>

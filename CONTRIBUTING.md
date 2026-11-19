@@ -60,9 +60,9 @@ openrtx           # The core program, including its UI, common utilities, and fe
     ├── base      # Object tree, screens, and events
     ├── layout    # Flex layout
     ├── render    # Rectangles and theme-aware drawing on top of core/graphics.h
-    ├── style     # Colour themes, character sets, and glyph names
+    ├── style     # Colour themes and glyph names
     ├── views     # The base View, the UI memory, and the screens
-    └── widgets   # Objects that paint themselves, such as labels, lists, tables, and text input
+    └── widgets   # Objects that paint themselves, such as labels, lists, tables, and text input with its character sets
 platform          # Hardware specific implementations, including things like drivers for specific components, details of specific hardware targets, and low-level implementations of hardware specific needs
 ├── drivers       # Drivers for specific hardware platforms, organized by the type of device
 ├── mcu           # Micro-controller specific handlings such as drivers and abstractions

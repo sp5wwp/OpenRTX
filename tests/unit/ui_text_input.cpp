@@ -15,7 +15,7 @@
 #include "core/input.h"
 #include "core/state.h"
 #include "interfaces/keyboard.h"
-#include "style/Charsets.hpp"
+#include "widgets/Charsets.hpp"
 #include "app/ViewSlot.hpp"
 #include "widgets/TextInput.hpp"
 

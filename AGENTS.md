@@ -34,9 +34,9 @@ openrtx/           Core firmware (hardware-agnostic)
         ├── base/       Object tree, screens, events
         ├── layout/     Flex layout
         ├── render/     Rectangles and theme-aware drawing over core/graphics.h
-        ├── style/      Colour themes, character sets, glyph names
+        ├── style/      Colour themes and glyph names
         ├── views/      The View base, the UI memory and the screens
-        └── widgets/    Objects that paint themselves (labels, lists, tables, text input)
+        └── widgets/    Objects that paint themselves (labels, lists, tables, text input and its character sets)
 platform/           Hardware-specific code
 ├── drivers/        Device drivers organized by component type
 ├── mcu/            MCU-specific implementations (STM32F4xx, STM32H7xx, MK22FN512, x86_64)
