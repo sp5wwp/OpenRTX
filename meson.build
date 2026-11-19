@@ -74,10 +74,8 @@ openrtx_inc = ['openrtx/include', 'platform', 'openrtx/src/ui']
 ##
 ## OpenRTX UI sources
 ##
-## The retained-widget UI toolkit — a single unified codebase for every target
-## (it replaced the former per-family "default" and "module17" immediate-mode
-## UIs). ui_strings.c holds the currentLanguage table the voice-prompt subsystem
-## depends on.
+## The widget toolkit UI, shared by every target. ui_strings.c holds the
+## currentLanguage table the voice prompts read too.
 ##
 
 ui_src = ['openrtx/src/ui/ui_shim.cpp',
@@ -203,10 +201,8 @@ subdir('lib/miosix-kernel')
 ##
 git_version = get_option('test_version')
 if git_version == ''
-  r = run_command('git', 'describe', '--tags', '--dirty', '--always')
-  if r.returncode() != 0
-    # it failed
-  endif
+  r = run_command('git', 'describe', '--tags', '--dirty', '--always',
+                  check : false)
   git_version = r.stdout().strip()
 endif
 openrtx_def += {'GIT_VERSION': '"'+git_version+'"'}
@@ -430,7 +426,7 @@ linux_def  += openrtx_def
 linux_def  += {'sniprintf':'snprintf', 'vsniprintf':'vsnprintf'}
 
 #
-# Standard UI
+# 160x128 colour and 128x64 monochrome emulators, with GPS and RTC
 #
 linux_default_src = linux_src + ui_src
 linux_default_def = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
@@ -443,7 +439,7 @@ linux_small_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HE
                                  'CONFIG_GPS': '', 'CONFIG_RTC': ''}
 
 #
-# Module17 UI
+# Module17 emulator: 128x64 monochrome, no GPS or RTC
 #
 linux_mod17_src = linux_src + ui_src
 linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': ''}
