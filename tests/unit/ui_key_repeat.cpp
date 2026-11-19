@@ -10,13 +10,13 @@
 #include <cstring>
 
 #include "base/Event.hpp"
-#include "base/Navigator.hpp"
+#include "app/Navigator.hpp"
 #include "views/UiMemory.hpp"
 #include "core/event.h"
 #include "core/input.h"
 #include "core/state.h"
 #include "interfaces/keyboard.h"
-#include "views/ViewSlot.hpp"
+#include "app/ViewSlot.hpp"
 
 using namespace ortxui;
 

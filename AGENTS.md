@@ -30,7 +30,8 @@ openrtx/           Core firmware (hardware-agnostic)
     ├── protocols/  Protocol implementations (M17, etc.) — structured per OSI layers 1-3
     ├── rtx/        Operational adapters integrating protocols with audio, PTT, squelch
     └── ui/         UI toolkit, shared by every target
-        ├── base/       Object tree, screens, events, navigation
+        ├── app/        Navigation and the entry points of ui.h
+        ├── base/       Object tree, screens, events
         ├── layout/     Flex layout
         ├── render/     Theme-aware drawing over core/graphics.h
         ├── style/      Colour themes, character sets, glyph names

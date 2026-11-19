@@ -147,7 +147,7 @@ target_sources(app
     openrtx/src/protocols/M17/PacketFramer.cpp
     openrtx/src/protocols/M17/SmsPacket.cpp
 
-    openrtx/src/ui/ui_shim.cpp
+    openrtx/src/ui/app/ui_shim.cpp
     openrtx/src/ui/base/Object.cpp
     openrtx/src/ui/base/Screen.cpp
     openrtx/src/ui/base/Event.cpp
@@ -155,7 +155,7 @@ target_sources(app
     openrtx/src/ui/base/UiFormat.cpp
     openrtx/src/ui/views/View.cpp
     openrtx/src/ui/views/SettingsListView.cpp
-    openrtx/src/ui/base/Navigator.cpp
+    openrtx/src/ui/app/Navigator.cpp
     openrtx/src/ui/views/UiMemory.cpp
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
@@ -172,7 +172,7 @@ target_sources(app
     openrtx/src/ui/widgets/Compass.cpp
     openrtx/src/ui/widgets/TextInput.cpp
     openrtx/src/ui/widgets/TextBlock.cpp
-    openrtx/src/ui/views/ViewSlot.cpp
+    openrtx/src/ui/app/ViewSlot.cpp
     openrtx/src/ui/views/VfoView.cpp
     openrtx/src/ui/views/VolumeOverlayView.cpp
     openrtx/src/ui/views/VolumeHud.cpp

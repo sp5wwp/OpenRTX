@@ -25,13 +25,13 @@
 #include "hwconfig.h"
 
 #include "base/Event.hpp"
-#include "base/Navigator.hpp"
+#include "app/Navigator.hpp"
 #include "views/UiMemory.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
 #include "views/LowBatteryScreen.hpp"
 #include "views/VfoView.hpp"
-#include "views/ViewSlot.hpp"
+#include "app/ViewSlot.hpp"
 #include "views/VolumeOverlayView.hpp"
 
 #include <cstdint>

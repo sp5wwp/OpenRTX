@@ -13,7 +13,7 @@
 #include "core/state.h"
 #include "interfaces/keyboard.h"
 #include "interfaces/platform.h"
-#include "views/ViewSlot.hpp"
+#include "app/ViewSlot.hpp"
 
 using namespace ortxui;
 

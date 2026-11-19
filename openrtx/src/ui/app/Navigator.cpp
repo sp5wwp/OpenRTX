@@ -4,10 +4,10 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "base/Navigator.hpp"
+#include "app/Navigator.hpp"
 #include "base/Event.hpp"
 #include "views/UiMemory.hpp"
-#include "views/ViewSlot.hpp"
+#include "app/ViewSlot.hpp"
 #include "widgets/List.hpp"
 
 namespace ortxui

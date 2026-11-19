@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/ViewSlot.hpp"
+#include "app/ViewSlot.hpp"
 #include "core/utils.h"
 
 #include <new>
