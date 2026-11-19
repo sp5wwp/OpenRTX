@@ -427,8 +427,7 @@ static bool startThread(const pathId path, void *(*func)(void *))
 
 /**
  * Mark the codec thread as stopped and wake a caller waiting on its queue,
- * which would otherwise wait forever when the thread ends on its own, as it
- * does when its audio stream cannot start.
+ * which would otherwise wait forever if the thread ends on its own.
  */
 static void threadStopped()
 {

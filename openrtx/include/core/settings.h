@@ -45,7 +45,7 @@ typedef struct
     uint8_t vpLevel         : 3,  // Voice prompt level
             vpPhoneticSpell : 1,  // Phonetic spell enabled
             macroMenuLatch  : 1,  // Automatic latch of macro menu
-            highContrast    : 1,  // High-contrast (mono) UI theme (colour only)
+            highContrast    : 1,  // High Contrast UI theme (colour only)
             crispText       : 1,  // Crisp text (colour only)
             _reserved       : 1;
     bool    m17_can_rx;           // Check M17 CAN on RX
