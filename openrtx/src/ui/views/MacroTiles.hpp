@@ -11,6 +11,7 @@
 #error This header is C++ only!
 #endif
 
+#include <cstddef>
 #include <cstdint>
 #include "core/Object.hpp"
 #include "core/state.h"
@@ -18,18 +19,31 @@
 namespace ortxui
 {
 
+/** Macro menu actions in tile order: number key N runs action N - 1. */
+enum class MacroAction : uint8_t {
+    ToneEnable,     ///< Cycle the CTCSS use
+    ToneDown,       ///< Step the CTCSS tone down
+    ToneUp,         ///< Step the CTCSS tone up
+    Bandwidth,      ///< Toggle the FM bandwidth
+    Mode,           ///< Switch the operating mode
+    Power,          ///< Cycle the TX power
+    BrightnessDown, ///< Dim the backlight
+    BrightnessUp,   ///< Brighten the backlight
+    KeypadLock,     ///< Toggle the keypad lock
+    Count,          ///< Number of actions
+};
+
 /**
  * The 3x3 tile grid of the macro menu: each tile shows its number key (with
  * an icon on the larger screens) and the live value of its action. The tiles
  * are laid out and painted one at a time through the scratch tile, and the
- * values are composed from the state snapshot when drawn, so the grid stores
- * only the snapshot and a digest of the values shown.
+ * values are composed when drawn from the readings the grid copies.
  */
 class MacroTiles : public Object
 {
 public:
     /** Number of tiles. */
-    static constexpr uint8_t TILES = 9;
+    static constexpr uint8_t TILES = static_cast<uint8_t>(MacroAction::Count);
 
     /** Constructor. */
     MacroTiles() = default;
@@ -40,7 +54,7 @@ public:
     /**
      * Follow a state snapshot.
      *
-     * @param s: state snapshot, which must outlive the next draw.
+     * @param s: state snapshot.
      * @return true if a tile value changed.
      */
     bool sync(const state_t &s);
@@ -59,6 +73,16 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
+    /** What the tiles show, copied from the state snapshot. */
+    struct Readings {
+        uint32_t power;     ///< TX power, in mW
+        fmInfo_t fm;        ///< CTCSS settings
+        uint8_t mode;       ///< Operating mode
+        uint8_t bandwidth;  ///< FM bandwidth
+        uint8_t brightness; ///< Backlight level, in percent
+        bool locked;        ///< Keypad locked
+    };
+
     /**
      * Get the area of a tile: the grid is three rows sharing its height, each
      * of three equal tiles, TILE_GAP apart.
@@ -80,17 +104,16 @@ private:
     /**
      * Compose a tile's value.
      *
-     * @param tile: tile index.
-     * @param s: state snapshot.
+     * @param action: action of the tile.
+     * @param r: readings shown.
      * @param out: output buffer.
      * @param n: output buffer size.
      */
-    static void composeValue(uint8_t tile, const state_t &s, char *out,
-                             uint16_t n);
+    static void composeValue(MacroAction action, const Readings &r, char *out,
+                             size_t n);
 
-    const state_t *state_ = nullptr; ///< Snapshot the values come from
-    uint32_t digest_ = 0;            ///< Digest of the values shown
-    uint8_t selected_ = TILES;       ///< Highlighted tile, TILES for none
+    Readings shown_ = {};      ///< Readings the tiles show
+    uint8_t selected_ = TILES; ///< Highlighted tile, TILES for none
 };
 
 } // namespace ortxui

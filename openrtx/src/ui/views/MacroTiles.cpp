@@ -10,7 +10,6 @@
 #include "core/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
-#include "core/utils.h"
 #include "layout/Flex.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
@@ -19,6 +18,7 @@
 #include "hwconfig.h"
 
 #include <cstdio>
+#include <cstring>
 
 namespace ortxui
 {
@@ -46,7 +46,7 @@ static constexpr const char *DIGITS[MacroTiles::TILES] = {
 static constexpr uint8_t TILE_GAP = 2;
 
 /* Size of a composed tile value. */
-static constexpr uint16_t VALUE_SIZE = 14;
+static constexpr size_t VALUE_SIZE = 14;
 
 /* Size of a composed key label. */
 static constexpr uint16_t KEY_SIZE = 16;
@@ -114,73 +114,69 @@ Rect MacroTiles::tileArea(uint8_t tile) const
              w, row.h };
 }
 
-void MacroTiles::composeValue(uint8_t tile, const state_t &s, char *out,
-                              uint16_t n)
+void MacroTiles::composeValue(MacroAction action, const Readings &r, char *out,
+                              size_t n)
 {
-    const channel_t &ch = s.channel;
-    const bool fm = (ch.mode == OPMODE_FM);
+    const bool fm = (r.mode == OPMODE_FM);
 
-    switch (tile) {
-        case 0: /* tone encode/decode */
-            sniprintf(out, n, "%s", fm ? toneEnableLabel(ch.fm).str() : "-");
+    switch (action) {
+        case MacroAction::ToneEnable:
+            sniprintf(out, n, "%s", fm ? toneEnableLabel(r.fm).str() : "-");
             break;
-        case 1: /* tone down (shows the tone) */
-        case 2: /* tone up */
+        case MacroAction::ToneDown:
+        case MacroAction::ToneUp:
             if (fm)
-                formatTone(ch.fm.txTone, out, n);
+                formatTone(r.fm.txTone, out, n);
             else
                 sniprintf(out, n, "-");
             break;
-        case 3: /* bandwidth */
-            sniprintf(out, n, "%s", fm ? bandwidthLabel(ch.bandwidth) : "-");
+        case MacroAction::Bandwidth:
+            sniprintf(out, n, "%s", fm ? bandwidthLabel(r.bandwidth) : "-");
             break;
-        case 4: /* radio mode */
-            sniprintf(out, n, "%s", modeLabel(ch.mode).str());
+        case MacroAction::Mode:
+            sniprintf(out, n, "%s", modeLabel(r.mode).str());
             break;
-        case 5: /* power */
-            formatPower(ch.power, out, n);
+        case MacroAction::Power:
+            formatPower(r.power, out, n);
             break;
-        case 6: /* brightness */
-        case 7:
+        case MacroAction::BrightnessDown:
+        case MacroAction::BrightnessUp:
 #ifdef CONFIG_SCREEN_BRIGHTNESS
-            sniprintf(out, n, "%u%%", (unsigned)s.settings.brightness);
+            sniprintf(out, n, "%u%%", static_cast<unsigned>(r.brightness));
 #else
             sniprintf(out, n, "-");
 #endif
             break;
-        case 8: /* keypad lock */
-            sniprintf(out, n, "%s",
-                      (uiMemory.keypadLocked ? STR(on) : STR(off)).str());
-            break;
+        case MacroAction::KeypadLock:
         default:
-            out[0] = '\0';
+            sniprintf(out, n, "%s", (r.locked ? STR(on) : STR(off)).str());
             break;
     }
 }
 
 bool MacroTiles::sync(const state_t &s)
 {
-    state_ = &s;
+    const channel_t &ch = s.channel;
+    Readings r = {};
+    r.power = ch.power;
+    r.fm = ch.fm;
+    r.mode = ch.mode;
+    r.bandwidth = ch.bandwidth;
+    r.brightness = s.settings.brightness;
+    r.locked = uiMemory.keypadLocked;
 
-    uint32_t h = FNV1A_BASIS;
-    for (uint8_t i = 0; i < TILES; i++) {
-        char value[VALUE_SIZE];
-        composeValue(i, s, value, sizeof(value));
-        for (const char *c = value; *c != '\0'; c++)
-            h = fnv1a(h, static_cast<uint8_t>(*c));
-        h = fnv1a(h, 0u); /* hash the NUL too, separating the tiles */
-    }
-
-    const bool changed = (h != digest_);
-    digest_ = h;
+    const bool changed = (r.power != shown_.power)
+                      || (memcmp(&r.fm, &shown_.fm, sizeof(r.fm)) != 0)
+                      || (r.mode != shown_.mode)
+                      || (r.bandwidth != shown_.bandwidth)
+                      || (r.brightness != shown_.brightness)
+                      || (r.locked != shown_.locked);
+    shown_ = r;
     return changed;
 }
 
 void MacroTiles::draw(DrawCtx &d)
 {
-    if (state_ == nullptr)
-        return;
-
     for (uint8_t i = 0; i < TILES; i++) {
         char keyBuf[KEY_SIZE];
         char value[VALUE_SIZE];
@@ -190,7 +186,7 @@ void MacroTiles::draw(DrawCtx &d)
             continue;
         ScratchTile &scratch = Scratch::get<ScratchTile>();
 
-        composeValue(i, *state_, value, sizeof(value));
+        composeValue(static_cast<MacroAction>(i), shown_, value, sizeof(value));
         setUp(i, keyBuf, value);
         scratch.key.setArea({ 0, 0, 0, 0 });
         scratch.value.setArea({ 0, 0, 0, 0 });

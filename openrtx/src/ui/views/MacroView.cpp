@@ -57,12 +57,20 @@ static void announceTones(enum vpQueueFlags flags)
 /**
  * Check whether a macro action steps a value, so that it repeats while held.
  *
- * @param number: number key of the action.
+ * @param action: action.
  * @return true for the tone and brightness steps.
  */
-static bool isStepAction(uint8_t number)
+static bool isStepAction(MacroAction action)
 {
-    return (number == 2) || (number == 3) || (number == 7) || (number == 8);
+    switch (action) {
+        case MacroAction::ToneDown:
+        case MacroAction::ToneUp:
+        case MacroAction::BrightnessDown:
+        case MacroAction::BrightnessUp:
+            return true;
+        default:
+            return false;
+    }
 }
 
 void MacroView::build()
@@ -149,14 +157,14 @@ void MacroView::stepSquelch(int dir)
     }
 }
 
-void MacroView::doAction(uint8_t number)
+void MacroView::doAction(MacroAction action)
 {
     channel_t &ch = state.channel;
     const bool fm = (ch.mode == OPMODE_FM);
     const enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
 
-    switch (number) {
-        case 1: /* tone encode/decode cycle (FM) */
+    switch (action) {
+        case MacroAction::ToneEnable:
             if (fm) {
                 stepToneEnable(ch.fm, +1);
                 requestSyncRtx();
@@ -164,14 +172,14 @@ void MacroView::doAction(uint8_t number)
                     static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));
             }
             break;
-        case 2: /* tone down (FM) */
+        case MacroAction::ToneDown:
             if (fm) {
                 stepTone(ch.fm, -1);
                 requestSyncRtx();
                 announceTones(flags);
             }
             break;
-        case 3: /* tone up (FM) */
+        case MacroAction::ToneUp:
             if (fm) {
                 stepTone(ch.fm, +1);
                 requestSyncRtx();
@@ -179,14 +187,14 @@ void MacroView::doAction(uint8_t number)
                     static_cast<vpQueueFlags>(flags | vpqIncludeDescriptions));
             }
             break;
-        case 4: /* bandwidth (FM) */
+        case MacroAction::Bandwidth:
             if (fm) {
-                ch.bandwidth = (uint8_t)((ch.bandwidth + 1) % 2);
+                ch.bandwidth = static_cast<uint8_t>((ch.bandwidth + 1) % 2);
                 requestSyncRtx();
                 vp_announceBandwidth(ch.bandwidth, flags);
             }
             break;
-        case 5: /* radio mode */
+        case MacroAction::Mode:
 #ifdef CONFIG_M17
             ch.mode = (ch.mode == OPMODE_FM) ? OPMODE_M17 : OPMODE_FM;
 #else
@@ -195,7 +203,7 @@ void MacroView::doAction(uint8_t number)
             requestSyncRtx();
             vp_announceRadioMode(ch.mode, flags);
             break;
-        case 6: /* power cycle 1 / 2.5 / 5 W */
+        case MacroAction::Power:
             ch.power = (ch.power == 1000u) ? 2500u :
                        (ch.power == 2500u) ? 5000u :
                                              1000u;
@@ -203,9 +211,11 @@ void MacroView::doAction(uint8_t number)
             vp_announcePower(ch.power, flags);
             break;
 #ifdef CONFIG_SCREEN_BRIGHTNESS
-        case 7:   /* brightness down */
-        case 8: { /* brightness up */
-            const int step = (number == 8) ? BRIGHTNESS_STEP : -BRIGHTNESS_STEP;
+        case MacroAction::BrightnessDown:
+        case MacroAction::BrightnessUp: {
+            const int step = (action == MacroAction::BrightnessUp) ?
+                                 BRIGHTNESS_STEP :
+                                 -BRIGHTNESS_STEP;
             int b = static_cast<int>(state.settings.brightness) + step;
             if (b < BRIGHTNESS_MIN)
                 b = BRIGHTNESS_MIN;
@@ -217,7 +227,7 @@ void MacroView::doAction(uint8_t number)
             break;
         }
 #endif
-        case 9: /* keypad lock toggle */
+        case MacroAction::KeypadLock:
             uiMemory.keypadLocked = !uiMemory.keypadLocked;
             break;
         default:
@@ -247,9 +257,11 @@ void MacroView::onKeypadEvent(const Event &e)
         stepSquelch(+1);
     } else {
         const int d = digitFromKeys(k);
-        const bool acts = (d >= 1) && (d <= 9);
-        if (acts && (!repeat || isStepAction((uint8_t)d)))
-            doAction((uint8_t)d);
+        if ((d >= 1) && (d <= MacroTiles::TILES)) {
+            const MacroAction action = static_cast<MacroAction>(d - 1);
+            if (!repeat || isStepAction(action))
+                doAction(action);
+        }
     }
 }
 
@@ -262,7 +274,7 @@ void MacroView::onKnobEvent(const Event &e)
         tiles_.invalidate();
     } else if (e.kind == EvKind::Key) {
         if ((e.keys & KEY_ENTER) != 0u)
-            doAction(static_cast<uint8_t>(selected_ + 1));
+            doAction(static_cast<MacroAction>(selected_));
         else if ((e.keys & KEY_VOLDOWN) != 0u)
             stepSquelch(-1);
         else if ((e.keys & KEY_VOLUP) != 0u)

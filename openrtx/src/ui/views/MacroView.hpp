@@ -66,9 +66,9 @@ private:
     /**
      * Run a macro action and speak its result.
      *
-     * @param number: number key of the action, 1 to 9.
+     * @param action: action.
      */
-    void doAction(uint8_t number);
+    void doAction(MacroAction action);
 
     /**
      * Step the FM squelch by one level, within its range.
