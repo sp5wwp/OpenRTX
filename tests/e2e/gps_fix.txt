@@ -1,0 +1,29 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+# variants: default smallscreen
+
+# GPS Position screen with a fix. The emulator's GPS plays a fixed set of
+# NMEA sentences, one a second, so after one round of them the screen shows
+# their position, heading and satellites.
+wait_stable 5000 3
+key ENTER
+wait_stable
+# Settings is main-menu row idx 5, GPS is Settings row idx 2; ENTER ticks
+# GPS Enabled.
+key DOWN DOWN DOWN DOWN DOWN ENTER
+wait_stable
+key DOWN DOWN ENTER
+wait_stable
+key ENTER
+wait_stable
+# Back in the main menu on Settings, GPS is two rows up (idx 3).
+key ESC ESC
+wait_stable
+key UP UP ENTER
+wait_stable
+# Seven sentences, one a second after a 1 s wait, and a margin.
+sleep 12000
+wait_stable
+screenshot_sync gps_fix.bmp
+quit
