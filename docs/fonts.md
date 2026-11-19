@@ -12,15 +12,14 @@ small in-tree reader decodes them at runtime. No LVGL source is vendored.
 | Committed font blobs | `openrtx/fonts/ubuntu_<pt>_<bpp>.bin` |
 | Regeneration script | `scripts/gen_fonts.sh` |
 | Decoder (format reader + RLE) | `openrtx/src/core/fonts/lv_font_bin.{c,h}` |
-| Embedding (`.incbin`) | `openrtx/src/core/fontData.S` |
+| Embedding (`.incbin`) | `openrtx/src/core/fontData.c` |
 | Text rendering + `SYMBOL_*` | `openrtx/src/core/graphics.c`, `core/graphics.h` |
 
 Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one blob. Colour
 (RGB565) targets embed the anti-aliased **4bpp** set; monochrome (BW) targets
-embed the compact **1bpp** set. The choice is made in `fontData.S` from the
-`CONFIG_FONT_AA` meson flag, which is set for the RGB565 targets in
-`meson.build` (the pixel format itself lives in `hwconfig.h`, which the
-assembler can't include).
+embed the compact **1bpp** set. The choice is made in `fontData.c` from
+`CONFIG_FONT_AA`, which the colour targets define in their `hwconfig.h` (the
+colour emulator derives it from its pixel format).
 
 ## Regenerating the fonts
 
@@ -41,7 +40,7 @@ Sources:
 `lv_font_conv` runs via `npx`, so only Node.js is needed (no global install).
 
 > **Gotcha:** ninja does not track `.incbin` dependencies. After regenerating
-> the blobs, `touch openrtx/src/core/fontData.S` (or clean) so the embed is
+> the blobs, `touch openrtx/src/core/fontData.c` (or clean) so the embed is
 > rebuilt.
 
 ## "pt" is a slot name, not a size — the ppem calibration
@@ -82,7 +81,7 @@ points render like any other glyph — a single-colour, theme-tinted silhouette
 that also works on 1bpp targets. Keeping it separate means the `ubuntu_*.bin`
 blobs stay byte-for-byte stable when the icon set changes, and vice-versa. The
 per-size blobs are `openrtx/fonts/icons_*.bin`, embedded alongside the text
-fonts in `fontData.S` and wired as fallbacks in `graphics.c` (`get_font`).
+fonts in `fontData.c` and wired as fallbacks in `graphics.c` (`get_font`).
 
 The M17 glyph is a UI-layer name (`SYMBOL_M17` in `src/ui/style/Symbols.hpp`,
 not `graphics.h`). Its source is a 3-colour *stroked* SVG

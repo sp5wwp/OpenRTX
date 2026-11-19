@@ -507,7 +507,7 @@ TEST_CASE("last glyph of each font decodes (non-zero width)",
     REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x89\x84") > 0);
 }
 
-/* Built-in 16 pt text font, embedded by fontData.S. */
+/* Built-in 16 pt text font, embedded by fontData.c. */
 extern "C" const uint8_t _font_16_start[];
 extern "C" const uint8_t _font_16_end[];
 

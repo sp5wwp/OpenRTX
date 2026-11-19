@@ -6,7 +6,7 @@
 # Regenerate the committed LVGL binary UI fonts under openrtx/fonts/.
 #
 # The firmware build does NOT run this — it embeds the committed .bin blobs
-# directly (openrtx/src/core/fontData.S). Run this only to change the font,
+# directly (openrtx/src/core/fontData.c). Run this only to change the font,
 # the pixel sizes, or the icon set, then commit the regenerated .bin files.
 #
 # Fonts are produced by lv_font_conv (https://github.com/lvgl/lv_font_conv),
