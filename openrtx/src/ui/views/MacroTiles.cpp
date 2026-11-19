@@ -217,6 +217,9 @@ void MacroTiles::draw(DrawCtx &d)
         char keyBuf[KEY_SIZE];
         char value[VALUE_SIZE];
         const Rect tile = tileArea(i);
+        /* A tile outside the clip, as in another band, draws nothing. */
+        if (!tile.empty() && intersect(d.clip(), tile).empty())
+            continue;
         ScratchTile &scratch = Scratch::get<ScratchTile>();
 
         /* The labels are laid out with an empty value and the metrics the

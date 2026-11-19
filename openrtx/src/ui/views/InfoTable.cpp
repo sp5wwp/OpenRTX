@@ -117,6 +117,9 @@ void InfoTable::draw(DrawCtx &d)
     for (uint8_t i = 0; i < ROW_COUNT; i++) {
         const Rect row = { area_.x, static_cast<int16_t>(area_.y + i * rowH),
                            area_.w, rowH };
+        /* A row outside the clip, as in another band, draws nothing. */
+        if (!row.empty() && intersect(d.clip(), row).empty())
+            continue;
         drawRow(d, i, row);
     }
 }

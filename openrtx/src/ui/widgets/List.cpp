@@ -214,14 +214,18 @@ void List::draw(DrawCtx &d)
         if (y > area_.bottom())
             break;
 
+        /* A row outside the clip, as in another band, draws nothing, but
+         * still moves the next rows down and counts as shown. */
         const Rect row = { area_.x, y, area_.w, static_cast<uint16_t>(h) };
+        y = static_cast<int16_t>(y + h);
+        if (!row.empty() && intersect(d.clip(), row).empty())
+            continue;
+
         const bool selected = selectable_ && (i == selected_);
         scratchRow.bind(kind, it.label, it.value, it.checked, selected);
         scratchRow.setArea(row);
         scratchRow.onLayout();
         scratchRow.paintTree(d);
-
-        y = static_cast<int16_t>(y + h);
     }
 
     /* Scroll indicator when the list overflows the viewport (there is a row
