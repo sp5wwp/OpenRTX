@@ -22,9 +22,12 @@ from tests/e2e as the emulator's codeplug.
 
 The variants and the meson targets they are built from are:
 
-    default      openrtx_linux               default UI, 160x128 colour
-    smallscreen  openrtx_linux_smallscreen   default UI, 128x64 monochrome
-    module17     openrtx_linux_mod17         Module17 UI, 128x64 monochrome
+    default      openrtx_linux               160x128 colour, GPS and RTC
+    smallscreen  openrtx_linux_smallscreen   128x64 monochrome, GPS and RTC
+    module17     openrtx_linux_mod17         128x64 monochrome, no GPS or RTC
+
+Configured with -Dgfx_band_rows=16, the default variant draws in bands as
+the colour radios do, and must match the same goldens.
 
 Scripts should wait for the screen to settle with "wait_stable" after every
 key press instead of sleeping for a fixed time, and take screenshots with

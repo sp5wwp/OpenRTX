@@ -31,13 +31,13 @@ command -v npx >/dev/null || { echo "npx (Node.js) is required"; exit 1; }
 [ -f "$TTF" ] || { echo "Ubuntu TTF not found: $TTF"; exit 1; }
 [ -f "$FA" ]  || { echo "FontAwesome woff not found: $FA"; exit 1; }
 
-# The "custom icon font" holds app-specific glyphs (kept separate from the
-# FontAwesome subset merged into the text font) as a fallback layer. Today its
-# only glyph is the M17 wordmark logo (U+E900), drawn in place of the "M17" mode
-# label. Its source is a 3-colour *stroked* SVG, so flatten the strokes to fills
-# (Inkscape), drop the drop-shadow layer, and wrap the result in a one-glyph TTF
-# that lv_font_conv can bake. Needs inkscape + python3-fonttools on top of npx;
-# if the SVG is absent the text fonts are still baked, just without the icons.
+# The "custom icon font" is the fallback layer of every text font, kept apart
+# from the FontAwesome subset merged into the text fonts. Its M17 wordmark logo
+# (U+E900), drawn in place of the "M17" mode label, comes from a 3-colour
+# *stroked* SVG, so flatten the strokes to fills (Inkscape), drop the
+# drop-shadow layer, and wrap the result in a one-glyph TTF that lv_font_conv
+# can bake. Needs inkscape + python3-fonttools on top of npx; if the SVG is
+# absent the text fonts are still baked, just without the icons.
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 M17_SVG="$OUT/m17_logo.svg"
 M17_CP=0xE900

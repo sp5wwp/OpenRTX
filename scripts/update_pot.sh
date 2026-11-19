@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 #
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
