@@ -786,6 +786,21 @@ void vp_announceSettingsInt(const char *const *stringTableStringPtr,
     playIfNeeded(flags);
 }
 
+void vp_announceSettingsValue(const char *const *stringTableStringPtr,
+                              const char *value, const uint16_t unit,
+                              const enum vpQueueFlags flags)
+{
+    clearCurrPromptIfNeeded(flags);
+
+    if (flags & vpqIncludeDescriptions)
+        vp_queueStringTableEntry(stringTableStringPtr);
+
+    vp_queueString(value, vpAnnounceCommonSymbols);
+    vp_queuePrompt(unit);
+
+    playIfNeeded(flags);
+}
+
 void vp_announceBuffer(const char *const *stringTableStringPtr, bool editMode,
                        bool callsign, const char *buffer)
 {

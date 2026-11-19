@@ -47,6 +47,10 @@ private:
     void formatValue(uint8_t row, char *out, size_t cap) override;
     void onAdjust(uint8_t row, int8_t dir) override;
     void onToggle(uint8_t row, bool on) override;
+
+    /** Speak the CAN as a number, the other rows as the base does. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
     NavIntent onActivate(uint8_t row) override;
     void onBeginEdit(uint8_t row) override;
     bool onEditEvent(const Event &e) override;

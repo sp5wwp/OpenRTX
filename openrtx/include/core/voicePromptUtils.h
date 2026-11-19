@@ -204,6 +204,19 @@ void vp_announceSettingsInt(const char *const *stringTableStringPtr,
                             const enum vpQueueFlags flags, int val);
 
 /**
+ * Announce a settings value with its unit: the setting's name at the
+ * descriptive level, then the value and the unit.
+ *
+ * @param stringTableStringPtr: setting name, an entry of currentLanguage.
+ * @param value: value as text, e.g. "12.5".
+ * @param unit: voice prompt of the unit, e.g. PROMPT_KILOHERTZ.
+ * @param flags: control flags.
+ */
+void vp_announceSettingsValue(const char *const *stringTableStringPtr,
+                              const char *value, const uint16_t unit,
+                              const enum vpQueueFlags flags);
+
+/**
  * This function is called from  ui_updateFSM to speak string buffers.
  */
 void vp_announceBuffer(const char *const *stringTableStringPtr, bool editMode,

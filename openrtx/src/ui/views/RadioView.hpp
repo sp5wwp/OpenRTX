@@ -60,6 +60,18 @@ private:
     /** Render the offset, or the entry while it is open. */
     void refreshCustom(uint8_t row, bool speak) override;
 
+    /** Speak Step with its unit, the other rows as the base does. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
+
+    /**
+     * Speak an offset entry key before it acts: the digit typed, or the one
+     * '*' removes.
+     *
+     * @param keys: keys pressed.
+     */
+    void announceKey(uint32_t keys);
+
     /** Keep the offset being entered. */
     void saveCustom(ListEdit &e) const override;
 

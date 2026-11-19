@@ -6,6 +6,7 @@
 
 #include "views/FmView.hpp"
 #include "core/cps.h"
+#include "core/voicePromptUtils.h"
 
 #include <cstdio>
 
@@ -56,6 +57,18 @@ void FmView::onAdjust(uint8_t row, int8_t dir)
     }
 
     requestSyncRtx(); /* re-tune the radio with the new tone/enable */
+}
+
+void FmView::announceValue(uint8_t row, const UiText &value, vpQueueFlags flags)
+{
+    (void)value;
+    const fmInfo_t &fm = state.channel.fm;
+
+    /* The tone row speaks the tone whether or not it is in use. */
+    if (row == RowTone)
+        vp_announceCTCSS(true, fm.rxTone, true, fm.txTone, flags);
+    else
+        vp_announceCTCSS(fm.rxToneEn, fm.rxTone, fm.txToneEn, fm.txTone, flags);
 }
 
 } // namespace ortxui

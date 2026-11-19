@@ -7,6 +7,7 @@
 #include "views/DisplayView.hpp"
 #include "core/graphics.h"
 #include "core/utils.h"
+#include "core/voicePromptUtils.h"
 #include "interfaces/display.h"
 #include "hwconfig.h"
 
@@ -156,6 +157,34 @@ void DisplayView::onAdjust(uint8_t row, int8_t dir)
         v = r.max;
 
     applyValue(row, static_cast<uint8_t>(v));
+}
+
+void DisplayView::announceValue(uint8_t row, const UiText &value,
+                                vpQueueFlags flags)
+{
+    switch (row) {
+#ifdef CONFIG_SCREEN_BRIGHTNESS
+        case RowBrightness:
+            vp_announceSettingsInt(&currentLanguage->brightness, flags,
+                                   state.settings.brightness);
+            break;
+#endif
+#ifdef CONFIG_SCREEN_CONTRAST
+        case RowContrast:
+            vp_announceSettingsInt(&currentLanguage->contrast, flags,
+                                   state.settings.contrast);
+            break;
+#endif
+        case RowSquelch:
+            vp_announceSquelch(state.settings.sqlLevel, flags);
+            break;
+        case RowTimer:
+            vp_announceDisplayTimer();
+            break;
+        default:
+            SettingsListView::announceValue(row, value, flags);
+            break;
+    }
 }
 
 } // namespace ortxui

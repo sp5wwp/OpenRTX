@@ -9,6 +9,8 @@
 #include "core/UiMemory.hpp"
 #include "interfaces/keyboard.h"
 #include "core/utils.h"
+#include "core/state.h"
+#include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 
 #include <cstdint>
@@ -24,10 +26,52 @@ static constexpr uint32_t OFFSET_MAX_KHZ = 999999u;
 /** Slot mask of the offset entry: six digits of kHz. */
 static constexpr char OFFSET_MASK[] = "999999";
 
+/** Unit of a frequency shown in its largest whole unit. */
+struct FreqUnit {
+    uint32_t div;    ///< Hz in one unit
+    uint8_t width;   ///< Decimal digits of a fraction of the unit
+    const char *sym; ///< Unit symbol
+    uint16_t prompt; ///< Unit voice prompt
+};
+
+/** Units, largest first. */
+static constexpr FreqUnit FREQ_UNITS[] = {
+    { 1000000u, 6, "MHz", PROMPT_MEGAHERTZ },
+    { 1000u, 3, "kHz", PROMPT_KILOHERTZ },
+    { 1u, 0, "Hz", PROMPT_HERTZ },
+};
+
 /**
- * Format a frequency in Hz as a compact "N.NN kHz/MHz" (trailing zeros
- * stripped), e.g. 600000 -> "600 kHz", 6250 -> "6.25 kHz", 5000000 -> "5 MHz".
- * Sub-kHz values fall back to "N Hz".
+ * Format a frequency as a number in its largest whole unit, trailing zeros
+ * stripped, e.g. 600000 -> "600" kHz, 6250 -> "6.25" kHz, 5000000 -> "5" MHz.
+ *
+ * @param hz: frequency in Hz.
+ * @param buf: output buffer.
+ * @param size: output buffer size.
+ * @return the unit.
+ */
+static const FreqUnit &formatFreqNumber(uint32_t hz, char *buf, size_t size)
+{
+    size_t i = 0;
+    while ((hz < FREQ_UNITS[i].div) && (FREQ_UNITS[i].div > 1u))
+        i++;
+    const FreqUnit &u = FREQ_UNITS[i];
+
+    sniprintf(buf, size, "%u.%0*u", static_cast<unsigned>(hz / u.div), u.width,
+              static_cast<unsigned>(hz % u.div));
+
+    /* Strip trailing zeros, then a bare trailing dot. */
+    size_t len = strlen(buf);
+    while ((len > 0) && (buf[len - 1] == '0') && (strchr(buf, '.') != nullptr))
+        buf[--len] = '\0';
+    if ((len > 0) && (buf[len - 1] == '.'))
+        buf[--len] = '\0';
+
+    return u;
+}
+
+/**
+ * Format a frequency with its unit, e.g. "6.25 kHz".
  *
  * @param hz: frequency in Hz.
  * @param buf: output buffer.
@@ -35,35 +79,28 @@ static constexpr char OFFSET_MASK[] = "999999";
  */
 static void formatFreq(uint32_t hz, char *buf, size_t size)
 {
-    uint32_t div;
-    int width;
-    char prefix;
+    char num[16];
+    const FreqUnit &u = formatFreqNumber(hz, num, sizeof(num));
+    sniprintf(buf, size, "%s %s", num, u.sym);
+}
 
-    if (hz >= 1000000u) {
-        div = 1000000u;
-        width = 6;
-        prefix = 'M';
-    } else if (hz >= 1000u) {
-        div = 1000u;
-        width = 3;
-        prefix = 'k';
-    } else {
-        sniprintf(buf, size, "%u Hz", static_cast<unsigned>(hz));
+/**
+ * Speak a frequency setting: its name at the descriptive level, then the
+ * value and its unit.
+ *
+ * @param name: setting name, an entry of currentLanguage.
+ * @param hz: frequency in Hz.
+ * @param flags: voice prompt queue flags.
+ */
+static void announceFreq(const char *const *name, uint32_t hz,
+                         vpQueueFlags flags)
+{
+    if (state.settings.vpLevel < vpLow)
         return;
-    }
 
-    char tmp[16];
-    sniprintf(tmp, sizeof(tmp), "%u.%0*u", static_cast<unsigned>(hz / div),
-              width, static_cast<unsigned>(hz % div));
-
-    /* Strip trailing zeros, then a bare trailing dot. */
-    size_t len = strlen(tmp);
-    while ((len > 0) && (tmp[len - 1] == '0'))
-        tmp[--len] = '\0';
-    if ((len > 0) && (tmp[len - 1] == '.'))
-        tmp[--len] = '\0';
-
-    sniprintf(buf, size, "%s %cHz", tmp, prefix);
+    char num[16];
+    const FreqUnit &u = formatFreqNumber(hz, num, sizeof(num));
+    vp_announceSettingsValue(name, num, u.prompt, flags);
 }
 
 /**
@@ -125,13 +162,12 @@ void RadioView::refreshCustom(uint8_t row, bool speak)
 {
     (void)row;
     if (editing_ && (editRow_ == RowOffset)) {
-        const unsigned v = static_cast<unsigned>(offsetKhz());
-        sniprintf(values(RowOffset), VALUE_SIZE, "<%u kHz>", v);
-        if (speak) {
-            char clean[16];
-            sniprintf(clean, sizeof(clean), "%u kHz", v);
-            vpSay(clean);
-        }
+        const uint32_t khz = offsetKhz();
+        sniprintf(values(RowOffset), VALUE_SIZE, "<%u kHz>",
+                  static_cast<unsigned>(khz));
+        if (speak)
+            announceFreq(&currentLanguage->offset, khz * 1000u,
+                         vp_getVoiceLevelQueueFlags());
     } else {
         formatFreq(splitOf(state.channel), values(RowOffset), VALUE_SIZE);
     }
@@ -240,6 +276,33 @@ void RadioView::offsetApply()
     state.channel.tx_frequency = static_cast<freq_t>(tx);
     requestSyncRtx();
     endEdit();
+    announceFreq(&currentLanguage->offset, static_cast<uint32_t>(off),
+                 static_cast<vpQueueFlags>(vp_getVoiceLevelQueueFlags()
+                                           | vpqIncludeDescriptions));
+}
+
+void RadioView::announceValue(uint8_t row, const UiText &value,
+                              vpQueueFlags flags)
+{
+    if (row == RowStep)
+        announceFreq(&currentLanguage->step, freq_steps[state.step_index],
+                     flags);
+    else
+        SettingsListView::announceValue(row, value, flags);
+}
+
+void RadioView::announceKey(uint32_t keys)
+{
+    /* Speak the digit typed, or the one '*' removes. */
+    if (state.settings.vpLevel < vpLow)
+        return;
+
+    const uint16_t n = offsetInput_.filledSlots();
+    if ((keys & KBD_NUM_MASK) != 0u)
+        vp_announceInputChar(static_cast<char>('0' + __builtin_ctz(keys)));
+    else if (n > 0)
+        vp_announceInputChar(
+            static_cast<char>('0' + offsetInput_.slotDigit(n - 1)));
 }
 
 bool RadioView::onEditEvent(const Event &e)
@@ -286,8 +349,9 @@ bool RadioView::onEditEvent(const Event &e)
                             offsetInput_.clearSlots();
                         offsetPristine_ = false;
                     }
+                    announceKey(k);
                     offsetInput_.handleKey(k, 0);
-                    refreshCustom(RowOffset, true);
+                    refreshCustom(RowOffset, false);
                 }
                 return true;
             }

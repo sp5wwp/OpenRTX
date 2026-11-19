@@ -5,6 +5,7 @@
  */
 
 #include "views/GpsSettingsView.hpp"
+#include "core/voicePromptUtils.h"
 
 #include <cstdio>
 
@@ -64,6 +65,15 @@ void GpsSettingsView::onToggle(uint8_t row, bool on)
         state.settings.gps_enabled = on;
     else if (row == RowSetTime)
         state.settings.gpsSetTime = on;
+}
+
+void GpsSettingsView::announceValue(uint8_t row, const UiText &value,
+                                    vpQueueFlags flags)
+{
+    if (row == RowTimezone)
+        vp_announceTimeZone(state.settings.utc_timezone, flags);
+    else
+        SettingsListView::announceValue(row, value, flags);
 }
 
 } // namespace ortxui

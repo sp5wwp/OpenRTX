@@ -56,6 +56,10 @@ private:
     /** Step a row's value within its range. */
     void onAdjust(uint8_t row, int8_t dir) override;
 
+    /** Speak a value through its voice prompt helper, if it has one. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
+
     /** Rows, top to bottom. */
     enum Row : uint8_t {
 #ifdef CONFIG_SCREEN_BRIGHTNESS

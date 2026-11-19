@@ -114,6 +114,16 @@ void M17View::onToggle(uint8_t row, bool on)
     requestSyncRtx();
 }
 
+void M17View::announceValue(uint8_t row, const UiText &value,
+                            vpQueueFlags flags)
+{
+    if (row == RowCan)
+        vp_announceSettingsInt(&currentLanguage->CAN, flags,
+                               state.settings.m17_can);
+    else
+        SettingsListView::announceValue(row, value, flags);
+}
+
 NavIntent M17View::onActivate(uint8_t row)
 {
     /* Meta Txt is long free text: hand it to the shared modal editor. */

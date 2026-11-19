@@ -40,6 +40,10 @@ private:
     /** Step the tone or the tone enable. */
     void onAdjust(uint8_t row, int8_t dir) override;
 
+    /** Speak the tones through the CTCSS voice prompt helper. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
+
     /** Rows, top to bottom. */
     enum Row : uint8_t {
         RowTone,   ///< CTCSS tone frequency

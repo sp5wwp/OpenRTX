@@ -46,6 +46,10 @@ private:
     /** Apply a checkbox. */
     void onToggle(uint8_t row, bool on) override;
 
+    /** Speak the timezone through its voice prompt helper. */
+    void announceValue(uint8_t row, const UiText &value,
+                       vpQueueFlags flags) override;
+
     /** Rows, top to bottom. */
     enum Row : uint8_t {
         RowEnabled,  ///< GPS on or off
