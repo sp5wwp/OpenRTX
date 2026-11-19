@@ -64,9 +64,9 @@ static void collectFocusables(Object *node, Object **out, uint8_t &n)
 {
     for (Object *c = node->firstChild(); (c != nullptr) && (n < MAX_FOCUSABLES);
          c = c->nextSibling()) {
-        if (c->hasFlag(FLAG_HIDDEN))
+        if (c->hasFlag(FlagHidden))
             continue;
-        if (c->hasFlag(FLAG_FOCUSABLE))
+        if (c->hasFlag(FlagFocusable))
             out[n++] = c;
         collectFocusables(c, out, n);
     }

@@ -49,7 +49,7 @@ void Object::invalidate()
 
 void Object::paintTree(DrawCtx &d)
 {
-    if (hasFlag(FLAG_HIDDEN))
+    if (hasFlag(FlagHidden))
         return;
 
     /* Clip this object (and its subtree) to its box, so content never bleeds

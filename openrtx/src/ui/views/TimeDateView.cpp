@@ -24,11 +24,11 @@ static constexpr char ENTRY_MASK[] = "9999999999";
 
 /** Entry slot of each field's first digit. */
 enum EntryField : uint8_t {
-    FIELD_DATE = 0,
-    FIELD_MONTH = 2,
-    FIELD_YEAR = 4,
-    FIELD_HOUR = 6,
-    FIELD_MINUTE = 8,
+    FieldDate = 0,
+    FieldMonth = 2,
+    FieldYear = 4,
+    FieldHour = 6,
+    FieldMinute = 8,
 };
 
 void TimeDateView::build()
@@ -183,13 +183,13 @@ void TimeDateView::announceDigit() const
     const uint16_t n = input.filledSlots();
     vp_flush();
     vp_queueInteger(input.slotDigit(n - 1));
-    if ((n == FIELD_MONTH) || (n == FIELD_YEAR))
+    if ((n == FieldMonth) || (n == FieldYear))
         vp_queuePrompt(PROMPT_SLASH);
-    if (n == FIELD_HOUR)
+    if (n == FieldHour)
         vp_queueString("hh:mm",
                        static_cast<vpFlags>(vpAnnounceCommonSymbols
                                             | vpAnnounceLessCommonSymbols));
-    if (n == FIELD_MINUTE)
+    if (n == FieldMinute)
         vp_queuePrompt(PROMPT_COLON);
     vp_play();
 }
@@ -203,11 +203,11 @@ int8_t TimeDateView::field(uint8_t first) const
 void TimeDateView::commit()
 {
     datetime_t local = {};
-    local.date = field(FIELD_DATE);
-    local.month = field(FIELD_MONTH);
-    local.year = static_cast<uint8_t>(field(FIELD_YEAR));
-    local.hour = field(FIELD_HOUR);
-    local.minute = field(FIELD_MINUTE);
+    local.date = field(FieldDate);
+    local.month = field(FieldMonth);
+    local.year = static_cast<uint8_t>(field(FieldYear));
+    local.hour = field(FieldHour);
+    local.minute = field(FieldMinute);
     if (!isValidTimeInfo(&local)) {
         vp_announceError(vp_getVoiceLevelQueueFlags());
         return;

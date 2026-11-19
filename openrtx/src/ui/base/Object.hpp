@@ -25,8 +25,8 @@ struct Event;
  * Per-object state flags (bitmask).
  */
 enum ObjFlag : uint8_t {
-    FLAG_HIDDEN = 1u << 0,    ///< Neither drawn nor laid out
-    FLAG_FOCUSABLE = 1u << 1, ///< Takes part in the Screen focus ring
+    FlagHidden = 1u << 0,    ///< Neither drawn nor laid out
+    FlagFocusable = 1u << 1, ///< Takes part in the Screen focus ring
 };
 
 /**

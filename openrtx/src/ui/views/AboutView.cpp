@@ -59,7 +59,7 @@ void AboutView::build()
     authors.setContentPad(1);
     authors.setSelectable(false);
     authors.setGrow(1);
-    authors.setFlag(FLAG_FOCUSABLE, true);
+    authors.setFlag(FlagFocusable, true);
 
     root.addChild(&bar);
     root.addChild(&header);

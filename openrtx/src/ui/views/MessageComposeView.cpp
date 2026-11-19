@@ -27,14 +27,14 @@ void MessageComposeView::build()
 
     TopBar &bar = useTopBar(uiMemory.draftReply ? STR(reply) : STR(newMessage));
 
-    items[ROW_TO].label = STR(to);
-    items[ROW_BODY].label = STR(message);
-    items[ROW_SEND].label = STR(send);
+    items[RowTo].label = STR(to);
+    items[RowBody].label = STR(message);
+    items[RowSend].label = STR(send);
     refresh();
 
     listBox.setContentPad(1);
-    listBox.setItems(items.data(), ROW_COUNT);
-    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setItems(items.data(), RowCount);
+    listBox.setFlag(FlagFocusable, true);
     listBox.setGrow(1);
 
     root.addChild(&bar);
@@ -50,7 +50,7 @@ bool MessageComposeView::open(const char *recipient, bool reply)
     if (!uiMemory.openDraft(recipient, reply))
         return false;
 
-    uiMemory.lists[static_cast<uint8_t>(ViewId::MessageCompose)] = { ROW_BODY,
+    uiMemory.lists[static_cast<uint8_t>(ViewId::MessageCompose)] = { RowBody,
                                                                      0 };
     return true;
 }
@@ -60,8 +60,8 @@ void MessageComposeView::refresh()
     /* An empty recipient is a broadcast. */
     const ComposeDraft *d = uiMemory.draft;
     const bool to = (d != nullptr) && (d->recipient[0] != '\0');
-    items[ROW_TO].value = to ? UiText(d->recipient) : STR(broadcast);
-    items[ROW_BODY].value = (d != nullptr) ? d->body : "";
+    items[RowTo].value = to ? UiText(d->recipient) : STR(broadcast);
+    items[RowBody].value = (d != nullptr) ? d->body : "";
 }
 
 bool MessageComposeView::send()
@@ -120,14 +120,14 @@ NavIntent MessageComposeView::onEvent(const Event &e)
 
     ComposeDraft *d = uiMemory.draft;
     switch (listBox.selected()) {
-        case ROW_TO:
+        case RowTo:
             if (TextInputView::open(STR(to), d->recipient, sizeof(d->recipient),
                                     CHARSET_CALLSIGN, MTAP_CALLSIGN,
                                     /*multiline=*/false, /*rtx=*/false))
                 return NavIntent::push(ViewId::TextInput);
             return NavIntent::none();
 
-        case ROW_BODY:
+        case RowBody:
             if (TextInputView::open(STR(message), d->body, sizeof(d->body),
                                     CHARSET_TEXT, MTAP_TEXT,
                                     /*multiline=*/true, /*rtx=*/false))

@@ -31,13 +31,13 @@ class InfoTable : public Object
 public:
     /** Rows, top to bottom. */
     enum Row : uint8_t {
-        ROW_BATTERY,
-        ROW_CHARGE,
-        ROW_RSSI,
-        ROW_HEAP,
-        ROW_BAND,
-        ROW_HW_VERSION,
-        ROW_COUNT,
+        RowBattery,
+        RowCharge,
+        RowRssi,
+        RowHeap,
+        RowBand,
+        RowHwVersion,
+        RowCount,
     };
 
     /** Constructor. */

@@ -59,7 +59,7 @@ void MenuView::build()
     TopBar &bar = useTopBar(settings ? STR(settings) : STR(menu));
     listBox.setContentPad(1);
     listBox.setModel(this);
-    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setFlag(FlagFocusable, true);
     listBox.setGrow(1);
 
     root.addChild(&bar);

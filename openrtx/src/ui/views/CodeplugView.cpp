@@ -40,8 +40,8 @@ void CodeplugView::build()
     TopBar &bar = useTopBar(titleText);
 
     listBox.setContentPad(1);
-    listBox.setFlag(FLAG_FOCUSABLE, true);
-    listBox.setFlag(FLAG_HIDDEN, empty);
+    listBox.setFlag(FlagFocusable, true);
+    listBox.setFlag(FlagHidden, empty);
     listBox.setGrow(1);
     listBox.setModel(this);
 
@@ -49,7 +49,7 @@ void CodeplugView::build()
     emptyLabel.setAlign(TEXT_ALIGN_CENTER);
     emptyLabel.setColor(Sem::OnSurfaceMuted);
     emptyLabel.setText(noneText);
-    emptyLabel.setFlag(FLAG_HIDDEN, !empty);
+    emptyLabel.setFlag(FlagHidden, !empty);
     emptyLabel.setGrow(1);
 
     root.addChild(&bar);

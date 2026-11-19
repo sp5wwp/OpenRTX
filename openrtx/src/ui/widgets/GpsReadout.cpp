@@ -125,10 +125,10 @@ void GpsReadout::onLayout()
         return;
 
     const int lineH = textRow.natural().h;
-    int free = ch - ROW_COUNT * lineH;
+    int free = ch - RowCount * lineH;
     if (free < 0)
         free = 0;
-    rowH = static_cast<uint16_t>(lineH + free / ROW_COUNT);
+    rowH = static_cast<uint16_t>(lineH + free / RowCount);
 }
 
 const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
@@ -136,21 +136,21 @@ const char *GpsReadout::composeRow(uint8_t row, char *val, size_t n) const
     const bool fixed = (lat != INT32_MIN) || (lon != INT32_MIN);
 
     switch (row) {
-        case ROW_LAT:
+        case RowLat:
             if (fixed)
                 return formatCoord(lat, true, val, n);
             break;
-        case ROW_LON:
+        case RowLon:
             if (fixed)
                 return formatCoord(lon, false, val, n);
             break;
-        case ROW_LOC:
+        case RowLoc:
             if (fixed) {
                 formatLocator(lat, lon, val, n);
                 return UNITS[row].str();
             }
             break;
-        case ROW_ALT:
+        case RowAlt:
             if (alt != INT16_MIN) {
                 sniprintf(val, n, "%d%s", alt, STR(metres).str());
                 return UNITS[row].str();
@@ -173,7 +173,7 @@ void GpsReadout::draw(DrawCtx &d)
     const int16_t x = static_cast<int16_t>(bounds.x + PAD);
     const uint16_t w = static_cast<uint16_t>(bounds.w - 2 * PAD);
 
-    for (uint8_t i = 0; i < ROW_COUNT; i++) {
+    for (uint8_t i = 0; i < RowCount; i++) {
         char val[VALUE_SIZE];
         textRow.setText(1, composeRow(i, val, sizeof(val)));
         textRow.setText(0, val);

@@ -32,7 +32,7 @@ void MessagesView::build()
     TopBar &bar = useTopBar(STR(messages));
 
     listBox.setContentPad(1);
-    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setFlag(FlagFocusable, true);
     listBox.setGrow(1);
 
     emptyLabel.setFont(regular ? FONT_SIZE_10PT : FONT_SIZE_8PT);
@@ -114,8 +114,8 @@ void MessagesView::reload(uint8_t mode)
     const bool empty = (rowCount() == 0);
     listBox.setModel(this);
     listBox.setSelected(pinnedRow(), false);
-    listBox.setFlag(FLAG_HIDDEN, empty);
-    emptyLabel.setFlag(FLAG_HIDDEN, !empty);
+    listBox.setFlag(FlagHidden, empty);
+    emptyLabel.setFlag(FlagHidden, !empty);
 
     root.onLayout();
     if (!empty)

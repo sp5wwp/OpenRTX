@@ -19,7 +19,7 @@ namespace ortxui
 {
 
 /* Row keys, in row order. */
-static constexpr UiText KEYS[InfoTable::ROW_COUNT] = {
+static constexpr UiText KEYS[InfoTable::RowCount] = {
     STR(batteryVoltage), STR(batteryCharge), STR(RSSI),
     STR(usedHeap),       STR(band),          STR(hwVersion),
 };
@@ -65,23 +65,23 @@ void InfoTable::composeValue(uint8_t row, char *out, size_t n) const
     const hwInfo_t *hw = platform_getHwInfo();
 
     switch (row) {
-        case ROW_BATTERY: {
+        case RowBattery: {
             /* Integer volts + one decimal, rounding the mantissa to nearest. */
             const uint16_t volt = (vbat + 50) / 1000;
             const uint16_t mv = ((vbat - volt * 1000) + 50) / 100;
             sniprintf(out, n, "%u.%uV", volt, mv);
             break;
         }
-        case ROW_CHARGE:
+        case RowCharge:
             sniprintf(out, n, "%u%%", charge);
             break;
-        case ROW_RSSI:
+        case RowRssi:
             sniprintf(out, n, "%ld dBm", static_cast<long>(rssi));
             break;
-        case ROW_HEAP:
+        case RowHeap:
             sniprintf(out, n, "%lu B", static_cast<unsigned long>(heapUsed));
             break;
-        case ROW_BAND:
+        case RowBand:
             sniprintf(out, n, "%s%s", hw->vhf_band ? "VHF " : "",
                       hw->uhf_band ? "UHF" : "");
             break;
@@ -107,8 +107,8 @@ bool InfoTable::sync(const state_t &s)
 void InfoTable::draw(DrawCtx &d)
 {
     /* The rows split the height evenly. */
-    const uint16_t rowH = static_cast<uint16_t>(bounds.h / ROW_COUNT);
-    for (uint8_t i = 0; i < ROW_COUNT; i++) {
+    const uint16_t rowH = static_cast<uint16_t>(bounds.h / RowCount);
+    for (uint8_t i = 0; i < RowCount; i++) {
         const Rect row = { bounds.x, static_cast<int16_t>(bounds.y + i * rowH),
                            bounds.w, rowH };
         /* A row outside the clip, as in another band, draws nothing. */

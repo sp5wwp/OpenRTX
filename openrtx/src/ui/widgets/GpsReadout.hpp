@@ -63,12 +63,12 @@ private:
 
     /** Rows, top to bottom. */
     enum Row : uint8_t {
-        ROW_LAT,
-        ROW_LON,
-        ROW_LOC,
-        ROW_ALT,
-        ROW_SPD,
-        ROW_COUNT,
+        RowLat,
+        RowLon,
+        RowLoc,
+        RowAlt,
+        RowSpd,
+        RowCount,
     };
 
     TextRow textRow; ///< Paints each row in turn

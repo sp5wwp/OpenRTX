@@ -77,16 +77,16 @@ private:
 
     /** Rows of the form, top to bottom. */
     enum Row : uint8_t {
-        ROW_TO,
-        ROW_BODY,
-        ROW_SEND,
-        ROW_COUNT,
+        RowTo,
+        RowBody,
+        RowSend,
+        RowCount,
     };
 
-    Screen tree;                                ///< Widget-tree root
-    Flex root;                                  ///< Top bar over the rows
-    List listBox;                               ///< To, Message, Send rows
-    std::array<ListItem, ROW_COUNT> items = {}; ///< Rows, on the draft
+    Screen tree;                               ///< Widget-tree root
+    Flex root;                                 ///< Top bar over the rows
+    List listBox;                              ///< To, Message, Send rows
+    std::array<ListItem, RowCount> items = {}; ///< Rows, on the draft
 };
 
 } // namespace ortxui

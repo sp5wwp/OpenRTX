@@ -55,7 +55,7 @@ void SettingRow::bind(Kind kind, const UiText &label, const UiText &value,
 
     /* Only a value row carries the second line; hide it otherwise so the label
      * centres on its own. */
-    valueLabel.setFlag(FLAG_HIDDEN, rowKind != Kind::Value);
+    valueLabel.setFlag(FlagHidden, rowKind != Kind::Value);
     if (rowKind == Kind::Value) {
         valueLabel.setText(value);
         valueLabel.setColor(valueColor);

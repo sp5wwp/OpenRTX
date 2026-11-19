@@ -45,7 +45,7 @@ void Flex::onLayout()
     int32_t totalGrow = 0;
     int32_t count = 0;
     for (Object *c = firstChild(); c != nullptr; c = c->nextSibling()) {
-        if (c->hasFlag(FLAG_HIDDEN))
+        if (c->hasFlag(FlagHidden))
             continue;
         const LayoutHints h = c->layout();
         count++;
@@ -89,7 +89,7 @@ void Flex::onLayout()
 
     /* Second pass: assign each child an absolute area and recurse. */
     for (Object *c = firstChild(); c != nullptr; c = c->nextSibling()) {
-        if (c->hasFlag(FLAG_HIDDEN))
+        if (c->hasFlag(FlagHidden))
             continue;
 
         const LayoutHints h = c->layout();

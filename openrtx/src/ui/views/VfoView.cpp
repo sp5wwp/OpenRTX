@@ -959,7 +959,7 @@ void VfoView::showDstEdit(bool editing)
     if (sizeClass() == SizeClass::Regular)
         return;
 
-    chanIdx.setFlag(FLAG_HIDDEN, editing);
+    chanIdx.setFlag(FlagHidden, editing);
     nameRow.onLayout();
 }
 

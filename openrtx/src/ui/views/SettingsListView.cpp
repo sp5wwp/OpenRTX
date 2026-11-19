@@ -32,7 +32,7 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
 
     listBox.setItems(items, count);
     listBox.setContentPad(ROW_PAD);
-    listBox.setFlag(FLAG_FOCUSABLE, true);
+    listBox.setFlag(FlagFocusable, true);
     listBox.setGrow(1);
 
     root.addChild(&bar);
