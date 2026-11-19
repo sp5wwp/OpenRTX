@@ -50,30 +50,6 @@ static constexpr bool knobOnly()
 }
 
 /**
- * Minimal UTF-8 encoder (BMP) for putCodePoint().
- *
- * @param cp: code point.
- * @param out: output bytes.
- * @return the byte count.
- */
-static int utf8Encode(uint32_t cp, char out[4])
-{
-    if (cp < 0x80u) {
-        out[0] = static_cast<char>(cp);
-        return 1;
-    }
-    if (cp < 0x800u) {
-        out[0] = static_cast<char>(0xC0u | (cp >> 6));
-        out[1] = static_cast<char>(0x80u | (cp & 0x3Fu));
-        return 2;
-    }
-    out[0] = static_cast<char>(0xE0u | (cp >> 12));
-    out[1] = static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
-    out[2] = static_cast<char>(0x80u | (cp & 0x3Fu));
-    return 3;
-}
-
-/**
  * Measure a span of a buffer.
  *
  * @param buf: text.
@@ -399,9 +375,9 @@ void TextInput::putCodePoint(uint32_t cp)
      * character would. */
     if (buf_ == nullptr)
         return;
-    char enc[4];
-    const int n = utf8Encode(cp, enc);
-    spliceCell(cursor_, enc, n);
+    char enc[3];
+    const size_t n = utf8Encode(cp, enc);
+    spliceCell(cursor_, enc, static_cast<int>(n));
 }
 
 void TextInput::backspace()

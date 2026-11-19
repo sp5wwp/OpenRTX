@@ -6,6 +6,7 @@
 
 #include "views/PickerGrid.hpp"
 #include "core/Layout.hpp"
+#include "core/utils.h"
 #include "render/DrawCtx.hpp"
 
 namespace ortxui
@@ -32,29 +33,6 @@ static constexpr uint16_t COLS_COMPACT = 6;   ///< Columns, compact screen
 static uint32_t codePointAt(uint16_t i)
 {
     return FIRST_CP + i;
-}
-
-/**
- * Encode a BMP code point to a NUL-terminated UTF-8 string.
- *
- * @param cp: code point.
- * @param out: output, at least 5 bytes.
- */
-static void utf8(uint32_t cp, char *out)
-{
-    if (cp < 0x80u) {
-        out[0] = static_cast<char>(cp);
-        out[1] = '\0';
-    } else if (cp < 0x800u) {
-        out[0] = static_cast<char>(0xC0u | (cp >> 6));
-        out[1] = static_cast<char>(0x80u | (cp & 0x3Fu));
-        out[2] = '\0';
-    } else {
-        out[0] = static_cast<char>(0xE0u | (cp >> 12));
-        out[1] = static_cast<char>(0x80u | ((cp >> 6) & 0x3Fu));
-        out[2] = static_cast<char>(0x80u | (cp & 0x3Fu));
-        out[3] = '\0';
-    }
 }
 
 /**
@@ -126,8 +104,8 @@ void PickerGrid::draw(DrawCtx &d)
             const bool selected = (idx == sel_);
             if (selected)
                 d.fillRect(cell, Sem::Primary);
-            char g[5];
-            utf8(codePointAt(idx), g);
+            char g[4];
+            g[utf8Encode(codePointAt(idx), g)] = '\0';
             d.textInBox(cell, font, TEXT_ALIGN_CENTER,
                         selected ? Sem::OnPrimary : Sem::OnSurface, g);
         }
