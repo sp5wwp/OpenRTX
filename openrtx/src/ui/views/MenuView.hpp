@@ -9,7 +9,7 @@
 
 #include <cstdint>
 #include "core/View.hpp"
-#include "widgets/Label.hpp"
+#include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/List.hpp"
 
@@ -71,8 +71,9 @@ public:
     void rowAt(uint16_t index, ListItem &out) const override;
 
 private:
-    Screen screen_;
-    List list_;
+    Screen screen_;                 ///< Widget tree root
+    Flex root_;                     ///< Top bar over the list
+    List list_;                     ///< Menu rows
 
     const MenuRow *rows_ = nullptr; ///< Static row table
     UiText title_;                  ///< Menu title

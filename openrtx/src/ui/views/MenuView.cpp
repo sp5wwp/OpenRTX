@@ -16,8 +16,7 @@
 namespace ortxui
 {
 
-/* Menu tables, mirroring the classic UI's menus; the config guards keep parity
- * with targets that omit GPS/RTC/M17/messages. */
+/* Menu tables; a screen the target lacks has no row. */
 static constexpr MenuRow MAIN_MENU[] = {
     { STR(banks), ViewId::Banks },
     { STR(channels), ViewId::Channels },
@@ -52,10 +51,6 @@ static constexpr MenuRow SETTINGS_MENU[] = {
 
 void MenuView::build()
 {
-    const int16_t W = CONFIG_SCREEN_WIDTH;
-    const int16_t H = CONFIG_SCREEN_HEIGHT;
-    const int16_t topH = (sizeClass() == SizeClass::Regular) ? 16 : 12;
-
     if (id() == ViewId::SettingsMenu) {
         title_ = STR(settings);
         rows_ = SETTINGS_MENU;
@@ -66,19 +61,21 @@ void MenuView::build()
         count_ = ARRAY_SIZE(MAIN_MENU);
     }
 
-    /* Shared top bar (title + clock + battery). */
-    TopBar &bar = useTopBar(title_);
-    bar.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
-    bar.onLayout();
+    root_.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
+                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });
+    root_.setAxis(Axis::Column);
 
-    /* Scrollable list fills the space below the top bar (plain label rows). */
-    list_.setArea({ 0, topH, (uint16_t)W, (uint16_t)(H - topH) });
+    /* The list of plain label rows fills the space below the top bar. */
+    TopBar &bar = useTopBar(title_);
     list_.setContentPad(1);
     list_.setModel(this);
     list_.setFlag(FLAG_FOCUSABLE, true);
+    list_.setGrow(1);
 
-    screen_.addChild(&bar);
-    screen_.addChild(&list_);
+    root_.addChild(&bar);
+    root_.addChild(&list_);
+    screen_.addChild(&root_);
+    root_.onLayout();
     screen_.focusFirst();
     screen_.markAllDirty();
 }
@@ -86,8 +83,6 @@ void MenuView::build()
 void MenuView::rowAt(uint16_t index, ListItem &out) const
 {
     out.label = rows_[index].label;
-    out.value = UiText();
-    out.checkbox = false;
 }
 
 void MenuView::announce()
