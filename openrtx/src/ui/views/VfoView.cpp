@@ -452,11 +452,11 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
             meter_.setColor(Sem::RxSuccess);
             meter_.setShowScale(true);
 
-            /* FM squelch opens at -127 + sqlLevel * 66 / 15 dBm (see
-             * OpMode_FM); map it like the fill so the mark sits where the
-             * signal has to reach. Only FM gates on RSSI. */
+            /* Map the squelch threshold like the fill, so the mark sits
+             * where the signal has to reach. Only FM gates on RSSI. */
             if (mode == OPMODE_FM)
-                meter_.setMarker(rssiToFrac(-127.0f + (sql * 66.0f) / 15.0f));
+                meter_.setMarker(
+                    rssiToFrac(static_cast<float>(squelchToRssi(sql))));
             else
                 meter_.setMarker(-1.0f);
         }
