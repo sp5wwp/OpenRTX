@@ -52,6 +52,7 @@ scripts/            Build and utility scripts
 - Never put hardware-specific code in `openrtx/` — use `platform/` and the interfaces layer
 - Protocol code in `openrtx/src/protocols/` must be structured per OSI layers 1-3
 - UI code is one toolkit for every target; screens adapt to the display size and keypad instead of forking per device
+- Toolkit includes go one way, `style` ← `render` ← `base` ← `layout` ← `widgets` ← `views` ← `app`: a directory includes only the ones before it
 
 ## Build and Test
 
