@@ -22,9 +22,14 @@ from tests/e2e as the emulator's codeplug.
 
 The variants and the meson targets they are built from are:
 
-    default      openrtx_linux               160x128 colour, GPS, RTC, 0-9 keys
-    smallscreen  openrtx_linux_smallscreen   128x64 mono, GPS, RTC, 0-9 keys
-    module17     openrtx_linux_mod17         128x64 mono, no GPS, RTC or 0-9 keys
+    default      openrtx_linux               160x128 colour, GPS, RTC, arrows
+                                             and 0-9 keys
+    smallscreen  openrtx_linux_smallscreen   128x64 mono, GPS, RTC, arrows and
+                                             0-9 keys
+    mduv3x0      openrtx_linux_mduv3x0       160x128 colour, GPS, RTC, 0-9 keys
+                                             and no LEFT/RIGHT, as on most radios
+    module17     openrtx_linux_mod17         128x64 mono, arrows, no GPS, RTC or
+                                             0-9 keys
 
 Configured with -Dgfx_band_rows=16, the default variant draws in bands as
 the colour radios do, and must match the same goldens.
@@ -46,7 +51,7 @@ screen does not change with every commit:
 
     meson setup build_linux -Dtest_version=e2e-test
     meson compile -C build_linux openrtx_linux openrtx_linux_mod17 \\
-        openrtx_linux_smallscreen
+        openrtx_linux_smallscreen openrtx_linux_mduv3x0
 
 Then run every test, or only some of them:
 
@@ -91,6 +96,7 @@ GOLDEN_DIR = E2E_DIR / "golden"
 # Variant name and emulator binary built for it by meson
 VARIANTS = {
     "default": "openrtx_linux",
+    "mduv3x0": "openrtx_linux_mduv3x0",
     "module17": "openrtx_linux_mod17",
     "smallscreen": "openrtx_linux_smallscreen",
 }

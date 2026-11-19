@@ -194,7 +194,7 @@ jobs:
             build_rt950pro/rt950pro/openrtx_rt950pro.BTF
             build_rt950pro/rt950pro/zephyr/zephyr.bin
           if-no-files-found: error
-  # Golden-image tests of the UI on the three Linux emulator variants, then on
+  # Golden-image tests of the UI on the four Linux emulator variants, then on
   # the colour one drawing in 16-row bands as the colour radios do. This is
   # its own job, rather than a step of `build`, so that a failing screenshot
   # does not hold back the firmware artifacts; the emulators are built with a
@@ -215,7 +215,7 @@ jobs:
           push: never
           runCmd: |
             meson setup build_e2e -Dtest_version=e2e-test &&
-            meson compile -C build_e2e openrtx_linux openrtx_linux_smallscreen openrtx_linux_mod17 &&
+            meson compile -C build_e2e openrtx_linux openrtx_linux_smallscreen openrtx_linux_mduv3x0 openrtx_linux_mod17 &&
             python3 scripts/run_e2e.py --build-dir build_e2e &&
             meson setup build_e2e_band -Dtest_version=e2e-test -Dgfx_band_rows=16 &&
             meson compile -C build_e2e_band openrtx_linux &&

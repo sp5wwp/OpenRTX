@@ -424,23 +424,32 @@ linux_def  += openrtx_def
 linux_def  += {'sniprintf':'snprintf', 'vsniprintf':'vsnprintf'}
 
 #
-# 160x128 colour and 128x64 monochrome emulators, with GPS, RTC and 0-9 keys
+# 160x128 colour and 128x64 monochrome emulators, with GPS, RTC, arrows and
+# 0-9 keys
 #
 linux_default_src = linux_src + ui_src
 linux_default_def = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
-                                 'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
+                                 'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_ARROWS': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
 # Draw in bands as the colour radios do, to test that mode on the emulator
 if get_option('gfx_band_rows') > 0
   linux_default_def += {'CONFIG_GFX_BAND_ROWS': get_option('gfx_band_rows').to_string()}
 endif
 linux_small_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
+                                 'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_ARROWS': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
+
+#
+# MD-UV3x0 emulator: 160x128 colour, GPS, RTC and 0-9 keys but no LEFT/RIGHT,
+# the keypad of most radios
+#
+linux_uv3x0_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
                                  'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
 
 #
 # Module17 emulator: 128x64 monochrome, no GPS, RTC or 0-9 keys
 #
 linux_mod17_src = linux_src + ui_src
-linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': ''}
+linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
+                               'CONFIG_KBD_HAS_ARROWS': ''}
 
 linux_c_args   = ['-ffunction-sections', '-fdata-sections', '-std=gnu17']
 linux_cpp_args = ['-ffunction-sections', '-fdata-sections', '-std=c++14']
@@ -696,6 +705,8 @@ linux_c_args         = linux_c_args
 linux_cpp_args       = linux_cpp_args
 linux_small_c_args   = linux_c_args
 linux_small_cpp_args = linux_cpp_args
+linux_uv3x0_c_args   = linux_c_args
+linux_uv3x0_cpp_args = linux_cpp_args
 linux_mod17_c_args   = linux_c_args
 linux_mod17_cpp_args = linux_cpp_args
 
@@ -716,6 +727,16 @@ foreach k, v : linux_small_def
   else
     linux_small_c_args   += '-D@0@=@1@'.format(k, v)
     linux_small_cpp_args += '-D@0@=@1@'.format(k, v)
+  endif
+endforeach
+
+foreach k, v : linux_uv3x0_def
+  if v == ''
+    linux_uv3x0_c_args   += '-D@0@'.format(k)
+    linux_uv3x0_cpp_args += '-D@0@'.format(k)
+  else
+    linux_uv3x0_c_args   += '-D@0@=@1@'.format(k, v)
+    linux_uv3x0_cpp_args += '-D@0@=@1@'.format(k, v)
   endif
 endforeach
 
@@ -834,6 +855,15 @@ linux_small_opts = {
     'dependencies'       : [sdl_dep, threads_dep, codec2_dep],
     'c_args'             : linux_small_c_args,
     'cpp_args'           : linux_small_cpp_args,
+    'link_args'          : linux_l_args
+}
+
+linux_uv3x0_opts = {
+    'sources'            : linux_default_src,
+    'include_directories': linux_inc,
+    'dependencies'       : [sdl_dep, threads_dep, codec2_dep],
+    'c_args'             : linux_uv3x0_c_args,
+    'cpp_args'           : linux_uv3x0_cpp_args,
     'link_args'          : linux_l_args
 }
 
@@ -979,6 +1009,12 @@ targets = [
   {
     'name'     : 'linux_smallscreen',
     'opts'     : linux_small_opts,
+    'flashable': false,
+    'cpu'      : 'linux'
+  },
+  {
+    'name'     : 'linux_mduv3x0',
+    'opts'     : linux_uv3x0_opts,
     'flashable': false,
     'cpu'      : 'linux'
   },
