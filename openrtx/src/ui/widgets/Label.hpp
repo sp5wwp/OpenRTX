@@ -29,15 +29,10 @@ public:
     /** Destructor. */
     ~Label() = default;
 
-    /**
-     * How text that is wider than the label's box is handled:
-     *   Wrap      - the backend wraps to further lines (the historic default).
-     *   Ellipsize - the text is kept to one line, truncated to fit with a
-     *               trailing ellipsis glyph (…).
-     */
+    /** How text wider than the label's box is handled. */
     enum class Overflow : uint8_t {
-        Wrap,
-        Ellipsize,
+        Clip,      ///< Cut at the box edge
+        Ellipsize, ///< Truncated to fit, with a trailing ellipsis
     };
 
     /**
@@ -59,10 +54,14 @@ public:
     {
         return text_;
     }
+
+    /** Set the text colour role. */
     void setColor(Sem c)
     {
         color_ = c;
     }
+
+    /** Set the text font. */
     void setFont(fontSize_t f)
     {
         font_ = f;
@@ -73,24 +72,30 @@ public:
     {
         return font_;
     }
+    /** Set the horizontal alignment in the box. */
     void setAlign(textAlign_t a)
     {
         align_ = a;
     }
+
+    /** Set how text wider than the box is handled. */
     void setOverflow(Overflow o)
     {
         overflow_ = o;
     }
 
-    Size natural() const override; //< measured text width x font height
+    /** The text's width by the font's line height. */
+    Size natural() const override;
+
+    /** Paint the text in the box. */
     void draw(DrawCtx &d) override;
 
 private:
-    UiText text_;
-    Sem color_ = Sem::OnSurface;
-    fontSize_t font_ = FONT_SIZE_8PT;
-    textAlign_t align_ = TEXT_ALIGN_LEFT;
-    Overflow overflow_ = Overflow::Wrap;
+    UiText text_;                         ///< Text shown
+    Sem color_ = Sem::OnSurface;          ///< Text colour role
+    fontSize_t font_ = FONT_SIZE_8PT;     ///< Text font
+    textAlign_t align_ = TEXT_ALIGN_LEFT; ///< Horizontal alignment
+    Overflow overflow_ = Overflow::Clip;  ///< Handling of wide text
 };
 
 } // namespace ortxui
