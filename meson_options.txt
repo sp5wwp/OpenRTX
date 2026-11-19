@@ -2,3 +2,4 @@ option('asan', type : 'boolean', value : false, description : 'Compile the softw
 option('ubsan', type : 'boolean', value : false, description : 'Compile the software with Undefined Behaviour Sanitizer')
 option('test', type: 'string', description: 'Replace the main OpenRTX source file with a specialized test')
 option('test_version', type : 'string', value : '', description : 'Version string shown instead of the git revision, for reproducible test builds')
+option('gfx_band_rows', type : 'integer', min : 0, max : 128, value : 0, description : 'Draw the colour emulator screen in bands of this many rows, as the colour radios do, instead of in a framebuffer (0)')

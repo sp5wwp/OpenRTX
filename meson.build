@@ -432,6 +432,10 @@ linux_def  += {'sniprintf':'snprintf', 'vsniprintf':'vsnprintf'}
 linux_default_src = linux_src + ui_src
 linux_default_def = linux_def + {'CONFIG_SCREEN_WIDTH': '160', 'CONFIG_SCREEN_HEIGHT': '128', 'CONFIG_PIX_FMT_RGB565': '',
                                  'CONFIG_FONT_AA': '', 'CONFIG_GPS': '', 'CONFIG_RTC': ''}
+# Draw in bands as the colour radios do, to test that mode on the emulator
+if get_option('gfx_band_rows') > 0
+  linux_default_def += {'CONFIG_GFX_BAND_ROWS': get_option('gfx_band_rows').to_string()}
+endif
 linux_small_def   = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
                                  'CONFIG_GPS': '', 'CONFIG_RTC': ''}
 
