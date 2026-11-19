@@ -5,19 +5,8 @@
  */
 
 /*
- * ui_shim.cpp -- the C ABI boundary of the "ortx" UI toolkit.
- *
- * Implements the eight functions of core/ui.h (the frozen seam the rest of the
- * firmware calls, only from threads.c / openrtx.c / state.c) and forwards into
- * the C++ retained-widget toolkit. threads.c, graphics.c, the state module,
- * the event queue and the sync_rtx/mutex discipline are all unchanged.
- *
- * The active screen is the top of a Navigator's screen stack; only that view
- * exists, built in a ViewSlot, with what must outlive it kept in UiMemory.
- * Input events are decoded and dispatched into the active view, which returns
- * a navigation intent (push a child screen / pop back); drawing pulls from the
- * state snapshot and repaints only when something actually changed, then sends
- * the screen to the display.
+ * core/ui.h for the widget toolkit: decodes events into the active view,
+ * repaints it when dirty and sends it to the display.
  */
 
 #include "core/ui.h"
@@ -50,14 +39,12 @@
 using namespace ortxui;
 
 /* Event ring: pushed and popped with state_mutex held. */
-static constexpr uint8_t MAX_NUM_EVENTS = 16;
-
-static event_t evQueue[MAX_NUM_EVENTS];
+static event_t evQueue[UI_EVENT_QUEUE_LEN];
 static uint8_t evQueue_rdPos = 0;
 static uint8_t evQueue_wrPos = 0;
 
-/* UI-thread-local snapshot of the radio state. ui_saveState() copies the
- * global `state` here under state_mutex; drawing reads only this snapshot. */
+/* Snapshot of the radio state the views are drawn from, copied under
+ * state_mutex by ui_saveState(). */
 static state_t last_state;
 
 /* The one live view, the screen stack over it, and the volume HUD, which
@@ -66,15 +53,12 @@ static ViewSlot viewSlot;
 static Navigator nav(viewSlot, uiMemory);
 static VolumeOverlayView volumeOverlay;
 
-/* Display standby (backlight timeout) — parity with the classic default UI.
- * On `settings.display_timer` of idle the backlight is blanked and drawing is
- * suspended; any keypress (or RF/volume activity) wakes it again. */
+/* Backlight timeout: after settings.display_timer of no activity the backlight
+ * is off and nothing is drawn until a key press, RF or the volume knob. */
 static bool standby = false;
 static long long last_event_tick = 0;
 
-/* Macro menu overlay (shown while MONI is held; long-press latches it open when
- * settings.macroMenuLatch is set). Managed here because it is triggered by a
- * global held key, not a view's own navigation intent. */
+/* Macro menu, opened by a held MONI key rather than by a view. */
 static bool macroOpen = false;
 static bool macroLatched = false;
 
@@ -84,10 +68,19 @@ static LowBatteryScreen lowBattery;
 static bool lowBatteryShown = false;
 #endif
 
-/* Transient volume HUD: shown while the user turns the physical volume knob,
- * auto-dismissed this many ms after the level stops changing. Driven here (not
- * by a view) because the knob is a polled analogue value, not an input event. */
-static constexpr uint32_t kVolumeOverlayMs = 500;
+/* How long the volume HUD stays after the knob stops, in ms. */
+static constexpr uint32_t VOLUME_HUD_MS = 500;
+
+/* Backlight timeouts, in ms. */
+static constexpr long long TIMER_STEP_S_MS = 5000;     ///< Per 5 s step
+static constexpr long long TIMER_STEP_M_MS = 60000;    ///< Per 1 min step
+static constexpr long long TIMER_STEP_15M_MS = 900000; ///< Per 15 min step
+static constexpr long long TIMER_1H_MS = 3600000;      ///< One hour
+
+/* Splash screen: the logo's centre line above the screen's middle, and the
+ * callsign's baseline above the bottom. */
+static constexpr int16_t SPLASH_LOGO_RISE = 6;
+static constexpr int16_t SPLASH_CALL_RISE = 8;
 
 /* Keys that click at the Beep voice level: the keypad, ENTER, ESC, UP and
  * DOWN. */
@@ -130,8 +123,7 @@ static void enterStandby()
  * Refresh the idle timer and leave standby if in it.
  *
  * @param now: current tick.
- * @return true if this call left standby, so the wake keypress is swallowed
- * (classic behaviour).
+ * @return true if this call left standby, so the waking key press only wakes.
  */
 static bool exitStandby(long long now)
 {
@@ -145,10 +137,14 @@ static bool exitStandby(long long now)
     return true;
 }
 
-/* Pure idle-timeout predicate — C linkage so the unit test (ui_check_standby)
- * links against it exactly as it did the classic implementation. Mirrors the
- * classic thresholds verbatim. */
-extern "C" bool _ui_checkStandby(long long time_since_last_event)
+/**
+ * Check whether the backlight timeout has elapsed. C linkage for its unit
+ * test.
+ *
+ * @param time_since_last_event: time since the last activity, in ms.
+ * @return true if the display should enter standby now.
+ */
+extern "C" bool ui_checkStandby(long long time_since_last_event)
 {
     if (standby)
         return false;
@@ -163,22 +159,23 @@ extern "C" bool _ui_checkStandby(long long time_since_last_event)
         case TIMER_25S:
         case TIMER_30S:
             return time_since_last_event
-                >= (5000 * state.settings.display_timer);
+                >= (TIMER_STEP_S_MS * state.settings.display_timer);
         case TIMER_1M:
         case TIMER_2M:
         case TIMER_3M:
         case TIMER_4M:
         case TIMER_5M:
             return time_since_last_event
-                >= (60000 * (state.settings.display_timer - (TIMER_1M - 1)));
+                >= (TIMER_STEP_M_MS
+                    * (state.settings.display_timer - (TIMER_1M - 1)));
         case TIMER_15M:
         case TIMER_30M:
         case TIMER_45M:
             return time_since_last_event
-                >= (60000 * 15
+                >= (TIMER_STEP_15M_MS
                     * (state.settings.display_timer - (TIMER_15M - 1)));
         case TIMER_1H:
-            return time_since_last_event >= 60 * 60 * 1000;
+            return time_since_last_event >= TIMER_1H_MS;
     }
 
     return false;
@@ -193,9 +190,7 @@ extern "C" void ui_init()
     volumeOverlay.build();
     nav.setRoot(ViewId::Vfo);
 
-    /* Apply the persisted text-rendering setting (crisp/1bpp vs smooth/AA). The
-     * theme (Instrument vs High Contrast) needs no apply — themeColor() reads it
-     * live. Both are no-ops on 1bpp targets. */
+    /* The theme needs no applying: themeColor() reads it when drawing. */
     gfx_setFontMono(state.settings.crispText);
 
     standby = false;
@@ -209,11 +204,12 @@ extern "C" void ui_init()
 
 extern "C" void ui_drawSplashScreen()
 {
-    const Point logo = { 0, (int16_t)((CONFIG_SCREEN_HEIGHT / 2) - 6) };
-    const Point call = { 0, (int16_t)(CONFIG_SCREEN_HEIGHT - 8) };
-    /* Render the splash 1bpp (no anti-aliasing) in the gold brand accent, to
-     * match the crisp classic boot logo. Restore the user's text setting after
-     * (this also establishes its resting value for the first UI frame). */
+    const Point logo = { 0, static_cast<int16_t>((CONFIG_SCREEN_HEIGHT / 2)
+                                                 - SPLASH_LOGO_RISE) };
+    const Point call = { 0, static_cast<int16_t>(CONFIG_SCREEN_HEIGHT
+                                                 - SPLASH_CALL_RISE) };
+    /* The logo is drawn crisp in the accent colour, then the text setting is
+     * put back for the screens after it. */
     gfx_setFontMono(true);
     drawScreen([&](DrawCtx &d) {
         d.text(logo, FONT_SIZE_12PT, TEXT_ALIGN_CENTER, Sem::Accent,
@@ -433,29 +429,18 @@ static bool filterKey(const kbd_msg_t &msg, long long now)
  */
 static void handleTick(long long now, bool *sync_rtx)
 {
-    /* Wake-keeping activity — ongoing RF (TX or an open squelch) or the user
-     * turning the volume — keeps the display awake and wakes it from standby.
-     * Checked every tick, BEFORE draining the event queue: state_task bundles
-     * the volume update with an EVENT_STATUS, so gating this on an empty queue
-     * would let that status event mask the change and the volume-wake would
-     * never fire. exitStandby also refreshes the idle timer. */
+    /* RF activity and the volume knob keep the display awake. Checked every
+     * tick, not only on an empty queue: the volume changes with a status
+     * event. */
     if ((rtx_getStatus()->opStatus == TX) || rtx_rxSquelchOpen()
         || (state.volume != last_state.volume))
         exitStandby(now);
 
-    /* Volume HUD: turning the knob (a change in the polled level) presents a
-     * transient level bar and re-pokes it while it keeps moving; it auto-hides
-     * kVolumeOverlayMs after the level settles. Suppressed while the macro menu
-     * is open so the two modals never fight. The FM squelch deliberately is not
-     * shown here — it stays in the macro menu, reusing the same BarRow control.
-     * Checked before draining the queue, like the wake-keeping block: the
-     * volume update rides a periodic EVENT_STATUS, so gating on an empty queue
-     * would let that event mask the change. */
+    /* Turning the volume knob shows the volume HUD, except over the macro
+     * menu. */
     if ((state.volume != last_state.volume) && !macroOpen)
-        nav.presentOverlay(&volumeOverlay, now, kVolumeOverlayMs);
+        nav.presentOverlay(&volumeOverlay, now, VOLUME_HUD_MS);
 
-    /* Apply managed-overlay dismiss policies every tick (unconditionally, for
-     * the same empty-queue reason as above). */
     nav.tickOverlay(now);
 
     /* Keying up closes a latched macro menu, so PTT is not left blocked. */
@@ -469,7 +454,8 @@ static void handleTick(long long now, bool *sync_rtx)
     if (evQueue_rdPos != evQueue_wrPos) {
         /* Pop one event per tick. */
         const event_t raw = evQueue[evQueue_rdPos];
-        evQueue_rdPos = (uint8_t)((evQueue_rdPos + 1) % MAX_NUM_EVENTS);
+        evQueue_rdPos =
+            static_cast<uint8_t>((evQueue_rdPos + 1) % UI_EVENT_QUEUE_LEN);
 
         kbd_msg_t msg;
         msg.value = raw.payload;
@@ -483,11 +469,10 @@ static void handleTick(long long now, bool *sync_rtx)
         if (key && !filterKey(msg, now))
             return;
 
-        /* If the view handling the event edited an rtx-affecting field it flags
-         * a resync, which we forward so threads.c re-applies state.channel to
-         * the radio. */
+        /* A view that changed the radio configuration asks for a resync. */
         const ViewId shown = nav.activeId();
-        const Event ev = Event::decode((uint8_t)raw.type, raw.payload);
+        const Event ev = Event::decode(static_cast<uint8_t>(raw.type),
+                                       raw.payload);
         if (nav.dispatch(ev))
             *sync_rtx = true;
 
@@ -500,9 +485,8 @@ static void handleTick(long long now, bool *sync_rtx)
         return;
     }
 
-    /* No event this tick: blank the backlight once the idle timer elapses
-     * (the wake-keeping activity was already handled at the top). */
-    if (_ui_checkStandby(now - last_event_tick))
+    /* No event this tick: blank the backlight once the idle timer elapses. */
+    if (ui_checkStandby(now - last_event_tick))
         enterStandby();
 }
 
@@ -527,39 +511,39 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
     updatePttGate(sync_rtx);
 }
 
-extern "C" bool ui_updateGUI()
+extern "C" void ui_updateGUI()
 {
     if (standby)
-        return false; /* backlight off — nothing to draw */
+        return; /* backlight off — nothing to draw */
 
 #if !defined(PLATFORM_TTWRPLUS)
     if (lowBatteryShown) {
-        if (!lowBattery.dirty())
-            return false;
-        drawScreen([&](DrawCtx &d) { lowBattery.paintTree(d); });
-        lowBattery.clearDirty();
-        return true;
+        if (lowBattery.dirty()) {
+            drawScreen([&](DrawCtx &d) { lowBattery.paintTree(d); });
+            lowBattery.clearDirty();
+        }
+        return;
     }
 #endif
 
     View *view = nav.active();
     if (view == nullptr)
-        return false;
+        return;
 
     view->syncFromState(last_state);
 
     Screen &screen = view->screen();
     if (!screen.dirty())
-        return false;
+        return;
 
     drawScreen([&](DrawCtx &d) { screen.paintTree(d); });
     screen.clearDirty();
-    return true;
 }
 
 extern "C" bool ui_pushEvent(const uint8_t type, const uint32_t data)
 {
-    const uint8_t newWrPos = (uint8_t)((evQueue_wrPos + 1) % MAX_NUM_EVENTS);
+    const uint8_t newWrPos =
+        static_cast<uint8_t>((evQueue_wrPos + 1) % UI_EVENT_QUEUE_LEN);
     if (newWrPos == evQueue_rdPos)
         return false; /* queue full */
 

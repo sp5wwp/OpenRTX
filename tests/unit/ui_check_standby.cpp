@@ -10,7 +10,7 @@ extern "C" {
 #include "core/state.h"
 #include "core/settings.h"
 
-extern bool _ui_checkStandby(long long);
+extern bool ui_checkStandby(long long);
 }
 
 extern state_t state;
@@ -23,8 +23,8 @@ static void check_timer_threshold(display_timer_t conf, long long time_sec)
     long long at = time_sec * 1000;
 
     INFO("Timer enum: " << conf << " threshold: " << time_sec << "s");
-    REQUIRE(_ui_checkStandby(below) == false);
-    REQUIRE(_ui_checkStandby(at) == true);
+    REQUIRE(ui_checkStandby(below) == false);
+    REQUIRE(ui_checkStandby(at) == true);
 }
 
 TEST_CASE("Backlight timer thresholds", "[ui]")
@@ -97,6 +97,6 @@ TEST_CASE("Backlight timer thresholds", "[ui]")
 TEST_CASE("Backlight timer OFF never triggers standby", "[ui]")
 {
     state.settings.display_timer = TIMER_OFF;
-    REQUIRE(_ui_checkStandby(0) == false);
-    REQUIRE(_ui_checkStandby(60LL * 60 * 24 * 1000) == false);
+    REQUIRE(ui_checkStandby(0) == false);
+    REQUIRE(ui_checkStandby(60LL * 60 * 24 * 1000) == false);
 }

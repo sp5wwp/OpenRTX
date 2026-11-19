@@ -15,6 +15,11 @@ extern "C" {
 #endif
 
 /**
+ * Number of slots of the UI event queue.
+ */
+#define UI_EVENT_QUEUE_LEN 16
+
+/**
  * This function initialises the User Interface, starting the
  * Finite State Machine describing the user interaction.
  */
@@ -27,15 +32,13 @@ void ui_init();
 void ui_drawSplashScreen();
 
 /**
- * This function updates the local copy of the radio state
- * the local copy is called last_state
- * and is accessible from all the UI code as extern variable.
+ * Copy the radio state the UI draws from. Call it with state_mutex held.
  */
 void ui_saveState();
 
 /**
  * This function advances the User Interface FSM, basing on the
- * current radio state and the keys pressed.
+ * current radio state and the keys pressed. Call it with state_mutex held.
  *
  * @param sync_rtx: If true RTX needs to be synchronized
  */
@@ -44,10 +47,8 @@ void ui_updateFSM(bool *sync_rtx);
 /**
  * This function redraws the GUI based on the last radio state and sends it to
  * the display, when it changed.
- *
- * @return true if the GUI has been redrawn.
  */
-bool ui_updateGUI();
+void ui_updateGUI();
 
 /**
  * Push an event to the UI event queue. Call it with state_mutex held, as
