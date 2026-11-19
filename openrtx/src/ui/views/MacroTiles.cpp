@@ -5,6 +5,7 @@
  */
 
 #include "views/MacroTiles.hpp"
+#include "core/LayoutFonts.hpp"
 #include "core/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
@@ -77,7 +78,7 @@ struct ScratchTile {
     Label value; ///< Live value
 };
 
-MacroTiles::MacroTiles() : tile_(), key_(), value_()
+MacroTiles::MacroTiles()
 {
 }
 
@@ -114,41 +115,22 @@ void MacroTiles::setUp(uint8_t tile, char *keyBuf)
     scratch.value.setGrow(1);
 }
 
-void MacroTiles::place(const Rect *rows)
+Rect MacroTiles::tileArea(uint8_t tile) const
 {
-    char keyBuf[KEY_SIZE];
+    /* The rows grew equally from nothing, so they split the grid evenly. */
+    const uint16_t rowH = static_cast<uint16_t>(area_.h / 3);
+    const Rect row = { area_.x,
+                       static_cast<int16_t>(area_.y + (tile / 3) * rowH),
+                       area_.w, rowH };
+    if ((row.w == 0) || (row.h == 0))
+        return { 0, 0, 0, 0 };
 
-    for (uint8_t r = 0; r < 3; r++) {
-        /* A row of three tiles growing equally, TILE_GAP apart. */
-        const Rect &row = rows[r];
-        int free = static_cast<int>(row.w) - 2 * TILE_GAP;
-        if (free < 0)
-            free = 0;
-        const uint16_t w = static_cast<uint16_t>(free / 3);
-
-        for (uint8_t c = 0; c < 3; c++) {
-            const uint8_t i = static_cast<uint8_t>(r * 3 + c);
-            if ((row.w == 0) || (row.h == 0)) {
-                tile_[i] = { 0, 0, 0, 0 };
-                key_[i] = { 0, 0, 0, 0 };
-                value_[i] = { 0, 0, 0, 0 };
-                continue;
-            }
-
-            tile_[i] = { static_cast<int16_t>(row.x + c * (w + TILE_GAP)),
-                         row.y, w, row.h };
-
-            /* The labels are laid out with an empty value, as when built. */
-            setUp(i, keyBuf);
-            ScratchTile &scratch = Scratch::get<ScratchTile>();
-            scratch.key.setArea({ 0, 0, 0, 0 });
-            scratch.value.setArea({ 0, 0, 0, 0 });
-            scratch.box.setArea(tile_[i]);
-            scratch.box.onLayout();
-            key_[i] = scratch.key.area();
-            value_[i] = scratch.value.area();
-        }
-    }
+    int free = static_cast<int>(row.w) - 2 * TILE_GAP;
+    if (free < 0)
+        free = 0;
+    const uint16_t w = static_cast<uint16_t>(free / 3);
+    return { static_cast<int16_t>(row.x + (tile % 3) * (w + TILE_GAP)), row.y,
+             w, row.h };
 }
 
 void MacroTiles::composeValue(uint8_t tile, const state_t &s, char *out,
@@ -234,17 +216,29 @@ void MacroTiles::draw(DrawCtx &d)
     for (uint8_t i = 0; i < TILES; i++) {
         char keyBuf[KEY_SIZE];
         char value[VALUE_SIZE];
-        setUp(i, keyBuf);
-        composeValue(i, *state_, value, sizeof(value));
+        const Rect tile = tileArea(i);
         ScratchTile &scratch = Scratch::get<ScratchTile>();
+
+        /* The labels are laid out with an empty value and the metrics the
+         * screen was built with. */
+        {
+            LayoutFonts fonts;
+            setUp(i, keyBuf);
+            scratch.key.setArea({ 0, 0, 0, 0 });
+            scratch.value.setArea({ 0, 0, 0, 0 });
+            if (!tile.empty()) {
+                scratch.box.setArea(tile);
+                scratch.box.onLayout();
+            }
+        }
+
+        composeValue(i, *state_, value, sizeof(value));
         scratch.value.setText(value);
-        scratch.key.setArea(key_[i]);
-        scratch.value.setArea(value_[i]);
 
         /* Clip to the tile as its container would. */
-        const bool clip = !tile_[i].empty();
+        const bool clip = !tile.empty();
         if (clip)
-            d.pushClip(tile_[i]);
+            d.pushClip(tile);
         scratch.key.paintTree(d);
         scratch.value.paintTree(d);
         if (clip)

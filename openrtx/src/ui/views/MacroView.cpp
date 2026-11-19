@@ -71,10 +71,11 @@ void MacroView::build()
     screen_.addChild(&root_);
     root_.onLayout();
 
-    const Rect rows[3] = { rows_[0].area(), rows_[1].area(), rows_[2].area() };
-    tiles_.place(rows);
-    tiles_.setArea({ rows[0].x, rows[0].y, rows[0].w,
-                     static_cast<uint16_t>(rows[2].bottom() - rows[0].y + 1) });
+    /* The tiles cover the three rows. */
+    const Rect &top = rows_[0].area();
+    tiles_.setArea(
+        { top.x, top.y, top.w,
+          static_cast<uint16_t>(rows_[2].area().bottom() - top.y + 1) });
     screen_.addChild(&tiles_);
     screen_.markAllDirty();
 }

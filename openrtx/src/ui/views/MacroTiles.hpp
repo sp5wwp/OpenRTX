@@ -21,9 +21,9 @@ namespace ortxui
 /**
  * The 3x3 tile grid of the macro menu: each tile shows its number key (with
  * an icon on the larger screens) and the live value of its action. The tiles
- * are painted one at a time through a shared scratch tile, and the values are
- * composed from the state snapshot when drawn, so the grid stores only where
- * each tile and its two labels go.
+ * are laid out and painted one at a time through the scratch tile, and the
+ * values are composed from the state snapshot when drawn, so the grid stores
+ * only the snapshot and a digest of the values shown.
  */
 class MacroTiles : public Object
 {
@@ -38,14 +38,6 @@ public:
     ~MacroTiles();
 
     /**
-     * Place the tiles over the three grid rows, as a row of three growing
-     * tiles with their key and value labels in each row.
-     *
-     * @param rows: areas of the three rows.
-     */
-    void place(const Rect *rows);
-
-    /**
      * Follow a state snapshot.
      *
      * @param s: state snapshot, which must outlive the next draw.
@@ -57,6 +49,15 @@ public:
     void draw(DrawCtx &d) override;
 
 private:
+    /**
+     * Get the area of a tile: the grid is three rows sharing its height, each
+     * a row of three tiles growing equally, TILE_GAP apart.
+     *
+     * @param tile: tile index.
+     * @return the area, empty if the grid has no room.
+     */
+    Rect tileArea(uint8_t tile) const;
+
     /**
      * Set the scratch tile up for one tile, with an empty value.
      *
@@ -76,9 +77,6 @@ private:
     static void composeValue(uint8_t tile, const state_t &s, char *out,
                              uint16_t n);
 
-    Rect tile_[TILES];               ///< Area of each tile
-    Rect key_[TILES];                ///< Area of each key label
-    Rect value_[TILES];              ///< Area of each value label
     const state_t *state_ = nullptr; ///< Snapshot the values come from
     uint32_t digest_ = 0;            ///< Digest of the values shown
 };

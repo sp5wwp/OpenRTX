@@ -5,8 +5,7 @@
  */
 
 #include "views/ViewSlot.hpp"
-#include "core/graphics.h"
-#include "core/state.h"
+#include "core/LayoutFonts.hpp"
 #include "core/utils.h"
 
 #include <new>
@@ -97,9 +96,8 @@ View *ViewSlot::build(ViewId id)
 
     /* Lay out with the smooth font metrics, as every view did when they were
      * all built at start-up, before the crisp text setting was applied. */
-    gfx_setFontMono(false);
+    LayoutFonts fonts;
     view_->build();
-    gfx_setFontMono(state.settings.crispText);
     return view_;
 }
 
