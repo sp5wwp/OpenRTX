@@ -67,6 +67,12 @@ public:
     {
         font_ = f;
     }
+
+    /** Font the text is drawn in. */
+    fontSize_t font() const
+    {
+        return font_;
+    }
     void setAlign(textAlign_t a)
     {
         align_ = a;

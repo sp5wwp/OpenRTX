@@ -51,13 +51,22 @@ public:
         return top_;
     }
 
-    void move(int delta); //< step the selection, scrolling as needed
+    /**
+     * Step the selection, scrolling as needed.
+     *
+     * @param delta: cells to step; a row is cols() cells.
+     */
+    void move(int delta);
+
+    /** Code point of the selected cell. */
     uint32_t selectedCodePoint() const;
+
+    /** Cells in a row. */
+    uint16_t cols() const;
 
     void draw(DrawCtx &d) override;
 
 private:
-    uint16_t cols() const;
     void ensureVisible();
 
     uint16_t sel_ = 0;

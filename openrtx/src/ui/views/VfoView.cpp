@@ -1022,8 +1022,7 @@ void VfoView::renderDstEdit()
      * marks it as an M17 destination address and stays pinned while the
      * callsign body scrolls within the remaining width -- a leading/trailing
      * ellipsis marks where it is truncated, so the cursor is always visible. */
-    const bool regular = (sizeClass() == SizeClass::Regular);
-    const fontSize_t font = regular ? FONT_SIZE_10PT : FONT_SIZE_6PT;
+    const fontSize_t font = chanName_.font();
     const uint16_t atW = gfx_getTextWidth(font, "@");
     const uint16_t boxW = chanName_.area().w;
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;

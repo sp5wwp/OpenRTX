@@ -82,7 +82,7 @@ private:
 
     /* Callsign edit state: the buffer is edited through the shared TextInput
      * widget (inline bracket rendering), which owns the cursor. */
-    char callBuf_[10] = {};
+    char callBuf_[sizeof(settings_t::callsign)] = {};
     TextInput callsign_;
 
     /* Change-gate mirrors. */

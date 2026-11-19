@@ -236,7 +236,7 @@ private:
     void spliceCell(uint16_t pos, const char *enc,
                     int n);                //< replace cell w/ enc
 
-    static constexpr uint16_t kMaxSlots = 16; ///< Most slots of a masked field
+    static constexpr uint16_t MAX_SLOTS = 16; ///< Most slots of a masked field
 
     char *buf_ = nullptr;
     uint16_t cap_ = 0;
@@ -261,7 +261,7 @@ private:
     char placeholder_ = '-';
     uint16_t slotCount_ = 0;  //< number of editable slots laid into the buffer
     uint16_t slotCursor_ = 0; //< active slot ordinal, in [0, slotCount_]
-    std::array<uint16_t, kMaxSlots> slotPos_ = {}; //< buffer offset of each slot
+    std::array<uint16_t, MAX_SLOTS> slotPos_ = {}; //< buffer offset of each slot
 };
 
 } // namespace ortxui

@@ -13,9 +13,15 @@ namespace ortxui
 
 /* Pickable code points: the Latin-1 supplement (accented letters + symbols),
  * matching the range baked into the custom icon/fallback font. */
-static constexpr uint32_t kFirst = 0xA1;
-static constexpr uint32_t kLast = 0xFF;
-static constexpr uint16_t kCount = static_cast<uint16_t>(kLast - kFirst + 1);
+static constexpr uint32_t FIRST_CP = 0xA1; ///< First pickable code point
+static constexpr uint32_t LAST_CP = 0xFF;  ///< Last pickable code point
+static constexpr uint16_t CELL_COUNT =
+    static_cast<uint16_t>(LAST_CP - FIRST_CP + 1); ///< Number of cells
+
+static constexpr int16_t CELL_H_REGULAR = 20; ///< Cell height, regular screen
+static constexpr int16_t CELL_H_COMPACT = 14; ///< Cell height, compact screen
+static constexpr uint16_t COLS_REGULAR = 8;   ///< Columns, regular screen
+static constexpr uint16_t COLS_COMPACT = 6;   ///< Columns, compact screen
 
 /**
  * Get the code point of a grid cell.
@@ -25,7 +31,7 @@ static constexpr uint16_t kCount = static_cast<uint16_t>(kLast - kFirst + 1);
  */
 static uint32_t codePointAt(uint16_t i)
 {
-    return kFirst + i;
+    return FIRST_CP + i;
 }
 
 /**
@@ -58,12 +64,13 @@ static void utf8(uint32_t cp, char *out)
  */
 static int16_t cellH()
 {
-    return (sizeClass() == SizeClass::Regular) ? 20 : 14;
+    return (sizeClass() == SizeClass::Regular) ? CELL_H_REGULAR :
+                                                 CELL_H_COMPACT;
 }
 
 uint16_t PickerGrid::cols() const
 {
-    return (sizeClass() == SizeClass::Regular) ? 8u : 6u;
+    return (sizeClass() == SizeClass::Regular) ? COLS_REGULAR : COLS_COMPACT;
 }
 
 uint32_t PickerGrid::selectedCodePoint() const
@@ -88,8 +95,8 @@ void PickerGrid::move(int delta)
     int idx = static_cast<int>(sel_) + delta;
     if (idx < 0)
         idx = 0;
-    if (idx >= static_cast<int>(kCount))
-        idx = kCount - 1;
+    if (idx >= static_cast<int>(CELL_COUNT))
+        idx = CELL_COUNT - 1;
     sel_ = static_cast<uint16_t>(idx);
     ensureVisible();
     invalidate();
@@ -110,7 +117,7 @@ void PickerGrid::draw(DrawCtx &d)
         const uint16_t row = static_cast<uint16_t>(top_ + vr);
         for (uint16_t col = 0; col < c; col++) {
             const uint16_t idx = static_cast<uint16_t>(row * c + col);
-            if (idx >= kCount)
+            if (idx >= CELL_COUNT)
                 return;
             const Rect cell = { static_cast<int16_t>(area_.x + col * cw),
                                 static_cast<int16_t>(area_.y + vr * ch),

@@ -9,6 +9,8 @@
 #include "core/Layout.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
+#include "core/input.h"
+#include "core/utils.h"
 #include "interfaces/keyboard.h"
 
 #include <cstdio>
@@ -17,20 +19,20 @@
 namespace ortxui
 {
 
-/* Longest wrapped line we measure/copy at once (a screen row never approaches
- * this many glyphs). */
-static constexpr uint16_t kLineBuf = 128;
+/** Longest wrapped line measured or copied at once. */
+static constexpr uint16_t LINE_BUF = 128;
 
-/* Multi-tap window: a same-key press within this many ms cycles the character
- * in place; longer commits it. Matches the classic input_longPressTimeout. */
-static constexpr long long kMultiTapMs = 700;
+static constexpr int16_t LINE_GAP = 2;     ///< Pixels between wrapped lines
+static constexpr uint16_t SCROLL_W = 2;    ///< Width of the scroll indicator
+static constexpr uint16_t SCROLL_GAP = 1;  ///< Gap between text and indicator
+static constexpr int16_t SCROLL_MIN_H = 2; ///< Shortest scroll thumb
 
 /* Sentinel stored in the buffer when the cursor character is cycled to the
  * "delete" slot in the wheel. It only ever exists at the cursor (transient) and
  * is resolved into an actual deletion on the next move / commit; it is rendered
  * as the ⌫ glyph. */
-static constexpr char kDelete = 0x7F;
-static constexpr char kDeleteGlyph[] = SYMBOL_BACKSPACE;
+static constexpr char DELETE_CELL = 0x7F;
+static constexpr char DELETE_GLYPH[] = SYMBOL_BACKSPACE;
 
 /** Keys that keep acting while held in a text field. */
 static constexpr uint32_t REPEAT_KEYS = KEY_STAR | KEY_UP | KEY_DOWN | KEY_LEFT
@@ -83,7 +85,7 @@ static int utf8Encode(uint32_t cp, char out[4])
 static uint16_t spanWidth(const char *buf, uint16_t start, uint16_t end,
                           fontSize_t font)
 {
-    char tmp[kLineBuf];
+    char tmp[LINE_BUF];
     uint16_t n = static_cast<uint16_t>(end - start);
     if (n >= sizeof(tmp))
         n = sizeof(tmp) - 1;
@@ -129,7 +131,7 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
 
     /* Lay the mask into the buffer, every editable slot set to the placeholder,
      * and cache each slot's buffer offset so later ops don't rescan the mask.
-     * The whole mask must fit in the buffer (plus a NUL) and in kMaxSlots; a
+     * The whole mask must fit in the buffer (plus a NUL) and in MAX_SLOTS; a
      * mask that overruns either bound is a caller sizing error -- lay down what
      * fits so nothing is silently corrupted, but the caller-visible slotCount()
      * then reveals the shortfall rather than a wrong value being committed. */
@@ -137,7 +139,7 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     uint16_t i = 0;
     for (; (mask[i] != '\0') && (i + 1 < cap_); i++) {
         if (mask[i] == '9') {
-            if (slotCount_ >= kMaxSlots)
+            if (slotCount_ >= MAX_SLOTS)
                 break; /* mask has more slots than we can track */
             buf_[i] = placeholder_;
             slotPos_[slotCount_++] = i;
@@ -264,7 +266,7 @@ uint16_t TextInput::cellLen(uint16_t pos) const
         return 0;
     const uint8_t b = static_cast<uint8_t>(buf_[pos]);
     if ((b & 0x80u) == 0x00u)
-        return 1; /* ASCII / kDelete */
+        return 1; /* ASCII / DELETE_CELL */
     if ((b & 0xE0u) == 0xC0u)
         return 2;
     if ((b & 0xF0u) == 0xE0u)
@@ -319,11 +321,11 @@ void TextInput::cycle(int dir)
     const int n = static_cast<int>(cs_->len);
     const int total = n + 1;
     const uint16_t clen = cellLen(cursor_);
-    int idx = (buf_[cursor_] == kDelete) ? n :
-              (clen == 1)                ? cs_->indexOf(buf_[cursor_]) :
-                                           -1; /* multibyte cell: start fresh */
+    int idx = (buf_[cursor_] == DELETE_CELL) ? n :
+              (clen == 1)                    ? cs_->indexOf(buf_[cursor_]) :
+                            -1; /* multibyte cell: start fresh */
     idx = ((idx + dir) % total + total) % total;
-    const char rep = (idx == n) ? kDelete : cs_->at(idx);
+    const char rep = (idx == n) ? DELETE_CELL : cs_->at(idx);
     if (clen == 1)
         buf_[cursor_] = rep; /* fast path, no length change */
     else
@@ -350,7 +352,7 @@ void TextInput::deleteAt(uint16_t pos)
 
 void TextInput::resolvePendingDelete()
 {
-    if ((buf_ != nullptr) && (cursor_ < len_) && (buf_[cursor_] == kDelete))
+    if ((buf_ != nullptr) && (cursor_ < len_) && (buf_[cursor_] == DELETE_CELL))
         deleteAt(cursor_);
 }
 
@@ -370,7 +372,7 @@ void TextInput::moveCursor(int dir)
     }
     /* A move key applied while sitting on the ⌫ slot performs the delete
      * (consuming the keypress) rather than moving. */
-    if ((cursor_ < len_) && (buf_[cursor_] == kDelete)) {
+    if ((cursor_ < len_) && (buf_[cursor_] == DELETE_CELL)) {
         deleteAt(cursor_);
         return;
     }
@@ -418,7 +420,7 @@ void TextInput::backspace()
         return;
     }
     /* On the ⌫ slot, '*' deletes that slot; otherwise it backspaces. */
-    if ((cursor_ < len_) && (buf_[cursor_] == kDelete)) {
+    if ((cursor_ < len_) && (buf_[cursor_] == DELETE_CELL)) {
         deleteAt(cursor_);
         return;
     }
@@ -435,7 +437,8 @@ void TextInput::backspace()
 
 void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
 {
-    if ((buf_ == nullptr) || (tapTable_ == nullptr) || (keyIndex >= 12))
+    if ((buf_ == nullptr) || (tapTable_ == nullptr)
+        || (keyIndex >= ARRAY_SIZE(tapTable_->keys)))
         return;
     const char *str = tapTable_->keys[keyIndex];
     if ((str == nullptr) || (str[0] == '\0'))
@@ -444,7 +447,7 @@ void TextInput::tapKey(uint8_t keyIndex, long long nowTick)
     const size_t n = strlen(str);
     const bool cont = tapActive_
                    && (tapKeyIdx_ == static_cast<int8_t>(keyIndex))
-                   && ((nowTick - tapTick_) < kMultiTapMs);
+                   && ((nowTick - tapTick_) < input_longPressTimeout);
     if (cont) {
         /* Same key within the window: cycle the character in place. */
         tapSet_ = static_cast<uint8_t>((tapSet_ + 1) % n);
@@ -586,8 +589,8 @@ void TextInput::formatBracketed(char *out, size_t sz) const
         for (uint16_t i = 0; (i < len_) && (rem > 6); i++) {
             int n;
             if (i == cursor_)
-                n = (buf_[i] == kDelete) ?
-                        sniprintf(o, rem, "[%s]", kDeleteGlyph) :
+                n = (buf_[i] == DELETE_CELL) ?
+                        sniprintf(o, rem, "[%s]", DELETE_GLYPH) :
                         sniprintf(o, rem, "[%c]", buf_[i]);
             else
                 n = sniprintf(o, rem, "%c", buf_[i]);
@@ -619,8 +622,8 @@ void TextInput::composeWindow(char *out, size_t sz, uint16_t lo,
     if (buf_ != nullptr) {
         for (uint16_t i = lo; (i < hi) && (rem > 6); i++) {
             if (i == cursor_)
-                n = (buf_[i] == kDelete) ?
-                        sniprintf(o, rem, "[%s]", kDeleteGlyph) :
+                n = (buf_[i] == DELETE_CELL) ?
+                        sniprintf(o, rem, "[%s]", DELETE_GLYPH) :
                         sniprintf(o, rem, "[%c]", buf_[i]);
             else
                 n = sniprintf(o, rem, "%c", buf_[i]);
@@ -659,7 +662,7 @@ void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
     uint16_t lo = (cursor_ < len_) ? cursor_ : static_cast<uint16_t>(len_ - 1);
     uint16_t hi = static_cast<uint16_t>(lo + 1);
 
-    char cand[kLineBuf];
+    char cand[LINE_BUF];
     bool grew = true;
     while (grew) {
         grew = false;
@@ -729,7 +732,7 @@ void TextInput::draw(DrawCtx &d)
         return;
 
     const int16_t fh = static_cast<int16_t>(gfx_getFontHeight(font_));
-    const int16_t lh = static_cast<int16_t>(fh + 2);
+    const int16_t lh = static_cast<int16_t>(fh + LINE_GAP);
 
     auto drawCursor = [&](const Rect &lineBox, uint16_t lineStart) {
         const uint16_t preW = spanWidth(buf_, lineStart, cursor_, font_);
@@ -737,7 +740,7 @@ void TextInput::draw(DrawCtx &d)
 
         /* Block over the whole cell (a picker-inserted accent is one cell). */
         const uint16_t clen = cellLen(cursor_);
-        const bool isDel = (cursor_ < len_) && (buf_[cursor_] == kDelete);
+        const bool isDel = (cursor_ < len_) && (buf_[cursor_] == DELETE_CELL);
         char t[5];
         uint16_t tn = (clen < sizeof(t)) ? clen : 0u;
         for (uint16_t i = 0; i < tn; i++)
@@ -745,7 +748,7 @@ void TextInput::draw(DrawCtx &d)
         t[tn] = '\0';
         const bool onChar = (cursor_ < len_) && !isDel
                          && !((clen == 1) && (buf_[cursor_] == ' '));
-        const char *glyph = isDel ? kDeleteGlyph : t;
+        const char *glyph = isDel ? DELETE_GLYPH : t;
         const bool visible = isDel || onChar;
         uint16_t cw = visible ? gfx_getTextWidth(font_, glyph) : 3u;
         if (cw < 2u)
@@ -764,7 +767,7 @@ void TextInput::draw(DrawCtx &d)
         return;
     }
 
-    const int maxW = static_cast<int>(area_.w) - 3;
+    const int maxW = static_cast<int>(area_.w) - SCROLL_W - SCROLL_GAP;
     uint16_t visRows =
         static_cast<uint16_t>(area_.h / static_cast<uint16_t>(lh));
     if (visRows == 0)
@@ -794,14 +797,15 @@ void TextInput::draw(DrawCtx &d)
                 static_cast<int16_t>(area_.y + (r - topRow_) * lh);
             const Rect lineBox = { area_.x, rowY, area_.w,
                                    static_cast<uint16_t>(lh) };
-            char tmp[kLineBuf];
+            char tmp[LINE_BUF];
             uint16_t n = static_cast<uint16_t>(end - pos);
             if (n >= sizeof(tmp))
                 n = sizeof(tmp) - 1;
             memcpy(tmp, buf_ + pos, n);
             tmp[n] = '\0';
             for (uint16_t j = 0; j < n; j++)
-                if (tmp[j] == kDelete) /* the ⌫ slot is drawn by the cursor */
+                if (tmp[j]
+                    == DELETE_CELL) /* the ⌫ slot is drawn by the cursor */
                     tmp[j] = ' ';
             d.textInBox(lineBox, font_, TEXT_ALIGN_LEFT, Sem::OnSurface, tmp);
             if (r == cursorRow)
@@ -817,13 +821,14 @@ void TextInput::draw(DrawCtx &d)
         const int16_t barX = static_cast<int16_t>(area_.right() - 1);
         const int trackH = static_cast<int>(area_.h);
         int thumbH = trackH * visRows / rows;
-        if (thumbH < 2)
-            thumbH = 2;
+        if (thumbH < SCROLL_MIN_H)
+            thumbH = SCROLL_MIN_H;
         const int16_t thumbY =
             static_cast<int16_t>(area_.y + trackH * topRow_ / rows);
-        const Rect track = { barX, area_.y, 2, area_.h };
+        const Rect track = { barX, area_.y, SCROLL_W, area_.h };
         d.fillRect(track, Sem::Surface);
-        const Rect thumb = { barX, thumbY, 2, static_cast<uint16_t>(thumbH) };
+        const Rect thumb = { barX, thumbY, SCROLL_W,
+                             static_cast<uint16_t>(thumbH) };
         d.fillRect(thumb, Sem::OnSurfaceMuted);
     }
 }

@@ -27,7 +27,7 @@ void TextInputView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const bool regular = (sizeClass() == SizeClass::Regular);
 
-    root_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    root_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
     root_.setAxis(Axis::Column);
     root_.setPadding(regular ? 4 : 2);
     root_.setGap(regular ? 3 : 2);

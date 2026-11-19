@@ -17,7 +17,7 @@ void PickerView::build()
 {
     const int16_t W = CONFIG_SCREEN_WIDTH;
     const int16_t H = CONFIG_SCREEN_HEIGHT;
-    grid_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    grid_.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
     grid_.setPosition(uiMemory.edit.pickerSelected, uiMemory.edit.pickerTop);
     screen_.addChild(&grid_);
     screen_.markAllDirty();
@@ -53,7 +53,7 @@ NavIntent PickerView::onEvent(const Event &e)
         return NavIntent::none();
 
     const uint32_t k = e.keys;
-    const int c = static_cast<int>((sizeClass() == SizeClass::Regular) ? 8 : 6);
+    const int c = static_cast<int>(grid_.cols());
     if (!repeat && ((k & KEY_ENTER) != 0u)) {
         uiMemory.edit.picked = grid_.selectedCodePoint();
         return NavIntent::pop();
