@@ -40,6 +40,12 @@ extern "C" {
 #define CONFIG_M17
 
 /*
+ * Settings and VFO are saved a few seconds after they change: at power off
+ * the supply collapses too fast for a reliable flash write.
+ */
+#define CONFIG_NVM_SAVE_ON_CHANGE
+
+/*
  * TETRA mode: starting taps of the demodulator's equalizer, measured on the
  * BK4819 flat RX path (REG_43 0x7e28). They undo the filters' inter-symbol
  * interference; the equalizer keeps adapting from there.
