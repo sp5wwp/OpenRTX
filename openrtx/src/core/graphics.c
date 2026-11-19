@@ -131,8 +131,22 @@ static const fontBlob_t *const builtinBlobs[FONT_SLOT_NUM] = {
 /* Fonts installed with gfx_setFontSource(); a NULL start means built-in. */
 static fontBlob_t fontSources[FONT_SLOT_NUM][FONT_SIZE_NUM];
 
-static lvFont_t g_fonts[FONT_SLOT_NUM][FONT_SIZE_NUM];
-static bool g_font_ready[FONT_SLOT_NUM][FONT_SIZE_NUM];
+/* What a decoded font is used for: drawing text, or as the icon fallback
+ * layered onto the text font. */
+enum fontRole {
+    FONT_ROLE_TEXT = 0,
+    FONT_ROLE_ICONS,
+    FONT_ROLE_NUM,
+};
+
+/* The decoded font of each role, for the slot and size last asked for.
+ * Decoding is a header parse, cheap next to drawing the glyphs, so the sizes
+ * take turns in one font per role instead of each keeping its own. */
+static lvFont_t g_fonts[FONT_ROLE_NUM];
+
+/* Slot and size each role holds, as 1 + slot * FONT_SIZE_NUM + size; 0 for
+ * none. */
+static uint8_t g_font_key[FONT_ROLE_NUM];
 static bool g_use_mono_font = false;
 
 /**
@@ -167,8 +181,9 @@ static enum fontSlot font_slot(fontSet_t set)
 }
 
 /**
- * Get a font, decoding it on first use from its installed source, or from
- * the built-in blob if there is none or it is not a valid font.
+ * Get a font, decoding it unless its role already holds it: from its
+ * installed source, or from the built-in blob if there is none or it is not
+ * a valid font. The font stays valid until its role is asked for another.
  *
  * @param set: font set.
  * @param size: font size.
@@ -177,15 +192,18 @@ static enum fontSlot font_slot(fontSet_t set)
 static lvFont_t *load_font(fontSet_t set, fontSize_t size)
 {
     const enum fontSlot slot = font_slot(set);
-    lvFont_t *font = &g_fonts[slot][size];
+    const enum fontRole role = (slot == FONT_SLOT_ICONS) ? FONT_ROLE_ICONS :
+                                                           FONT_ROLE_TEXT;
+    const uint8_t key = (uint8_t)(1 + slot * FONT_SIZE_NUM + size);
+    lvFont_t *font = &g_fonts[role];
 
-    if (!g_font_ready[slot][size]) {
+    if (g_font_key[role] != key) {
         const fontBlob_t *src = &fontSources[slot][size];
         if (src->start != NULL)
             decode_blob(font, src);
         if ((src->start == NULL) || !font->valid)
             decode_blob(font, &builtinBlobs[slot][size]);
-        g_font_ready[slot][size] = true;
+        g_font_key[role] = key;
     }
 
     return font;
@@ -238,7 +256,7 @@ bool gfx_setFontSource(fontSet_t set, fontSize_t size, const uint8_t *data,
     const enum fontSlot slot = font_slot(set);
     fontSources[slot][size].start = data;
     fontSources[slot][size].end = (data != NULL) ? (data + len) : NULL;
-    g_font_ready[slot][size] = false;
+    memset(g_font_key, 0, sizeof(g_font_key));
 
     return true;
 }
