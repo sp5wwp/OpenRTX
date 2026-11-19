@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include "core/View.hpp"
+#include "views/InfoTable.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Widgets.hpp"
 #include "widgets/TopBar.hpp"
@@ -38,28 +39,10 @@ public:
     }
 
 private:
-    /* Row order; the live rows are refreshed in syncFromState(). */
-    enum Row : uint8_t {
-        RowBattery,
-        RowCharge,
-        RowRssi,
-        RowHeap,
-        RowBand,
-        RowHwVer,
-        RowCount,
-    };
-
     Screen screen_;
     Flex root_;
-    Flex rows_[RowCount];
-    Label keys_[RowCount];
-    Label vals_[RowCount];
-    char valBufs_[RowCount][20] = {};
-
-    uint16_t lastVbat_ = 0xFFFFu;
-    uint8_t lastCharge_ = 0xFFu;
-    int32_t lastRssi_ = INT32_MIN;
-    unsigned lastHeapUsed_ = 0xFFFFFFFFu;
+    Flex rows_[InfoTable::ROW_COUNT]; //< zebra-striped rows of the table
+    InfoTable table_;                 //< keys and values over the rows
 };
 
 } // namespace ortxui
