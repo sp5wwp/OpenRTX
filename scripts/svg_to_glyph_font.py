@@ -4,9 +4,9 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Convert a single monochrome SVG (e.g. the M17 logo) into a one-glyph TTF so
-# it can be merged into the UI font by lv_font_conv, exactly like a FontAwesome
-# icon. lv_font_conv only ingests font files (TTF/OTF/WOFF), not raw SVGs, so
-# this bridges an SVG asset into that pipeline.
+# lv_font_conv can bake it into the icon font blobs. lv_font_conv only ingests
+# font files (TTF/OTF/WOFF), not raw SVGs, so this bridges an SVG asset into
+# that pipeline.
 #
 # The glyph is placed at a Private-Use-Area codepoint (default 0xE900) and
 # scaled to sit on the baseline at roughly cap height, so it drops into a line

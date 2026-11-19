@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 #
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Regenerate the committed LVGL binary UI fonts under openrtx/fonts/.
@@ -10,7 +11,8 @@
 # the pixel sizes, or the icon set, then commit the regenerated .bin files.
 #
 # Fonts are produced by lv_font_conv (https://github.com/lvgl/lv_font_conv),
-# invoked through `npx` so no global install is required.
+# invoked through `npx` so no global install is required. The version is
+# pinned so the same sources give the same blobs.
 #
 # Usage:  scripts/gen_fonts.sh [UBUNTU_TTF] [FONTAWESOME_WOFF]
 #
@@ -23,6 +25,7 @@ set -euo pipefail
 TTF="${1:-/usr/share/fonts/truetype/ubuntu/Ubuntu-R.ttf}"
 FA="${2:-FontAwesome5-Solid+Brands+Regular.woff}"
 OUT="$(cd "$(dirname "$0")/../openrtx/fonts" && pwd)"
+LV_FONT_CONV="lv_font_conv@1.5.3"
 
 command -v npx >/dev/null || { echo "npx (Node.js) is required"; exit 1; }
 [ -f "$TTF" ] || { echo "Ubuntu TTF not found: $TTF"; exit 1; }
@@ -41,9 +44,10 @@ M17_CP=0xE900
 if [ -f "$M17_SVG" ]; then
     command -v inkscape >/dev/null || { echo "inkscape is required for the custom icon font"; exit 1; }
     python3 -c "import fontTools" 2>/dev/null || { echo "python3 fonttools is required for the custom icon font"; exit 1; }
-    ICON_OUTLINE="$(mktemp --suffix=.svg)"
-    ICON_TTF="$(mktemp --suffix=.ttf)"
-    trap 'rm -f "$ICON_OUTLINE" "$ICON_TTF"' EXIT
+    ICON_TMP="$(mktemp -d)"
+    trap 'rm -rf "$ICON_TMP"' EXIT
+    ICON_OUTLINE="$ICON_TMP/outline.svg"
+    ICON_TTF="$ICON_TMP/icon.ttf"
     inkscape "$M17_SVG" \
         --actions="select-all;object-stroke-to-path;export-plain-svg;export-filename:$ICON_OUTLINE;export-do" \
         >/dev/null 2>&1
@@ -53,29 +57,29 @@ else
     echo "WARNING: $M17_SVG not found — skipping the custom icon font"
 fi
 
-# fontSize_t slot -> lv_font_conv pixel size (ppem). Calibrated so each font's
-# digit advance and cap height match the historic Adafruit GFXfont metrics, so
-# existing layouts do not reflow. NOTE: ppem != the nominal "pt" name.
-declare -A PPEM=( [5]=8 [6]=12 [8]=16 [9]=17 [10]=20 [12]=25 [16]=30 )
+# fontSize_t slot:lv_font_conv pixel size (ppem). Every layout is sized
+# against these digit advances and cap heights. NOTE: ppem != the "pt" name.
+SLOTS="5:8 6:12 8:16 9:17 10:20 12:25 16:30"
 
 # ASCII text plus a curated FontAwesome icon subset (LVGL's canonical
 # codepoints, all present in the free woff). Extend as the UI needs icons.
 ASCII="0x20-0x7E"
 ICONS="0xF012,0xF013,0xF023,0xF026,0xF028,0xF071,0xF095,0xF0C9,0xF0E0,0xF0E7,0xF0F3,0xF124,0xF185,0xF1EB,0xF240,0xF242,0xF244"
 
-for pt in 5 6 8 9 10 12 16; do
-    p="${PPEM[$pt]}"
+for slot in $SLOTS; do
+    pt="${slot%%:*}"
+    p="${slot#*:}"
     # 1bpp (monochrome targets), raw.
-    npx --yes lv_font_conv@latest \
+    npx --yes "$LV_FONT_CONV" \
         --font "$TTF" -r "$ASCII" --font "$FA" -r "$ICONS" \
         --size "$p" --bpp 1 --format bin --no-compress --no-kerning \
         -o "$OUT/ubuntu_${pt}_1.bin"
     # 4bpp (colour targets), RLE-compressed, anti-aliased.
-    npx --yes lv_font_conv@latest \
+    npx --yes "$LV_FONT_CONV" \
         --font "$TTF" -r "$ASCII" --font "$FA" -r "$ICONS" \
         --size "$p" --bpp 4 --format bin --no-kerning \
         -o "$OUT/ubuntu_${pt}_4.bin"
-    echo "ubuntu_${pt}  (ppem $p): $(stat -c%s "$OUT/ubuntu_${pt}_1.bin")B 1bpp, $(stat -c%s "$OUT/ubuntu_${pt}_4.bin")B 4bpp"
+    echo "ubuntu_${pt}  (ppem $p): $(wc -c < "$OUT/ubuntu_${pt}_1.bin" | tr -d " ")B 1bpp, $(wc -c < "$OUT/ubuntu_${pt}_4.bin" | tr -d " ")B 4bpp"
 
     # The custom icon font lives in its OWN per-size blobs, embedded as a
     # fallback so the base ubuntu blobs stay byte-for-byte unchanged (see
@@ -86,11 +90,11 @@ for pt in 5 6 8 9 10 12 16; do
     # Also the ellipsis (U+2026, from Ubuntu) for text truncation and a
     # FontAwesome backspace (U+F55A) for the character-wheel delete slot.
     if [ -n "${ICON_TTF:-}" ]; then
-        npx --yes lv_font_conv@latest --font "$ICON_TTF" -r "$M17_CP" \
+        npx --yes "$LV_FONT_CONV" --font "$ICON_TTF" -r "$M17_CP" \
             --font "$TTF" -r 0xA1-0xFF -r 0x2026 --font "$FA" -r 0xF55A \
             --size "$p" --bpp 1 --format bin --no-compress --no-kerning \
             -o "$OUT/icons_${pt}_1.bin"
-        npx --yes lv_font_conv@latest --font "$ICON_TTF" -r "$M17_CP" \
+        npx --yes "$LV_FONT_CONV" --font "$ICON_TTF" -r "$M17_CP" \
             --font "$TTF" -r 0xA1-0xFF -r 0x2026 --font "$FA" -r 0xF55A \
             --size "$p" --bpp 4 --format bin --no-kerning \
             -o "$OUT/icons_${pt}_4.bin"

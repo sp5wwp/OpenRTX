@@ -40,7 +40,8 @@ Sources:
 - **Icons** — `FontAwesome5-Solid+Brands+Regular.woff` (SIL OFL 1.1), from
   <https://github.com/lvgl/lvgl/tree/master/scripts/built_in_font>.
 
-`lv_font_conv` runs via `npx`, so only Node.js is needed (no global install).
+`lv_font_conv` runs via `npx` at the version pinned in `gen_fonts.sh`, so only
+Node.js is needed (no global install).
 
 > **Gotcha:** ninja does not track `.incbin` dependencies. After regenerating
 > the blobs, `touch openrtx/src/core/fontData.c` (or clean) so the embed is
@@ -96,8 +97,8 @@ M17-Project/ref-dash under GPL-3.0). `gen_fonts.sh`
 flattens the strokes to fills (Inkscape `object-stroke-to-path`), drops the grey
 drop-shadow layer, and wraps the foreground in a one-glyph TTF via
 `scripts/svg_to_glyph_font.py` (fonttools) before baking it at every size. So
-regenerating the icon font needs `inkscape` and `python3-fonttools` on top of
-`npx`.
+regenerating the icon font needs `inkscape` and fonttools (`requirements.txt`)
+on top of `npx`.
 
 To add a custom icon: give it a Private-Use code point, add its SVG to the
 `gen_fonts.sh` icon-font step (extend `svg_to_glyph_font.py` for multiple
