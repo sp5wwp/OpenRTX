@@ -20,16 +20,13 @@ static constexpr size_t LABEL_SIZE = 32;                ///< Joined label
 static constexpr fontSize_t SCALE_FONT = FONT_SIZE_5PT; ///< S-scale numbers
 static constexpr float S_FULL = 11.0f;                  ///< S-point at full
 
-/* S-points labelled beneath the track, placed by S / S_FULL on its axis. */
+/** S-points labelled beneath the track, placed by S / S_FULL on its axis. */
 static constexpr uint8_t SCALE_POINTS[] = { 1, 3, 5, 7, 9 };
 
-/* Box of a scale number, centred on its tick. */
-static constexpr int16_t NUM_HALF_W = 4;
-static constexpr uint16_t NUM_W = 9;
-
-/* Width of the mark, and how far it stands out of the track. */
-static constexpr uint16_t MARK_W = 2;
-static constexpr int16_t MARK_OUT = 1;
+static constexpr int16_t NUM_HALF_W = 4; ///< Half width of a scale number box
+static constexpr uint16_t NUM_W = 9;     ///< Width of a scale number box
+static constexpr uint16_t MARK_W = 2;    ///< Width of the mark
+static constexpr int16_t MARK_OUT = 1;   ///< Overhang of the mark on the track
 
 /**
  * Clamp a value to [0, 1].

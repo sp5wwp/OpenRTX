@@ -21,16 +21,9 @@ namespace ortxui
 {
 
 /**
- * The shared screen header: a padded row of a fixed left slot with the keypad
- * lock and unread-message glyphs, a centre with the page title, or the clock
- * on a screen without one, and a fixed right slot with the battery as a
- * percentage or an icon, per settings.showBatteryIcon. The left slot balances
- * the right one so the centre lands near the middle; a title too long for it
- * also takes the left slot when that is empty, and ellipsizes if it still
- * does not fit. The text is composed when drawn, so the bar keeps only the
- * readings and the centre's width. reset() readies it for a new screen;
- * update() follows the clock and battery in the state snapshot and the keypad
- * lock, change-gated.
+ * The shared screen header: the keypad lock and unread-message glyphs at the
+ * left, the page title (or the clock) in the centre, and the battery at the
+ * right. The text is composed when drawn, so the bar keeps only the readings.
  */
 class TopBar : public Object
 {

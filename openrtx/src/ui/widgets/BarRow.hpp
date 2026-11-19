@@ -25,7 +25,7 @@ namespace ortxui
  * A labelled horizontal level bar: an optional leading label, a track filled
  * to a fraction in [0, 1], an optional trailing readout, and optionally a mark
  * on the track and an S-scale beneath it. The VFO signal meter, the volume HUD
- * and the macro menu's squelch use it, so they look alike.
+ * and the macro modal's squelch use it, so they look alike.
  */
 class BarRow : public Object
 {

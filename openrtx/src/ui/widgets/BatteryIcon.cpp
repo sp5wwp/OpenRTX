@@ -11,32 +11,28 @@
 namespace ortxui
 {
 
-/* Height of the terminal, and the smallest body that still reads as one. */
-static constexpr int16_t NUB_H = 2;
-static constexpr int16_t MIN_BODY_H = 5;
-static constexpr int16_t MIN_W = 6;
+static constexpr int16_t NUB_H = 2;      ///< Height of the terminal
+static constexpr int16_t MIN_BODY_H = 5; ///< Shortest body that reads as one
+static constexpr int16_t MIN_W = 6;      ///< Narrowest body
 
-/* Width of the body for its height, and of the terminal for the body's. */
-static constexpr int16_t BODY_W_NUM = 4;
-static constexpr int16_t BODY_W_DEN = 5;
-static constexpr int16_t NUB_W_NUM = 3;
-static constexpr int16_t NUB_W_DEN = 5;
+static constexpr int16_t BODY_W_NUM = 4; ///< Body width per height, numerator
+static constexpr int16_t BODY_W_DEN = 5; ///< Body width per height, divisor
+static constexpr int16_t NUB_W_NUM = 3;  ///< Terminal width per body, numerator
+static constexpr int16_t NUB_W_DEN = 5;  ///< Terminal width per body, divisor
 
-/* Body width from which the corners round by 2 px rather than 1. */
+/** Body width from which the corners round by 2 px rather than 1. */
 static constexpr int16_t ROUND2_W = 9;
 
-/* Inset of the charge fill from the outline. */
-static constexpr int16_t FILL_INSET = 2;
+static constexpr int16_t FILL_INSET = 2;   ///< Inset of the fill in the outline
+static constexpr uint16_t FILL_RADIUS = 1; ///< Corner radius of the fill
 
-/* Corner radius of the charge fill. */
-static constexpr uint16_t FILL_RADIUS = 1;
-
-/* Glyph footprint, a little shorter than the top bar so it has room above and
- * below. */
+/** Footprint on a regular screen, short of the bar height to leave a margin. */
 static constexpr Size SIZE_REGULAR = { 13, 12 };
+
+/** Footprint on a compact screen. */
 static constexpr Size SIZE_COMPACT = { 10, 9 };
 
-/* Charge at or below which the fill shows the warning colour. */
+/** Charge at or below which the fill shows the warning colour. */
 static constexpr uint8_t LOW_CHARGE = 20;
 
 Size BatteryIcon::size()
@@ -67,8 +63,7 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
     const int16_t byBody = static_cast<int16_t>(area.y + NUB_H);
     const uint16_t r = (W >= ROUND2_W) ? 2u : 1u;
 
-    /* A square terminal centred on top, overlapping the body by 1 px so they
-     * join. */
+    /* A square terminal on top, overlapping the body by 1 px so they join. */
     const int16_t nubW = static_cast<int16_t>((W * NUB_W_NUM) / NUB_W_DEN);
     d.fillRect({ static_cast<int16_t>(bx + (W - nubW) / 2), area.y,
                  static_cast<uint16_t>(nubW),

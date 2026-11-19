@@ -25,28 +25,21 @@ static constexpr const char *LEFT_GLYPHS[] = {
     SYMBOL_LOCK SYMBOL_ENVELOPE,
 };
 
-/* Whether the bar is laid out for the roomy screen. */
+/** Whether the bar is laid out for the regular screen. */
 static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
 
-/* Bar height. */
-static constexpr int16_t BAR_H = REGULAR ? 16 : 12;
+static constexpr int16_t PAD_X = 4; ///< Inset of the slots from the bar ends
+static constexpr int16_t GAP = 4;   ///< Gap between slots
 
-/* Inset of the slots from the bar ends, and the gap between slots. */
-static constexpr int16_t PAD_X = 4;
-static constexpr int16_t GAP = 4;
-
-/* Width of the left slot. Fixed, it also balances the right slot, keeping the
- * centred title or clock centred. */
+/** Width of the left slot; fixed, so it balances the right one. */
 static constexpr int16_t LOCK_W = REGULAR ? 28 : 22;
 
-/* The widest battery percentage, which sizes its slot. */
+/** The widest battery percentage, which sizes its slot. */
 static constexpr char FULL_CHARGE[] = "100%";
 
-/* Width of the battery icon slot. */
-static constexpr int16_t ICON_W = REGULAR ? 16 : 12;
-
-/* Text font of the bar. */
-static constexpr fontSize_t FONT = FONT_SIZE_6PT;
+static constexpr int16_t BAR_H = REGULAR ? 16 : 12;  ///< Bar height
+static constexpr int16_t ICON_W = REGULAR ? 16 : 12; ///< Battery icon slot
+static constexpr fontSize_t FONT = FONT_SIZE_6PT;    ///< Text font of the bar
 
 /**
  * Paint a text in its box, clipped to it.
@@ -133,7 +126,7 @@ void TopBar::update(const state_t &s, bool locked)
 #endif
     const uint8_t glyphs = (locked ? 1u : 0u) | (unread ? 2u : 0u);
     if (glyphs != shownGlyphs) {
-        /* Constant-width slot, so just swap the glyphs — no re-flow needed. */
+        /* The slot has a fixed width, so the glyphs swap without a relayout. */
         shownGlyphs = glyphs;
         invalidate();
     }
