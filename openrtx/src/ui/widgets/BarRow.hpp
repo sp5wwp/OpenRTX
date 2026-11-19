@@ -32,10 +32,13 @@ public:
      * Set the leading label; plain text is borrowed, not copied.
      *
      * @param l: label, empty for none.
+     * @param icon: glyph drawn before the label, nullptr for none. The two
+     * are joined when drawn, so the label follows the current language.
      */
-    void setLabel(const UiText &l)
+    void setLabel(const UiText &l, const char *icon = nullptr)
     {
         label_ = l;
+        icon_ = icon;
     }
     void setReadout(const char *r)
     {
@@ -64,6 +67,7 @@ public:
 
 private:
     UiText label_;
+    const char *icon_ = nullptr; ///< Glyph before the label, nullptr if none
     const char *readout_ = "";
     float value_ = 0.0f;
     fontSize_t font_ = FONT_SIZE_6PT;

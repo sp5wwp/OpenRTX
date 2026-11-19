@@ -7,6 +7,8 @@
 #include "widgets/BarRow.hpp"
 #include "render/DrawCtx.hpp"
 
+#include <cstdio>
+
 namespace ortxui
 {
 
@@ -27,8 +29,13 @@ void BarRow::draw(DrawCtx &d)
     int16_t left = static_cast<int16_t>(area_.x + kPad);
     int16_t right = static_cast<int16_t>(area_.x + area_.w - kPad);
 
-    /* Label pinned to the left. */
+    /* Label pinned to the left, after its glyph if it has one. */
+    char joined[32];
     const char *label = label_.str();
+    if (icon_ != nullptr) {
+        snprintf(joined, sizeof(joined), "%s %s", icon_, label);
+        label = joined;
+    }
     if (label[0] != '\0') {
         const uint16_t lw = gfx_getTextWidth(font_, label);
         d.textInBox({ left, area_.y, lw, area_.h }, font_, TEXT_ALIGN_LEFT,

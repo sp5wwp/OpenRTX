@@ -42,11 +42,6 @@ void MacroView::build()
     TopBar &bar = useTopBar(STR(macroMenu));
     root_.addChild(&bar);
 
-    /* The squelch label mixes a glyph with a word, composed in the current
-     * language. */
-    snprintf(sqlLabel_, sizeof(sqlLabel_), SYMBOL_VOLUME " %s",
-             STR(squelch).str());
-
     /* The grid rows share the free height; the tiles are placed over them. */
     for (uint8_t r = 0; r < 3; r++) {
         rows_[r].setGrow(1);
@@ -57,7 +52,7 @@ void MacroView::build()
     footer_.setAlign(Align::Center);
     footer_.setBasis(regular ? 14 : 10);
     sqlBar_.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
-    sqlBar_.setLabel(sqlLabel_);
+    sqlBar_.setLabel(STR(squelch), SYMBOL_VOLUME);
     sqlBar_.setColors(Sem::SurfaceHigh, Sem::TxDanger); /* squelch = red, as on
                                                            the VFO meter gate */
     sqlBar_.setTextColor(Sem::OnSurface);

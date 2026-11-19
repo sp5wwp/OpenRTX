@@ -54,7 +54,6 @@ private:
     BarRow sqlBar_; //< squelch level, using the shared level-bar control
 
     char sqlBuf_[8] = { 0 };
-    char sqlLabel_[32] = { 0 }; //< volume glyph + the squelch label
 };
 
 } // namespace ortxui
