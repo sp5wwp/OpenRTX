@@ -17,12 +17,15 @@ static rtxStatus_t rtxStatus;     // RTX driver status
 static rssi_t rssi;               // Current RSSI in dBm
 static bool reinitFilter;         // Flag for RSSI filter re-initialisation
 
-static OpMode *currMode;          // Pointer to currently active opMode handler
 static OpMode noMode;             // Empty opMode handler for opmode::NONE
 static OpMode_FM fmMode;          // FM mode handler
 #ifdef CONFIG_M17
 static OpMode_M17 m17Mode;        // M17 mode handler
 #endif
+
+/* Currently active opMode handler, valid before rtx_init(): the UI thread
+ * may read the squelch before the rtx thread has started. */
+static OpMode *currMode = &noMode;
 
 void rtx_init(pthread_mutex_t *m)
 {

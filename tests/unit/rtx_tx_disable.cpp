@@ -98,3 +98,9 @@ TEST_CASE("RTX thread pttDisable enforcement", "[rtx]")
         REQUIRE(cfg.pttDisable == 0);
     }
 }
+
+TEST_CASE("RTX squelch reads closed before rtx_init()", "[rtx]")
+{
+    /* The UI thread can ask before the rtx thread has initialised. */
+    REQUIRE_FALSE(rtx_rxSquelchOpen());
+}
