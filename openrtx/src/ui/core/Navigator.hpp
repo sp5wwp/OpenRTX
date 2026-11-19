@@ -20,14 +20,6 @@ struct UiMemory;
 class ViewSlot;
 
 /**
- * How a managed overlay is auto-dismissed by tickOverlay().
- */
-enum class OverlayDismiss : uint8_t {
-    Transient,   //< auto-hide after timeoutMs with no re-poke (volume HUD, ...)
-    WhileActive, //< visible only while cond() holds (TX/RX detail overlays, ...)
-};
-
-/**
  * A depth-bounded stack of screens.
  *
  * ENTER-style actions push a child screen, ESC pops back to the parent, and the
@@ -68,12 +60,9 @@ public:
      */
     bool dispatch(const Event &e);
 
-    /** Forward the state snapshot to the active view. */
-    void syncActive(const state_t &s);
-
     /**
-     * Get the active view: the managed overlay when one is shown, else the
-     * built screen.
+     * Get the active view: the overlay when one is shown, else the built
+     * screen.
      *
      * @return the view, or nullptr before setRoot().
      */
@@ -109,32 +98,31 @@ public:
     void closeOverlay();
 
     /**
-     * Present `v` as a *managed* overlay above the current screen and drive its
-     * dismissal centrally from tickOverlay(). The view below stays built. A
-     * managed overlay auto-hides:
-     *   Transient   - after `timeoutMs` since the last pokeOverlay(now);
-     *   WhileActive - as soon as `cond()` returns false.
-     * Re-presenting the same view just refreshes its policy/poke, so a
-     * repeating trigger (e.g. the volume knob turning) keeps one overlay alive.
-     * One managed overlay at a time; a different one replaces it. This is the
-     * shared layer behind the volume HUD and, later, the TX/RX detail views.
+     * Show a view over the current screen, which stays built, until
+     * `timeoutMs` pass without it being presented again. Presenting it again
+     * restarts the timeout, so a repeating trigger keeps it up.
+     *
+     * @param v: view to show.
+     * @param now: current tick.
+     * @param timeoutMs: time it stays up.
      */
-    void presentOverlay(View *v, OverlayDismiss policy, long long now,
-                        uint32_t timeoutMs = 0, bool (*cond)() = nullptr);
+    void presentOverlay(View *v, long long now, uint32_t timeoutMs);
 
-    /** Refresh a Transient overlay's timeout window (call on each re-trigger). */
-    void pokeOverlay(long long now)
-    {
-        overlayPoke_ = now;
-    }
-
-    /** Apply the managed overlay's dismiss policy; call once per UI tick. */
+    /**
+     * Dismiss the overlay once its timeout has passed; call once per UI tick.
+     *
+     * @param now: current tick.
+     */
     void tickOverlay(long long now);
 
-    /** Dismiss the managed overlay now, if one is shown. */
+    /** Dismiss the overlay now, if one is shown. */
     void dismissOverlay();
 
-    /** The managed overlay currently shown, or nullptr. */
+    /**
+     * Get the overlay shown.
+     *
+     * @return the overlay, or nullptr.
+     */
     View *overlay() const
     {
         return overlay_;
@@ -169,20 +157,17 @@ private:
      */
     static void activate(View *v, bool announce);
 
-    static constexpr uint8_t kMaxDepth = 8;
+    /** Deepest stack of screens. */
+    static constexpr uint8_t MAX_DEPTH = 8;
 
     ViewSlot &slot_;                      ///< Where the top screen is built
     UiMemory &mem_;                       ///< What survives a view
-    std::array<ViewId, kMaxDepth> stack_; ///< Screens, root first
-    ViewId built_ = ViewId::Count; ///< Screen currently built in the slot
-    uint8_t depth_ = 0;            ///< Number of screens on the stack
-
-    /* Managed-overlay bookkeeping (see presentOverlay). */
-    View *overlay_ = nullptr;
-    OverlayDismiss overlayPolicy_ = OverlayDismiss::Transient;
-    uint32_t overlayTimeoutMs_ = 0;
-    long long overlayPoke_ = 0;
-    bool (*overlayCond_)() = nullptr;
+    View *overlay_ = nullptr;             ///< Overlay shown, or nullptr
+    long long overlayShown_ = 0;          ///< Tick it was last presented
+    uint32_t overlayTimeout_ = 0;         ///< Time it stays up, in ms
+    std::array<ViewId, MAX_DEPTH> stack_; ///< Screens, root first
+    ViewId built_ = ViewId::Count;        ///< Screen built in the slot
+    uint8_t depth_ = 0;                   ///< Number of screens on the stack
 };
 
 } // namespace ortxui

@@ -242,8 +242,7 @@ static void handleTick(long long now, bool *sync_rtx)
      * volume update rides a periodic EVENT_STATUS, so gating on an empty queue
      * would let that event mask the change. */
     if ((state.volume != last_state.volume) && !macroOpen)
-        nav.presentOverlay(&volumeOverlay, OverlayDismiss::Transient, now,
-                           kVolumeOverlayMs);
+        nav.presentOverlay(&volumeOverlay, now, kVolumeOverlayMs);
 
     /* Apply managed-overlay dismiss policies every tick (unconditionally, for
      * the same empty-queue reason as above). */

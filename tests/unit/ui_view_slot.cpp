@@ -233,7 +233,7 @@ TEST_CASE("Dismissing an overlay leaves the screen below as it was",
     nav.openOverlay(ViewId::TimeDate);
     nav.dispatch(key(KEY_ENTER)); /* opens the time editor */
 
-    nav.presentOverlay(&probe, OverlayDismiss::Transient, 0, 500);
+    nav.presentOverlay(&probe, 0, 500);
     REQUIRE(nav.active() == &probe);
     View *below = slot.view();
     below->screen().clearDirty();

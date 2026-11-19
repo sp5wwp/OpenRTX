@@ -25,7 +25,6 @@ Navigator::~Navigator()
 void Navigator::setRoot(ViewId root)
 {
     overlay_ = nullptr;
-    overlayCond_ = nullptr;
     stack_[0] = root;
     depth_ = 1;
     rebuild();
@@ -38,7 +37,7 @@ View *Navigator::active() const
 
 void Navigator::push(ViewId id)
 {
-    if ((id == ViewId::Count) || (depth_ >= kMaxDepth))
+    if ((id == ViewId::Count) || (depth_ >= MAX_DEPTH))
         return;
 
     stack_[depth_++] = id;
@@ -129,37 +128,15 @@ bool Navigator::dispatch(const Event &e)
     return sync;
 }
 
-void Navigator::syncActive(const state_t &s)
+void Navigator::presentOverlay(View *v, long long now, uint32_t timeoutMs)
 {
-    View *v = active();
-    if (v != nullptr)
-        v->syncFromState(s);
-}
-
-void Navigator::presentOverlay(View *v, OverlayDismiss policy, long long now,
-                               uint32_t timeoutMs, bool (*cond)())
-{
-    if (v == nullptr)
+    overlayShown_ = now;
+    overlayTimeout_ = timeoutMs;
+    if (overlay_ == v)
         return;
 
-    if (overlay_ == v) {
-        /* Already showing: just refresh its policy and poke window so the
-         * repeating trigger keeps the one overlay alive. */
-        overlayPolicy_ = policy;
-        overlayTimeoutMs_ = timeoutMs;
-        overlayCond_ = cond;
-        overlayPoke_ = now;
-        return;
-    }
-
-    /* A different managed overlay replaces whatever was up. */
     dismissOverlay();
-
     overlay_ = v;
-    overlayPolicy_ = policy;
-    overlayTimeoutMs_ = timeoutMs;
-    overlayCond_ = cond;
-    overlayPoke_ = now;
     activate(v, true);
 }
 
@@ -169,7 +146,6 @@ void Navigator::dismissOverlay()
         return;
 
     overlay_ = nullptr;
-    overlayCond_ = nullptr;
 
     /* The screen below stayed built and active: only repaint it. */
     slot_.view()->screen().markAllDirty();
@@ -177,16 +153,7 @@ void Navigator::dismissOverlay()
 
 void Navigator::tickOverlay(long long now)
 {
-    if (overlay_ == nullptr)
-        return;
-
-    bool expired = false;
-    if (overlayPolicy_ == OverlayDismiss::Transient)
-        expired = (now - overlayPoke_) >= (long long)overlayTimeoutMs_;
-    else if (overlayPolicy_ == OverlayDismiss::WhileActive)
-        expired = (overlayCond_ == nullptr) || !overlayCond_();
-
-    if (expired)
+    if ((overlay_ != nullptr) && ((now - overlayShown_) >= overlayTimeout_))
         dismissOverlay();
 }
 
