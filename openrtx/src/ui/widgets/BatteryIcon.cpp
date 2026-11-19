@@ -11,41 +11,44 @@
 namespace ortxui
 {
 
-Size BatteryIcon::natural() const
+Size BatteryIcon::size()
 {
     /* An upright battery with the terminal on top. The height is kept a couple
      * of pixels short of the top-bar height so the glyph has padding above and
-     * below; draw() fits within whatever area the row assigns. */
+     * below; paint() fits within whatever area the row assigns. */
     const bool regular = (sizeClass() == SizeClass::Regular);
     return regular ? Size{ 13, 12 } : Size{ 10, 9 };
 }
 
-void BatteryIcon::draw(DrawCtx &d)
+void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
 {
-    if (area_.empty())
+    if (area.empty())
         return;
 
+    if (charge > 100u)
+        charge = 100u;
+
     const int16_t nubH = 2;
-    const int16_t bodyH = static_cast<int16_t>(area_.h - nubH);
+    const int16_t bodyH = static_cast<int16_t>(area.h - nubH);
     if (bodyH < 5)
         return;
 
     /* Battery aspect: taller than wide. Centre it in the assigned width. */
     int16_t W = static_cast<int16_t>(bodyH * 4 / 5);
-    if (W > static_cast<int16_t>(area_.w))
-        W = static_cast<int16_t>(area_.w);
+    if (W > static_cast<int16_t>(area.w))
+        W = static_cast<int16_t>(area.w);
     if (W < 6)
         W = 6;
 
-    const int16_t bx = static_cast<int16_t>(area_.x + (area_.w - W) / 2);
-    const int16_t byBody = static_cast<int16_t>(area_.y + nubH);
+    const int16_t bx = static_cast<int16_t>(area.x + (area.w - W) / 2);
+    const int16_t byBody = static_cast<int16_t>(area.y + nubH);
     const uint16_t r = (W >= 9) ? 2u : 1u;
 
     /* Terminal: a SQUARED-off cap centred on top of the body (about three
      * fifths of the body width, crisp corners so it reads as a battery contact,
      * not a rounded bottle neck). It overlaps the body by 1px so they join. */
     const int16_t nubW = static_cast<int16_t>((W * 3) / 5);
-    d.fillRect({ static_cast<int16_t>(bx + (W - nubW) / 2), area_.y,
+    d.fillRect({ static_cast<int16_t>(bx + (W - nubW) / 2), area.y,
                  static_cast<uint16_t>(nubW), static_cast<uint16_t>(nubH + 1) },
                Sem::OnSurface);
 
@@ -76,11 +79,11 @@ void BatteryIcon::draw(DrawCtx &d)
 
     /* Charge fill, from the bottom up, inset 2px from the outline. */
     const int innerH = bodyH - 4;
-    const int fillH = innerH * static_cast<int>(charge_) / 100;
+    const int fillH = innerH * static_cast<int>(charge) / 100;
     if (fillH <= 0)
         return;
 
-    const Sem fill = (charge_ <= 20u) ? Sem::Warning : Sem::OnSurface;
+    const Sem fill = (charge <= 20u) ? Sem::Warning : Sem::OnSurface;
     d.fillRoundRect({ static_cast<int16_t>(bx + 2),
                       static_cast<int16_t>(byBody + 2 + (innerH - fillH)),
                       static_cast<uint16_t>(W - 4),

@@ -7,10 +7,10 @@
 #ifndef ORTX_UI_TOPBAR_HPP
 #define ORTX_UI_TOPBAR_HPP
 
+#include <cstddef>
 #include <cstdint>
-#include "layout/Flex.hpp"
-#include "widgets/Widgets.hpp"
-#include "widgets/BatteryIcon.hpp"
+#include "core/Object.hpp"
+#include "core/UiText.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -24,11 +24,14 @@ namespace ortxui
  * messages, on every screen. The right cluster shows the battery as EITHER a
  * percentage or an icon, per settings.showBatteryIcon. A left pad balances the
  * cluster so the centre lands near the true middle while long titles still fit.
- * The constructor sizes the bar for the active SizeClass; reset() readies it
- * for a new screen; update() refreshes the live clock/battery/lock from the
- * state snapshot, change-gated.
+ *
+ * The slots are laid out as a padded row of a fixed left slot, a growing
+ * centre and a fixed right slot, and their text is composed from the readings
+ * when drawn, so the bar keeps only the readings and the centre's width.
+ * reset() readies it for a new screen; update() follows the clock, battery and
+ * lock in the state snapshot, change-gated.
  */
-class TopBar : public Flex
+class TopBar : public Object
 {
 public:
     /** Constructor. */
@@ -59,29 +62,47 @@ public:
      */
     const UiText &title() const
     {
-        return titleStr_;
+        return title_;
     }
 
     /** Refresh clock + battery + lock from the state snapshot (change-gated). */
     void update(const state_t &s);
 
-private:
-    Label lock_;   //< lock / unread glyphs at the far left (blank otherwise);
-                   //  its reserved width also balances the right status cluster
-    Label middle_; //< page title, or the clock when there is no title
-    Label pct_;    //< battery percentage (when showBatteryIcon is false)
-    BatteryIcon battery_; //< battery glyph (when showBatteryIcon is true)
+    /** Size the centre slot to the bar. */
+    void onLayout() override;
 
-    UiText titleStr_;
-    bool hasTitle_ = false;
-    char clockBuf_[8] = { 0 };
-    char pctBuf_[8] = { 0 };
-    int16_t lastMinute_ = -1;
-    uint8_t lastCharge_ = 0xFFu;
-    bool lastLocked_ = false;
-    /** Whether the envelope for unread messages is shown. */
-    bool lastUnread_ = false;
-    int8_t lastShowIcon_ = -1; //< -1 forces the first battery-mode layout
+    /** Paint the background and the slots. */
+    void draw(DrawCtx &d) override;
+
+private:
+    /**
+     * Compose the centre text: the title, or the clock.
+     *
+     * @param clock: buffer for the clock, CLOCK_SIZE bytes.
+     * @return the text.
+     */
+    const char *middleText(char *clock) const;
+
+    /**
+     * Get the width of the right cluster.
+     *
+     * @return the width, with the gap between the percentage and the icon
+     * when both show.
+     */
+    int16_t rightWidth() const;
+
+    /** Size of the clock text. */
+    static constexpr size_t CLOCK_SIZE = 8;
+
+    UiText title_;          ///< Page title
+    uint16_t middleW_ = 0;  ///< Width of the centre slot
+    uint8_t textH_ = 0;     ///< Height of the text slots
+    bool hasTitle_ = false; ///< The centre shows the title, not the clock
+    uint8_t hour_ = 0;      ///< Hour shown by the clock
+    int8_t minute_ = -1;    ///< Minute shown by the clock, -1 before one
+    uint8_t charge_ = 0xFF; ///< Battery charge shown, 0xFF before one
+    uint8_t glyphs_ = 0;    ///< Left glyphs: bit 0 locked, bit 1 unread
+    int8_t showIcon_ = -1;  ///< Battery as an icon; -1 shows both until set
 };
 
 } // namespace ortxui

@@ -8,30 +8,38 @@
 #define ORTX_UI_BATTERYICON_HPP
 
 #include <cstdint>
-#include "core/Object.hpp"
+#include "core/Geometry.hpp"
+#include "core/Layout.hpp"
 
 namespace ortxui
 {
 
+class DrawCtx;
+
 /**
  * A small battery glyph for the top bar: an outlined body with a terminal nub
  * and an inner fill proportional to charge. The fill turns to the warning
- * colour at low charge. Drawn within its layout-assigned area; natural() gives
- * it a fixed footprint so a Flex row reserves the right width.
+ * colour at low charge. The top bar paints it in the slot it lays out, so the
+ * glyph keeps no state of its own.
  */
-class BatteryIcon : public Object
+class BatteryIcon
 {
 public:
-    void setCharge(uint8_t pct)
-    {
-        charge_ = (pct > 100u) ? 100u : pct;
-    }
+    /**
+     * Get the glyph's footprint, which the top bar centres in its slot.
+     *
+     * @return the size.
+     */
+    static Size size();
 
-    Size natural() const override;
-    void draw(DrawCtx &d) override;
-
-private:
-    uint8_t charge_ = 0;
+    /**
+     * Paint the glyph within an area.
+     *
+     * @param d: drawing context.
+     * @param area: area to fit the glyph in.
+     * @param charge: battery charge in percent; above 100 counts as 100.
+     */
+    static void paint(DrawCtx &d, const Rect &area, uint8_t charge);
 };
 
 } // namespace ortxui
