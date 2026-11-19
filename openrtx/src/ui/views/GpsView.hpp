@@ -12,8 +12,8 @@
 #include "layout/Flex.hpp"
 #include "widgets/Widgets.hpp"
 #include "widgets/TopBar.hpp"
-#include "widgets/TextRow.hpp"
 #include "widgets/Compass.hpp"
+#include "views/GpsReadout.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -40,15 +40,6 @@ public:
     }
 
 private:
-    enum Row : uint8_t {
-        RowLat,
-        RowLon,
-        RowLoc,
-        RowAlt,
-        RowSpd,
-        RowCount,
-    };
-
     /* Coarse presentation state; a change re-lays-out body vs. status line. */
     enum class FixKind : uint8_t { NoGps, GpsOff, NoFix, FixLost, Fixed };
 
@@ -59,17 +50,10 @@ private:
     Flex root_;
     Flex body_;
     Compass compass_;
-    Flex statsCol_;
-    TextRow rows_[RowCount];
+    GpsReadout readout_; ///< Position, locator, altitude and speed
     Label status_;
 
-    char valBufs_[RowCount][16] = {};
-
     FixKind lastKind_ = FixKind::NoGps;
-    int32_t lastLat_ = INT32_MIN;
-    int32_t lastLon_ = INT32_MIN;
-    int16_t lastAlt_ = INT16_MIN;
-    uint16_t lastSpeed_ = 0xFFFFu;
     int16_t lastHeading_ = INT16_MIN;
 };
 

@@ -22,13 +22,6 @@ void Compass::setHeading(int16_t deg, bool valid)
         d = static_cast<int16_t>(d + 360);
     heading_ = d;
     valid_ = valid;
-
-    /* The bitmap font is ASCII-only (no degree glyph), so the heading reads as
-     * a plain 3-digit bearing; the dial supplies the "degrees" context. */
-    if (valid)
-        snprintf(label_, sizeof(label_), "%03d", d);
-    else
-        snprintf(label_, sizeof(label_), "---");
 }
 
 void Compass::draw(DrawCtx &d)
@@ -65,11 +58,16 @@ void Compass::draw(DrawCtx &d)
                     k.s);
     }
 
-    /* Heading readout under the dial. */
+    /* Heading readout under the dial. The font has no degree glyph, so the
+     * heading reads as a plain 3-digit bearing; the dial supplies the
+     * "degrees" context. */
+    char label[6] = "---";
+    if (valid_)
+        snprintf(label, sizeof(label), "%03d", heading_);
     const Rect lblBox = { area_.x, static_cast<int16_t>(area_.y + dialH),
                           area_.w, static_cast<uint16_t>(labelH) };
     d.textInBox(lblBox, FONT_SIZE_6PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
-                label_);
+                label);
 
     if (!valid_)
         return;

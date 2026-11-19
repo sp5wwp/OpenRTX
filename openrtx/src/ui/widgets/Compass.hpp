@@ -30,7 +30,6 @@ public:
 private:
     int16_t heading_ = 0;
     bool valid_ = false;
-    char label_[6] = "---";
 };
 
 } // namespace ortxui
