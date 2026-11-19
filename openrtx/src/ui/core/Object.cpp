@@ -16,13 +16,6 @@ bool Object::onEvent(const Event &e)
     return false;
 }
 
-void Object::onDescendantInvalidated(const Rect &area)
-{
-    /* Non-root objects forward toward the root. */
-    if (parent_ != nullptr)
-        parent_->onDescendantInvalidated(area);
-}
-
 void Object::addChild(Object *child)
 {
     if (child == nullptr)
@@ -47,13 +40,11 @@ void Object::setFlag(ObjFlag f, bool on)
 
 void Object::invalidate()
 {
-    flags_ |= FLAG_DIRTY;
-
     Object *root = this;
     while (root->parent_ != nullptr)
         root = root->parent_;
 
-    root->onDescendantInvalidated(area_);
+    root->onInvalidated();
 }
 
 void Object::paintTree(DrawCtx &d)

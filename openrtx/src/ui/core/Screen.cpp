@@ -10,6 +10,9 @@
 namespace ortxui
 {
 
+/** Most focusable objects a screen can hold. */
+static constexpr uint8_t MAX_FOCUSABLES = 32;
+
 Screen::Screen()
 {
     markAllDirty();
@@ -17,23 +20,22 @@ Screen::Screen()
 
 void Screen::draw(DrawCtx &d)
 {
-    (void)d; /* the root itself paints nothing; children do */
+    (void)d;
 }
 
-void Screen::onDescendantInvalidated(const Rect &area)
+void Screen::onInvalidated()
 {
-    (void)area; /* a repaint redraws the whole screen */
-    hasDirty_ = true;
+    dirty_ = true;
 }
 
 void Screen::markAllDirty()
 {
-    hasDirty_ = true;
+    dirty_ = true;
 }
 
 void Screen::clearDirty()
 {
-    hasDirty_ = false;
+    dirty_ = false;
 }
 
 void Screen::setFocus(Object *obj)
@@ -41,70 +43,62 @@ void Screen::setFocus(Object *obj)
     if (focused_ == obj)
         return;
 
-    if (focused_ != nullptr) {
-        focused_->setFlag(FLAG_FOCUSED, false);
+    if (focused_ != nullptr)
         focused_->invalidate();
-    }
 
     focused_ = obj;
 
-    if (focused_ != nullptr) {
-        focused_->setFlag(FLAG_FOCUSED, true);
+    if (focused_ != nullptr)
         focused_->invalidate();
-    }
 }
 
 /**
  * Collect the focusable, non-hidden objects of a subtree in paint (pre-order)
- * order. Traversal is recursive so focusables nested inside layout containers
- * (Flex/Grid) are reached, not just the Screen's direct children.
+ * order, descending into layout containers.
  *
  * @param node: subtree root.
  * @param out: collected objects.
  * @param n: number collected so far, updated.
- * @param max: capacity of out.
  */
-static void collectFocusables(Object *node, Object **out, int &n, int max)
+static void collectFocusables(Object *node, Object **out, uint8_t &n)
 {
-    for (Object *c = node->firstChild(); (c != nullptr) && (n < max);
+    for (Object *c = node->firstChild(); (c != nullptr) && (n < MAX_FOCUSABLES);
          c = c->nextSibling()) {
         if (c->hasFlag(FLAG_HIDDEN))
             continue;
         if (c->hasFlag(FLAG_FOCUSABLE))
             out[n++] = c;
-        collectFocusables(c, out, n, max);
+        collectFocusables(c, out, n);
     }
 }
 
-static constexpr int kMaxFocusables = 32;
-
 void Screen::focusFirst()
 {
-    Object *items[kMaxFocusables];
-    int n = 0;
-    collectFocusables(this, items, n, kMaxFocusables);
+    Object *items[MAX_FOCUSABLES];
+    uint8_t n = 0;
+    collectFocusables(this, items, n);
     if (n > 0)
         setFocus(items[0]);
 }
 
-void Screen::moveFocus(int dir)
+void Screen::moveFocus(int8_t dir)
 {
-    Object *items[kMaxFocusables];
-    int n = 0;
-    collectFocusables(this, items, n, kMaxFocusables);
+    Object *items[MAX_FOCUSABLES];
+    uint8_t n = 0;
+    collectFocusables(this, items, n);
     if (n == 0)
         return;
 
-    int idx = 0;
-    for (int i = 0; i < n; i++) {
+    /* With nothing focused yet, the first step lands on either end. */
+    uint8_t next = (dir >= 0) ? 0 : static_cast<uint8_t>(n - 1);
+    for (uint8_t i = 0; i < n; i++) {
         if (items[i] == focused_) {
-            idx = i;
+            next = static_cast<uint8_t>((i + ((dir >= 0) ? 1 : n - 1)) % n);
             break;
         }
     }
 
-    idx = (idx + ((dir >= 0) ? 1 : -1) + n) % n;
-    setFocus(items[idx]);
+    setFocus(items[next]);
 }
 
 bool Screen::dispatch(const Event &e)
@@ -112,7 +106,6 @@ bool Screen::dispatch(const Event &e)
     if ((focused_ != nullptr) && focused_->onEvent(e))
         return true;
 
-    /* Unconsumed knob steps move focus within the screen. */
     if (e.kind == EvKind::Encoder) {
         moveFocus(e.encoder);
         return true;

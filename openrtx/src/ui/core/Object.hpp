@@ -21,11 +21,8 @@ struct Event;
  * Per-object state flags (bitmask).
  */
 enum ObjFlag : uint8_t {
-    FLAG_HIDDEN = 1u << 0,
-    FLAG_FOCUSABLE = 1u << 1,
-    FLAG_FOCUSED = 1u << 2,
-    FLAG_EDITING = 1u << 3,
-    FLAG_DIRTY = 1u << 4,
+    FLAG_HIDDEN = 1u << 0,    ///< Neither drawn nor laid out
+    FLAG_FOCUSABLE = 1u << 1, ///< Takes part in the Screen focus ring
 };
 
 /**
@@ -33,8 +30,8 @@ enum ObjFlag : uint8_t {
  *
  * The tree is intrusive: each node stores pointers to its parent, first child
  * and next sibling, so building a screen allocates no containers. Areas
- * are in absolute screen coordinates. Objects live in static storage owned by
- * their view (placement-new / direct members), never on the heap.
+ * are in absolute screen coordinates. Objects are owned by their view, and none
+ * is freed while it is in a tree.
  */
 class Object
 {
@@ -44,18 +41,26 @@ public:
     {
     }
 
+    /** Destructor. */
     virtual ~Object() = default;
 
     Object(const Object &) = delete;
     Object &operator=(const Object &) = delete;
 
-    /** Paint this object only (not its children) within its area. */
+    /**
+     * Paint this object only (not its children) within its area.
+     *
+     * @param d: drawing context.
+     */
     virtual void draw(DrawCtx &d) = 0;
 
-    /** Handle an input event; return true when consumed. */
+    /**
+     * Handle an input event.
+     *
+     * @param e: event.
+     * @return true when consumed.
+     */
     virtual bool onEvent(const Event &e);
-
-    /* ---- Tree ---- */
 
     /**
      * Append a child, walking the siblings to the end: trees are built once
@@ -64,37 +69,59 @@ public:
      * @param child: object to append.
      */
     void addChild(Object *child);
+
+    /** Get the parent, nullptr for a root. */
     Object *parent() const
     {
         return parent_;
     }
+
+    /** Get the first child, nullptr if none. */
     Object *firstChild() const
     {
         return firstChild_;
     }
+
+    /** Get the next sibling, nullptr if none. */
     Object *nextSibling() const
     {
         return nextSibling_;
     }
 
-    /* ---- Geometry (absolute screen coordinates) ---- */
+    /**
+     * Place the object.
+     *
+     * @param r: area in absolute screen coordinates.
+     */
     void setArea(const Rect &r)
     {
         area_ = r;
     }
+
+    /** Get the area, in absolute screen coordinates. */
     const Rect &area() const
     {
         return area_;
     }
 
-    /* ---- Flags ---- */
+    /**
+     * Set or clear a flag.
+     *
+     * @param f: flag.
+     * @param on: whether to set it.
+     */
     void setFlag(ObjFlag f, bool on);
+
+    /**
+     * Test a flag.
+     *
+     * @param f: flag.
+     * @return true if it is set.
+     */
     bool hasFlag(ObjFlag f) const
     {
         return (flags_ & f) != 0u;
     }
-
-    /* ---- Layout ---- */
 
     /**
      * Get the layout hints a Flex parent reads when placing this child.
@@ -115,6 +142,12 @@ public:
     {
         grow_ = g;
     }
+
+    /**
+     * Set the preferred main-axis extent.
+     *
+     * @param b: extent in pixels, -1 for natural().
+     */
     void setBasis(int16_t b)
     {
         basis_ = b;
@@ -129,6 +162,12 @@ public:
     {
         margin_ = m;
     }
+
+    /**
+     * Set the cross-axis alignment of the child, overriding its parent's.
+     *
+     * @param a: alignment.
+     */
     void setAlignSelf(Align a)
     {
         self_ = static_cast<uint8_t>(a);
@@ -153,23 +192,26 @@ public:
     {
     }
 
-    /** Mark this object as needing repaint, propagating to the tree root. */
+    /** Mark this object as needing repaint, by telling the tree root. */
     void invalidate();
 
-    /** Recursively paint this subtree (pre-order, skipping hidden nodes). */
+    /**
+     * Recursively paint this subtree (pre-order, skipping hidden nodes).
+     *
+     * @param d: drawing context.
+     */
     void paintTree(DrawCtx &d);
 
 protected:
-    /**
-     * Called on the tree root when a descendant invalidates. The Screen root
-     * overrides this to accumulate a dirty rectangle.
-     */
-    virtual void onDescendantInvalidated(const Rect &area);
+    /** Called on the tree root when an object in the tree invalidates. */
+    virtual void onInvalidated()
+    {
+    }
 
-    Object *parent_ = nullptr;
-    Object *firstChild_ = nullptr;
-    Object *nextSibling_ = nullptr;
-    Rect area_ = { 0, 0, 0, 0 };
+    Object *parent_ = nullptr;      ///< Parent, nullptr for a root
+    Object *firstChild_ = nullptr;  ///< First child
+    Object *nextSibling_ = nullptr; ///< Next child of the parent
+    Rect area_ = { 0, 0, 0, 0 };    ///< Area in screen coordinates
 
     /* Layout hints and flags, packed in a word: every widget carries them. */
     int16_t basis_ = -1; ///< Preferred main-axis extent, -1: natural()

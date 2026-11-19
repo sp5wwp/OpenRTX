@@ -16,29 +16,31 @@ namespace ortxui
  * Kinds of input/lifecycle event delivered to the widget tree.
  */
 enum class EvKind : uint8_t {
-    None = 0,
-    Key,       //< Key press; `keys` holds the raw keyboard bitmask
-    KeyLong,   //< Long key press; `keys` holds the raw keyboard bitmask
+    None = 0,  ///< No event
+    Key,       ///< Key press; `keys` holds the raw keyboard bitmask
+    KeyLong,   ///< Long key press; `keys` holds the raw keyboard bitmask
     KeyRepeat, ///< Auto-repeat of held keys, for handlers that scroll or tune
-    Encoder,   //< Rotary knob step; `encoder` is -1 (left) or +1 (right)
-    Status,    //< Periodic status-change tick (battery, GPS, RTC, ...)
+    Encoder,   ///< Rotary knob step; `encoder` is -1 (left) or +1 (right)
+    Status,    ///< Periodic status-change tick (battery, GPS, RTC, ...)
 };
 
 /**
- * A decoded UI event. Produced from the raw event queue (event_t type +
- * payload, where the payload is a kbd_msg_t value) and dispatched into the
- * widget tree. The rotary knob is surfaced as an Encoder step so widgets and
- * views can treat it like an LVGL-style encoder input device.
+ * A decoded UI event, made from a raw event_t whose payload is a kbd_msg_t
+ * value. The knob arrives as an Encoder step of -1 or +1.
  */
 struct Event {
     /**
-     * Decode a raw event (event_t.type + payload) into a toolkit Event.
+     * Decode a raw event.
+     *
+     * @param type: event_t type.
+     * @param payload: event_t payload.
+     * @return the event.
      */
     static Event decode(uint8_t type, uint32_t payload);
 
-    EvKind kind = EvKind::None;
-    uint32_t keys = 0;
-    int8_t encoder = 0;
+    EvKind kind = EvKind::None; ///< What happened
+    uint32_t keys = 0;          ///< Keyboard bitmask of a key event
+    int8_t encoder = 0;         ///< Knob step of an Encoder event
 };
 
 } // namespace ortxui

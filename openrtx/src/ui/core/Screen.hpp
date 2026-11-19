@@ -22,40 +22,70 @@ namespace ortxui
 class Screen : public Object
 {
 public:
+    /** Constructor. */
+    Screen();
+
     /** Destructor. */
     ~Screen() = default;
 
-    Screen();
+    /**
+     * Paint nothing: the root has no content of its own.
+     *
+     * @param d: drawing context.
+     */
+    void draw(DrawCtx &d) override;
 
-    void draw(DrawCtx &d) override; //< root paints nothing itself
-
-    /** Dispatch an event to the focused object; knob steps move focus. */
+    /**
+     * Dispatch an event to the focused object; unconsumed knob steps move the
+     * focus.
+     *
+     * @param e: event.
+     * @return true when consumed.
+     */
     bool dispatch(const Event &e);
 
-    /* ---- Focus over focusable direct children ---- */
+    /** Focus the first focusable object. */
     void focusFirst();
-    void moveFocus(int dir);
+
+    /**
+     * Move the focus to the next or previous focusable object, wrapping.
+     *
+     * @param dir: +1 next, -1 previous.
+     */
+    void moveFocus(int8_t dir);
+
+    /** Get the focused object, nullptr if none. */
     Object *focused() const
     {
         return focused_;
     }
 
-    /* ---- Repaint tracking ---- */
+    /** Check whether the screen needs a repaint. */
     bool dirty() const
     {
-        return hasDirty_;
+        return dirty_;
     }
+
+    /** Ask for a repaint. */
     void markAllDirty();
+
+    /** Record that the screen was repainted. */
     void clearDirty();
 
 protected:
-    void onDescendantInvalidated(const Rect &area) override;
+    /** Ask for a repaint when an object in the tree invalidates. */
+    void onInvalidated() override;
 
 private:
+    /**
+     * Move the focus to an object.
+     *
+     * @param obj: object to focus.
+     */
     void setFocus(Object *obj);
 
-    Object *focused_ = nullptr;
-    bool hasDirty_ = true; ///< The screen needs a repaint
+    Object *focused_ = nullptr; ///< Focused object, nullptr if none
+    bool dirty_ = true;         ///< The screen needs a repaint
 };
 
 } // namespace ortxui
