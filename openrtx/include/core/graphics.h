@@ -174,20 +174,20 @@ void gfx_setClipRect(int16_t x, int16_t y, uint16_t width, uint16_t height);
 void gfx_resetClipRect(void);
 
 /**
- * Select the crisp (1bpp, non-anti-aliased) text font, or the default smooth
- * anti-aliased font. On colour targets both sets are embedded and this switches
- * the font returned for all subsequent text. No effect on monochrome targets,
- * which ship only the 1bpp font. Defaults to off (smooth).
- * @param on: true for the crisp 1bpp font, false for the smooth AA font.
+ * Select crisp text, drawn with the 1bpp font set, or the default smooth text.
+ * On colour targets both sets are embedded and this switches the font returned
+ * for all subsequent text. No effect on monochrome targets, whose text is
+ * always crisp. Defaults to off (smooth).
+ * @param on: true for crisp text, false for smooth text.
  */
-void gfx_setFontMono(bool on);
+void gfx_setFontCrisp(bool on);
 
 /**
  * Font sets: each holds one font per fontSize_t.
  */
 enum fontSet {
     FONT_SET_TEXT = 0, ///< Default text font
-    FONT_SET_CRISP,    ///< 1bpp text font, see gfx_setFontMono(); the text
+    FONT_SET_CRISP,    ///< Crisp text font, see gfx_setFontCrisp(); the text
                        ///< font itself on monochrome targets
     FONT_SET_ICONS,    ///< App icon glyphs, fallback of the text fonts
     FONT_SET_NUM

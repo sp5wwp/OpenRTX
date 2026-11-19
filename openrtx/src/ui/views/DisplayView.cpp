@@ -121,7 +121,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
             break;
         case RowText:
             state.settings.crispText = (v != 0u);
-            gfx_setFontMono(v != 0u);
+            gfx_setFontCrisp(v != 0u);
             /* The other font has other metrics: lay the screen out again. */
             root.onLayout();
             tree.markAllDirty();

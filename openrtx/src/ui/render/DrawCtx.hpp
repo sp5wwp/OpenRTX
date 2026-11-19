@@ -61,7 +61,7 @@ public:
     void fillRect(const Rect &r, Sem color);
 
     /** Filled rounded rectangle; the corners are anti-aliased (arcs of the AA
-     *  fillCircle), the straight edges crisp. `radius` is clamped to half the
+     *  fillCircle), the straight edges sharp. `radius` is clamped to half the
      *  smaller side. */
     void fillRoundRect(const Rect &r, uint16_t radius, Sem color);
 
@@ -77,7 +77,7 @@ public:
     /** 1px line between two points. */
     void line(Point a, Point b, Sem color);
 
-    /** Anti-aliased line of the given width (coverage-blended; a crisp 1px line
+    /** Anti-aliased line of the given width (coverage-blended; a sharp 1px line
      *  on 1bpp targets since gfx_setPixel thresholds there). */
     void lineAA(Point a, Point b, Sem color, float width = LINE_AA_WIDTH);
 

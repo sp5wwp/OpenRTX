@@ -69,7 +69,7 @@ ICONS="0xF012,0xF013,0xF023,0xF026,0xF028,0xF071,0xF095,0xF0C9,0xF0E0,0xF0E7,0xF
 for slot in $SLOTS; do
     pt="${slot%%:*}"
     p="${slot#*:}"
-    # 1bpp (monochrome targets), raw.
+    # 1bpp (monochrome targets, and crisp text on colour), raw.
     npx --yes "$LV_FONT_CONV" \
         --font "$TTF" -r "$ASCII" --font "$FA" -r "$ICONS" \
         --size "$p" --bpp 1 --format bin --no-compress --no-kerning \

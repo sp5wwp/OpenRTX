@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # variants: default
 
-# Display > Theme (High Contrast) and Text (Crisp): pure-mono, non-AA UI.
+# Display > Theme (High Contrast) and Text (Crisp): black and white, crisp text.
 wait_stable 5000 3
 key ENTER
 wait_stable
@@ -23,7 +23,7 @@ wait_stable
 key ENTER
 wait_stable
 screenshot_sync theme_display_hc.bmp
-# move to Text, edit: UP raises Smooth -> Crisp (drops text anti-aliasing)
+# move to Text, edit: UP raises Smooth -> Crisp
 key DOWN ENTER
 wait_stable
 key UP

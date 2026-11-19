@@ -21,7 +21,8 @@ LVGL's `lv_font_fmt_txt.c` (MIT).
 Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one text blob
 and one icon blob. Colour
 (RGB565) targets embed the anti-aliased **4bpp** set; monochrome (BW) targets
-embed the compact **1bpp** set. The choice is made in `fontData.c` from
+embed the compact **1bpp** set, which colour targets also embed for the
+**Crisp** text setting. The choice is made in `fontData.c` from
 `CONFIG_FONT_AA`, which the colour targets define in their `hwconfig.h` (the
 colour emulator derives it from its pixel format).
 

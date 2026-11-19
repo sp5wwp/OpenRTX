@@ -48,18 +48,18 @@ DECL_FONT_BLOB(12);
 DECL_FONT_BLOB(16);
 
 #ifdef CONFIG_FONT_AA
-/* Colour targets also embed the 1bpp text set, the crisp font selected at run
- * time. Mono targets ship only the 1bpp set. Icons stay 4bpp. */
-#define DECL_FONT_MONO_BLOB(pt)                     \
-    extern const uint8_t _font_mono_##pt##_start[]; \
-    extern const uint8_t _font_mono_##pt##_end[]
-DECL_FONT_MONO_BLOB(5);
-DECL_FONT_MONO_BLOB(6);
-DECL_FONT_MONO_BLOB(8);
-DECL_FONT_MONO_BLOB(9);
-DECL_FONT_MONO_BLOB(10);
-DECL_FONT_MONO_BLOB(12);
-DECL_FONT_MONO_BLOB(16);
+/* Colour targets also embed the crisp text set, selected at run time.
+ * Monochrome targets ship only that set. Icons stay 4bpp. */
+#define DECL_FONT_CRISP_BLOB(pt)                     \
+    extern const uint8_t _font_crisp_##pt##_start[]; \
+    extern const uint8_t _font_crisp_##pt##_end[]
+DECL_FONT_CRISP_BLOB(5);
+DECL_FONT_CRISP_BLOB(6);
+DECL_FONT_CRISP_BLOB(8);
+DECL_FONT_CRISP_BLOB(9);
+DECL_FONT_CRISP_BLOB(10);
+DECL_FONT_CRISP_BLOB(12);
+DECL_FONT_CRISP_BLOB(16);
 #endif
 
 struct fontBlob {
@@ -90,20 +90,20 @@ static const struct fontBlob iconBlobs[FONT_SIZE_NUM] = {
 };
 
 #ifdef CONFIG_FONT_AA
-/* Parallel 1bpp text set (crisp / non-anti-aliased), selected at run time. */
-static const struct fontBlob monoFontBlobs[FONT_SIZE_NUM] = {
-    { _font_mono_5_start, _font_mono_5_end },   // FONT_SIZE_5PT
-    { _font_mono_6_start, _font_mono_6_end },   // FONT_SIZE_6PT
-    { _font_mono_8_start, _font_mono_8_end },   // FONT_SIZE_8PT
-    { _font_mono_9_start, _font_mono_9_end },   // FONT_SIZE_9PT
-    { _font_mono_10_start, _font_mono_10_end }, // FONT_SIZE_10PT
-    { _font_mono_12_start, _font_mono_12_end }, // FONT_SIZE_12PT
-    { _font_mono_16_start, _font_mono_16_end }, // FONT_SIZE_16PT
+/* Parallel crisp text set, selected at run time. */
+static const struct fontBlob crispFontBlobs[FONT_SIZE_NUM] = {
+    { _font_crisp_5_start, _font_crisp_5_end },   // FONT_SIZE_5PT
+    { _font_crisp_6_start, _font_crisp_6_end },   // FONT_SIZE_6PT
+    { _font_crisp_8_start, _font_crisp_8_end },   // FONT_SIZE_8PT
+    { _font_crisp_9_start, _font_crisp_9_end },   // FONT_SIZE_9PT
+    { _font_crisp_10_start, _font_crisp_10_end }, // FONT_SIZE_10PT
+    { _font_crisp_12_start, _font_crisp_12_end }, // FONT_SIZE_12PT
+    { _font_crisp_16_start, _font_crisp_16_end }, // FONT_SIZE_16PT
 };
 #endif
 
-/* Font sets the target has. Mono targets ship only the 1bpp set, so there the
- * crisp set is the text set and gets no slot of its own. */
+/* Font sets the target has. Monochrome targets ship only the crisp set, so
+ * there it is the text set and gets no slot of its own. */
 enum fontSlot {
     FONT_SLOT_TEXT = 0,
 #ifdef CONFIG_FONT_AA
@@ -115,11 +115,11 @@ enum fontSlot {
 
 /* Built-in blobs for each font slot, the default source of every font. */
 static const struct fontBlob *const builtinBlobs[FONT_SLOT_NUM] = {
-    fontBlobs,     // FONT_SLOT_TEXT
+    fontBlobs,      // FONT_SLOT_TEXT
 #ifdef CONFIG_FONT_AA
-    monoFontBlobs, // FONT_SLOT_CRISP
+    crispFontBlobs, // FONT_SLOT_CRISP
 #endif
-    iconBlobs,     // FONT_SLOT_ICONS
+    iconBlobs,      // FONT_SLOT_ICONS
 };
 
 /* Fonts installed with gfx_setFontSource(), a NULL start meaning built-in.
@@ -144,8 +144,8 @@ static struct lvFont roleFonts[FONT_ROLE_NUM];
  * none. */
 static uint8_t roleFontKeys[FONT_ROLE_NUM];
 
-/** Text is drawn with the crisp set, as set by gfx_setFontMono(). */
-static bool useMonoFont = false;
+/** Text is drawn with the crisp set, as set by gfx_setFontCrisp(). */
+static bool useCrispFont = false;
 
 /**
  * Decode a font from its blob.
@@ -211,7 +211,7 @@ static struct lvFont *load_font(enum fontSet set, fontSize_t size)
 /**
  * Get the text font for a size, with the same-size icon font as its
  * fallback so app glyphs (e.g. the M17 logo) resolve. Uses the crisp set
- * when selected with gfx_setFontMono(); a bad size gets the smallest font.
+ * when selected with gfx_setFontCrisp(); a bad size gets the smallest font.
  *
  * @param size: font size.
  * @return the font.
@@ -223,8 +223,8 @@ static const struct lvFont *get_font(fontSize_t size)
 
     enum fontSet set = FONT_SET_TEXT;
 #ifdef CONFIG_FONT_AA
-    // Mono targets ship only the 1bpp set, so crisp is the text font there
-    if (useMonoFont)
+    // Monochrome targets ship only the crisp set, the text font there
+    if (useCrispFont)
         set = FONT_SET_CRISP;
 #endif
     struct lvFont *font = load_font(set, size);
@@ -234,9 +234,9 @@ static const struct lvFont *get_font(fontSize_t size)
     return font;
 }
 
-void gfx_setFontMono(bool on)
+void gfx_setFontCrisp(bool on)
 {
-    useMonoFont = on;
+    useCrispFont = on;
 }
 
 bool gfx_setFontSource(enum fontSet set, fontSize_t size, const uint8_t *data,

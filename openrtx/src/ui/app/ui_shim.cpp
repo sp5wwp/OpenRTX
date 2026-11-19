@@ -192,7 +192,7 @@ extern "C" void ui_init()
     nav.setRoot(ViewId::Vfo);
 
     /* The theme needs no applying: themeColor() reads it when drawing. */
-    gfx_setFontMono(state.settings.crispText);
+    gfx_setFontCrisp(state.settings.crispText);
 
     standby = false;
     last_event_tick = getTick();
@@ -212,14 +212,14 @@ extern "C" void ui_drawSplashScreen()
                                                  - SPLASH_CALL_RISE) };
     /* The logo is drawn crisp in the accent colour, then the text setting is
      * put back for the screens after it. */
-    gfx_setFontMono(true);
+    gfx_setFontCrisp(true);
     drawScreen([&](DrawCtx &d) {
         d.text(logo, FONT_SIZE_12PT, TEXT_ALIGN_CENTER, Sem::Accent,
                "OPN\nRTX");
         d.text(call, FONT_SIZE_8PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
                state.settings.callsign);
     });
-    gfx_setFontMono(state.settings.crispText);
+    gfx_setFontCrisp(state.settings.crispText);
 
     vp_announceSplashScreen();
 }

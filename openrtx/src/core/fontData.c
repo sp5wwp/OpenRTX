@@ -9,8 +9,8 @@
  * openrtx/fonts/) directly into flash via .incbin, one blob per fontSize_t.
  * The paths resolve relative to the build directory (a sibling of the repo
  * root, matching voicePromptData.S). Colour displays get the 4bpp anti-aliased
- * set (plus the 1bpp text set as _font_mono_* for the run-time-selectable crisp
- * font), monochrome targets the compact 1bpp set, chosen by the CONFIG_FONT_AA
+ * set (plus the 1bpp set as _font_crisp_* for crisp text, selected at run
+ * time), monochrome targets the compact 1bpp set, chosen by the CONFIG_FONT_AA
  * define in the target's hwconfig.h. This is a C file with top-level assembly,
  * rather than a .S, so that it can include hwconfig.h, which holds C.
  */
@@ -65,15 +65,15 @@ __asm__(ICON_BLOB(10, "../openrtx/fonts/icons_10_4.bin"));
 __asm__(ICON_BLOB(12, "../openrtx/fonts/icons_12_4.bin"));
 __asm__(ICON_BLOB(16, "../openrtx/fonts/icons_16_4.bin"));
 
-/* Colour targets also embed the 1bpp text set as _font_mono_*, the crisp font
- * selected at run time. The icon blobs stay 4bpp. */
-__asm__(FONT_BLOB(mono_5, "../openrtx/fonts/ubuntu_5_1.bin"));
-__asm__(FONT_BLOB(mono_6, "../openrtx/fonts/ubuntu_6_1.bin"));
-__asm__(FONT_BLOB(mono_8, "../openrtx/fonts/ubuntu_8_1.bin"));
-__asm__(FONT_BLOB(mono_9, "../openrtx/fonts/ubuntu_9_1.bin"));
-__asm__(FONT_BLOB(mono_10, "../openrtx/fonts/ubuntu_10_1.bin"));
-__asm__(FONT_BLOB(mono_12, "../openrtx/fonts/ubuntu_12_1.bin"));
-__asm__(FONT_BLOB(mono_16, "../openrtx/fonts/ubuntu_16_1.bin"));
+/* Colour targets also embed the 1bpp text set as _font_crisp_*, for crisp
+ * text selected at run time. The icon blobs stay 4bpp. */
+__asm__(FONT_BLOB(crisp_5, "../openrtx/fonts/ubuntu_5_1.bin"));
+__asm__(FONT_BLOB(crisp_6, "../openrtx/fonts/ubuntu_6_1.bin"));
+__asm__(FONT_BLOB(crisp_8, "../openrtx/fonts/ubuntu_8_1.bin"));
+__asm__(FONT_BLOB(crisp_9, "../openrtx/fonts/ubuntu_9_1.bin"));
+__asm__(FONT_BLOB(crisp_10, "../openrtx/fonts/ubuntu_10_1.bin"));
+__asm__(FONT_BLOB(crisp_12, "../openrtx/fonts/ubuntu_12_1.bin"));
+__asm__(FONT_BLOB(crisp_16, "../openrtx/fonts/ubuntu_16_1.bin"));
 #else
 __asm__(FONT_BLOB(5, "../openrtx/fonts/ubuntu_5_1.bin"));
 __asm__(FONT_BLOB(6, "../openrtx/fonts/ubuntu_6_1.bin"));
