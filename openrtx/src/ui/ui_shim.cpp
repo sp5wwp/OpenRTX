@@ -21,6 +21,7 @@
  */
 
 #include "core/ui.h"
+#include "core/beeps.h"
 #include "core/state.h"
 #include "core/event.h"
 #include "core/input.h"
@@ -80,6 +81,11 @@ static bool macroLatched = false;
  * auto-dismissed this many ms after the level stops changing. Driven here (not
  * by a view) because the knob is a polled analogue value, not an input event. */
 static constexpr uint32_t kVolumeOverlayMs = 500;
+
+/* Keys that click at the Beep voice level: the keypad, ENTER, ESC, UP and
+ * DOWN. */
+static constexpr uint32_t CLICK_KEYS = KBD_CHAR_MASK | KEY_ENTER | KEY_ESC
+                                     | KEY_UP | KEY_DOWN;
 
 /**
  * Draw the whole screen and send it to the display: in one go, or a band at a
@@ -241,6 +247,78 @@ static bool isToneBurstKey(const kbd_msg_t &msg)
 }
 
 /**
+ * Click a key press at the Beep voice level, where nothing else speaks it.
+ *
+ * @param msg: key event.
+ */
+static void clickKey(const kbd_msg_t &msg)
+{
+    if ((state.settings.vpLevel == vpBeep) && !macroOpen && !msg.repeat
+        && ((msg.keys & CLICK_KEYS) != 0u))
+        vp_beep(BEEP_KEY_GENERIC, SHORT_BEEP);
+}
+
+/**
+ * Handle a key event before the active view: wake the display, dismiss the
+ * volume HUD, replay a prompt on F1, apply the keypad lock and open or close
+ * the macro menu.
+ *
+ * @param msg: key event.
+ * @param now: current tick.
+ * @return true if the active view handles the event.
+ */
+static bool filterKey(const kbd_msg_t &msg, long long now)
+{
+    /* A key press waking the display only wakes it, but MONI still opens the
+     * macro menu. */
+    const bool woke = exitStandby(now);
+    if (woke && ((msg.keys & KEY_MONI) == 0u))
+        return false;
+
+    /* Input acts on the screen under the volume HUD. */
+    if (nav.overlay() == &volumeOverlay)
+        nav.dismissOverlay();
+
+    /* F1 replays the last voice prompt, once however long it is held. */
+    if (((msg.keys & KEY_F1) != 0u) && (state.settings.vpLevel > vpBeep)) {
+        if (!msg.repeat)
+            vp_replayLastPrompt();
+        return false;
+    }
+
+    /* Keypad lock: while locked, ignore keys unless the macro menu is open or
+     * MONI is pressed (so it can always be opened to unlock), except the FM
+     * tone burst. */
+    if (uiMemory.keypadLocked && !macroOpen && ((msg.keys & KEY_MONI) == 0u)
+        && !isToneBurstKey(msg)) {
+        clickKey(msg);
+        return false;
+    }
+
+    /* Macro menu: shown while MONI is held. A long-press latches it open (if
+     * enabled); a MONI press while latched, or releasing MONI when not
+     * latched, closes it. MONI repeating while held does neither. */
+    const bool moni = ((msg.keys & KEY_MONI) != 0u);
+    if (moni && !msg.repeat) {
+        if (!macroOpen) {
+            nav.openOverlay(ViewId::Macro);
+            macroOpen = true;
+            macroLatched = false;
+        } else if (macroLatched) {
+            closeMacro();
+            return false;
+        }
+        if (msg.long_press && (state.settings.macroMenuLatch != 0u))
+            macroLatched = true;
+    } else if (!moni && macroOpen && !macroLatched) {
+        closeMacro();
+        return false; /* the release only closes the menu */
+    }
+
+    return true;
+}
+
+/**
  * Handle one UI tick: wake-keeping, the volume HUD, and at most one queued
  * event.
  *
@@ -279,69 +357,30 @@ static void handleTick(long long now, bool *sync_rtx)
         closeMacro();
 
     if (evQueue_rdPos != evQueue_wrPos) {
-        /* Pop one event per tick, matching the classic loop cadence. */
+        /* Pop one event per tick. */
         const event_t raw = evQueue[evQueue_rdPos];
         evQueue_rdPos = (uint8_t)((evQueue_rdPos + 1) % MAX_NUM_EVENTS);
 
-        /* A keypress always refreshes the idle timer; if it also woke the
-         * display we consume it (except MONI, kept for the macro menu) so the
-         * wake press isn't acted on — parity with the classic UI. */
-        if (raw.type == EVENT_KBD) {
-            kbd_msg_t msg;
-            msg.value = raw.payload;
-            const bool woke = exitStandby(now);
-            if (woke && ((msg.keys & KEY_MONI) == 0u))
-                return;
-
-            /* Any real input (key or tuning knob, both EVENT_KBD) dismisses the
-             * transient volume HUD, so the event acts on the screen underneath
-             * instead of being swallowed by the overlay. */
-            if (nav.overlay() == &volumeOverlay)
-                nav.dismissOverlay();
-
-            /* F1 replays the last voice prompt (global, matches classic),
-             * once however long it is held. */
-            if (((msg.keys & KEY_F1) != 0u)
-                && (state.settings.vpLevel > vpBeep)) {
-                if (!msg.repeat)
-                    vp_replayLastPrompt();
-                return;
-            }
-
-            /* Keypad lock: while locked, ignore keys unless the macro menu is
-             * open or MONI is pressed (so it can always be opened to unlock),
-             * except the FM tone burst. */
-            if (uiMemory.keypadLocked && !macroOpen
-                && ((msg.keys & KEY_MONI) == 0u) && !isToneBurstKey(msg))
-                return;
-
-            /* Macro menu: shown while MONI is held. A long-press latches it open
-             * (if enabled); a MONI press while latched, or releasing MONI when
-             * not latched, closes it. MONI repeating while held does neither. */
-            const bool moni = ((msg.keys & KEY_MONI) != 0u);
-            if (moni && !msg.repeat) {
-                if (!macroOpen) {
-                    nav.openOverlay(ViewId::Macro);
-                    macroOpen = true;
-                    macroLatched = false;
-                } else if (macroLatched) {
-                    closeMacro();
-                    return;
-                }
-                if (msg.long_press && (state.settings.macroMenuLatch != 0u))
-                    macroLatched = true;
-            } else if (!moni && macroOpen && !macroLatched) {
-                closeMacro();
-                return; /* consume the closing (key-release) event */
-            }
-        }
+        kbd_msg_t msg;
+        msg.value = raw.payload;
+        const bool key = (raw.type == EVENT_KBD);
+        if (key && !filterKey(msg, now))
+            return;
 
         /* If the view handling the event edited an rtx-affecting field it flags
          * a resync, which we forward so threads.c re-applies state.channel to
          * the radio. */
+        const ViewId shown = nav.activeId();
         const Event ev = Event::decode((uint8_t)raw.type, raw.payload);
         if (nav.dispatch(ev))
             *sync_rtx = true;
+
+        if (key) {
+            /* Going back from a screen beeps like reaching a first item. */
+            if (((msg.keys & KEY_ESC) != 0u) && (nav.activeId() != shown))
+                vp_playMenuBeepIfNeeded(true);
+            clickKey(msg);
+        }
         return;
     }
 

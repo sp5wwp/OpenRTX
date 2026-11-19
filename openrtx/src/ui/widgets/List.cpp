@@ -150,6 +150,7 @@ void List::moveSelection(int8_t dir)
     selected_ = static_cast<uint16_t>(idx);
     scrollToSelected();
     invalidate();
+    vp_playMenuBeepIfNeeded(selected_ == 0);
     announceSelection();
 }
 
