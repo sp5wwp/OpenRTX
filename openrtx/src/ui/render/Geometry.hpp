@@ -16,38 +16,44 @@ namespace ortxui
  * A point in screen space, in pixel coordinates.
  */
 struct Point {
-    int16_t x;
-    int16_t y;
+    int16_t x; ///< Column
+    int16_t y; ///< Row
 };
 
 /**
  * An axis-aligned rectangle, origin at its top-left corner.
  */
 struct Rect {
+    /** Last column inside the rectangle. */
     constexpr int16_t right() const
     {
         return static_cast<int16_t>(x + static_cast<int16_t>(w) - 1);
     }
 
+    /** Last row inside the rectangle. */
     constexpr int16_t bottom() const
     {
         return static_cast<int16_t>(y + static_cast<int16_t>(h) - 1);
     }
 
+    /** True when the rectangle covers no pixel. */
     constexpr bool empty() const
     {
         return (w == 0) || (h == 0);
     }
 
-    int16_t x;
-    int16_t y;
-    uint16_t w;
-    uint16_t h;
+    int16_t x;  ///< Left column
+    int16_t y;  ///< Top row
+    uint16_t w; ///< Width, in pixels
+    uint16_t h; ///< Height, in pixels
 };
 
 /**
- * Intersection of two rectangles. Returns an empty rect (w or h == 0) when
- * they do not overlap.
+ * Intersect two rectangles.
+ *
+ * @param a: first rectangle.
+ * @param b: second rectangle.
+ * @return the overlap, or an empty rectangle when they do not overlap.
  */
 inline Rect intersect(const Rect &a, const Rect &b)
 {
