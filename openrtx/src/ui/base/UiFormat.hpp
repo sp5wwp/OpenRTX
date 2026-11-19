@@ -13,7 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "core/UiText.hpp"
+#include "base/UiText.hpp"
 #include "core/cps.h"
 
 namespace ortxui

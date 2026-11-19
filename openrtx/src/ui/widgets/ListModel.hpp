@@ -12,7 +12,7 @@
 #endif
 
 #include <cstdint>
-#include "core/UiText.hpp"
+#include "base/UiText.hpp"
 
 namespace ortxui
 {

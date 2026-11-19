@@ -8,7 +8,7 @@
 
 #include <cstdint>
 
-#include "core/Event.hpp"
+#include "base/Event.hpp"
 #include "interfaces/keyboard.h"
 #include "render/DrawCtx.hpp"
 #include "widgets/List.hpp"

@@ -12,7 +12,7 @@
 #endif
 
 #include <cstdint>
-#include "core/View.hpp"
+#include "base/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/Label.hpp"
 #include "widgets/TopBar.hpp"

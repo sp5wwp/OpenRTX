@@ -12,8 +12,8 @@
 #endif
 
 #include <cstdint>
-#include "core/Geometry.hpp"
-#include "core/Layout.hpp"
+#include "base/Geometry.hpp"
+#include "base/Layout.hpp"
 
 namespace ortxui
 {

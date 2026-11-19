@@ -8,7 +8,7 @@
 #define ORTX_UI_COMPASS_HPP
 
 #include <cstdint>
-#include "core/Object.hpp"
+#include "base/Object.hpp"
 
 namespace ortxui
 {

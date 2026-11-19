@@ -5,7 +5,7 @@
  */
 
 #include "widgets/List.hpp"
-#include "core/Event.hpp"
+#include "base/Event.hpp"
 #include "render/DrawCtx.hpp"
 #include "interfaces/keyboard.h"
 #include "core/state.h"

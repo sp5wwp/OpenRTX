@@ -13,7 +13,7 @@
 
 #include <cstddef>
 #include <cstdint>
-#include "core/Object.hpp"
+#include "base/Object.hpp"
 #include "core/gps.h"
 #include "widgets/TextRow.hpp"
 

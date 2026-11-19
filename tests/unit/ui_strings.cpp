@@ -7,7 +7,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cstring>
 
-#include "core/UiText.hpp"
+#include "base/UiText.hpp"
 
 using ortxui::UiText;
 

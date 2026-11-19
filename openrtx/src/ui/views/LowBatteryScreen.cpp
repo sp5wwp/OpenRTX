@@ -5,7 +5,7 @@
  */
 
 #include "views/LowBatteryScreen.hpp"
-#include "core/UiText.hpp"
+#include "base/UiText.hpp"
 #include "render/DrawCtx.hpp"
 #include "widgets/BatteryIcon.hpp"
 #include "hwconfig.h"

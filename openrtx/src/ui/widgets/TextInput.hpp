@@ -10,8 +10,8 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
-#include "core/Event.hpp"
-#include "core/Object.hpp"
+#include "base/Event.hpp"
+#include "base/Object.hpp"
 #include "core/graphics.h"
 #include "style/Charsets.hpp"
 

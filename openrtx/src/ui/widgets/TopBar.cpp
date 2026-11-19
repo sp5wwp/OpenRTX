@@ -5,8 +5,8 @@
  */
 
 #include "widgets/TopBar.hpp"
-#include "core/Layout.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Layout.hpp"
+#include "base/UiMemory.hpp"
 #include "core/graphics.h"
 #include "core/messages.h"
 #include "render/DrawCtx.hpp"

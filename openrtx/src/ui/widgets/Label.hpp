@@ -7,8 +7,8 @@
 #ifndef ORTX_UI_LABEL_HPP
 #define ORTX_UI_LABEL_HPP
 
-#include "core/Object.hpp"
-#include "core/UiText.hpp"
+#include "base/Object.hpp"
+#include "base/UiText.hpp"
 #include "core/graphics.h"
 #include "style/SemanticColor.hpp"
 

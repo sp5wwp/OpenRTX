@@ -8,7 +8,7 @@
 #define ORTX_UI_FREQHERO_HPP
 
 #include <cstdint>
-#include "core/Object.hpp"
+#include "base/Object.hpp"
 #include "style/SemanticColor.hpp"
 
 namespace ortxui

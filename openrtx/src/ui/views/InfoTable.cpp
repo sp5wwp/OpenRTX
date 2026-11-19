@@ -5,8 +5,8 @@
  */
 
 #include "views/InfoTable.hpp"
-#include "core/Layout.hpp"
-#include "core/UiText.hpp"
+#include "base/Layout.hpp"
+#include "base/UiText.hpp"
 #include "core/memory_profiling.h"
 #include "interfaces/platform.h"
 #include "render/DrawCtx.hpp"

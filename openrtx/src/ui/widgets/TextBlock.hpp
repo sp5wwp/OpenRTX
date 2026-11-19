@@ -8,7 +8,7 @@
 #define ORTX_UI_TEXTBLOCK_HPP
 
 #include <cstdint>
-#include "core/Object.hpp"
+#include "base/Object.hpp"
 #include "core/graphics.h"
 #include "style/SemanticColor.hpp"
 

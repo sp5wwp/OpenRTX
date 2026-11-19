@@ -5,8 +5,8 @@
  */
 
 #include "views/PickerView.hpp"
-#include "core/UiMemory.hpp"
-#include "core/Event.hpp"
+#include "base/UiMemory.hpp"
+#include "base/Event.hpp"
 #include "interfaces/keyboard.h"
 
 namespace ortxui

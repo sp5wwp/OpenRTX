@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/UiFormat.hpp"
+#include "base/UiFormat.hpp"
 #include "core/utils.h"
 #include "rtx/rtx.h"
 

@@ -24,9 +24,9 @@
 #include "rtx/rtx.h"
 #include "hwconfig.h"
 
-#include "core/Event.hpp"
-#include "core/Navigator.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Event.hpp"
+#include "base/Navigator.hpp"
+#include "base/UiMemory.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
 #include "views/LowBatteryScreen.hpp"

@@ -5,8 +5,8 @@
  */
 
 #include "views/TimeDateView.hpp"
-#include "core/Event.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Event.hpp"
+#include "base/UiMemory.hpp"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
 #include "interfaces/keyboard.h"

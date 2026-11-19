@@ -5,7 +5,7 @@
  */
 
 #include "views/DefaultsView.hpp"
-#include "core/Event.hpp"
+#include "base/Event.hpp"
 #include "interfaces/keyboard.h"
 #include "hwconfig.h"
 

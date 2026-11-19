@@ -11,7 +11,7 @@
 #error This header is C++ only!
 #endif
 
-#include "core/Screen.hpp"
+#include "base/Screen.hpp"
 
 namespace ortxui
 {

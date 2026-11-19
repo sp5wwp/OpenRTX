@@ -5,7 +5,7 @@
  */
 
 #include "views/MenuView.hpp"
-#include "core/Event.hpp"
+#include "base/Event.hpp"
 #include "core/utils.h"
 #include "interfaces/keyboard.h"
 #include "hwconfig.h"

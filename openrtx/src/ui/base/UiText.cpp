@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/UiText.hpp"
+#include "base/UiText.hpp"
 
 #include <cstring>
 

@@ -9,9 +9,9 @@
 #include <cstdint>
 #include <cstring>
 
-#include "core/Event.hpp"
-#include "core/Navigator.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Event.hpp"
+#include "base/Navigator.hpp"
+#include "base/UiMemory.hpp"
 #include "core/state.h"
 #include "interfaces/keyboard.h"
 #include "views/ViewSlot.hpp"

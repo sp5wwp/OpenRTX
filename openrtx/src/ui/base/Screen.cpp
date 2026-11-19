@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/Screen.hpp"
-#include "core/Event.hpp"
+#include "base/Screen.hpp"
+#include "base/Event.hpp"
 
 namespace ortxui
 {

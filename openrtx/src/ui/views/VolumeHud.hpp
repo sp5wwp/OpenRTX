@@ -12,7 +12,7 @@
 #endif
 
 #include <cstdint>
-#include "core/Screen.hpp"
+#include "base/Screen.hpp"
 
 namespace ortxui
 {

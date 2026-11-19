@@ -9,8 +9,8 @@
 
 #include <cstdint>
 #include <cstddef>
-#include "core/UiMemory.hpp"
-#include "core/View.hpp"
+#include "base/UiMemory.hpp"
+#include "base/View.hpp"
 #include "core/voicePrompts.h"
 #include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"

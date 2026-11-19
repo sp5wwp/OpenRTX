@@ -5,8 +5,8 @@
  */
 
 #include "widgets/TextInput.hpp"
-#include "core/Event.hpp"
-#include "core/Keypad.hpp"
+#include "base/Event.hpp"
+#include "base/Keypad.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"
 #include "widgets/List.hpp"

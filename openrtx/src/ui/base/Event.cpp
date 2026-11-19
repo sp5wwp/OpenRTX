@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/Event.hpp"
+#include "base/Event.hpp"
 #include "core/input.h"
 #include "core/event.h"
 #include "interfaces/keyboard.h"

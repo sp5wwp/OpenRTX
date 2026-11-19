@@ -5,9 +5,9 @@
  */
 
 #include "views/MacroView.hpp"
-#include "core/Event.hpp"
-#include "core/UiMemory.hpp"
-#include "core/UiFormat.hpp"
+#include "base/Event.hpp"
+#include "base/UiMemory.hpp"
+#include "base/UiFormat.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
 #include "core/voicePromptUtils.h"

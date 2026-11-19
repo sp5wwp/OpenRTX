@@ -9,7 +9,7 @@
 
 #include <array>
 #include "core/graphics.h"
-#include "core/Geometry.hpp"
+#include "base/Geometry.hpp"
 #include "style/SemanticColor.hpp"
 
 namespace ortxui

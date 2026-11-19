@@ -5,7 +5,7 @@
  */
 
 #include "views/FmView.hpp"
-#include "core/UiFormat.hpp"
+#include "base/UiFormat.hpp"
 #include "core/voicePromptUtils.h"
 
 #include <cstdio>

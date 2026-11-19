@@ -5,8 +5,8 @@
  */
 
 #include "views/RadioView.hpp"
-#include "core/Event.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Event.hpp"
+#include "base/UiMemory.hpp"
 #include "interfaces/keyboard.h"
 #include "core/utils.h"
 #include "core/state.h"

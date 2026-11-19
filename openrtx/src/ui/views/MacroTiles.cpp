@@ -5,9 +5,9 @@
  */
 
 #include "views/MacroTiles.hpp"
-#include "core/UiMemory.hpp"
-#include "core/UiFormat.hpp"
-#include "core/UiText.hpp"
+#include "base/UiMemory.hpp"
+#include "base/UiFormat.hpp"
+#include "base/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
 #include "layout/Flex.hpp"

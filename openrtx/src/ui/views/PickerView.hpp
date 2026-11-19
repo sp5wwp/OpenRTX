@@ -8,7 +8,7 @@
 #define ORTX_UI_PICKERVIEW_HPP
 
 #include <cstdint>
-#include "core/View.hpp"
+#include "base/View.hpp"
 #include "views/PickerGrid.hpp"
 
 namespace ortxui

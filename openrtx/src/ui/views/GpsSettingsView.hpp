@@ -10,7 +10,7 @@
 #include <array>
 #include <cstdint>
 #include <cstddef>
-#include "core/SettingsListView.hpp"
+#include "base/SettingsListView.hpp"
 #include "core/state.h"
 #include "hwconfig.h"
 

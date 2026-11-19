@@ -6,7 +6,7 @@
 
 #include "widgets/BatteryIcon.hpp"
 #include "render/DrawCtx.hpp"
-#include "core/Layout.hpp"
+#include "base/Layout.hpp"
 
 namespace ortxui
 {

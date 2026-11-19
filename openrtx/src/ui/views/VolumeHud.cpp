@@ -5,8 +5,8 @@
  */
 
 #include "views/VolumeHud.hpp"
-#include "core/Layout.hpp"
-#include "core/UiText.hpp"
+#include "base/Layout.hpp"
+#include "base/UiText.hpp"
 #include "core/graphics.h"
 #include "render/DrawCtx.hpp"
 #include "style/Symbols.hpp"

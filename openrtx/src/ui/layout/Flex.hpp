@@ -12,8 +12,8 @@
 #endif
 
 #include <cstdint>
-#include "core/Object.hpp"
-#include "core/Layout.hpp"
+#include "base/Object.hpp"
+#include "base/Layout.hpp"
 #include "style/SemanticColor.hpp"
 
 namespace ortxui

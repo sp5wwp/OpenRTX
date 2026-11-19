@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/Object.hpp"
+#include "base/Object.hpp"
 #include "render/DrawCtx.hpp"
 
 namespace ortxui

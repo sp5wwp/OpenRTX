@@ -8,7 +8,7 @@
 #define ORTX_UI_CHARSETS_HPP
 
 #include <cstdint>
-#include "core/Keypad.hpp"
+#include "base/Keypad.hpp"
 
 namespace ortxui
 {

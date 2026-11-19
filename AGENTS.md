@@ -30,7 +30,7 @@ openrtx/           Core firmware (hardware-agnostic)
     ├── protocols/  Protocol implementations (M17, etc.) — structured per OSI layers 1-3
     ├── rtx/        Operational adapters integrating protocols with audio, PTT, squelch
     └── ui/         UI toolkit, shared by every target
-        ├── core/       Object tree, screens, events, navigation, View base
+        ├── base/       Object tree, screens, events, navigation, View base
         ├── layout/     Flex layout
         ├── render/     Theme-aware drawing over core/graphics.h
         ├── style/      Colour themes, character sets, glyph names
@@ -174,7 +174,7 @@ about the layer directly below it, and generic layers never learn a specific pro
 - **Know the `radio_*` call contract.** The rtx thread calls `radio_setOpmode()` only when the mode really changes, before it disables the old OpMode (`openrtx/src/rtx/rtx.cpp`), so the driver does not re-check for a change. Settings that apply to the whole mode go in `radio_setOpmode()`; only RX- or TX-specific settings go in `radio_enableRx()` and `radio_enableTx()`. `radio_MD3x0.cpp` is laid out this way. This is trusting callers inside the firmware (#509; see [Reuse Before Reimplementation](#reuse-before-reimplementation)) applied to the radio interface (#542).
 - **The UI never calls the radio API.** Set the `sync_rtx` flag that `ui_updateFSM` takes and let the rtx thread do the reconfiguration (#335).
 - **LED state is set only in the dedicated FSM**, never from an OpMode (#360).
-- State used by exactly one subsystem lives in that subsystem's state struct. A field only the UI reads belongs in the UI (`openrtx/src/ui/`, e.g. `core/UiMemory.hpp`), not in the global `state` (#429).
+- State used by exactly one subsystem lives in that subsystem's state struct. A field only the UI reads belongs in the UI (`openrtx/src/ui/`, e.g. `base/UiMemory.hpp`), not in the global `state` (#429).
 - Generic structures stay generic. `struct pktDesc` must not grow a mode-specific field such as an M17 destination callsign; mode-specific configuration goes through `rtx_configure`. Likewise a minimum-packet-size check belongs in the OpMode, not in the generic rtx entry point (#427).
 - Signal chains are split the way M17 is split: demodulator produces raw frames and knows only about syncwords; a separate deframer/decoder does unstuffing, CRC and protocol semantics. Keeping framing out of the demodulator is what lets a target with a hardware demodulator reuse the upper half (#396).
 - Anything general-purpose belongs in the library, not in the module that first needed it. Date arithmetic goes to `core/datetime.h`, CRCs to `core/crc.h`, coordinate conversions to `core/gps.h` or `core/utils.h` — even when the only current caller is one driver (#360, #456, #498).

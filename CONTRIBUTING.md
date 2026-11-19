@@ -56,7 +56,7 @@ openrtx           # The core program, including its UI, common utilities, and fe
   ├── protocols   # Protocol implementations that are hardware agnostic; focusing on things like frame structures, encoding, and signal processing
   ├── rtx         # Operational adapters that integrate a protocol, such as handling audio routing, PTT, squelch, etc
   └── ui          # The user interface toolkit, shared by every target
-    ├── core      # Object tree, screens, events, navigation, and the base View
+    ├── base      # Object tree, screens, events, navigation, and the base View
     ├── layout    # Flex layout
     ├── render    # Theme-aware drawing on top of core/graphics.h
     ├── style     # Colour themes, character sets, and glyph names

@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/Navigator.hpp"
-#include "core/Event.hpp"
-#include "core/UiMemory.hpp"
+#include "base/Navigator.hpp"
+#include "base/Event.hpp"
+#include "base/UiMemory.hpp"
 #include "views/ViewSlot.hpp"
 #include "widgets/List.hpp"
 

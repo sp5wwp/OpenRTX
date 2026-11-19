@@ -12,8 +12,8 @@
 #endif
 
 #include <cstdint>
-#include "core/Object.hpp"
-#include "core/UiText.hpp"
+#include "base/Object.hpp"
+#include "base/UiText.hpp"
 #include "core/graphics.h"
 #include "style/SemanticColor.hpp"
 #include "widgets/ListModel.hpp"

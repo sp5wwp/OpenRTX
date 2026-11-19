@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "core/UiMemory.hpp"
+#include "base/UiMemory.hpp"
 
 #include <cstdlib>
 #include <cstring>

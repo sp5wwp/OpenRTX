@@ -18,7 +18,7 @@ extern "C" {
 #include "rtx/rtx.h"
 }
 
-#include "core/UiMemory.hpp"
+#include "base/UiMemory.hpp"
 
 static pthread_mutex_t rtxMutex = PTHREAD_MUTEX_INITIALIZER; ///< For rtx_init()
 

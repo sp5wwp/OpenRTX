@@ -16,8 +16,8 @@
 #include <cstdint>
 #include <cstring>
 #include <type_traits>
-#include "core/ViewId.hpp"
-#include "core/UiText.hpp"
+#include "base/ViewId.hpp"
+#include "base/UiText.hpp"
 #include "core/messages.h"
 #include "style/Charsets.hpp"
 #include "widgets/List.hpp"

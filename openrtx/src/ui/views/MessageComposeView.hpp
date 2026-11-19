@@ -13,7 +13,7 @@
 
 #include <array>
 #include <cstdint>
-#include "core/View.hpp"
+#include "base/View.hpp"
 #include "layout/Flex.hpp"
 #include "widgets/TopBar.hpp"
 #include "widgets/List.hpp"

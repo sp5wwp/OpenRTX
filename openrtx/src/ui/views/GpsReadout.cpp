@@ -5,8 +5,8 @@
  */
 
 #include "views/GpsReadout.hpp"
-#include "core/Layout.hpp"
-#include "core/UiText.hpp"
+#include "base/Layout.hpp"
+#include "base/UiText.hpp"
 
 #include <climits>
 #include <cmath>
