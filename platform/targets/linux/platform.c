@@ -8,6 +8,7 @@
 #include "interfaces/platform.h"
 #include "interfaces/nvmem.h"
 #include <stdio.h>
+#include <time.h>
 #include <unistd.h>
 #include "core/gps.h"
 #include "emulator.h"
@@ -20,6 +21,9 @@
  * with the Module17 UI to make development faster.
  */
 mod17Calib_t mod17CalData;
+
+/** Seconds the emulated RTC runs ahead of the host clock. */
+static time_t rtcOffset = 0;
 
 static const hwInfo_t hwInfo = {
     .vhf_maxFreq = 174,
@@ -133,9 +137,8 @@ datetime_t platform_getCurrentTime()
 {
     datetime_t t;
 
-    time_t rawtime;
+    time_t rawtime = time(NULL) + rtcOffset;
     struct tm *timeinfo;
-    time(&rawtime);
     // radio expects time to be TZ-less, so use gmtime instead of localtime.
     timeinfo = gmtime(&rawtime);
 
@@ -153,9 +156,17 @@ datetime_t platform_getCurrentTime()
 
 void platform_setTime(datetime_t t)
 {
-    (void)t;
+    /* Keep the host clock and run the emulated RTC at an offset from it. */
+    struct tm tm = {
+        .tm_sec = t.second,
+        .tm_min = t.minute,
+        .tm_hour = t.hour,
+        .tm_mday = t.date,
+        .tm_mon = t.month - 1,
+        .tm_year = t.year + 100,
+    };
 
-    printf("rtc_setTime(t)\n");
+    rtcOffset = timegm(&tm) - time(NULL);
 }
 
 const hwInfo_t *platform_getHwInfo()

@@ -4,8 +4,8 @@
 # variants: default smallscreen
 
 # Settings > Time & Date: display the clock, then the keypad digit editor.
-# Under faketime the clock is frozen (2000-01-01 00:00:00) and state_task's
-# 100ms throttle never elapses, so a committed time sticks -- deterministic.
+# Under faketime the host clock is frozen at 2000-01-01 00:00:00; setting the
+# time moves the emulated RTC, which then holds the committed time.
 rssi 0
 wait_stable 5000 3
 key ENTER
@@ -43,7 +43,7 @@ wait_stable
 key 5
 wait_stable
 screenshot_sync td_edit_full.bmp
-# ENTER commits; back in display mode showing the applied time.
+# ENTER commits; back in display mode the clock shows 25/12/80 13:45:00.
 key ENTER
 wait_stable
 screenshot_sync td_committed.bmp
