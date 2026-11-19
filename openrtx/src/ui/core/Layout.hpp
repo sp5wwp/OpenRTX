@@ -83,20 +83,44 @@ constexpr SizeClass sizeClass()
                                            SizeClass::Compact;
 }
 
-/* Keypad input capability, from the target hwconfig. Text entry adapts to it:
- * a numeric keypad gets ETSI phone-style multi-tap; cursor movement uses the
- * LEFT/RIGHT arrows when present, otherwise the knob / UP-DOWN. */
+/*
+ * Keypad keys, as presence macros in the target's hwconfig.h; a target
+ * without the keys leaves the macro undefined. Text entry adapts to them:
+ * - CONFIG_KBD_HAS_ARROWS: LEFT/RIGHT move the cursor; without them the knob
+ *   or UP/DOWN do.
+ * - CONFIG_KBD_HAS_NUMERIC: 0-9 keys, typed with ETSI phone-style multi-tap.
+ * - CONFIG_KBD_SPACE_ON_HASH: the keypad prints space on '#' rather than '0'.
+ * The UI reads them only through these functions.
+ */
+
+/** True when the keypad has LEFT/RIGHT keys. */
 constexpr bool kbdHasArrows()
 {
-    return CONFIG_KBD_HAS_ARROWS != 0;
+#ifdef CONFIG_KBD_HAS_ARROWS
+    return true;
+#else
+    return false;
+#endif
 }
+
+/** True when the keypad has 0-9 keys. */
 constexpr bool kbdHasNumeric()
 {
-    return CONFIG_KBD_HAS_NUMERIC != 0;
+#ifdef CONFIG_KBD_HAS_NUMERIC
+    return true;
+#else
+    return false;
+#endif
 }
+
+/** True when the keypad prints space on '#' rather than '0'. */
 constexpr bool kbdSpaceOnHash()
 {
-    return CONFIG_KBD_SPACE_ON_HASH != 0;
+#ifdef CONFIG_KBD_SPACE_ON_HASH
+    return true;
+#else
+    return false;
+#endif
 }
 
 } // namespace ortxui

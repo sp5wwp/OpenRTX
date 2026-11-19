@@ -8,7 +8,7 @@
 #define ORTX_UI_CHARSETS_HPP
 
 #include <cstdint>
-#include "hwconfig.h"
+#include "core/Layout.hpp"
 
 namespace ortxui
 {
@@ -55,7 +55,7 @@ constexpr Charset CHARSET_TEXT{ CHARS_TEXT, sizeof(CHARS_TEXT) - 1 };
  * key cycle through its string in place; a different key, or a pause of
  * input_longPressTimeout, keeps the character and advances. Indexed by key 0-9,
  * then '*' = 10, '#' = 11. An empty string types nothing ('*' deletes). Space
- * is on '0' or '#', as CONFIG_KBD_SPACE_ON_HASH says the keypad prints it.
+ * is on '0' or '#', as kbdSpaceOnHash() says the keypad prints it.
  */
 struct MultiTapTable {
     static constexpr uint8_t KEY_COUNT = 12; ///< Keys 0-9, '*' and '#'
@@ -65,16 +65,16 @@ struct MultiTapTable {
 
 /** Callsign: uppercase only, digit last in each group. */
 constexpr MultiTapTable MTAP_CALLSIGN = { {
-    CONFIG_KBD_SPACE_ON_HASH ? "0" : "0 ", /* 0, and space unless on '#' */
-    "1-/.",                                /* 1 and the M17 symbols */
+    kbdSpaceOnHash() ? "0" : "0 ", /* 0, and space unless on '#' */
+    "1-/.",                        /* 1 and the M17 symbols */
     "ABC2", "DEF3", "GHI4", "JKL5", "MNO6", "PQRS7", "TUV8", "WXYZ9",
-    "",                                    /* '*' deletes */
-    CONFIG_KBD_SPACE_ON_HASH ? " " : "",   /* '#' is space where printed so */
+    "",                            /* '*' deletes */
+    kbdSpaceOnHash() ? " " : "",   /* '#' is space where printed so */
 } };
 
 /** Free text: lowercase first, then the digit, then uppercase. */
 constexpr MultiTapTable MTAP_TEXT = { {
-    CONFIG_KBD_SPACE_ON_HASH ? "0" : " 0",
+    kbdSpaceOnHash() ? "0" : " 0",
     ".,?!1-/@",
     "abc2ABC",
     "def3DEF",
@@ -85,7 +85,7 @@ constexpr MultiTapTable MTAP_TEXT = { {
     "tuv8TUV",
     "wxyz9WXYZ",
     "",
-    CONFIG_KBD_SPACE_ON_HASH ? " " : "",
+    kbdSpaceOnHash() ? " " : "",
 } };
 
 } // namespace ortxui

@@ -41,10 +41,8 @@ enum Mod17Flags {
 #define CONFIG_MESSAGES
 #define CONFIG_M17_SMS
 
-/* Keypad input capability (adaptive text entry): arrows = has
- * LEFT/RIGHT keys; numeric = has a 0-9 keypad (ETSI multi-tap);
- * space-on-hash = the space key is '#' (else '0'). */
-#define CONFIG_KBD_HAS_ARROWS 1
-#define CONFIG_KBD_HAS_NUMERIC 1
-#define CONFIG_KBD_SPACE_ON_HASH 0
+/* Keypad keys */
+#define CONFIG_KBD_HAS_ARROWS
+#define CONFIG_KBD_HAS_NUMERIC
+
 #endif /* HWCONFIG_H */
