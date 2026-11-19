@@ -28,8 +28,8 @@ namespace ortxui
  * The slots are laid out as a padded row of a fixed left slot, a growing
  * centre and a fixed right slot, and their text is composed from the readings
  * when drawn, so the bar keeps only the readings and the centre's width.
- * reset() readies it for a new screen; update() follows the clock, battery and
- * lock in the state snapshot, change-gated.
+ * reset() readies it for a new screen; update() follows the clock and battery
+ * in the state snapshot and the keypad lock, change-gated.
  */
 class TopBar : public Object
 {
@@ -65,7 +65,11 @@ public:
         return title_;
     }
 
-    /** Refresh clock + battery + lock from the state snapshot (change-gated). */
+    /**
+     * Refresh the clock, battery and keypad lock, change-gated.
+     *
+     * @param s: state snapshot.
+     */
     void update(const state_t &s);
 
     /** Size the centre slot to the bar. */

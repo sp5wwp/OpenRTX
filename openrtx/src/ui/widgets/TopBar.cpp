@@ -6,6 +6,7 @@
 
 #include "widgets/TopBar.hpp"
 #include "core/Layout.hpp"
+#include "core/UiMemory.hpp"
 #include "core/graphics.h"
 #include "core/messages.h"
 #include "render/DrawCtx.hpp"
@@ -134,7 +135,8 @@ void TopBar::update(const state_t &s)
 #else
     const bool unread = false;
 #endif
-    const uint8_t glyphs = (s.keypad_locked ? 1u : 0u) | (unread ? 2u : 0u);
+    const uint8_t glyphs = (uiMemory.keypadLocked ? 1u : 0u)
+                         | (unread ? 2u : 0u);
     if (glyphs != glyphs_) {
         /* Constant-width slot, so just swap the glyphs — no re-flow needed. */
         glyphs_ = glyphs;

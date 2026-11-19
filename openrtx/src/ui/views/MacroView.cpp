@@ -6,6 +6,7 @@
 
 #include "views/MacroView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
 #include "interfaces/keyboard.h"
@@ -194,7 +195,7 @@ void MacroView::doAction(uint8_t number)
         }
 #endif
         case 9: /* keypad lock toggle */
-            state.keypad_locked = !state.keypad_locked;
+            uiMemory.keypadLocked = !uiMemory.keypadLocked;
             break;
         default:
             break;

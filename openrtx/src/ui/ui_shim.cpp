@@ -277,7 +277,7 @@ static void handleTick(long long now, bool *sync_rtx)
 
             /* Keypad lock: while locked, ignore keys unless the macro menu is
              * open or MONI is pressed (so it can always be opened to unlock). */
-            if (state.keypad_locked && !macroOpen
+            if (uiMemory.keypadLocked && !macroOpen
                 && ((msg.keys & KEY_MONI) == 0u))
                 return;
 

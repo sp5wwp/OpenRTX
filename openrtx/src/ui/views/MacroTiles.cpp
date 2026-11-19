@@ -6,6 +6,7 @@
 
 #include "views/MacroTiles.hpp"
 #include "core/LayoutFonts.hpp"
+#include "core/UiMemory.hpp"
 #include "core/UiText.hpp"
 #include "core/cps.h"
 #include "core/graphics.h"
@@ -182,7 +183,7 @@ void MacroTiles::composeValue(uint8_t tile, const state_t &s, char *out,
             break;
         case 8: /* keypad lock */
             sniprintf(out, n, "%s",
-                      (s.keypad_locked ? STR(on) : STR(off)).str());
+                      (uiMemory.keypadLocked ? STR(on) : STR(off)).str());
             break;
         default:
             out[0] = '\0';

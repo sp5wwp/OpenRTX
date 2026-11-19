@@ -17,6 +17,8 @@ extern "C" {
 #include "rtx/rtx.h"
 }
 
+#include "core/UiMemory.hpp"
+
 static pthread_mutex_t rtxMutex = PTHREAD_MUTEX_INITIALIZER; ///< For rtx_init()
 
 /**
@@ -42,7 +44,7 @@ TEST_CASE("PTT is gated outside the home screen", "[ui]")
     /* The UI tick reads the squelch through rtx; no platform state is needed. */
     rtx_init(&rtxMutex);
     state.settings = default_settings;
-    state.keypad_locked = false;
+    ortxui::uiMemory.keypadLocked = false;
     state.pttDisable = false;
     ui_init();
 
