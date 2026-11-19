@@ -99,6 +99,7 @@ void TextInput::configure(char *buf, uint16_t cap, const Charset &cs, Mode mode,
     topRow_ = 0;
     tapActive_ = false;
     tapKeyIdx_ = -1;
+    enterDown_ = false;
     /* Leave any prior slot-mode state behind so a reused widget accepts text. */
     slotMode_ = false;
     slotCount_ = 0;
@@ -120,6 +121,7 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     placeholder_ = placeholder;
     tapActive_ = false;
     tapKeyIdx_ = -1;
+    enterDown_ = false;
 
     /* Lay the mask into the buffer and note each slot's offset. A mask longer
      * than the buffer or MAX_SLOTS is cut short, which slotCount() shows. */
@@ -547,12 +549,14 @@ TextInput::KeyResult TextInput::handleEvent(const Event &e, long long nowTick)
             return handleKey(e.keys & REPEAT_KEYS, nowTick);
 
         case EvKind::KeyLong:
-            if (knobOnly() && ((e.keys & KEY_ENTER) != 0u))
+            /* The press that opened the editor is not this field's to commit. */
+            if (knobOnly() && enterDown_ && ((e.keys & KEY_ENTER) != 0u))
                 return commit();
             return KeyResult::NotHandled;
 
         case EvKind::Key:
-            if (knobOnly() && ((e.keys & KEY_ENTER) != 0u)) {
+            enterDown_ = ((e.keys & KEY_ENTER) != 0u);
+            if (knobOnly() && enterDown_) {
                 moveCursor(+1);
                 return KeyResult::Editing;
             }

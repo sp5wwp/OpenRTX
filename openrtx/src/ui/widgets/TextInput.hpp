@@ -117,7 +117,8 @@ public:
      * Apply an event to a text field: a press as handleKey(), held arrows and
      * '*' as repeated presses, and the knob as a character change or a cursor
      * move. On a keypad with neither arrows nor digits, ENTER steps to the next
-     * character and a long ENTER commits.
+     * character and a long ENTER commits, if it was pressed after the field
+     * was bound.
      *
      * @param e: event.
      * @param nowTick: current tick, for multi-tap.
@@ -385,6 +386,7 @@ private:
     uint8_t tapSet_ = 0;     ///< Index into the tapped key's characters
     int8_t tapKeyIdx_ = -1;  ///< Last key tapped
     bool tapActive_ = false; ///< A character is being tapped
+    bool enterDown_ = false; ///< ENTER went down while the field was bound
     bool slotMode_ = false;  ///< The field is a slot mask
     char placeholder_ = '-'; ///< Character of an unfilled slot
 };
