@@ -99,6 +99,7 @@ void DisplayView::applyValue(uint8_t row, uint8_t v)
 #endif
         case RowSquelch:
             state.settings.sqlLevel = v;
+            requestSyncRtx();
             break;
         case RowTimer:
             /* The standby loop reads display_timer on every tick. */

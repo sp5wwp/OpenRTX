@@ -101,3 +101,54 @@ TEST_CASE("Radio offset stays inside the radio's bands", "[ui][settings]")
 
     slot.destroy();
 }
+
+TEST_CASE("Settings that reach the radio request an rtx sync", "[ui][settings]")
+{
+    resetState();
+    ViewSlot slot;
+
+    SECTION("squelch")
+    {
+        View *v = slot.build(ViewId::Display);
+        /* Squelch is the row after Brightness. */
+        press(v, KEY_DOWN);
+        press(v, KEY_ENTER);
+        REQUIRE_FALSE(v->takeSyncRtx());
+        press(v, KEY_UP);
+        REQUIRE(state.settings.sqlLevel == default_settings.sqlLevel + 1);
+        REQUIRE(v->takeSyncRtx());
+    }
+
+    SECTION("M17 callsign")
+    {
+        View *v = slot.build(ViewId::M17);
+        press(v, KEY_ENTER);
+        press(v, KEY_UP);
+        press(v, KEY_ENTER);
+        REQUIRE(v->takeSyncRtx());
+    }
+
+    SECTION("M17 CAN")
+    {
+        View *v = slot.build(ViewId::M17);
+        press(v, KEY_DOWN);
+        press(v, KEY_DOWN);
+        press(v, KEY_ENTER);
+        press(v, KEY_UP);
+        REQUIRE(state.settings.m17_can == 1);
+        REQUIRE(v->takeSyncRtx());
+    }
+
+    SECTION("M17 CAN RX check")
+    {
+        View *v = slot.build(ViewId::M17);
+        press(v, KEY_DOWN);
+        press(v, KEY_DOWN);
+        press(v, KEY_DOWN);
+        press(v, KEY_ENTER);
+        REQUIRE(state.settings.m17_can_rx);
+        REQUIRE(v->takeSyncRtx());
+    }
+
+    slot.destroy();
+}

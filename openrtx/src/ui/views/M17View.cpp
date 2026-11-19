@@ -103,6 +103,7 @@ void M17View::onAdjust(uint8_t row, int8_t dir)
     (void)row;
     settings_t &st = state.settings;
     st.m17_can = static_cast<uint8_t>((st.m17_can + dir + 16) % 16);
+    requestSyncRtx();
 }
 
 void M17View::onToggle(uint8_t row, bool on)
@@ -110,6 +111,7 @@ void M17View::onToggle(uint8_t row, bool on)
     /* CAN RX is the only Checkbox row. */
     (void)row;
     state.settings.m17_can_rx = on;
+    requestSyncRtx();
 }
 
 NavIntent M17View::onActivate(uint8_t row)
@@ -137,6 +139,7 @@ void M17View::callsignConfirm()
     strncpy(state.settings.callsign, callBuf_,
             sizeof(state.settings.callsign) - 1);
     state.settings.callsign[sizeof(state.settings.callsign) - 1] = '\0';
+    requestSyncRtx();
 
     endEdit();
 }
