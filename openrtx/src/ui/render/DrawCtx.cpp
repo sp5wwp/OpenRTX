@@ -15,9 +15,32 @@
 namespace ortxui
 {
 
-DrawCtx::DrawCtx() : clip_{ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT }
+DrawCtx::DrawCtx() :
+    DrawCtx(Rect{ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT })
+{
+}
+
+DrawCtx::DrawCtx(const Rect &bounds) : bounds_(bounds), clip_(bounds)
 {
     gfx_resetClipRect();
+}
+
+/**
+ * Narrow a span of offsets from an origin to those landing inside the clip,
+ * so that loops over a shape's bounding box skip what would be clipped.
+ *
+ * @param lo: first offset, raised to the first one inside.
+ * @param hi: last offset, lowered to the last one inside.
+ * @param origin: coordinate the offsets are from.
+ * @param first: first coordinate inside the clip.
+ * @param last: last coordinate inside the clip.
+ */
+static void clipSpan(int &lo, int &hi, int origin, int first, int last)
+{
+    if (origin + lo < first)
+        lo = first - origin;
+    if (origin + hi > last)
+        hi = last - origin;
 }
 
 void DrawCtx::pushClip(const Rect &r)
@@ -34,9 +57,7 @@ void DrawCtx::popClip()
 {
     if (clipDepth_ > 0)
         clipDepth_--;
-    clip_ = (clipDepth_ < kClipStackMax) ?
-                clipStack_[clipDepth_] :
-                Rect{ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT };
+    clip_ = (clipDepth_ < kClipStackMax) ? clipStack_[clipDepth_] : bounds_;
     gfx_setClipRect(clip_.x, clip_.y, clip_.w, clip_.h);
 }
 
@@ -112,8 +133,11 @@ void DrawCtx::drawCircle(Point c, uint16_t r, Sem color)
     const color_t col = themeColor(color);
     const float rf = static_cast<float>(r);
     const int R = static_cast<int>(r) + 1;
-    for (int dy = -R; dy <= R; dy++) {
-        for (int dx = -R; dx <= R; dx++) {
+    int dy0 = -R, dy1 = R, dx0 = -R, dx1 = R;
+    clipSpan(dy0, dy1, c.y, clip_.y, clip_.bottom());
+    clipSpan(dx0, dx1, c.x, clip_.x, clip_.right());
+    for (int dy = dy0; dy <= dy1; dy++) {
+        for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
             float cov = 1.0f - std::fabs(dist - rf);
             if (cov <= 0.0f)
@@ -135,8 +159,11 @@ void DrawCtx::fillCircle(Point c, uint16_t r, Sem color)
     const color_t col = themeColor(color);
     const float rf = static_cast<float>(r);
     const int R = static_cast<int>(r) + 1;
-    for (int dy = -R; dy <= R; dy++) {
-        for (int dx = -R; dx <= R; dx++) {
+    int dy0 = -R, dy1 = R, dx0 = -R, dx1 = R;
+    clipSpan(dy0, dy1, c.y, clip_.y, clip_.bottom());
+    clipSpan(dx0, dx1, c.x, clip_.x, clip_.right());
+    for (int dy = dy0; dy <= dy1; dy++) {
+        for (int dx = dx0; dx <= dx1; dx++) {
             const float dist = std::sqrt(static_cast<float>(dx * dx + dy * dy));
             float cov = rf + 0.5f - dist;
             if (cov <= 0.0f)
@@ -178,8 +205,12 @@ void DrawCtx::lineAA(Point a, Point b, Sem color, float width)
     const int maxy =
         static_cast<int>(std::ceil(std::fmax(y0, y1) + half + 1.0f));
 
-    for (int py = miny; py <= maxy; py++) {
-        for (int px = minx; px <= maxx; px++) {
+    int px0 = minx, px1 = maxx, py0 = miny, py1 = maxy;
+    clipSpan(px0, px1, 0, clip_.x, clip_.right());
+    clipSpan(py0, py1, 0, clip_.y, clip_.bottom());
+
+    for (int py = py0; py <= py1; py++) {
+        for (int px = px0; px <= px1; px++) {
             /* Distance from the pixel centre to the segment. */
             const float fx = px - x0, fy = py - y0;
             float t = (len2 > 0.0f) ? ((fx * dx + fy * dy) / len2) : 0.0f;

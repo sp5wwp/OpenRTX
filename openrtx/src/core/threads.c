@@ -52,13 +52,12 @@ void *ui_threadFunc(void *arg)
     messages_registerSource(&m17_sms_ops);
     #endif
 
-    // Load initial state and update the UI
+    // Load initial state
     ui_saveState();
-    ui_updateGUI();
 
-    // Keep the splash screen for one second  before rendering the new UI screen
+    // Keep the splash screen for one second before drawing the UI screen
     sleepFor(1u, 0u);
-    gfx_render();
+    ui_updateGUI();
 
     while(state.devStatus != SHUTDOWN)
     {
@@ -115,10 +114,7 @@ void *ui_threadFunc(void *arg)
         }
 
         // Update UI and render on screen, if necessary
-        if(ui_updateGUI() == true)
-        {
-            gfx_render();
-        }
+        ui_updateGUI();
 
         // 40Hz update rate for keyboard and UI
         time += 25;

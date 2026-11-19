@@ -16,7 +16,8 @@
  * exists, built in a ViewSlot, with what must outlive it kept in UiMemory.
  * Input events are decoded and dispatched into the active view, which returns
  * a navigation intent (push a child screen / pop back); drawing pulls from the
- * state snapshot and repaints only when something actually changed.
+ * state snapshot and repaints only when something actually changed, then sends
+ * the screen to the display.
  */
 
 #include "core/ui.h"
@@ -81,6 +82,27 @@ bool macroLatched = false;
  * auto-dismissed this many ms after the level stops changing. Driven here (not
  * by a view) because the knob is a polled analogue value, not an input event. */
 constexpr uint32_t kVolumeOverlayMs = 500;
+
+/**
+ * Draw the whole screen and send it to the display: in one go, or a band at a
+ * time on targets drawing in bands, each band drawing everything and keeping
+ * what lands in it.
+ *
+ * @param paint: draws the screen content with the DrawCtx it is given.
+ */
+template <typename Paint>
+void drawScreen(Paint paint)
+{
+    for (uint16_t y = 0; y < CONFIG_SCREEN_HEIGHT; y += GFX_BAND_ROWS) {
+        gfx_beginBand(static_cast<uint8_t>(y));
+        const Rect band = { 0, static_cast<int16_t>(y), CONFIG_SCREEN_WIDTH,
+                            GFX_BAND_ROWS };
+        DrawCtx d(band);
+        d.clearScreen(Sem::Background);
+        paint(d);
+        gfx_render();
+    }
+}
 
 void enterStandby()
 {
@@ -167,18 +189,18 @@ extern "C" void ui_init()
 
 extern "C" void ui_drawSplashScreen()
 {
-    DrawCtx d;
-    d.clearScreen(Sem::Background);
-
     const Point logo = { 0, (int16_t)((CONFIG_SCREEN_HEIGHT / 2) - 6) };
     const Point call = { 0, (int16_t)(CONFIG_SCREEN_HEIGHT - 8) };
     /* Render the splash 1bpp (no anti-aliasing) in the gold brand accent, to
      * match the crisp classic boot logo. Restore the user's text setting after
      * (this also establishes its resting value for the first UI frame). */
     gfx_setFontMono(true);
-    d.text(logo, FONT_SIZE_12PT, TEXT_ALIGN_CENTER, Sem::Accent, "OPN\nRTX");
-    d.text(call, FONT_SIZE_8PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
-           state.settings.callsign);
+    drawScreen([&](DrawCtx &d) {
+        d.text(logo, FONT_SIZE_12PT, TEXT_ALIGN_CENTER, Sem::Accent,
+               "OPN\nRTX");
+        d.text(call, FONT_SIZE_8PT, TEXT_ALIGN_CENTER, Sem::OnSurface,
+               state.settings.callsign);
+    });
     gfx_setFontMono(state.settings.crispText);
 
     vp_announceSplashScreen();
@@ -307,9 +329,7 @@ extern "C" bool ui_updateGUI()
     if (!screen.dirty())
         return false;
 
-    DrawCtx d;
-    d.clearScreen(Sem::Background);
-    screen.paintTree(d);
+    drawScreen([&](DrawCtx &d) { screen.paintTree(d); });
     screen.clearDirty();
     return true;
 }

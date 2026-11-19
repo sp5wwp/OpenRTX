@@ -19,18 +19,25 @@ namespace ortxui
  *
  * Every colour is supplied as a semantic role and resolved through the active
  * Theme, so drawing code never mentions raw colours. The context also carries
- * a clip rectangle; today drawing is full-screen, but the clip is threaded
- * through so dirty-rectangle rendering can be enabled as the widget tree
- * lands, without touching call sites.
+ * a clip rectangle, starting from the part of the screen being drawn: the
+ * whole screen, or one band on targets drawing in bands. Painting skips the
+ * objects outside it.
  *
- * The gfx_* backend owns the static framebuffer; the toolkit never allocates
- * one. Flushing to the panel stays the responsibility of the UI loop
- * (threads.c calls gfx_render after ui_updateGUI reports a redraw).
+ * The gfx_* backend owns the static framebuffer or band buffer; the toolkit
+ * never allocates one. The UI loop sends what was drawn to the panel.
  */
 class DrawCtx
 {
 public:
+    /** Constructor, drawing on the whole screen. */
     DrawCtx();
+
+    /**
+     * Constructor, drawing on part of the screen.
+     *
+     * @param bounds: the part of the screen being drawn, the outermost clip.
+     */
+    explicit DrawCtx(const Rect &bounds);
 
     /** Current clip rectangle (screen space). */
     const Rect &clip() const
@@ -107,6 +114,7 @@ public:
 
 private:
     static constexpr uint8_t kClipStackMax = 16;
+    Rect bounds_; ///< Part of the screen being drawn
     Rect clip_;
     Rect clipStack_[kClipStackMax];
     uint8_t clipDepth_ = 0;

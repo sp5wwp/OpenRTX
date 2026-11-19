@@ -21,8 +21,8 @@ extern "C" {
 void ui_init();
 
 /**
- * This function writes the OpenRTX splash screen image into the framebuffer
- * centered in the screen space.
+ * This function draws the OpenRTX splash screen image centered in the screen
+ * space and sends it to the display.
  */
 void ui_drawSplashScreen();
 
@@ -42,9 +42,10 @@ void ui_saveState();
 void ui_updateFSM(bool *sync_rtx);
 
 /**
- * This function redraws the GUI based on the last radio state.
+ * This function redraws the GUI based on the last radio state and sends it to
+ * the display, when it changed.
  *
- * @return true if GUI has been updated and a screen render is necessary.
+ * @return true if the GUI has been redrawn.
  */
 bool ui_updateGUI();
 

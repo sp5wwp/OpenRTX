@@ -59,7 +59,6 @@ void openrtx_init()
     // Display splash screen, turn on backlight after a suitable time to
     // hide random pixels during render process
     ui_drawSplashScreen();
-    gfx_render();
     sleepFor(0u, 30u);
     display_setBacklightLevel(state.settings.brightness);
 }

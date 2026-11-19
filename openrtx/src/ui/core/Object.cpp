@@ -102,8 +102,11 @@ void Object::paintTree(DrawCtx &d)
 
     /* Clip this object (and its subtree) to its box, so content never bleeds
      * past its bounds. The root Screen has no area set, so it inherits the
-     * full-screen clip. */
+     * full-screen clip. A box wholly outside the clip, such as outside the
+     * band being drawn, draws nothing: skip the subtree. */
     const bool clip = !area_.empty();
+    if (clip && intersect(d.clip(), area_).empty())
+        return;
     if (clip)
         d.pushClip(area_);
 
