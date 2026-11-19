@@ -21,9 +21,6 @@
 
 using namespace ortxui;
 
-static constexpr uint8_t KEY_IDX_2 = 2; ///< Keypad key "2": A B C 2
-static constexpr uint8_t KEY_IDX_3 = 3; ///< Keypad key "3": D E F 3
-
 /** Ticks far enough apart that a second tap starts a new character. */
 static constexpr long long LATER = input_longPressTimeout + 1;
 
@@ -75,11 +72,11 @@ TEST_CASE("Typing after clearing the field starts from empty",
     TextInput t;
     bindCallsign(t, buf, sizeof(buf));
 
-    t.clear();
-    t.tapKey(KEY_IDX_2, 0);
+    t.handleKey(KEY_HASH, 0);
+    t.handleKey(KEY_2, 0);
     REQUIRE(strcmp(buf, "A") == 0);
 
-    t.tapKey(KEY_IDX_3, LATER);
+    t.handleKey(KEY_3, LATER);
     REQUIRE(strcmp(buf, "AD") == 0);
 
     char out[16];
@@ -94,10 +91,10 @@ TEST_CASE("Typing after deleting the last character starts from empty",
     TextInput t;
     bindCallsign(t, buf, sizeof(buf));
 
-    t.cycle(-1); /* A -> space */
-    t.cycle(-1); /* space -> delete slot */
-    t.moveCursor(+1);
-    t.tapKey(KEY_IDX_2, 0);
+    t.handleKey(KEY_DOWN, 0); /* A -> space */
+    t.handleKey(KEY_DOWN, 0); /* space -> delete slot */
+    t.handleKey(KEY_RIGHT, 0);
+    t.handleKey(KEY_2, 0);
     REQUIRE(strcmp(buf, "A") == 0);
 }
 
@@ -107,13 +104,13 @@ TEST_CASE("Moving the cursor ends a multi-tap", "[ui][textinput]")
     TextInput t;
     bindCallsign(t, buf, sizeof(buf));
 
-    t.tapKey(KEY_IDX_2, 0);
-    t.moveCursor(+1);
-    t.tapKey(KEY_IDX_2, 1); /* same key, inside the multi-tap window */
+    t.handleKey(KEY_2, 0);
+    t.handleKey(KEY_RIGHT, 0);
+    t.handleKey(KEY_2, 1); /* same key, inside the multi-tap window */
     REQUIRE(strcmp(buf, "AA") == 0);
 
-    t.moveCursor(-1);
-    t.tapKey(KEY_IDX_2, 2);
+    t.handleKey(KEY_LEFT, 0);
+    t.handleKey(KEY_2, 2);
     REQUIRE(strcmp(buf, "AA") == 0);
 }
 
@@ -131,7 +128,7 @@ TEST_CASE("A picked character is one cell", "[ui][textinput]")
     t.formatBracketed(out, sizeof(out));
     REQUIRE(strcmp(out, "[\xC3\xA9]B") == 0);
 
-    t.moveCursor(+1);
+    t.handleKey(KEY_RIGHT, 0);
     t.formatBracketed(out, sizeof(out));
     REQUIRE(strcmp(out, "\xC3\xA9[B]") == 0);
 }

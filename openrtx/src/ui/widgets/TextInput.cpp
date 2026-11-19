@@ -26,12 +26,9 @@ static constexpr uint16_t SCROLL_W = 2;    ///< Width of the scroll indicator
 static constexpr uint16_t SCROLL_GAP = 1;  ///< Gap between text and indicator
 static constexpr int16_t SCROLL_MIN_H = 2; ///< Shortest scroll thumb
 
-/* Sentinel stored in the buffer when the cursor character is cycled to the
- * "delete" slot in the wheel. It only ever exists at the cursor (transient) and
- * is resolved into an actual deletion on the next move / commit; it is rendered
- * as the ⌫ glyph. */
+/** The delete slot of the cycle: only under the cursor, applied on a move. */
 static constexpr char DELETE_CELL = 0x7F;
-static constexpr char DELETE_GLYPH[] = SYMBOL_BACKSPACE;
+static constexpr char DELETE_GLYPH[] = SYMBOL_BACKSPACE; ///< Delete slot glyph
 
 /** Keys that keep acting while held in a text field. */
 static constexpr uint32_t REPEAT_KEYS = KEY_STAR | KEY_UP | KEY_DOWN | KEY_LEFT
@@ -124,12 +121,8 @@ void TextInput::configureSlots(char *buf, uint16_t cap, const char *mask,
     tapActive_ = false;
     tapKeyIdx_ = -1;
 
-    /* Lay the mask into the buffer, every editable slot set to the placeholder,
-     * and cache each slot's buffer offset so later ops don't rescan the mask.
-     * The whole mask must fit in the buffer (plus a NUL) and in MAX_SLOTS; a
-     * mask that overruns either bound is a caller sizing error -- lay down what
-     * fits so nothing is silently corrupted, but the caller-visible slotCount()
-     * then reveals the shortfall rather than a wrong value being committed. */
+    /* Lay the mask into the buffer and note each slot's offset. A mask longer
+     * than the buffer or MAX_SLOTS is cut short, which slotCount() shows. */
     slotCount_ = 0;
     uint16_t i = 0;
     for (; (mask[i] != '\0') && (i + 1 < cap_); i++) {
@@ -309,10 +302,8 @@ void TextInput::cycle(int dir)
     if (cursor_ >= len_)
         return;
 
-    /* The wheel is the charset plus one trailing "delete" slot (rendered ⌫).
-     * Landing on it marks the character for deletion; a move or commit applies
-     * it. Reachable from either end (cycle down from blank, or up past the last
-     * symbol), so it's visible on every radio without a dedicated key. */
+    /* The cycle is the character set plus a delete slot, reached from either
+     * end, so every radio can delete; a move or commit applies it. */
     const int n = static_cast<int>(cs_->len);
     const int total = n + 1;
     const uint16_t clen = cellLen(cursor_);
@@ -638,9 +629,17 @@ void TextInput::formatWindow(char *out, size_t sz, uint16_t maxW,
     composeWindow(out, sz, lo, hi);
 }
 
-/* Exclusive end index of the wrapped line starting at `start` that fits `maxW`
- * pixels: break at the last space (word wrap), or mid-word when a single word
- * is too wide; always advances at least one character. */
+/**
+ * Find the end of a wrapped line: after its last space, or mid-word when one
+ * word is too wide, and always at least one character on.
+ *
+ * @param buf: text.
+ * @param start: first byte of the line.
+ * @param len: text length.
+ * @param maxW: line width in pixels.
+ * @param font: font.
+ * @return the byte after the line.
+ */
 static uint16_t lineEnd(const char *buf, uint16_t start, uint16_t len, int maxW,
                         fontSize_t font)
 {
@@ -712,8 +711,7 @@ void TextInput::draw(DrawCtx &d)
     };
 
     if (mode_ == Mode::SingleLine) {
-        /* Assumes the content fits the field width (callsign/dest-length use);
-         * long text uses MultiLine. */
+        /* A SingleLine field is as wide as its text; long text is MultiLine. */
         d.textInBox(area_, font_, TEXT_ALIGN_LEFT, Sem::OnSurface, buf_);
         drawCursor(area_, 0);
         return;
@@ -768,7 +766,7 @@ void TextInput::draw(DrawCtx &d)
         pos = end;
     }
 
-    /* Scroll indicator (mirrors List): a track with a thumb. */
+    /* Scroll indicator: a track with a thumb. */
     if (rows > visRows) {
         const int16_t barX = static_cast<int16_t>(area_.right() - 1);
         const int trackH = static_cast<int>(area_.h);
