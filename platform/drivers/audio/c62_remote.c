@@ -34,6 +34,8 @@
  *   rr <reg>             read a BK4819 register (hex or decimal)
  *   rw <reg> <value>     write a BK4819 register; the radio driver may
  *                        overwrite it at the next mode or frequency change
+ *   afc [0|1]            read or set the TETRA frequency correction (a
+ *                        setting, saved like one)
  */
 
 #include <stdarg.h>
@@ -103,10 +105,11 @@ static void status(void)
 
     char text[CTRL_TEXT_MAX];
     /* No %lld: newlib-nano's printf fails on long long */
-    int n = snprintf(text, sizeof(text), "S t=%lu m=%u f=%lu rssi=%d sv=%lu",
+    int n = snprintf(text, sizeof(text),
+                     "S t=%lu m=%u f=%lu rssi=%d sv=%lu fo=%ld",
                      (unsigned long)k_uptime_get_32(), mode,
                      (unsigned long)freq, (int)rtx_getRssi(),
-                     (unsigned long)state_nvmSaves);
+                     (unsigned long)state_nvmSaves, (long)c62_getRxOffset());
 #ifdef CONFIG_TETRA
     if (mode == OPMODE_TETRA && n > 0 && (size_t)n < sizeof(text)) {
         struct tetraDiag dg;
@@ -310,6 +313,15 @@ static void execute(char *cmd)
         }
         BK4819_writeReg(&c62_bk4819, reg, val);
         reply("rw 0x%02lx 0x%04x", reg, BK4819_readReg(&c62_bk4819, reg));
+#ifdef CONFIG_TETRA_AFC
+    } else if (!strcmp(argv[0], "afc")) {
+        if (argc == 2) {
+            pthread_mutex_lock(&state_mutex);
+            state.settings.tetraAfcOff = (argv[1][0] == '0');
+            pthread_mutex_unlock(&state_mutex);
+        }
+        reply("afc %d", !state.settings.tetraAfcOff);
+#endif
     } else if (!strcmp(argv[0], "d") && argc == 2) {
         baseband_dump_pause(argv[1][0] == '0');
         reply("d %d", !baseband_dump_paused());
