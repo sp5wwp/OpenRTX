@@ -162,8 +162,6 @@ target_sources(app
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp
     openrtx/src/ui/widgets/Label.cpp
-    openrtx/src/ui/widgets/Panel.cpp
-    openrtx/src/ui/widgets/Bar.cpp
     openrtx/src/ui/widgets/TextRow.cpp
     openrtx/src/ui/widgets/SettingRow.cpp
     openrtx/src/ui/widgets/List.cpp
