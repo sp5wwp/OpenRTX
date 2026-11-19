@@ -9,6 +9,7 @@
 #include "interfaces/radio.h"
 #include "rtx/OpMode_FM.hpp"
 #include "rtx/rtx.h"
+#include "core/utils.h"
 
 #if defined(PLATFORM_TTWRPLUS)
 #include "drivers/baseband/AT1846S.h"
@@ -79,8 +80,7 @@ void OpMode_FM::update(rtxStatus_t *const status, const bool newCfg)
     if(status->opStatus == RX)
     {
         // RF squelch mechanism
-        // This turns squelch (0 to 15) into RSSI (-127.0dbm to -61dbm)
-        rssi_t squelch = -127 + (status->sqlLevel * 66) / 15;
+        rssi_t squelch = squelchToRssi(status->sqlLevel);
         rssi_t rssi    = rtx_getRssi();
 
         // Provide a bit of hysteresis, only change state if the RSSI has
