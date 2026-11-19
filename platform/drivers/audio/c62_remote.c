@@ -103,9 +103,10 @@ static void status(void)
 
     char text[CTRL_TEXT_MAX];
     /* No %lld: newlib-nano's printf fails on long long */
-    int n = snprintf(text, sizeof(text), "S t=%lu m=%u f=%lu rssi=%d",
+    int n = snprintf(text, sizeof(text), "S t=%lu m=%u f=%lu rssi=%d sv=%lu",
                      (unsigned long)k_uptime_get_32(), mode,
-                     (unsigned long)freq, (int)rtx_getRssi());
+                     (unsigned long)freq, (int)rtx_getRssi(),
+                     (unsigned long)state_nvmSaves);
 #ifdef CONFIG_TETRA
     if (mode == OPMODE_TETRA && n > 0 && (size_t)n < sizeof(text)) {
         struct tetraDiag dg;

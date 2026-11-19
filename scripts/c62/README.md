@@ -227,6 +227,9 @@ python3 OpenRTX/scripts/c62_remote.py -p /dev/ttyUSB0 --watch 1000
 | `fo [hz]` | Read / set a fine RX tuning offset, added to the channel frequency |
 | `rr <reg>` / `rw <reg> <value>` | Read / write a BK4819 register (the driver may overwrite it at the next mode or frequency change) |
 
+In every mode the status starts with the uptime `t` (ms), mode `m`,
+frequency `f`, `rssi` and `sv`, the number of settings saves since boot.
+
 Status fields in T mode: `e` phase error (% of pi/4), `cfo` carrier offset
 (Hz), `clk` sample clock offset (ppm), `lk`/`sync` libtetra lock, `crc`
 downlink blocks that passed the CRC, `ral` slot grid re-alignments, `rq`/`sl`
