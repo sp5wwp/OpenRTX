@@ -97,3 +97,27 @@ TEST_CASE("PTT is gated outside the home screen", "[ui]")
         REQUIRE_FALSE(state.pttDisable);
     }
 }
+
+TEST_CASE("Keypad lock lets the FM tone burst through", "[ui]")
+{
+    rtx_init(&rtxMutex);
+    state.settings = default_settings;
+    state.channel.mode = OPMODE_FM;
+    state.channel.rx_frequency = 430000000;
+    state.channel.tx_frequency = 430000000;
+    state.tone_enabled = false;
+    ui_init();
+    ortxui::uiMemory.keypadLocked = true;
+
+    pressKeys(KEY_UP);
+    pressKeys(0);
+    REQUIRE(state.channel.rx_frequency == 430000000);
+
+    pressKeys(KEY_HASH);
+    REQUIRE(state.tone_enabled);
+
+    pressKeys(0);
+    REQUIRE_FALSE(state.tone_enabled);
+
+    ortxui::uiMemory.keypadLocked = false;
+}

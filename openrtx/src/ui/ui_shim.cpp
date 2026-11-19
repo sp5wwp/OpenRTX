@@ -226,6 +226,21 @@ static void closeMacro()
 }
 
 /**
+ * Check whether a key event keys or ends the FM 1750 Hz tone burst on the
+ * home screen, which the keypad lock lets through.
+ *
+ * @param msg: key event.
+ * @return true for the # press and the events while the tone plays.
+ */
+static bool isToneBurstKey(const kbd_msg_t &msg)
+{
+    if ((nav.activeId() != ViewId::Vfo) || (state.channel.mode != OPMODE_FM))
+        return false;
+
+    return (msg.keys == KEY_HASH) || state.tone_enabled;
+}
+
+/**
  * Handle one UI tick: wake-keeping, the volume HUD, and at most one queued
  * event.
  *
@@ -294,9 +309,10 @@ static void handleTick(long long now, bool *sync_rtx)
             }
 
             /* Keypad lock: while locked, ignore keys unless the macro menu is
-             * open or MONI is pressed (so it can always be opened to unlock). */
+             * open or MONI is pressed (so it can always be opened to unlock),
+             * except the FM tone burst. */
             if (uiMemory.keypadLocked && !macroOpen
-                && ((msg.keys & KEY_MONI) == 0u))
+                && ((msg.keys & KEY_MONI) == 0u) && !isToneBurstKey(msg))
                 return;
 
             /* Macro menu: shown while MONI is held. A long-press latches it open
