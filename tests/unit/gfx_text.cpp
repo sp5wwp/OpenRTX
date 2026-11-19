@@ -643,8 +643,7 @@ TEST_CASE("Glyph rows decode as the pixels read one by one", "[gfx][text]")
     for (uint32_t cp = 0x20; cp < 0x7F; cp++) {
         struct lvGlyph g;
         struct lvGlyphRows rows;
-        if (!lvFont_getGlyph(&font, cp, &g)
-            || !lvGlyph_beginRows(&font, &g, &rows))
+        if (!lvFont_getGlyph(&font, cp, &g) || !lvGlyph_beginRows(&g, &rows))
             continue;
 
         INFO("code point " << cp);
@@ -652,7 +651,7 @@ TEST_CASE("Glyph rows decode as the pixels read one by one", "[gfx][text]")
             uint8_t row[LV_GLYPH_MAX_WIDTH];
             lvGlyph_nextRow(&rows, row);
             for (uint16_t x = 0; x < g.box_w; x++)
-                REQUIRE(row[x] == lvGlyph_pixelRaw(&font, &g, x, y));
+                REQUIRE(row[x] == lvGlyph_pixelRaw(&g, x, y));
         }
     }
 }

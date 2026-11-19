@@ -913,7 +913,7 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
 #ifdef CONFIG_PIX_FMT_RGB565
         struct lvGlyphRows rows;
         uint8_t cov[LV_GLYPH_MAX_WIDTH];
-        const bool decoded = lvGlyph_beginRows(f, &glyph, &rows);
+        const bool decoded = lvGlyph_beginRows(&glyph, &rows);
 #endif
         for (uint16_t yy = 0; yy < h; yy++) {
             /* Rows are decoded in order: decode those above the clip without
@@ -930,11 +930,11 @@ point_t gfx_printBufferClipped(point_t start, fontSize_t size,
             for (uint16_t xx = 0; xx < w; xx++) {
 #ifdef CONFIG_PIX_FMT_RGB565
                 uint8_t a = decoded ? cov[xx] :
-                                      lvGlyph_pixelRaw(f, &glyph, xx, yy);
+                                      lvGlyph_pixelRaw(&glyph, xx, yy);
                 if (a == 0)
                     continue;
 #else
-                if (lvGlyph_pixelRaw(f, &glyph, xx, yy) < 128)
+                if (lvGlyph_pixelRaw(&glyph, xx, yy) < 128)
                     continue;
 #endif
                 int16_t px = (int16_t)(start.x + xo + xx);

@@ -27,66 +27,74 @@ extern "C" {
  * the BOTTOM of the glyph box.
  */
 
-/** A parsed font blob. Populated by lvFont_init(); holds only offsets into the
- *  embedded data, no glyph is decoded until lvFont_getGlyph(). */
+/**
+ * A parsed font blob: offsets into the embedded data, filled by lvFont_init().
+ * No glyph is decoded until lvFont_getGlyph().
+ */
 struct lvFont {
-    const uint8_t *data; //< the whole .bin blob (borrowed, not owned)
-    uint32_t size;       //< blob length in bytes
-
-    /* Optional next font to consult for code points this one lacks, mirroring
-     * LVGL's lv_font_t.fallback chain (used to layer an app/icon font onto the
-     * base text font). Borrowed; NULL for no fallback. */
-    const struct lvFont *fallback;
-
-    uint16_t ppem;        //< nominal pixel size
-    int16_t ascent;       //< pixels above the baseline
-    int16_t descent;      //< pixels below the baseline (<= 0)
-    uint16_t line_height; //< ascent - descent
-    uint16_t default_adv; //< advance for monospaced fonts (px)
-
-    uint32_t cmap_off;    //< byte offset of the cmap table
-    uint32_t loca_off;    //< byte offset of the loca table
-    uint32_t glyf_off;    //< byte offset of the glyf table
-    uint32_t glyph_cnt;   //< number of loca entries (glyph ids)
-
-    uint8_t bpp;          //< bits per pixel (1, 2, 3 or 4)
-    uint8_t compression;  //< 0 = raw, 1 = RLE+prefilter, 2 = RLE (see decoder)
-    uint8_t xy_bits;      //< bit width of the signed glyph bbox x/y fields
-    uint8_t wh_bits;      //< bit width of the glyph bbox w/h fields
-    uint8_t adv_bits; //< bit width of the per-glyph advance (0 = monospaced)
-    uint8_t adv_fmt;  //< 0 = integer px, 1 = FP4.4
-    uint8_t loc_fmt;  //< loca entry size: 0 = uint16, 1 = uint32
-    bool valid;       //< true once successfully parsed
+    const uint8_t *data;           ///< The whole blob, borrowed
+    const struct lvFont *fallback; ///< Font for code points this one lacks
+    uint32_t cmap_off;             ///< Byte offset of the cmap table
+    uint32_t loca_off;             ///< Byte offset of the loca table
+    uint32_t glyf_off;             ///< Byte offset of the glyf table
+    uint32_t glyph_cnt;            ///< Number of loca entries (glyph ids)
+    int16_t ascent;                ///< Pixels above the baseline
+    int16_t descent;               ///< Pixels below the baseline, <= 0
+    uint16_t line_height;          ///< Ascent minus descent
+    uint16_t default_adv;          ///< Advance of a monospaced font, pixels
+    uint8_t bpp;                   ///< Bits per pixel: 1, 2, 3 or 4
+    uint8_t compression;           ///< 0 raw, 1 RLE and prefilter, 2 RLE
+    uint8_t xy_bits;               ///< Bit width of the glyph box x/y
+    uint8_t wh_bits;               ///< Bit width of the glyph box w/h
+    uint8_t adv_bits;              ///< Bit width of the advance, 0 monospaced
+    uint8_t adv_fmt;               ///< 0 integer pixels, 1 FP4.4
+    uint8_t loc_fmt;               ///< Loca entry size: 0 u16, 1 u32
+    bool valid;                    ///< Parsed successfully
 };
 
-/** A located glyph: geometry plus a pointer to the start of its pixel bits. */
+/**
+ * A located glyph: geometry plus a pointer to the start of its pixel bits.
+ */
 struct lvGlyph {
-    /* The font the glyph was actually resolved from — the queried font or one
-     * of its fallbacks. Pixel decoding must use this font's parameters (bpp,
-     * compression, ...), so lvFont_decodeGlyph()/lvGlyph_pixelRaw() read it. */
-    const struct lvFont *src;
-    int16_t ofs_x;      //< baseline-left to glyph-box left (signed)
-    int16_t ofs_y;      //< baseline to glyph-box BOTTOM (signed, LVGL anchor)
-    uint16_t box_w;     //< glyph bitmap width in pixels
-    uint16_t box_h;     //< glyph bitmap height in pixels
-    uint16_t adv_w;     //< horizontal advance in pixels
-    const uint8_t *bmp; //< base pointer for the pixel bitstream
-    uint32_t bmp_bit;   //< bit offset of the first pixel within *bmp
-    uint32_t data_len; //< bytes from the glyph start to the next glyph (for RLE)
+    const struct lvFont *src; ///< Font it was found in, whose bpp applies
+    const uint8_t *bmp;       ///< Base pointer of the pixel bitstream
+    uint32_t bmp_bit;         ///< Bit offset of the first pixel in bmp
+    int16_t ofs_x;            ///< Baseline-left to glyph box left
+    int16_t ofs_y;            ///< Baseline to glyph box BOTTOM
+    uint16_t box_w;           ///< Glyph bitmap width, pixels
+    uint16_t box_h;           ///< Glyph bitmap height, pixels
+    uint16_t adv_w;           ///< Horizontal advance, pixels
 };
 
-/** Parse a font blob header and locate its tables. Returns false on a malformed
- *  or unsupported blob (leaves f->valid = false). */
+/**
+ * Parse a font blob's head and locate its tables.
+ *
+ * @param f: font to fill.
+ * @param data: blob, borrowed.
+ * @param size: blob length in bytes.
+ * @return false, leaving f->valid false, on a malformed or unsupported blob.
+ */
 bool lvFont_init(struct lvFont *f, const uint8_t *data, uint32_t size);
 
-/** Resolve a Unicode codepoint to its glyph geometry. Returns false when the
- *  font has no glyph for `code` (the caller should skip it). */
+/**
+ * Look up a code point, in the font or its fallbacks.
+ *
+ * @param f: font.
+ * @param code: Unicode code point.
+ * @param g: glyph found.
+ * @return false when no font in the chain has the code point.
+ */
 bool lvFont_getGlyph(const struct lvFont *f, uint32_t code, struct lvGlyph *g);
 
-/** Alpha (0..255) of pixel (x,y) within a glyph box, for RAW (uncompressed)
- *  fonts — 1bpp fonts are always raw. Out-of-range returns 0. */
-uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
-                         uint16_t x, uint16_t y);
+/**
+ * Get one pixel of a glyph from an uncompressed font; 1bpp fonts always are.
+ *
+ * @param g: glyph.
+ * @param x: column in the glyph box.
+ * @param y: row in the glyph box.
+ * @return coverage, 0 to 255; 0 outside the box.
+ */
+uint8_t lvGlyph_pixelRaw(const struct lvGlyph *g, uint16_t x, uint16_t y);
 
 /** Widest glyph, in pixels, that lvGlyph_beginRows() decodes. */
 #define LV_GLYPH_MAX_WIDTH 64
@@ -96,30 +104,28 @@ uint8_t lvGlyph_pixelRaw(const struct lvFont *f, const struct lvGlyph *g,
  * row of coverage rather than the whole glyph.
  */
 struct lvGlyphRows {
-    const uint8_t *in;   //< glyph bitstream
-    uint32_t rdp;        //< bit position of the next pixel value in *in
-    int32_t cnt;         //< RLE repeat counter
-    uint16_t w;          //< glyph width in pixels
-    uint8_t bpp;         //< bits per pixel
-    uint8_t compression; //< 0 = raw, 1 = RLE+prefilter, 2 = RLE
-    uint8_t state;       //< RLE decoder state
-    uint8_t prev;        //< last RLE pixel value
-    bool started;        //< false until the first pixel has been read
-    bool first;          //< no row decoded yet
-    uint8_t line[LV_GLYPH_MAX_WIDTH]; //< last row's values, for the prefilter
+    const uint8_t *in;                ///< Glyph bitstream
+    uint32_t rdp;                     ///< Bit position of the next value
+    int32_t cnt;                      ///< RLE repeat counter
+    uint16_t w;                       ///< Glyph width, pixels
+    uint8_t bpp;                      ///< Bits per pixel
+    uint8_t compression;              ///< 0 raw, 1 RLE and prefilter, 2 RLE
+    uint8_t state;                    ///< RLE decoder state
+    uint8_t prev;                     ///< Last RLE pixel value
+    bool started;                     ///< A pixel has been read
+    bool first;                       ///< No row decoded yet
+    uint8_t line[LV_GLYPH_MAX_WIDTH]; ///< Last row's values, for the prefilter
 };
 
 /**
  * Start decoding a glyph's pixels row by row, from raw or RLE-compressed
  * (anti-aliased) fonts.
  *
- * @param f: font the glyph was looked up in.
  * @param g: glyph.
  * @param r: decoder state to start.
  * @return false on a zero-size glyph or one wider than LV_GLYPH_MAX_WIDTH.
  */
-bool lvGlyph_beginRows(const struct lvFont *f, const struct lvGlyph *g,
-                       struct lvGlyphRows *r);
+bool lvGlyph_beginRows(const struct lvGlyph *g, struct lvGlyphRows *r);
 
 /**
  * Decode the next row of a glyph as 8-bit coverage (0..255).
