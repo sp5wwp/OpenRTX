@@ -45,8 +45,7 @@
 
 using namespace ortxui;
 
-/* Classic UI event ring: single-thread producer/consumer (all in the UI
- * thread), so no locking is required. */
+/* Event ring: pushed and popped with state_mutex held. */
 static constexpr uint8_t MAX_NUM_EVENTS = 16;
 
 static event_t evQueue[MAX_NUM_EVENTS];

@@ -164,9 +164,9 @@ void state_task()
 
     settings = state.settings;
     vfo = state.channel;
-    pthread_mutex_unlock(&state_mutex);
-
     ui_pushEvent(EVENT_STATUS, 0);
+
+    pthread_mutex_unlock(&state_mutex);
 }
 
 void state_resetSettingsAndVfo()

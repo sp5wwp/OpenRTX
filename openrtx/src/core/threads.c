@@ -63,12 +63,11 @@ void *ui_threadFunc(void *arg)
     {
         time = getTick();
 
-        if(input_scanKeyboard(&kbd_msg))
-        {
-            ui_pushEvent(EVENT_KBD, kbd_msg.value);
-        }
+        bool newKey = input_scanKeyboard(&kbd_msg);
 
         pthread_mutex_lock(&state_mutex);   // Lock r/w access to radio state
+        if(newKey)
+            ui_pushEvent(EVENT_KBD, kbd_msg.value);
         ui_updateFSM(&sync_rtx);            // Update UI FSM
         ui_saveState();                     // Save local state copy
         pthread_mutex_unlock(&state_mutex); // Unlock r/w access to radio state

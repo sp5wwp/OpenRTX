@@ -50,7 +50,8 @@ void ui_updateFSM(bool *sync_rtx);
 bool ui_updateGUI();
 
 /**
- * Push an event to the UI event queue.
+ * Push an event to the UI event queue. Call it with state_mutex held, as
+ * several threads push and ui_updateFSM() pops under that lock.
  *
  * @param type: event type.
  * @param data: event data.
