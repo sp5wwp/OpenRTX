@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # variants: default smallscreen
 
-# The FM CTCSS/DCS tone in the VFO mode stack follows the direction: a
+# The FM CTCSS tone in the VFO mode stack follows the direction: a
 # decode (RX) tone shows while receiving and hides while transmitting; an
 # encode (TX) tone would show only on TX. Enable a decode tone via
 # Settings > FM (CTCSS En. -> Decode), return to the VFO, then PTT.
