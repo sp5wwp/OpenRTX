@@ -28,6 +28,7 @@ static struct tetra_tmo_rx tmo;
 
 /* Diagnostics and remote control (see TetraStatus.h) */
 static uint32_t crcBase;            /* CRC passes of earlier tmo contexts */
+static uint32_t lastCrc;            /* CRC passes the demodulator was told of */
 static volatile bool resetRequest;
 static volatile bool eqSeed = true; /* Start from CONFIG_TETRA_EQ_INIT */
 
@@ -57,6 +58,7 @@ void OpMode_TETRA::reset()
     demodJumps = 0;
     resync(false);
     crcBase = 0;
+    lastCrc = 0;
     tetraStatus_reset();
 }
 
@@ -176,6 +178,13 @@ void OpMode_TETRA::update(rtxStatus_t *const rtx, const bool newCfg)
     }
 
     tetra_tmo_push_soft(&tmo, soft, n);
+
+    /* Blocks decode: the demodulator keeps its lock */
+    uint32_t crc = crcBase + tetra_tmo_crc_ok(&tmo);
+    if (crc != lastCrc) {
+        lastCrc = crc;
+        tetraDemod_signalOk(&demod);
+    }
 
     tetraStatus_setDemod(tetraDemod_phaseError(&demod),
                          tetraDemod_carrierOffset(&demod));
