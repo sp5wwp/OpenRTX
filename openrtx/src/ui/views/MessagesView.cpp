@@ -12,6 +12,7 @@
 #include "core/state.h"
 #include "core/graphics.h"
 #include "core/utils.h"
+#include "style/Symbols.hpp"
 #include "interfaces/keyboard.h"
 #include "rtx/rtx.h"
 #include "hwconfig.h"

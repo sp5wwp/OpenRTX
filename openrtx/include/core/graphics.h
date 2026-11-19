@@ -98,21 +98,6 @@ typedef enum {
     TEXT_ALIGN_RIGHT
 } textAlign_t;
 
-/*
- * Icon glyphs, as UTF-8 strings, from the FontAwesome codepoints merged into
- * each UI font. Pass them to gfx_print() like any other text (the text path
- * decodes UTF-8), e.g. gfx_print(pos, FONT_SIZE_8PT, ..., SYMBOL_LOCK). Extend
- * the set by adding codepoints to scripts/gen_fonts.sh and regenerating.
- */
-#define SYMBOL_SIGNAL "\xEF\x80\x92"     /* 0xF012 */
-#define SYMBOL_LOCK "\xEF\x80\xA3"       /* 0xF023 */
-#define SYMBOL_VOLUME "\xEF\x80\xA8"     /* 0xF028 */
-#define SYMBOL_WARNING "\xEF\x81\xB1"    /* 0xF071 */
-#define SYMBOL_ENVELOPE "\xEF\x83\xA0"   /* 0xF0E0 */
-#define SYMBOL_CHARGE "\xEF\x83\xA7"     /* 0xF0E7 */
-#define SYMBOL_BELL "\xEF\x83\xB3"       /* 0xF0F3 */
-#define SYMBOL_BRIGHTNESS "\xEF\x86\x85" /* 0xF185 */
-
 /**
  * This function calls the correspondent method of the low level interface display.h
  * It initializes the display.

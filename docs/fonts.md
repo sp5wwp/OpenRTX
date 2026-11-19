@@ -15,7 +15,8 @@ LVGL's `lv_font_fmt_txt.c` (MIT).
 | Regeneration script | `scripts/gen_fonts.sh` |
 | Decoder (format reader + RLE) | `openrtx/src/core/fonts/lv_font_bin.{c,h}` |
 | Embedding (`.incbin`) | `openrtx/src/core/fontData.c` |
-| Text rendering + `SYMBOL_*` | `openrtx/src/core/graphics.c`, `core/graphics.h` |
+| Text rendering | `openrtx/src/core/graphics.c`, `core/graphics.h` |
+| Glyph names (`SYMBOL_*`) | `openrtx/src/ui/style/Symbols.hpp` |
 
 Each `fontSize_t` (`FONT_SIZE_5PT` … `FONT_SIZE_16PT`) maps to one text blob
 and one icon blob. Colour
@@ -70,7 +71,7 @@ gfx_print(pos, FONT_SIZE_8PT, TEXT_ALIGN_LEFT, color, SYMBOL_LOCK " " SYMBOL_SIG
 ```
 
 To add an icon: append its FontAwesome codepoint to `ICONS` in
-`scripts/gen_fonts.sh`, add a matching `SYMBOL_*` macro in `graphics.h` (the
+`scripts/gen_fonts.sh`, add a matching `SYMBOL_*` macro in `Symbols.hpp` (the
 UTF-8 encoding of the codepoint), regenerate, and commit.
 
 ## Custom icon font (fallback layer)
@@ -90,11 +91,10 @@ blobs stay byte-for-byte stable when the icon set changes, and vice-versa. The
 per-size blobs are `openrtx/fonts/icons_*.bin`, embedded alongside the text
 fonts in `fontData.c` and wired as fallbacks in `graphics.c` (`get_font`).
 
-The M17 glyph is a UI-layer name (`SYMBOL_M17` in `src/ui/style/Symbols.hpp`,
-not `graphics.h`). Its source is a 3-colour *stroked* SVG
-(`openrtx/fonts/m17_logo.svg`, the M17 project logo as distributed in
-M17-Project/ref-dash under GPL-3.0). `gen_fonts.sh`
-flattens the strokes to fills (Inkscape `object-stroke-to-path`), drops the grey
+The M17 glyph is `SYMBOL_M17` in `Symbols.hpp`. Its source is a 3-colour
+*stroked* SVG (`openrtx/fonts/m17_logo.svg`, the M17 project logo as
+distributed in M17-Project/ref-dash under GPL-3.0). `gen_fonts.sh` flattens
+the strokes to fills (Inkscape `object-stroke-to-path`), drops the grey
 drop-shadow layer, and wraps the foreground in a one-glyph TTF via
 `scripts/svg_to_glyph_font.py` (fonttools) before baking it at every size. So
 regenerating the icon font needs `inkscape` and fonttools (`requirements.txt`)

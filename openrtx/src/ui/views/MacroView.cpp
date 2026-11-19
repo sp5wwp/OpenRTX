@@ -11,6 +11,7 @@
 #include "core/cps.h"
 #include "core/graphics.h"
 #include "core/voicePromptUtils.h"
+#include "style/Symbols.hpp"
 #include "interfaces/keyboard.h"
 #include "interfaces/display.h"
 #include "hwconfig.h"
