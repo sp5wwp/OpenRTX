@@ -127,7 +127,7 @@ void MacroView::syncFromState(const state_t &s)
 {
     View::syncFromState(s);
 
-    if (tiles_.sync(s))
+    if (tiles_.sync(s, uiMemory.keypadLocked))
         tiles_.invalidate();
 
     /* Squelch is an FM-only RF gate (OpMode_FM); in the digital modes it does

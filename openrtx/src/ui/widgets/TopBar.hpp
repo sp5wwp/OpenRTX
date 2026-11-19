@@ -63,8 +63,9 @@ public:
      * Refresh the clock, battery and keypad lock, change-gated.
      *
      * @param s: state snapshot.
+     * @param locked: whether the keypad is locked.
      */
-    void update(const state_t &s);
+    void update(const state_t &s, bool locked);
 
     /** Size the centre slot to the bar. */
     void onLayout() override;

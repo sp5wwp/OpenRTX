@@ -55,9 +55,10 @@ public:
      * Follow a state snapshot.
      *
      * @param s: state snapshot.
+     * @param locked: whether the keypad is locked.
      * @return true if a tile value changed.
      */
-    bool sync(const state_t &s);
+    bool sync(const state_t &s, bool locked);
 
     /**
      * Highlight a tile, on radios that pick the tile with the knob.

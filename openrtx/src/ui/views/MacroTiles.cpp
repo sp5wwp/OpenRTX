@@ -5,7 +5,6 @@
  */
 
 #include "views/MacroTiles.hpp"
-#include "base/UiMemory.hpp"
 #include "base/UiFormat.hpp"
 #include "base/UiText.hpp"
 #include "core/cps.h"
@@ -163,7 +162,7 @@ void MacroTiles::composeValue(MacroAction action, const Readings &r, char *out,
     }
 }
 
-bool MacroTiles::sync(const state_t &s)
+bool MacroTiles::sync(const state_t &s, bool locked)
 {
     const channel_t &ch = s.channel;
     Readings r = {};
@@ -172,7 +171,7 @@ bool MacroTiles::sync(const state_t &s)
     r.mode = ch.mode;
     r.bandwidth = ch.bandwidth;
     r.brightness = s.settings.brightness;
-    r.locked = uiMemory.keypadLocked;
+    r.locked = locked;
 
     const bool changed = (r.power != shown_.power)
                       || (memcmp(&r.fm, &shown_.fm, sizeof(r.fm)) != 0)

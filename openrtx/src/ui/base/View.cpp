@@ -6,6 +6,7 @@
 
 #include "base/View.hpp"
 #include "base/Event.hpp"
+#include "base/UiMemory.hpp"
 #include "widgets/List.hpp"
 #include "widgets/TopBar.hpp"
 #include "interfaces/keyboard.h"
@@ -39,7 +40,7 @@ TopBar &View::useTopBar(const UiText &title)
 void View::syncFromState(const state_t &s)
 {
     if (hasTopBar_)
-        sharedTopBar.update(s);
+        sharedTopBar.update(s, uiMemory.keypadLocked);
 }
 
 void View::announce()

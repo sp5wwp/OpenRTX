@@ -6,7 +6,6 @@
 
 #include "widgets/TopBar.hpp"
 #include "base/Layout.hpp"
-#include "base/UiMemory.hpp"
 #include "core/graphics.h"
 #include "core/messages.h"
 #include "render/DrawCtx.hpp"
@@ -108,7 +107,7 @@ int16_t TopBar::rightWidth() const
     return static_cast<int16_t>(gfx_getTextWidth(FONT, FULL_CHARGE));
 }
 
-void TopBar::update(const state_t &s)
+void TopBar::update(const state_t &s, bool locked)
 {
     /* The clock occupies the centre only when the screen has no title. */
     if (!hasTitle_ && (s.time.minute != minute_)) {
@@ -132,8 +131,7 @@ void TopBar::update(const state_t &s)
 #else
     const bool unread = false;
 #endif
-    const uint8_t glyphs = (uiMemory.keypadLocked ? 1u : 0u)
-                         | (unread ? 2u : 0u);
+    const uint8_t glyphs = (locked ? 1u : 0u) | (unread ? 2u : 0u);
     if (glyphs != glyphs_) {
         /* Constant-width slot, so just swap the glyphs — no re-flow needed. */
         glyphs_ = glyphs;
