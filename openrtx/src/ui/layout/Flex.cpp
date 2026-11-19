@@ -16,9 +16,8 @@ void Flex::draw(DrawCtx &d)
         d.fillRect(area_, bg_);
 }
 
-int16_t Flex::childBase(const Object &c) const
+int16_t Flex::childBase(const Object &c, const LayoutHints &h) const
 {
-    const LayoutHints &h = c.layout();
     if (h.basis >= 0)
         return h.basis;
 
@@ -33,53 +32,54 @@ void Flex::onLayout()
     /* Content box, inside padding. */
     const int16_t cx = static_cast<int16_t>(area_.x + padX_);
     const int16_t cy = static_cast<int16_t>(area_.y + padY_);
-    const int cw = static_cast<int>(area_.w) - 2 * padX_;
-    const int ch = static_cast<int>(area_.h) - 2 * padY_;
+    const int32_t cw = static_cast<int32_t>(area_.w) - 2 * padX_;
+    const int32_t ch = static_cast<int32_t>(area_.h) - 2 * padY_;
     if ((cw <= 0) || (ch <= 0))
         return;
 
-    const int mainAvail = row ? cw : ch;
-    const int crossAvail = row ? ch : cw;
+    const int32_t mainAvail = row ? cw : ch;
+    const int32_t crossAvail = row ? ch : cw;
 
     /* First pass: sum fixed main extents (incl. margins) and grow weights. */
-    int totalBase = 0;
-    int totalGrow = 0;
-    int count = 0;
+    int32_t totalBase = 0;
+    int32_t totalGrow = 0;
+    int32_t count = 0;
     for (Object *c = firstChild(); c != nullptr; c = c->nextSibling()) {
         if (c->hasFlag(FLAG_HIDDEN))
             continue;
+        const LayoutHints h = c->layout();
         count++;
-        totalBase += childBase(*c) + 2 * c->layout().margin;
-        totalGrow += c->layout().grow;
+        totalBase += childBase(*c, h) + 2 * h.margin;
+        totalGrow += h.grow;
     }
     if (count == 0)
         return;
 
-    const int gaps = gap_ * (count - 1);
-    int free = mainAvail - totalBase - gaps;
-    if (free < 0)
-        free = 0;
+    const int32_t gaps = gap_ * (count - 1);
+    int32_t spare = mainAvail - totalBase - gaps;
+    if (spare < 0)
+        spare = 0;
 
-    /* Main-axis start cursor and inter-item spacing. A grow weight consumes the
-     * free space, so justify only redistributes when nothing grows. */
-    int cursor = row ? cx : cy;
-    int spacing = gap_;
+    /* Main-axis start cursor and inter-item spacing. A grow weight takes the
+     * spare space, so justify only redistributes when nothing grows. */
+    int32_t cursor = row ? cx : cy;
+    int32_t spacing = gap_;
     if (totalGrow == 0) {
         switch (justify_) {
             case Justify::Start:
                 break;
             case Justify::Center:
-                cursor += free / 2;
+                cursor += spare / 2;
                 break;
             case Justify::End:
-                cursor += free;
+                cursor += spare;
                 break;
             case Justify::SpaceBetween:
                 if (count > 1)
-                    spacing += free / (count - 1);
+                    spacing += spare / (count - 1);
                 break;
             case Justify::SpaceAround: {
-                const int unit = free / count;
+                const int32_t unit = spare / count;
                 cursor += unit / 2;
                 spacing += unit;
                 break;
@@ -92,18 +92,17 @@ void Flex::onLayout()
         if (c->hasFlag(FLAG_HIDDEN))
             continue;
 
-        const LayoutHints &h = c->layout();
-        int mainSize = childBase(*c);
+        const LayoutHints h = c->layout();
+        int32_t mainSize = childBase(*c, h);
         if ((totalGrow > 0) && (h.grow > 0))
-            mainSize +=
-                static_cast<int>(static_cast<long>(free) * h.grow / totalGrow);
+            mainSize += spare * h.grow / totalGrow;
 
         /* Cross-axis size and offset. */
         const Align a = (h.self == Align::Auto) ? align_ : h.self;
-        const int crossInner = crossAvail - 2 * h.margin;
+        const int32_t crossInner = crossAvail - 2 * h.margin;
         const Size nat = c->natural();
-        int crossSize = row ? nat.h : nat.w;
-        int crossOff = 0;
+        int32_t crossSize = row ? nat.h : nat.w;
+        int32_t crossOff = 0;
         if (a == Align::Stretch) {
             crossSize = crossInner;
         } else {
@@ -117,8 +116,8 @@ void Flex::onLayout()
         if (crossSize < 0)
             crossSize = 0;
 
-        const int mainPos = cursor + h.margin;
-        const int crossPos = (row ? cy : cx) + h.margin + crossOff;
+        const int32_t mainPos = cursor + h.margin;
+        const int32_t crossPos = (row ? cy : cx) + h.margin + crossOff;
 
         Rect r;
         if (row)
