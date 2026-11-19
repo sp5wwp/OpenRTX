@@ -5,6 +5,7 @@
  */
 
 #include "views/VfoView.hpp"
+#include "core/LayoutFonts.hpp"
 #include "style/Symbols.hpp"
 #include "style/Charsets.hpp"
 #include "core/Event.hpp"
@@ -398,6 +399,7 @@ void VfoView::restore(UiMemory &m)
     if (e.destination) {
         memcpy(n.dst, e.text[0], sizeof(n.dst));
         bindDst(e.cursor[0]);
+        showDstEdit(true);
         renderDstEdit();
         return;
     }
@@ -1031,6 +1033,17 @@ void VfoView::renderDstEdit()
     chanName_.invalidate();
 }
 
+void VfoView::showDstEdit(bool editing)
+{
+    if (sizeClass() == SizeClass::Regular)
+        return;
+
+    /* Lay the row out with the metrics build() used. */
+    LayoutFonts fonts;
+    chanIdx_.setFlag(FLAG_HIDDEN, editing);
+    nameRow_.onLayout();
+}
+
 void VfoView::bindDst(uint16_t cursor)
 {
     Entry &n = *entry_;
@@ -1055,6 +1068,7 @@ void VfoView::beginDstEdit()
     strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
     n.dst[sizeof(n.dst) - 1] = '\0';
     bindDst(0);
+    showDstEdit(true);
     renderDstEdit();
     screen_.markAllDirty();
     announceDstChar();
@@ -1070,6 +1084,7 @@ void VfoView::endDstEdit(bool commit)
     }
 
     closeEntry();
+    showDstEdit(false);
     /* Force the channel line to recompose from live state next sync. */
     idxCache_[0] = '\1';
     nameCache_[0] = '\1';

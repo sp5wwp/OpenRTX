@@ -150,6 +150,14 @@ private:
      */
     void bindDst(uint16_t cursor);
 
+    /**
+     * Give the destination the index slot while it is edited, on the compact
+     * screen where the two share a row.
+     *
+     * @param editing: the destination is being edited.
+     */
+    void showDstEdit(bool editing);
+
     /** Show "@W1[A]W" with the bracketed cursor in the channel line. */
     void renderDstEdit();
 
