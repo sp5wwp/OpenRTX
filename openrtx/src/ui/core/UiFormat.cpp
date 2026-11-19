@@ -5,12 +5,16 @@
  */
 
 #include "core/UiFormat.hpp"
+#include "core/utils.h"
 #include "rtx/rtx.h"
 
 #include <cstdio>
 
 namespace ortxui
 {
+
+/** TX powers the macro menu cycles through, in mW. */
+static constexpr uint32_t POWER_STEPS_MW[] = { 1000, 2500, POWER_MAX_MW };
 
 /** CTCSS use label, indexed by (txToneEn << 1) | rxToneEn. */
 static constexpr UiText TONE_ENABLE_LABELS[4] = {
@@ -65,6 +69,16 @@ void formatPower(uint32_t mw, char *out, size_t n)
                   static_cast<unsigned long>((mw % 1000u) / 100u));
     else
         sniprintf(out, n, "%lumW", static_cast<unsigned long>(mw));
+}
+
+uint32_t nextPower(uint32_t mw)
+{
+    for (size_t i = 0; (i + 1) < ARRAY_SIZE(POWER_STEPS_MW); i++) {
+        if (POWER_STEPS_MW[i] == mw)
+            return POWER_STEPS_MW[i + 1];
+    }
+
+    return POWER_STEPS_MW[0];
 }
 
 const char *bandwidthLabel(uint8_t bandwidth)

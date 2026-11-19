@@ -204,9 +204,7 @@ void MacroView::doAction(MacroAction action)
             vp_announceRadioMode(ch.mode, flags);
             break;
         case MacroAction::Power:
-            ch.power = (ch.power == 1000u) ? 2500u :
-                       (ch.power == 2500u) ? 5000u :
-                                             1000u;
+            ch.power = nextPower(ch.power);
             requestSyncRtx();
             vp_announcePower(ch.power, flags);
             break;

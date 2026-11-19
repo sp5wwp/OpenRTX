@@ -42,7 +42,6 @@ static constexpr long long kInputErrorMs = 1500;
 
 /* The TX meter is a dB scale up to the highest power the macro menu sets,
  * emptying kPowerSpanDb below it. */
-static constexpr uint32_t kMaxPowerMw = 5000;
 static constexpr float kPowerSpanDb = 10.0f;
 
 /**
@@ -73,7 +72,7 @@ static float powerToFrac(uint32_t mw)
         return 0.0f;
     const float db =
         10.0f
-        * std::log10(static_cast<float>(mw) / static_cast<float>(kMaxPowerMw));
+        * std::log10(static_cast<float>(mw) / static_cast<float>(POWER_MAX_MW));
     return clampFrac(1.0f + db / kPowerSpanDb);
 }
 
