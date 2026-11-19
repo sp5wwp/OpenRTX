@@ -28,11 +28,17 @@ class AboutView : public View
 public:
     static constexpr uint16_t kMaxAuthors = 16;
 
-    void build();
+    void build() override;
 
     Screen &screen() override
     {
         return screen_;
+    }
+
+    /** The credits list, whose scroll UiMemory keeps. */
+    List *list() override
+    {
+        return &authors_;
     }
 
 private:

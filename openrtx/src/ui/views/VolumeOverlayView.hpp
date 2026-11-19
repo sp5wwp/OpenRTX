@@ -26,7 +26,7 @@ namespace ortxui
 class VolumeOverlayView : public View
 {
 public:
-    void build();
+    void build() override;
 
     void syncFromState(const state_t &s) override;
     NavIntent onEvent(const Event &e) override;

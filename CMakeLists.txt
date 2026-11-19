@@ -152,6 +152,7 @@ target_sources(app
     openrtx/src/ui/core/UiText.cpp
     openrtx/src/ui/core/View.cpp
     openrtx/src/ui/core/Navigator.cpp
+    openrtx/src/ui/core/UiMemory.cpp
     openrtx/src/ui/style/Theme.cpp
     openrtx/src/ui/render/DrawCtx.cpp
     openrtx/src/ui/layout/Flex.cpp
@@ -165,6 +166,7 @@ target_sources(app
     openrtx/src/ui/widgets/StatValue.cpp
     openrtx/src/ui/widgets/Compass.cpp
     openrtx/src/ui/widgets/TextBlock.cpp
+    openrtx/src/ui/views/ViewSlot.cpp
     openrtx/src/ui/views/VfoView.cpp
     openrtx/src/ui/views/VolumeOverlayView.cpp
     openrtx/src/ui/views/MenuView.cpp

@@ -30,7 +30,7 @@ namespace ortxui
 class ContactsView : public View, public ListModel
 {
 public:
-    void build();
+    void build() override;
     void onShow() override;
     NavIntent onEvent(const Event &e) override;
 

@@ -35,6 +35,19 @@ void List::setModel(const ListModel *model)
     invalidate();
 }
 
+ListPos List::position() const
+{
+    return { static_cast<uint8_t>(selected_), static_cast<uint8_t>(top_) };
+}
+
+void List::setPosition(const ListPos &p)
+{
+    const uint16_t n = rows();
+    selected_ = (p.selected < n) ? p.selected : 0;
+    top_ = (p.top <= selected_) ? p.top : selected_;
+    invalidate();
+}
+
 ListItem *List::selectedItem()
 {
     /* Model-backed rows are read-only (fetched into a scratch on draw), so

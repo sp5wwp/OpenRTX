@@ -6,6 +6,7 @@
 
 #include "core/SettingsListView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "interfaces/keyboard.h"
 #include "hwconfig.h"
 
@@ -37,7 +38,37 @@ void SettingsListView::buildList(const UiText &title, ListItem *items,
     screen_.markAllDirty();
 }
 
-void SettingsListView::refreshValue(uint8_t row)
+void SettingsListView::save(UiMemory &m) const
+{
+    InlineEdit &ie = m.inlineEdit;
+    if (!editing_) {
+        if (ie.owner == id())
+            ie.owner = ViewId::Count;
+        return;
+    }
+
+    ie.list.row = editRow_;
+    if (rowKind(editRow_) == RowKind::Custom)
+        saveCustom(ie.list);
+    ie.owner = id();
+}
+
+void SettingsListView::restore(UiMemory &m)
+{
+    InlineEdit &ie = m.inlineEdit;
+    if (ie.owner != id())
+        return;
+    ie.owner = ViewId::Count;
+
+    editRow_ = ie.list.row;
+    editing_ = true;
+    if (rowKind(editRow_) == RowKind::Custom)
+        restoreCustom(ie.list);
+    else
+        refreshValue(editRow_, false);
+}
+
+void SettingsListView::refreshValue(uint8_t row, bool speak)
 {
     char inner[32];
     formatValue(row, inner, sizeof(inner));
@@ -48,7 +79,8 @@ void SettingsListView::refreshValue(uint8_t row)
         char wrapped[40];
         snprintf(wrapped, sizeof(wrapped), "<%s>", inner);
         setValueText(row, wrapped);
-        vpSay(inner);
+        if (speak)
+            vpSay(inner);
     } else {
         setValueText(row, inner);
     }

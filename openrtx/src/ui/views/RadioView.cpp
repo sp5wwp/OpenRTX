@@ -6,6 +6,7 @@
 
 #include "views/RadioView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "interfaces/keyboard.h"
 #include "hwconfig.h"
 
@@ -158,6 +159,27 @@ void RadioView::onBeginEdit(uint8_t row)
                                 TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
     setSlotsDecimal(offsetInput_, mag);
     offsetPristine_ = true;
+}
+
+void RadioView::saveCustom(ListEdit &e) const
+{
+    memcpy(e.text, offsetBuf_, sizeof(offsetBuf_));
+    e.cursor = static_cast<uint8_t>(offsetInput_.cursorSlot());
+    e.negative = offsetNeg_;
+    e.pristine = offsetPristine_;
+}
+
+void RadioView::restoreCustom(const ListEdit &e)
+{
+    offsetInput_.configureSlots(offsetBuf_, sizeof(offsetBuf_), "999999", '-',
+                                TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    memcpy(offsetBuf_, e.text, sizeof(offsetBuf_));
+    offsetInput_.setCursorSlot(e.cursor);
+    offsetNeg_ = e.negative;
+    offsetPristine_ = e.pristine;
+    snprintf(bufs_[RowOffset], sizeof(bufs_[RowOffset]), "<%u kHz>",
+             (unsigned)offsetKhz());
+    list_.invalidate();
 }
 
 void RadioView::onAdjust(uint8_t row, int dir)

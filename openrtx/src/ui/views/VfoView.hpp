@@ -42,12 +42,13 @@ namespace ortxui
 class VfoView : public View
 {
 public:
-    void build();
+    void build() override;
 
-    void setMenu(View *menu)
-    {
-        menu_ = menu;
-    }
+    /** Keep an open frequency or destination entry while destroyed. */
+    void save(UiMemory &m) const override;
+
+    /** Reopen a frequency or destination entry kept by save(). */
+    void restore(UiMemory &m) override;
 
     void syncFromState(const state_t &s) override;
     NavIntent onEvent(const Event &e) override;
@@ -146,8 +147,6 @@ private:
     bool dstEditing_ = false; //< destination editor active
     char dstBuf_[10] = { 0 }; //< settings.m17_dest is char[10]
     TextInput dst_;
-
-    View *menu_ = nullptr;
 };
 
 } // namespace ortxui

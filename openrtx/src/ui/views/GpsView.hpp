@@ -30,7 +30,7 @@ namespace ortxui
 class GpsView : public View
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
     void announce() override;
 

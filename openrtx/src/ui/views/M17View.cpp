@@ -7,6 +7,7 @@
 #include "views/M17View.hpp"
 #include "views/TextInputView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/Layout.hpp"
 #include "interfaces/keyboard.h"
 #include "interfaces/delays.h"
@@ -104,6 +105,23 @@ void M17View::onBeginEdit(uint8_t row)
     callsign_.begin();
 }
 
+void M17View::saveCustom(ListEdit &e) const
+{
+    memcpy(e.text, callBuf_, sizeof(callBuf_));
+    e.cursor = static_cast<uint8_t>(callsign_.cursor());
+}
+
+void M17View::restoreCustom(const ListEdit &e)
+{
+    memcpy(callBuf_, e.text, sizeof(callBuf_));
+    callsign_.configure(callBuf_, sizeof(callBuf_), CHARSET_CALLSIGN,
+                        TextInput::Mode::SingleLine,
+                        TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    callsign_.setMultiTap(MTAP_CALLSIGN);
+    callsign_.resume(e.cursor, 0);
+    refreshCustom(RowCallsign);
+}
+
 void M17View::onAdjust(uint8_t /*row*/, int dir)
 {
     /* Only CAN is an adjustable value (CAN RX is a checkbox). */
@@ -123,12 +141,12 @@ void M17View::onToggle(uint8_t row, bool on)
 NavIntent M17View::onActivate(uint8_t row)
 {
     /* Meta Txt is long free text: hand it to the shared modal editor. */
-    if ((row == RowMeta) && (editor_ != nullptr)) {
-        editor_->open(STR(metaText), state.settings.M17_meta_text,
-                      sizeof(state.settings.M17_meta_text), CHARSET_TEXT,
-                      MTAP_TEXT, /*multiline=*/true, /*rtx=*/false);
-        return NavIntent::push(editor_);
-    }
+    if ((row == RowMeta)
+        && TextInputView::open(STR(metaText), state.settings.M17_meta_text,
+                               sizeof(state.settings.M17_meta_text),
+                               CHARSET_TEXT, MTAP_TEXT, /*multiline=*/true,
+                               /*rtx=*/false))
+        return NavIntent::push(ViewId::TextInput);
     return NavIntent::none();
 }
 

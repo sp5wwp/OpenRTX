@@ -51,6 +51,26 @@ public:
     /** Show the last line (resolved against the text at the next use). */
     void scrollToEnd();
 
+    /**
+     * Get the scroll offset as stored, to put it back with setScrollOffset().
+     *
+     * @return the offset in pixels.
+     */
+    int16_t scrollOffset() const
+    {
+        return scroll_;
+    }
+
+    /**
+     * Put back a scroll offset from scrollOffset().
+     *
+     * @param offset: offset in pixels.
+     */
+    void setScrollOffset(int16_t offset)
+    {
+        scroll_ = offset;
+    }
+
     /** Draw the visible lines and, when the text overflows, the indicator. */
     void draw(DrawCtx &d) override;
 

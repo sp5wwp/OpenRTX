@@ -5,6 +5,7 @@
  */
 
 #include "views/PickerView.hpp"
+#include "core/UiMemory.hpp"
 #include "core/Event.hpp"
 #include "core/Layout.hpp"
 #include "render/DrawCtx.hpp"
@@ -122,29 +123,27 @@ void PickerView::build()
     const int16_t W = CONFIG_SCREEN_WIDTH;
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     grid_.setArea({ 0, 0, (uint16_t)W, (uint16_t)H });
+    grid_.setPosition(uiMemory.edit.pickerSelected, uiMemory.edit.pickerTop);
     screen_.addChild(&grid_);
     screen_.markAllDirty();
 }
 
 void PickerView::open()
 {
-    grid_.reset();
-    resultReady_ = false;
-    screen_.markAllDirty();
+    uiMemory.edit.pickerSelected = 0;
+    uiMemory.edit.pickerTop = 0;
+    uiMemory.edit.picked = 0;
+}
+
+void PickerView::save(UiMemory &m) const
+{
+    m.edit.pickerSelected = static_cast<uint8_t>(grid_.selected());
+    m.edit.pickerTop = static_cast<uint8_t>(grid_.top());
 }
 
 void PickerView::announce()
 {
     vpSay(STR(pickCharacter));
-}
-
-bool PickerView::takeResult(uint32_t &cp)
-{
-    if (!resultReady_)
-        return false;
-    cp = result_;
-    resultReady_ = false;
-    return true;
 }
 
 NavIntent PickerView::onEvent(const Event &e)
@@ -159,8 +158,7 @@ NavIntent PickerView::onEvent(const Event &e)
     const uint32_t k = e.keys;
     const int c = static_cast<int>((sizeClass() == SizeClass::Regular) ? 8 : 6);
     if ((k & KEY_ENTER) != 0u) {
-        result_ = grid_.selectedCodePoint();
-        resultReady_ = true;
+        uiMemory.edit.picked = grid_.selectedCodePoint();
         return NavIntent::pop();
     }
     if ((k & KEY_ESC) != 0u)

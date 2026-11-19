@@ -8,6 +8,7 @@
 #include "views/MessageDetailView.hpp"
 #include "views/MessageComposeView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/state.h"
 #include "core/graphics.h"
 #include "interfaces/keyboard.h"
@@ -133,13 +134,19 @@ void MessagesView::reload(uint8_t mode)
     screen_.markAllDirty();
 }
 
+void MessagesView::save(UiMemory &m) const
+{
+    m.inboxPinned = pinned_;
+}
+
+void MessagesView::restore(UiMemory &m)
+{
+    /* Back from the detail view this is the message it ended on. */
+    pinned_ = m.inboxPinned;
+}
+
 void MessagesView::onShow()
 {
-    /* Back from the detail view: follow the message it ended on. */
-    if (inDetail_) {
-        pinned_ = detail_->sequence();
-        inDetail_ = false;
-    }
     reload(state.channel.mode);
 }
 
@@ -164,9 +171,9 @@ NavIntent MessagesView::onEvent(const Event &e)
             const uint16_t sel = list_.selected();
             const struct message *msg = messages_get(sel);
             if (msg != nullptr) {
-                detail_->open(msg->sequence);
-                inDetail_ = true;
-                return NavIntent::push(detail_);
+                pinned_ = msg->sequence;
+                MessageDetailView::open(msg->sequence);
+                return NavIntent::push(ViewId::MessageDetail);
             }
 
             if (canCompose_ && (sel == count_)) {
@@ -174,8 +181,8 @@ NavIntent MessagesView::onEvent(const Event &e)
                 const char *dest = (state.channel.mode == OPMODE_M17) ?
                                        state.settings.m17_dest :
                                        nullptr;
-                if (compose_->open(dest, false))
-                    return NavIntent::push(compose_);
+                if (MessageComposeView::open(dest, false))
+                    return NavIntent::push(ViewId::MessageCompose);
             }
             return NavIntent::none();
         }

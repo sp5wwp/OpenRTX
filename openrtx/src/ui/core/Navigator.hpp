@@ -9,11 +9,14 @@
 
 #include <cstdint>
 #include "core/View.hpp"
+#include "core/ViewId.hpp"
 
 namespace ortxui
 {
 
 struct Event;
+struct UiMemory;
+class ViewSlot;
 
 /**
  * How a managed overlay is auto-dismissed by tickOverlay().
@@ -24,42 +27,81 @@ enum class OverlayDismiss : uint8_t {
 };
 
 /**
- * A depth-bounded stack of Views.
+ * A depth-bounded stack of screens.
  *
- * ENTER-style actions push a child view, ESC pops back to the parent, and the
+ * ENTER-style actions push a child screen, ESC pops back to the parent, and the
  * top of the stack is the active screen that ui_shim draws and feeds state to.
- * Activating a view marks it fully dirty so it repaints cleanly over whatever
- * screen it now covers. The root view is never popped, so ESC on the home
- * screen is a no-op. All storage is static (no heap): the stack is a small
- * fixed array of View pointers.
+ * The stack holds ViewIds and only the top one is built, in a ViewSlot: going
+ * to another screen saves the current view into UiMemory, destroys it and
+ * builds the new one, which restores its own state from UiMemory. Activating a
+ * view marks it fully dirty so it repaints cleanly over whatever screen it now
+ * covers. The root screen is never popped, so ESC on the home screen is a
+ * no-op.
  */
 class Navigator
 {
 public:
-    /** Clear the stack and make `root` the (unpoppable) base screen. */
-    void setRoot(View *root);
+    /**
+     * Constructor.
+     *
+     * @param slot: where the active view is built.
+     * @param mem: what survives a view being destroyed.
+     */
+    Navigator(ViewSlot &slot, UiMemory &mem);
 
-    /** Feed an event to the active view and apply its navigation intent. */
-    void dispatch(const Event &e);
+    /** Destructor. */
+    ~Navigator();
+
+    /**
+     * Clear the stack and make a screen the (unpoppable) base screen.
+     *
+     * @param root: home screen.
+     */
+    void setRoot(ViewId root);
+
+    /**
+     * Feed an event to the active view and apply its navigation intent.
+     *
+     * @param e: event.
+     * @return true if the view asked to reconfigure the radio.
+     */
+    bool dispatch(const Event &e);
 
     /** Forward the state snapshot to the active view. */
     void syncActive(const state_t &s);
 
-    /** The current top-of-stack view, or nullptr before setRoot(). */
-    View *active() const
+    /**
+     * Get the active view: the managed overlay when one is shown, else the
+     * built screen.
+     *
+     * @return the view, or nullptr before setRoot().
+     */
+    View *active() const;
+
+    /**
+     * Get the screen at the top of the stack.
+     *
+     * @return the screen, or ViewId::Count before setRoot().
+     */
+    ViewId activeId() const
     {
-        return (depth_ > 0) ? stack_[depth_ - 1] : nullptr;
+        return (depth_ > 0) ? stack_[depth_ - 1] : ViewId::Count;
     }
 
     /**
-     * Open/close a modal overlay (e.g. the macro menu) on top of the current
-     * screen. Unlike push/pop these are public so ui_shim can drive an overlay
-     * that is triggered globally (a held key), outside a view's onEvent intent.
+     * Open a modal screen (e.g. the macro menu) on top of the current one. It
+     * replaces the current view until closeOverlay() rebuilds it. Public so
+     * ui_shim can open a screen triggered globally (a held key), outside a
+     * view's onEvent intent.
+     *
+     * @param id: screen to open.
      */
-    void openOverlay(View *v)
+    void openOverlay(ViewId id)
     {
-        push(v);
+        push(id);
     }
+
+    /** Close the modal screen and rebuild the one below it. */
     void closeOverlay()
     {
         pop();
@@ -67,14 +109,14 @@ public:
 
     /**
      * Present `v` as a *managed* overlay above the current screen and drive its
-     * dismissal centrally from tickOverlay(). Unlike openOverlay/closeOverlay
-     * (a held-key modal the caller pops itself), a managed overlay auto-hides:
+     * dismissal centrally from tickOverlay(). The view below stays built. A
+     * managed overlay auto-hides:
      *   Transient   - after `timeoutMs` since the last pokeOverlay(now);
      *   WhileActive - as soon as `cond()` returns false.
-     * Re-presenting the same view just refreshes its policy/poke (no re-push),
-     * so a repeating trigger (e.g. the volume knob turning) keeps one overlay
-     * alive. One managed overlay at a time; a different one replaces it. This is
-     * the shared layer behind the volume HUD and, later, the TX/RX detail views.
+     * Re-presenting the same view just refreshes its policy/poke, so a
+     * repeating trigger (e.g. the volume knob turning) keeps one overlay alive.
+     * One managed overlay at a time; a different one replaces it. This is the
+     * shared layer behind the volume HUD and, later, the TX/RX detail views.
      */
     void presentOverlay(View *v, OverlayDismiss policy, long long now,
                         uint32_t timeoutMs = 0, bool (*cond)() = nullptr);
@@ -88,7 +130,7 @@ public:
     /** Apply the managed overlay's dismiss policy; call once per UI tick. */
     void tickOverlay(long long now);
 
-    /** Dismiss the managed overlay now, if it is the exposed top of stack. */
+    /** Dismiss the managed overlay now, if one is shown. */
     void dismissOverlay();
 
     /** The managed overlay currently shown, or nullptr. */
@@ -100,13 +142,34 @@ public:
 private:
     static constexpr uint8_t kMaxDepth = 8;
 
-    void push(View *v);
-    void pop();
-    void popToRoot();
-    void activate();
+    /**
+     * Push a screen onto the stack and build it.
+     *
+     * @param id: screen to push.
+     */
+    void push(ViewId id);
 
-    View *stack_[kMaxDepth] = {};
-    uint8_t depth_ = 0;
+    /** Pop the top screen and rebuild the one below it. */
+    void pop();
+
+    /** Pop every screen but the root and rebuild it. */
+    void popToRoot();
+
+    /** Save and destroy the built view, then build the top of the stack. */
+    void rebuild();
+
+    /**
+     * Run a view's entry hooks and mark it for a full repaint.
+     *
+     * @param v: view becoming active.
+     */
+    static void activate(View *v);
+
+    ViewSlot &slot_;               ///< Where the top screen is built
+    UiMemory &mem_;                ///< What survives a view
+    ViewId stack_[kMaxDepth];      ///< Screens, root first
+    ViewId built_ = ViewId::Count; ///< Screen currently built in the slot
+    uint8_t depth_ = 0;            ///< Number of screens on the stack
 
     /* Managed-overlay bookkeeping (see presentOverlay). */
     View *overlay_ = nullptr;

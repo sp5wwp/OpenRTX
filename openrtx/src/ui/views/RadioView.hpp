@@ -33,7 +33,7 @@ namespace ortxui
 class RadioView : public SettingsListView
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
 
 private:
@@ -53,6 +53,12 @@ private:
     void onBeginEdit(uint8_t row) override;
     bool onEditEvent(const Event &e) override;
     void refreshCustom(uint8_t row) override;
+
+    /** Keep the offset being entered. */
+    void saveCustom(ListEdit &e) const override;
+
+    /** Reopen the offset entry kept by saveCustom(). */
+    void restoreCustom(const ListEdit &e) override;
 
     void
     offsetAdjust(int dir); //< nudge the offset by the tuning step (knob/UP)

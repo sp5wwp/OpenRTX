@@ -26,7 +26,7 @@ namespace ortxui
 class FmView : public SettingsListView
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
 
 private:

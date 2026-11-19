@@ -8,6 +8,7 @@
 #include "style/Symbols.hpp"
 #include "style/Charsets.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/Layout.hpp"
 #include "interfaces/delays.h"
 #include "core/utils.h"
@@ -283,6 +284,73 @@ void VfoView::build()
     screen_.markAllDirty();
 }
 
+void VfoView::save(UiMemory &m) const
+{
+    InlineEdit &ie = m.inlineEdit;
+    if (!inputActive_ && !dstEditing_) {
+        if (ie.owner == id())
+            ie.owner = ViewId::Count;
+        return;
+    }
+
+    VfoEdit &e = ie.vfo;
+    e.input = inputActive_;
+    e.destination = dstEditing_;
+    e.txField = inputTxSet_;
+    e.rxPristine = rxPristine_;
+    e.txPristine = txPristine_;
+    e.shift = static_cast<int32_t>(inputShift_);
+    e.errorAt = inputErrorAt_;
+    if (dstEditing_) {
+        memcpy(e.text[0], dstBuf_, sizeof(dstBuf_));
+        e.cursor[0] = static_cast<uint8_t>(dst_.cursor());
+    } else {
+        memcpy(e.text[0], rxBuf_, sizeof(rxBuf_));
+        memcpy(e.text[1], txBuf_, sizeof(txBuf_));
+        e.cursor[0] = static_cast<uint8_t>(rxInput_.cursorSlot());
+        e.cursor[1] = static_cast<uint8_t>(txInput_.cursorSlot());
+    }
+    ie.owner = id();
+}
+
+void VfoView::restore(UiMemory &m)
+{
+    InlineEdit &ie = m.inlineEdit;
+    if (ie.owner != id())
+        return;
+    ie.owner = ViewId::Count;
+
+    const VfoEdit &e = ie.vfo;
+    if (e.destination) {
+        memcpy(dstBuf_, e.text[0], sizeof(dstBuf_));
+        dst_.configure(dstBuf_, sizeof(dstBuf_), CHARSET_CALLSIGN,
+                       TextInput::Mode::SingleLine,
+                       TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+        dst_.setMultiTap(MTAP_CALLSIGN);
+        dst_.resume(e.cursor[0], 0);
+        dstEditing_ = true;
+        renderDstEdit();
+        return;
+    }
+
+    /* Lay the masks, then put the digits and cursors back over them. */
+    rxInput_.configureSlots(rxBuf_, sizeof(rxBuf_), kFreqMask, '-',
+                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    txInput_.configureSlots(txBuf_, sizeof(txBuf_), kFreqMask, '-',
+                            TextInput::CursorStyle::Bracket, FONT_SIZE_8PT);
+    memcpy(rxBuf_, e.text[0], sizeof(rxBuf_));
+    memcpy(txBuf_, e.text[1], sizeof(txBuf_));
+    rxInput_.setCursorSlot(e.cursor[0]);
+    txInput_.setCursorSlot(e.cursor[1]);
+    inputActive_ = true;
+    inputTxSet_ = e.txField;
+    rxPristine_ = e.rxPristine;
+    txPristine_ = e.txPristine;
+    inputShift_ = e.shift;
+    inputErrorAt_ = e.errorAt;
+    refreshInput();
+}
+
 void VfoView::syncMode(const channel_t &ch)
 {
     const char *m1 = "--";
@@ -495,8 +563,7 @@ NavIntent VfoView::onEvent(const Event &e)
             clearFmTone();
 
         if ((k & KEY_ENTER) != 0u) {
-            if (menu_ != nullptr)
-                return NavIntent::push(menu_);
+            return NavIntent::push(ViewId::MainMenu);
         } else if ((k & KEY_ESC) != 0u) {
             toggleVfoMem();
         } else if ((k & KEY_HASH) != 0u) {

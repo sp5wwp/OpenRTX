@@ -10,14 +10,16 @@
 #include <cstdint>
 #include "core/Object.hpp"
 #include "core/UiText.hpp"
+#include "core/ViewId.hpp"
 #include "core/state.h"
 
 namespace ortxui
 {
 
-class View;
 class TopBar;
+class List;
 struct Event;
+struct UiMemory;
 
 /**
  * What a View asks the Navigator to do after handling an event.
@@ -30,29 +32,35 @@ enum class NavAction : uint8_t {
 };
 
 /**
- * A navigation request returned by a View from onEvent(). Views are statically
- * allocated singletons, so a push carries the target View pointer directly and
- * needs no id registry or table.
+ * A navigation request returned by a View from onEvent(). Only one view exists
+ * at a time, so a push names the screen to build.
  */
 struct NavIntent {
     NavAction action = NavAction::None;
-    View *target = nullptr;
+    ViewId target = ViewId::Count; ///< Screen a push opens
 
     static NavIntent none()
     {
         return {};
     }
-    static NavIntent push(View *v)
+
+    /**
+     * Open a child screen.
+     *
+     * @param id: screen to open.
+     * @return the intent.
+     */
+    static NavIntent push(ViewId id)
     {
-        return { NavAction::Push, v };
+        return { NavAction::Push, id };
     }
     static NavIntent pop()
     {
-        return { NavAction::Pop, nullptr };
+        return { NavAction::Pop, ViewId::Count };
     }
     static NavIntent popToRoot()
     {
-        return { NavAction::PopToRoot, nullptr };
+        return { NavAction::PopToRoot, ViewId::Count };
     }
 };
 
@@ -60,14 +68,58 @@ struct NavIntent {
  * Base class for a full-screen view.
  *
  * A View owns a Screen (its retained widget tree) plus the navigation and
- * state-binding behaviour wrapped around it. Concrete views are static
- * singletons; the Navigator drives their lifecycle and treats the top of its
- * stack as the active screen.
+ * state-binding behaviour wrapped around it. Only the active view exists: the
+ * Navigator builds it in a shared slot and destroys it when another screen
+ * replaces it, so anything that must outlive it goes to UiMemory in save()
+ * and comes back in restore().
  */
 class View
 {
 public:
     virtual ~View() = default;
+
+    /** Build the widget tree, once, right after construction. */
+    virtual void build() = 0;
+
+    /**
+     * Get the screen this view was built as.
+     *
+     * @return the screen.
+     */
+    ViewId id() const
+    {
+        return id_;
+    }
+
+    /**
+     * The list whose position UiMemory keeps for this screen.
+     *
+     * @return the list, or nullptr if the screen keeps none.
+     */
+    virtual List *list()
+    {
+        return nullptr;
+    }
+
+    /**
+     * Store what must survive this view being destroyed.
+     *
+     * @param m: UI memory.
+     */
+    virtual void save(UiMemory &m) const
+    {
+        (void)m;
+    }
+
+    /**
+     * Take back what save() stored, right after build() and before onShow().
+     *
+     * @param m: UI memory.
+     */
+    virtual void restore(UiMemory &m)
+    {
+        (void)m;
+    }
 
     /** Called each time this view becomes the active (top-of-stack) screen. */
     virtual void onShow()
@@ -139,7 +191,10 @@ protected:
     TopBar *topBar_ = nullptr;
 
 private:
+    friend class ViewSlot;
+
     bool syncRtx_ = false;
+    ViewId id_ = ViewId::Count; ///< Screen this view was built as
 };
 
 } // namespace ortxui

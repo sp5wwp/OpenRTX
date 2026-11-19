@@ -7,6 +7,7 @@
 #include "views/TextInputView.hpp"
 #include "views/PickerView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/Layout.hpp"
 #include "interfaces/keyboard.h"
 #include "interfaces/delays.h"
@@ -37,6 +38,7 @@ void TextInputView::build()
     title_.setBasis(regular ? 14 : 10);
 
     field_.setGrow(1); /* the scrolling field fills the middle */
+    configureField();
 
     hint_.setColor(Sem::OnSurfaceMuted);
     hint_.setFont(regular ? FONT_SIZE_6PT : FONT_SIZE_5PT);
@@ -53,45 +55,46 @@ void TextInputView::build()
     screen_.markAllDirty();
 }
 
-void TextInputView::open(const UiText &title, char *dst, uint16_t cap,
+bool TextInputView::open(const UiText &title, char *dst, uint16_t cap,
                          const Charset &cs, const MultiTapTable &tap,
                          bool multiline, bool rtx)
 {
-    dst_ = dst;
-    rtx_ = rtx;
+    return uiMemory.openEdit(title, dst, cap, cs, tap, multiline, rtx);
+}
 
-    /* Copy into the working buffer, bounded by both the caller's capacity and
-     * our own storage. */
-    uint16_t lim = (cap < sizeof(work_)) ? cap : (uint16_t)sizeof(work_);
-    if (lim == 0)
-        lim = 1;
-    cap_ = lim;
-    strncpy(work_, (dst != nullptr) ? dst : "", lim - 1);
-    work_[lim - 1] = '\0';
+void TextInputView::configureField()
+{
+    const EditRequest &r = uiMemory.edit;
+    if (r.work == nullptr)
+        return;
 
-    title_.setText(title);
+    title_.setText(r.title);
 
     const bool regular = (sizeClass() == SizeClass::Regular);
     const fontSize_t f = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
-    field_.configure(work_, lim, cs,
-                     multiline ? TextInput::Mode::MultiLine :
-                                 TextInput::Mode::SingleLine,
+    field_.configure(r.work, r.cap, *r.charset,
+                     r.multiline ? TextInput::Mode::MultiLine :
+                                   TextInput::Mode::SingleLine,
                      TextInput::CursorStyle::Block, f);
-    field_.setMultiTap(tap);
-    field_.begin();
+    field_.setMultiTap(*r.tap);
+    field_.resume(r.cursor, r.topRow);
     field_.setEditMode(TextInput::EditMode::Overtype); /* the only model now */
-    refreshHint();
+}
 
-    screen_.markAllDirty();
+void TextInputView::save(UiMemory &m) const
+{
+    m.edit.cursor = field_.cursor();
+    m.edit.topRow = field_.topRow();
 }
 
 void TextInputView::onShow()
 {
-    /* Returning from the character picker: insert the chosen code point. */
-    uint32_t cp = 0;
-    if ((picker_ != nullptr) && picker_->takeResult(cp)) {
-        field_.putCodePoint(cp); /* insert or overwrite, per the current mode */
+    /* Back from the character picker: insert the chosen code point. */
+    EditRequest &r = uiMemory.edit;
+    if (r.picked != 0) {
+        field_.putCodePoint(r.picked); /* insert or overwrite, per the mode */
         field_.invalidate();
+        r.picked = 0;
     }
 }
 
@@ -128,12 +131,13 @@ void TextInputView::refreshHint()
 
 void TextInputView::commit()
 {
+    const EditRequest &r = uiMemory.edit;
     field_.stripTrailingSpaces();
-    if ((dst_ != nullptr) && (cap_ > 0)) {
-        strncpy(dst_, work_, cap_ - 1);
-        dst_[cap_ - 1] = '\0';
+    if ((r.dst != nullptr) && (r.work != nullptr)) {
+        strncpy(r.dst, r.work, r.cap - 1);
+        r.dst[r.cap - 1] = '\0';
     }
-    if (rtx_)
+    if (r.rtx)
         requestSyncRtx();
 }
 
@@ -154,11 +158,8 @@ NavIntent TextInputView::onEvent(const Event &e)
 
     /* A long-press opens the UTF-8 character picker (accented Latin, symbols). */
     if (e.kind == EvKind::KeyLong) {
-        if (picker_ != nullptr) {
-            picker_->open();
-            return NavIntent::push(picker_);
-        }
-        return NavIntent::none();
+        PickerView::open();
+        return NavIntent::push(ViewId::Picker);
     }
 
     if (e.kind != EvKind::Key)
@@ -168,10 +169,13 @@ NavIntent TextInputView::onEvent(const Event &e)
     if ((k & KEY_ENTER) != 0u) {
         field_.commitPending();
         commit();
+        uiMemory.closeEdit();
         return NavIntent::pop();
     }
-    if ((k & KEY_ESC) != 0u)
+    if ((k & KEY_ESC) != 0u) {
+        uiMemory.closeEdit();
         return NavIntent::pop();
+    }
 
     /* '#' clears the field, but only where it isn't the space key (otherwise it
      * stays space and falls through to multi-tap below). Checked before the

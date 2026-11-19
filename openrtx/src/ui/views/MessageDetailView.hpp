@@ -19,8 +19,6 @@
 namespace ortxui
 {
 
-class MessageComposeView;
-
 /**
  * One inbox message: a "sender > recipient" header, the scrollable body and a
  * footer with the Reply hint and the "n/m" position. UP/DOWN and the knob
@@ -33,22 +31,21 @@ class MessageDetailView : public View
 {
 public:
     /** Build the widget tree. */
-    void build();
+    void build() override;
 
-    /** Wire the compose form used for replies. */
-    void setComposer(MessageComposeView *c)
-    {
-        compose_ = c;
-    }
+    /**
+     * Pin a message, shown from its top, and mark it read. Call before
+     * pushing the view.
+     *
+     * @param sequence: sequence number of the message.
+     */
+    static void open(uint32_t sequence);
 
-    /** Pin the message with `sequence` and mark it read. Call before pushing. */
-    void open(uint32_t sequence);
+    /** Keep the pinned message and the body scroll while destroyed. */
+    void save(UiMemory &m) const override;
 
-    /** Sequence number of the message shown. */
-    uint32_t sequence() const
-    {
-        return seq_;
-    }
+    /** Take back the pinned message and the body scroll. */
+    void restore(UiMemory &m) override;
 
     /** Read the message out: the other party, then the body. */
     void announce() override;
@@ -103,8 +100,6 @@ private:
     Label reply_;
     /** "n/m" position in the inbox. */
     Label position_;
-    /** Compose form used for replies. */
-    MessageComposeView *compose_ = nullptr;
     /** Sequence number of the pinned message. */
     uint32_t seq_ = 0;
     /** Sequence number the widgets currently show; 0 when none. */

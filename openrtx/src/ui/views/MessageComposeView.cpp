@@ -7,6 +7,7 @@
 #include "views/MessageComposeView.hpp"
 #include "views/TextInputView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/state.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
@@ -26,7 +27,7 @@ void MessageComposeView::build()
     const int16_t H = CONFIG_SCREEN_HEIGHT;
     const int16_t topH = (sizeClass() == SizeClass::Regular) ? 16 : 12;
 
-    topBar_.init(STR(newMessage));
+    topBar_.init(uiMemory.draftReply ? STR(reply) : STR(newMessage));
     topBar_.setArea({ 0, 0, (uint16_t)W, (uint16_t)topH });
     topBar_.onLayout();
     setTopBar(&topBar_);
@@ -49,30 +50,22 @@ void MessageComposeView::build()
 
 bool MessageComposeView::open(const char *recipient, bool reply)
 {
-    /* Reuse a draft left allocated if the form was not closed through
-     * close(); otherwise pay for the body only while composing. */
-    if (body_ == nullptr)
-        body_ = static_cast<char *>(malloc(MSG_BODY_MAX_LEN));
-    if (body_ == nullptr)
+    /* Pay for the draft only while composing. */
+    if (!uiMemory.openDraft(recipient, reply))
         return false;
 
-    body_[0] = '\0';
-    memset(recipient_, 0, sizeof(recipient_));
-    if (recipient != nullptr)
-        strncpy(recipient_, recipient, sizeof(recipient_) - 1);
-
-    topBar_.setTitle(reply ? STR(reply) : STR(newMessage));
-    refresh();
-    list_.setSelected(ROW_BODY, false);
+    uiMemory.lists[static_cast<uint8_t>(ViewId::MessageCompose)] = { ROW_BODY,
+                                                                     0 };
     return true;
 }
 
 void MessageComposeView::refresh()
 {
     /* An empty recipient is a broadcast. */
-    items_[ROW_TO].value = (recipient_[0] != '\0') ? UiText(recipient_) :
-                                                     STR(broadcast);
-    items_[ROW_BODY].value = (body_ != nullptr) ? body_ : "";
+    const ComposeDraft *d = uiMemory.draft;
+    const bool to = (d != nullptr) && (d->recipient[0] != '\0');
+    items_[ROW_TO].value = to ? UiText(d->recipient) : STR(broadcast);
+    items_[ROW_BODY].value = (d != nullptr) ? d->body : "";
     list_.invalidate();
 }
 
@@ -96,15 +89,16 @@ void MessageComposeView::announce()
 
 bool MessageComposeView::send()
 {
-    const size_t len = strnlen(body_, MSG_BODY_MAX_LEN);
+    const ComposeDraft *d = uiMemory.draft;
+    const size_t len = strnlen(d->body, MSG_BODY_MAX_LEN);
     if (len == 0)
         return false;
 
     /* An empty To field goes on the air as the source's broadcast address,
      * never the display string. */
     const uint8_t mode = state.channel.mode;
-    const char *rcpt = (recipient_[0] != '\0') ? recipient_ :
-                                                 messages_broadcastAddr(mode);
+    const char *rcpt = (d->recipient[0] != '\0') ? d->recipient :
+                                                   messages_broadcastAddr(mode);
     if (rcpt == nullptr) {
         vp_announceError(
             static_cast<vpQueueFlags>(vpqInit | vpqPlayImmediately));
@@ -113,7 +107,7 @@ bool MessageComposeView::send()
 
     struct message msg;
     memset(&msg, 0, sizeof(msg));
-    msg.body = body_;
+    msg.body = d->body;
     msg.bodyLen = static_cast<uint16_t>(len);
     msg.mode = mode;
     strncpy(msg.sender, state.settings.callsign, sizeof(msg.sender) - 1);
@@ -128,8 +122,7 @@ bool MessageComposeView::send()
 
 NavIntent MessageComposeView::close()
 {
-    free(body_);
-    body_ = nullptr;
+    uiMemory.closeDraft();
     refresh();
     return NavIntent::pop();
 }
@@ -149,17 +142,21 @@ NavIntent MessageComposeView::onEvent(const Event &e)
         return NavIntent::none();
     }
 
+    ComposeDraft *d = uiMemory.draft;
     switch (list_.selected()) {
         case ROW_TO:
-            editor_->open(STR(to), recipient_, sizeof(recipient_),
-                          CHARSET_CALLSIGN, MTAP_CALLSIGN,
-                          /*multiline=*/false, /*rtx=*/false);
-            return NavIntent::push(editor_);
+            if (TextInputView::open(STR(to), d->recipient, sizeof(d->recipient),
+                                    CHARSET_CALLSIGN, MTAP_CALLSIGN,
+                                    /*multiline=*/false, /*rtx=*/false))
+                return NavIntent::push(ViewId::TextInput);
+            return NavIntent::none();
 
         case ROW_BODY:
-            editor_->open(STR(message), body_, MSG_BODY_MAX_LEN, CHARSET_TEXT,
-                          MTAP_TEXT, /*multiline=*/true, /*rtx=*/false);
-            return NavIntent::push(editor_);
+            if (TextInputView::open(STR(message), d->body, sizeof(d->body),
+                                    CHARSET_TEXT, MTAP_TEXT,
+                                    /*multiline=*/true, /*rtx=*/false))
+                return NavIntent::push(ViewId::TextInput);
+            return NavIntent::none();
 
         default:
             if (send())

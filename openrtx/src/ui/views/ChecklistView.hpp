@@ -27,13 +27,19 @@ namespace ortxui
 class ChecklistView : public View
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
     NavIntent onEvent(const Event &e) override;
 
     Screen &screen() override
     {
         return screen_;
+    }
+
+    /** The checklist, whose position UiMemory keeps. */
+    List *list() override
+    {
+        return &list_;
     }
 
 private:

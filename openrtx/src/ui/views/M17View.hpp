@@ -16,8 +16,6 @@
 namespace ortxui
 {
 
-class TextInputView;
-
 /**
  * The Settings > M17 screen (value-row style), mirroring the classic M17 menu:
  *  - Callsign: edited in place with a deterministic cursor cycle — ENTER opens
@@ -36,14 +34,8 @@ class TextInputView;
 class M17View : public SettingsListView
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
-
-    /** Wire the shared modal text editor used for the (long) Meta Txt field. */
-    void setTextEditor(TextInputView *e)
-    {
-        editor_ = e;
-    }
 
 private:
     enum Row : uint8_t {
@@ -66,12 +58,16 @@ private:
     bool onEditEvent(const Event &e) override;
     void refreshCustom(uint8_t row) override;
 
+    /** Keep the callsign being edited. */
+    void saveCustom(ListEdit &e) const override;
+
+    /** Reopen the callsign edit kept by saveCustom(). */
+    void restoreCustom(const ListEdit &e) override;
+
     void callsignCycle(int dir); //< cycle the char under the cursor
     void callsignMove(int dir);  //< move the cursor (extend at the end)
     void callsignConfirm();      //< strip + write to settings.callsign
     void announceCursorChar();   //< speak the char under the cursor (voice)
-
-    TextInputView *editor_ = nullptr; //< shared modal, for Meta Txt
 
     ListItem items_[RowCount] = {};
     char bufs_[RowCount][24] = {};

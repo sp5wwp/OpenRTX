@@ -12,12 +12,11 @@
  * the C++ retained-widget toolkit. threads.c, graphics.c, the state module,
  * the event queue and the sync_rtx/mutex discipline are all unchanged.
  *
- * The active screen is the top of a Navigator's View stack (each View driving a
- * Screen). Input events are decoded and dispatched into the active view, which
- * returns a navigation intent (push a child screen / pop back); drawing pulls
- * from the state snapshot and repaints only when something actually changed.
- * The VFO home, a main menu and a settings submenu exist so far; remaining
- * views land in later slices.
+ * The active screen is the top of a Navigator's screen stack; only that view
+ * exists, built in a ViewSlot, with what must outlive it kept in UiMemory.
+ * Input events are decoded and dispatched into the active view, which returns
+ * a navigation intent (push a child screen / pop back); drawing pulls from the
+ * state snapshot and repaints only when something actually changed.
  */
 
 #include "core/ui.h"
@@ -35,31 +34,11 @@
 
 #include "core/Event.hpp"
 #include "core/Navigator.hpp"
+#include "core/UiMemory.hpp"
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
-#include "views/VfoView.hpp"
-#include "views/MacroView.hpp"
+#include "views/ViewSlot.hpp"
 #include "views/VolumeOverlayView.hpp"
-#include "views/MenuView.hpp"
-#include "views/InfoView.hpp"
-#include "views/AboutView.hpp"
-#include "views/DisplayView.hpp"
-#include "views/TimeDateView.hpp"
-#include "views/ChecklistView.hpp"
-#include "views/GpsView.hpp"
-#include "views/GpsSettingsView.hpp"
-#include "views/FmView.hpp"
-#include "views/RadioView.hpp"
-#include "views/M17View.hpp"
-#include "views/DefaultsView.hpp"
-#include "views/ChannelsView.hpp"
-#include "views/ContactsView.hpp"
-#include "views/BanksView.hpp"
-#include "views/TextInputView.hpp"
-#include "views/PickerView.hpp"
-#include "views/MessagesView.hpp"
-#include "views/MessageDetailView.hpp"
-#include "views/MessageComposeView.hpp"
 
 #include <cstdint>
 
@@ -80,93 +59,11 @@ uint8_t evQueue_wrPos = 0;
  * global `state` here under state_mutex; drawing reads only this snapshot. */
 state_t last_state;
 
-/* Menu item tables, also used to wire the rows to their views. Content
- * mirrors the classic UI's menus; the config guards keep parity with targets
- * that omit GPS/RTC/M17. */
-const UiText kMainMenu[] = {
-    STR(banks),    STR(channels), STR(contacts),
-#ifdef CONFIG_GPS
-    STR(gps),
-#endif
-#ifdef CONFIG_MESSAGES
-    STR(messages),
-#endif
-    STR(settings), STR(info),     STR(about),
-};
-constexpr uint16_t kMainMenuCount = sizeof(kMainMenu) / sizeof(kMainMenu[0]);
-
-const UiText kSettingsMenu[] = {
-    STR(display),
-#ifdef CONFIG_RTC
-    STR(timeAndDate),
-#endif
-#ifdef CONFIG_GPS
-    STR(gps),
-#endif
-    STR(radio),
-#ifdef CONFIG_M17
-    STR(m17),
-#endif
-    STR(fm),          STR(accessibility), STR(defaultSettings),
-};
-constexpr uint16_t kSettingsMenuCount = sizeof(kSettingsMenu)
-                                      / sizeof(kSettingsMenu[0]);
-
-/* The view singletons and the Navigator whose stack top is the active screen.
- * Each View owns its widget tree in static storage. */
-VfoView vfoView;
-MacroView macroView;
+/* The one live view, the screen stack over it, and the volume HUD, which
+ * stays built because it draws over the screen without replacing it. */
+ViewSlot viewSlot;
+Navigator nav(viewSlot, uiMemory);
 VolumeOverlayView volumeOverlay;
-MenuView mainMenu;
-MenuView settingsMenu;
-InfoView infoView;
-AboutView aboutView;
-DisplayView displayView;
-#ifdef CONFIG_RTC
-TimeDateView timeDateView;
-#endif
-ChecklistView checklistView;
-FmView fmView;
-RadioView radioView;
-DefaultsView defaultsView;
-ChannelsView channelsView;
-ContactsView contactsView;
-BanksView banksView;
-TextInputView textInputView;
-PickerView pickerView;
-#ifdef CONFIG_M17
-M17View m17View;
-#endif
-#ifdef CONFIG_GPS
-GpsView gpsView;
-GpsSettingsView gpsSettingsView;
-#endif
-#ifdef CONFIG_MESSAGES
-MessagesView messagesView;
-MessageDetailView messageDetailView;
-MessageComposeView messageComposeView;
-#endif
-Navigator nav;
-
-/**
- * Wire the row of a menu whose label matches a given one to a view.
- *
- * @param menu: menu to wire.
- * @param table: the menu's row labels.
- * @param count: number of rows.
- * @param label: label of the row to wire.
- * @param target: view the row opens.
- */
-void wireRow(MenuView &menu, const UiText *table, uint16_t count,
-             const UiText &label, View *target)
-{
-    for (uint16_t i = 0; i < count; i++) {
-        if (table[i] == label) {
-            menu.setRowTarget(i, target);
-            return;
-        }
-    }
-}
 
 /* Display standby (backlight timeout) — parity with the classic default UI.
  * On `settings.display_timer` of idle the backlight is blanked and drawing is
@@ -254,80 +151,8 @@ extern "C" void ui_init()
     evQueue_wrPos = 0;
     last_state = state;
 
-    vfoView.build();
-    macroView.build();
     volumeOverlay.build();
-    mainMenu.build(STR(menu), kMainMenu, kMainMenuCount);
-    settingsMenu.build(STR(settings), kSettingsMenu, kSettingsMenuCount);
-    infoView.build();
-    aboutView.build();
-    displayView.build();
-#ifdef CONFIG_RTC
-    timeDateView.build();
-#endif
-    checklistView.build();
-    fmView.build();
-    radioView.build();
-    defaultsView.build();
-    channelsView.build();
-    contactsView.build();
-    banksView.build();
-    textInputView.build();
-    pickerView.build();
-    textInputView.setPicker(&pickerView);
-#ifdef CONFIG_M17
-    m17View.build();
-    m17View.setTextEditor(&textInputView);
-#endif
-#ifdef CONFIG_GPS
-    gpsView.build();
-    gpsSettingsView.build();
-#endif
-#ifdef CONFIG_MESSAGES
-    messagesView.build();
-    messageDetailView.build();
-    messageComposeView.build();
-    messagesView.setViews(&messageDetailView, &messageComposeView);
-    messageDetailView.setComposer(&messageComposeView);
-    messageComposeView.setTextEditor(&textInputView);
-#endif
-
-    /* Wire menu rows to their views. Rows resolve by label because the indices
-     * shift with the config guards on the menu tables. */
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(banks), &banksView);
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(channels), &channelsView);
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(contacts), &contactsView);
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(settings), &settingsMenu);
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(info), &infoView);
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(about), &aboutView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(display),
-            &displayView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(accessibility),
-            &checklistView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(fm), &fmView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(radio),
-            &radioView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount,
-            STR(defaultSettings), &defaultsView);
-#ifdef CONFIG_RTC
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(timeAndDate),
-            &timeDateView);
-#endif
-#ifdef CONFIG_M17
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(m17),
-            &m17View);
-#endif
-#ifdef CONFIG_GPS
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(gps), &gpsView);
-    wireRow(settingsMenu, kSettingsMenu, kSettingsMenuCount, STR(gps),
-            &gpsSettingsView);
-#endif
-#ifdef CONFIG_MESSAGES
-    wireRow(mainMenu, kMainMenu, kMainMenuCount, STR(messages), &messagesView);
-#endif
-
-    vfoView.setMenu(&mainMenu);
-    nav.setRoot(&vfoView);
+    nav.setRoot(ViewId::Vfo);
 
     /* Apply the persisted text-rendering setting (crisp/1bpp vs smooth/AA). The
      * theme (Instrument vs High Contrast) needs no apply — themeColor() reads it
@@ -434,7 +259,7 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
             const bool moni = ((msg.keys & KEY_MONI) != 0u);
             if (moni) {
                 if (!macroOpen) {
-                    nav.openOverlay(&macroView);
+                    nav.openOverlay(ViewId::Macro);
                     macroOpen = true;
                     macroLatched = false;
                 } else if (macroLatched) {
@@ -452,14 +277,11 @@ extern "C" void ui_updateFSM(bool *sync_rtx)
             }
         }
 
-        /* The view that handles the event is the active one at dispatch time; if
-         * it edited an rtx-affecting field it flags a resync, which we forward so
-         * threads.c re-applies state.channel to the radio. */
-        View *handler = nav.active();
+        /* If the view handling the event edited an rtx-affecting field it flags
+         * a resync, which we forward so threads.c re-applies state.channel to
+         * the radio. */
         const Event ev = Event::decode((uint8_t)raw.type, raw.payload);
-        nav.dispatch(ev);
-
-        if ((handler != nullptr) && handler->takeSyncRtx())
+        if (nav.dispatch(ev))
             *sync_rtx = true;
         return;
     }

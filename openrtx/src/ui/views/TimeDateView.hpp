@@ -29,7 +29,7 @@ namespace ortxui
 class TimeDateView : public View
 {
 public:
-    void build();
+    void build() override;
     void onShow() override;
     void announce() override;
     void syncFromState(const state_t &s) override;

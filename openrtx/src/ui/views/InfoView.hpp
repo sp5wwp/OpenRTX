@@ -29,7 +29,7 @@ namespace ortxui
 class InfoView : public View
 {
 public:
-    void build();
+    void build() override;
     void syncFromState(const state_t &s) override;
 
     Screen &screen() override

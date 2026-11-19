@@ -32,6 +32,14 @@ struct ListItem {
 };
 
 /**
+ * Selection and scroll offset of a list, kept while its view is destroyed.
+ */
+struct ListPos {
+    uint8_t selected; ///< Selected row
+    uint8_t top;      ///< First visible row
+};
+
+/**
  * An on-demand source of list rows. Only the currently visible window is
  * queried (during draw), so a large list — e.g. a codeplug's hundreds of
  * channels — needs no per-row storage: the model reads each row lazily.
@@ -86,6 +94,20 @@ public:
     }
     /** Select row `i`; `announce` false keeps a background re-sync silent. */
     void setSelected(uint16_t i, bool announce = true);
+
+    /**
+     * Get the selection and scroll offset.
+     *
+     * @return the position.
+     */
+    ListPos position() const;
+
+    /**
+     * Put back a position from position(), silently.
+     *
+     * @param p: position.
+     */
+    void setPosition(const ListPos &p);
 
     /** Mutable access to the selected item (e.g. to toggle a checkbox). */
     ListItem *selectedItem();

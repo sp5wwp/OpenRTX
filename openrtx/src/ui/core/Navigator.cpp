@@ -6,26 +6,43 @@
 
 #include "core/Navigator.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
+#include "views/ViewSlot.hpp"
+#include "widgets/List.hpp"
 
 namespace ortxui
 {
 
-void Navigator::setRoot(View *root)
+Navigator::Navigator(ViewSlot &slot, UiMemory &mem) :
+    slot_(slot), mem_(mem), stack_()
 {
-    depth_ = 0;
-    if (root != nullptr) {
-        stack_[depth_++] = root;
-        activate();
-    }
 }
 
-void Navigator::push(View *v)
+Navigator::~Navigator()
 {
-    if ((v == nullptr) || (depth_ >= kMaxDepth))
+}
+
+void Navigator::setRoot(ViewId root)
+{
+    overlay_ = nullptr;
+    overlayCond_ = nullptr;
+    stack_[0] = root;
+    depth_ = 1;
+    rebuild();
+}
+
+View *Navigator::active() const
+{
+    return (overlay_ != nullptr) ? overlay_ : slot_.view();
+}
+
+void Navigator::push(ViewId id)
+{
+    if ((id == ViewId::Count) || (depth_ >= kMaxDepth))
         return;
 
-    stack_[depth_++] = v;
-    activate();
+    stack_[depth_++] = id;
+    rebuild();
 }
 
 void Navigator::pop()
@@ -34,27 +51,57 @@ void Navigator::pop()
         return; /* the root view is never popped */
 
     depth_--;
-    activate();
+    rebuild();
 }
 
-void Navigator::activate()
+void Navigator::popToRoot()
 {
-    View *v = active();
-    if (v == nullptr)
+    if (depth_ <= 1)
         return;
 
+    depth_ = 1;
+    rebuild();
+}
+
+void Navigator::rebuild()
+{
+    View *old = slot_.view();
+    if (old != nullptr) {
+        const List *l = old->list();
+        if (l != nullptr)
+            mem_.lists[static_cast<uint8_t>(built_)] = l->position();
+        old->save(mem_);
+    }
+
+    built_ = stack_[depth_ - 1];
+    View *v = slot_.build(built_);
+
+    List *l = v->list();
+    if (l != nullptr)
+        l->setPosition(mem_.lists[static_cast<uint8_t>(built_)]);
+    v->restore(mem_);
+
+    activate(v);
+}
+
+void Navigator::activate(View *v)
+{
     v->onShow();
     v->announce();
     v->screen().markAllDirty();
 }
 
-void Navigator::dispatch(const Event &e)
+bool Navigator::dispatch(const Event &e)
 {
     View *v = active();
     if (v == nullptr)
-        return;
+        return false;
 
+    /* Take the resync request before navigating: a push or pop destroys the
+     * view that made it. */
     const NavIntent intent = v->onEvent(e);
+    const bool sync = v->takeSyncRtx();
+
     switch (intent.action) {
         case NavAction::Push:
             push(intent.target);
@@ -68,15 +115,8 @@ void Navigator::dispatch(const Event &e)
         case NavAction::None:
             break;
     }
-}
 
-void Navigator::popToRoot()
-{
-    if (depth_ <= 1)
-        return;
-
-    depth_ = 1;
-    activate();
+    return sync;
 }
 
 void Navigator::syncActive(const state_t &s)
@@ -94,7 +134,7 @@ void Navigator::presentOverlay(View *v, OverlayDismiss policy, long long now,
 
     if (overlay_ == v) {
         /* Already showing: just refresh its policy and poke window so the
-         * repeating trigger keeps the one overlay alive (no re-push). */
+         * repeating trigger keeps the one overlay alive. */
         overlayPolicy_ = policy;
         overlayTimeoutMs_ = timeoutMs;
         overlayCond_ = cond;
@@ -110,7 +150,7 @@ void Navigator::presentOverlay(View *v, OverlayDismiss policy, long long now,
     overlayTimeoutMs_ = timeoutMs;
     overlayCond_ = cond;
     overlayPoke_ = now;
-    push(v);
+    activate(v);
 }
 
 void Navigator::dismissOverlay()
@@ -118,25 +158,18 @@ void Navigator::dismissOverlay()
     if (overlay_ == nullptr)
         return;
 
-    /* Only unwind (and forget) our overlay while it is the exposed top of the
-     * stack. If another modal was pushed above it, leave the bookkeeping in
-     * place: tickOverlay() reclaims it once that modal pops and it is exposed
-     * again, so a buried overlay is never orphaned. */
-    if (active() != overlay_)
-        return;
-
-    pop();
     overlay_ = nullptr;
     overlayCond_ = nullptr;
+
+    /* The screen below stayed built: show it again as a pop would. */
+    View *v = slot_.view();
+    if (v != nullptr)
+        activate(v);
 }
 
 void Navigator::tickOverlay(long long now)
 {
     if (overlay_ == nullptr)
-        return;
-
-    /* Only act while our overlay is exposed; if a modal covers it, wait. */
-    if (active() != overlay_)
         return;
 
     bool expired = false;

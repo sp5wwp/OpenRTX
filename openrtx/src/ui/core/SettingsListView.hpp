@@ -17,6 +17,8 @@
 namespace ortxui
 {
 
+struct ListEdit;
+
 /**
  * Base for the Settings value-list screens (Display, Radio, FM, M17, GPS).
  *
@@ -44,6 +46,18 @@ public:
         return screen_;
     }
     NavIntent onEvent(const Event &e) override;
+
+    /** The settings list, whose position UiMemory keeps. */
+    List *list() override
+    {
+        return &list_;
+    }
+
+    /** Keep the row being edited while destroyed. */
+    void save(UiMemory &m) const override;
+
+    /** Reopen the row edit kept by save(). */
+    void restore(UiMemory &m) override;
 
 protected:
     enum class RowKind : uint8_t { Stepper, Checkbox, Action, Custom };
@@ -91,9 +105,36 @@ protected:
     {
     }
 
+    /**
+     * Store the editor state of the Custom row being edited.
+     *
+     * @param e: where to store it.
+     */
+    virtual void saveCustom(ListEdit &e) const
+    {
+        (void)e;
+    }
+
+    /**
+     * Reopen the Custom row editor from saveCustom() and render its value
+     * without speaking it.
+     *
+     * @param e: stored editor state.
+     */
+    virtual void restoreCustom(const ListEdit &e)
+    {
+        (void)e;
+    }
+
     /* ---- helpers the derived views call ---- */
-    void
-    refreshValue(uint8_t row); //< formatValue + <> wrap + vpSay + invalidate
+
+    /**
+     * Render a row's value, wrapped in <> while it is edited, and repaint.
+     *
+     * @param row: row to render.
+     * @param speak: speak the value of the row being edited.
+     */
+    void refreshValue(uint8_t row, bool speak = true);
     void beginEdit();
     void endEdit();
 

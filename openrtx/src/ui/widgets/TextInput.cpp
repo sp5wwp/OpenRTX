@@ -222,6 +222,13 @@ void TextInput::begin()
     tapKeyIdx_ = -1;
 }
 
+void TextInput::resume(uint16_t cursor, uint16_t topRow)
+{
+    begin();
+    cursor_ = (cursor <= len_) ? cursor : len_;
+    topRow_ = topRow;
+}
+
 uint16_t TextInput::cellLen(uint16_t pos) const
 {
     if ((buf_ == nullptr) || (pos >= len_))

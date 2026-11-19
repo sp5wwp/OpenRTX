@@ -7,6 +7,7 @@
 #include "views/MessageDetailView.hpp"
 #include "views/MessageComposeView.hpp"
 #include "core/Event.hpp"
+#include "core/UiMemory.hpp"
 #include "core/state.h"
 #include "core/voicePrompts.h"
 #include "core/voicePromptUtils.h"
@@ -70,10 +71,23 @@ void MessageDetailView::build()
 
 void MessageDetailView::open(uint32_t sequence)
 {
-    seq_ = sequence;
-    shownSeq_ = 0;
-    body_.scrollToTop();
+    uiMemory.messageSeq = sequence;
+    uiMemory.messageScroll = 0;
     messages_markRead(messages_findBySequence(sequence), true);
+}
+
+void MessageDetailView::save(UiMemory &m) const
+{
+    m.messageSeq = seq_;
+    m.messageScroll = body_.scrollOffset();
+    /* The inbox follows the message this view ended on. */
+    m.inboxPinned = seq_;
+}
+
+void MessageDetailView::restore(UiMemory &m)
+{
+    seq_ = m.messageSeq;
+    body_.setScrollOffset(m.messageScroll);
 }
 
 bool MessageDetailView::canReply(const struct message *msg, uint8_t mode)
@@ -197,8 +211,8 @@ NavIntent MessageDetailView::onEvent(const Event &e)
 
     if ((k & KEY_ENTER) != 0u) {
         if (canReply(msg, state.channel.mode)
-            && compose_->open(msg->sender, true))
-            return NavIntent::push(compose_);
+            && MessageComposeView::open(msg->sender, true))
+            return NavIntent::push(ViewId::MessageCompose);
         return NavIntent::none();
     }
 

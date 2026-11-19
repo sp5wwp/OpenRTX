@@ -16,34 +16,27 @@
 namespace ortxui
 {
 
-class TextInputView;
-
 /**
  * The message compose form: a To row (empty means broadcast), a Message row
  * and a Send row. ENTER on To or Message opens the shared modal text editor;
  * ENTER on Send hands the draft to the inbox and closes the form. ESC discards
- * the draft. The body lives on the heap only while the form is open.
+ * the draft. The draft lives in UiMemory, on the heap, only while the form is
+ * open, so the editor can write it while this view is destroyed.
  */
 class MessageComposeView : public View
 {
 public:
     /** Build the widget tree. */
-    void build();
-
-    /** Wire the shared modal text editor. */
-    void setTextEditor(TextInputView *e)
-    {
-        editor_ = e;
-    }
+    void build() override;
 
     /**
-     * Start a draft, allocating its body. Call right before pushing the view.
+     * Start a draft, allocating it. Call right before pushing the view.
      *
      * @param recipient: initial recipient, or nullptr for broadcast.
      * @param reply: whether the draft answers a received message.
-     * @return false if the body could not be allocated (do not push).
+     * @return false if the draft could not be allocated (do not push).
      */
-    bool open(const char *recipient, bool reply);
+    static bool open(const char *recipient, bool reply);
 
     /** Refresh the row values after the editor returns. */
     void onShow() override;
@@ -58,6 +51,12 @@ public:
     Screen &screen() override
     {
         return screen_;
+    }
+
+    /** The form rows, whose position UiMemory keeps. */
+    List *list() override
+    {
+        return &list_;
     }
 
 private:
@@ -86,12 +85,6 @@ private:
     List list_;
     /** Row items, values borrowed from the draft. */
     ListItem items_[ROW_COUNT] = {};
-    /** Shared modal text editor. */
-    TextInputView *editor_ = nullptr;
-    /** Draft body, MSG_BODY_MAX_LEN bytes while the form is open. */
-    char *body_ = nullptr;
-    /** Draft recipient; empty means broadcast. */
-    char recipient_[MSG_ADDR_MAX_LEN] = {};
 };
 
 } // namespace ortxui

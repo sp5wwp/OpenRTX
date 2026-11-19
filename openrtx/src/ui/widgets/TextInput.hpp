@@ -87,6 +87,14 @@ public:
      *  single editable blank so there is always a character under the cursor. */
     void begin();
 
+    /**
+     * Resume an edit of the bound buffer where an earlier one left off.
+     *
+     * @param cursor: cursor position, from cursor().
+     * @param topRow: first visible wrapped row, from topRow().
+     */
+    void resume(uint16_t cursor, uint16_t topRow);
+
     /** Bind the ETSI multi-tap table for numeric-keypad entry (optional; only
      *  needed when the host routes digit keys to tapKey()). */
     void setMultiTap(const MultiTapTable &t)
@@ -136,6 +144,16 @@ public:
     }
     uint16_t filledSlots() const; //< count of filled slots, left-contiguous
     void setCursorSlot(uint16_t ordinal); //< position the cursor on a slot
+
+    /**
+     * Get the active slot.
+     *
+     * @return the slot ordinal, slotCount() when past the last slot.
+     */
+    uint16_t cursorSlot() const
+    {
+        return slotCursor_;
+    }
     void clearSlots(); //< reset every slot to the placeholder, cursor to slot 0
 
     /* ---- Validation + commit/cancel hooks (used by handleKey) ---- */
@@ -174,6 +192,16 @@ public:
     uint16_t cursor() const
     {
         return cursor_;
+    }
+
+    /**
+     * Get the first visible wrapped row.
+     *
+     * @return the row.
+     */
+    uint16_t topRow() const
+    {
+        return topRow_;
     }
     char cursorChar() const
     {

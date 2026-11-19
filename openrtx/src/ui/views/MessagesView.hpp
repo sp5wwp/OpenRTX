@@ -18,9 +18,6 @@
 namespace ortxui
 {
 
-class MessageDetailView;
-class MessageComposeView;
-
 /**
  * The main-menu message inbox, newest first. Each row shows the other party
  * (marked when unread or failed to send) and a body preview; while a protocol
@@ -34,14 +31,13 @@ class MessagesView : public View, public ListModel
 {
 public:
     /** Build the widget tree. */
-    void build();
+    void build() override;
 
-    /** Wire the detail view and the compose form this list opens. */
-    void setViews(MessageDetailView *detail, MessageComposeView *compose)
-    {
-        detail_ = detail;
-        compose_ = compose;
-    }
+    /** Keep the pinned entry while destroyed. */
+    void save(UiMemory &m) const override;
+
+    /** Take back the pinned entry, which the detail view may have moved. */
+    void restore(UiMemory &m) override;
 
     /** Reload the rows, keeping the selection on the pinned entry. */
     void onShow() override;
@@ -93,10 +89,6 @@ private:
     List list_;
     /** "No messages" line. */
     Label empty_;
-    /** Detail view opened by ENTER on a message. */
-    MessageDetailView *detail_ = nullptr;
-    /** Compose form opened by ENTER on "New Message". */
-    MessageComposeView *compose_ = nullptr;
     /** Sequence of the selected entry, NEW_ROW, or 0 for the newest. */
     uint32_t pinned_ = 0;
     /** digest() at the last reload. */
@@ -105,8 +97,6 @@ private:
     uint16_t count_ = 0;
     /** Whether the "New Message" row is shown. */
     bool canCompose_ = false;
-    /** Whether the detail view was opened from here and not returned yet. */
-    bool inDetail_ = false;
     /** Row label scratch: status mark and callsign. */
     mutable char label_[MSG_ADDR_MAX_LEN + 8] = {};
 };

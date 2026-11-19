@@ -17,8 +17,6 @@
 namespace ortxui
 {
 
-class PickerView;
-
 /**
  * A generic full-screen modal text editor: a title, a scrolling TextInput
  * field, and a key hint. A caller opens it for a destination buffer, the user
@@ -27,19 +25,23 @@ class PickerView;
  * the render loop clears to Background and paints only the top view, it fully
  * covers whatever it was opened over.
  *
- * Result delivery matches the existing in-place editors: on commit it writes
- * the destination buffer (a settings field) and optionally requests an rtx
- * resync, so the opener's change-gated syncFromState picks it up on return.
+ * The request and the working copy live in UiMemory, so the editor can be
+ * destroyed and rebuilt (character picker, macro menu) without losing the
+ * edit. The destination outlives the opener's view: a settings field or a
+ * buffer UiMemory owns. On commit the editor writes it and optionally requests
+ * an rtx resync, so the opener's change-gated syncFromState picks it up on
+ * return.
  */
 class TextInputView : public View
 {
 public:
-    void build();
+    void build() override;
 
     /**
      * Configure and prepare the editor. Call this immediately before returning
-     * `NavIntent::push(&editor)` from the opener. `dst` holds up to `cap`-1
-     * chars; it is copied into a working buffer and only written back on commit.
+     * `NavIntent::push(ViewId::TextInput)` from the opener. `dst` holds up to
+     * `cap`-1 chars; it is copied into a working buffer and only written back
+     * on commit.
      *
      * @param title: editor title.
      * @param dst: destination buffer.
@@ -48,16 +50,16 @@ public:
      * @param tap: multi-tap table for keypad entry.
      * @param multiline: whether the field wraps over several lines.
      * @param rtx: whether a commit reconfigures the radio.
+     * @return false if the working copy could not be allocated (do not push).
      */
-    void open(const UiText &title, char *dst, uint16_t cap, const Charset &cs,
-              const MultiTapTable &tap, bool multiline, bool rtx);
+    static bool open(const UiText &title, char *dst, uint16_t cap,
+                     const Charset &cs, const MultiTapTable &tap,
+                     bool multiline, bool rtx);
 
-    /** Wire the shared UTF-8 character picker (opened by a long-press). */
-    void setPicker(PickerView *p)
-    {
-        picker_ = p;
-    }
+    /** Keep the cursor and scroll of the edit while destroyed. */
+    void save(UiMemory &m) const override;
 
+    /** Insert the character picked while the editor was destroyed. */
     void onShow() override;
     void announce() override;
     NavIntent onEvent(const Event &e) override;
@@ -68,6 +70,9 @@ public:
     }
 
 private:
+    /** Bind the field to the request in UiMemory, where it left off. */
+    void configureField();
+
     void commit();
     void afterEdit();   //< re-render + announce the cursor character
     void refreshHint(); //< key hint line, reflecting the current edit mode
@@ -77,12 +82,6 @@ private:
     Label title_;
     TextInput field_;
     Label hint_;
-
-    char work_[822] = {}; //< working copy (sized for the M17 SMS budget)
-    char *dst_ = nullptr;
-    uint16_t cap_ = 0;
-    bool rtx_ = false;
-    PickerView *picker_ = nullptr; //< shared UTF-8 character picker
 };
 
 } // namespace ortxui

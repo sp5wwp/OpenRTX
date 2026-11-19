@@ -17,46 +17,61 @@ namespace ortxui
 {
 
 /**
+ * One row of a menu: its label and the screen ENTER opens.
+ */
+struct MenuRow {
+    UiText label;  ///< Row label
+    ViewId target; ///< Screen the row opens
+};
+
+/**
  * A generic vertical menu screen: a title bar over a selectable List.
  *
- * One class backs every menu level (main menu, settings, ...): build() takes a
- * title and a borrowed item table, and each row may be wired to a sub-View that
- * ENTER pushes onto the Navigator. Rows with no target are leaves and do
- * nothing on ENTER for now (their detail views are ported in later slices).
- * ESC pops back. Widgets are direct members in static storage, no heap.
+ * One class backs every menu level (main menu, settings): id() picks the
+ * title and the static row table, and ENTER pushes the selected row's screen.
+ * ESC pops back.
  */
-class MenuView : public View
+class MenuView : public View, public ListModel
 {
 public:
-    static constexpr uint16_t kMaxRows = 24;
+    /** Build the widget tree of the menu id() names. */
+    void build() override;
 
-    /**
-     * Build the menu.
-     *
-     * @param title: menu title.
-     * @param items: row labels, copied.
-     * @param count: number of rows, at most kMaxRows.
-     */
-    void build(const UiText &title, const UiText *items, uint16_t count);
-
-    /** Wire a row so ENTER on it pushes `target` (nullptr leaves it a leaf). */
-    void setRowTarget(uint16_t row, View *target);
-
+    /** Open the selected row's screen, or go back on ESC. */
     NavIntent onEvent(const Event &e) override;
+
+    /** Speak the menu title and the selected row. */
     void announce() override;
+
+    /** The view's widget-tree root. */
     Screen &screen() override
     {
         return screen_;
     }
+
+    /** The menu list, whose position UiMemory keeps. */
+    List *list() override
+    {
+        return &list_;
+    }
+
+    /** Number of rows. */
+    uint16_t rowCount() const override
+    {
+        return count_;
+    }
+
+    /** Fill a row from the menu table. */
+    void rowAt(uint16_t index, ListItem &out) const override;
 
 private:
     Screen screen_;
     TopBar topBar_;
     List list_;
 
-    UiText title_;
-    ListItem items_[kMaxRows] = {};
-    View *rowTargets_[kMaxRows] = {};
+    const MenuRow *rows_ = nullptr; ///< Static row table
+    UiText title_;                  ///< Menu title
+    uint8_t count_ = 0;             ///< Number of rows
 };
 
 } // namespace ortxui

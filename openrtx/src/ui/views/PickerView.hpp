@@ -22,11 +22,30 @@ namespace ortxui
 class PickerGrid : public Object
 {
 public:
-    void reset()
+    /**
+     * Put back a selection and scroll row.
+     *
+     * @param sel: selected cell.
+     * @param top: first visible row.
+     */
+    void setPosition(uint16_t sel, uint16_t top)
     {
-        sel_ = 0;
-        top_ = 0;
+        sel_ = sel;
+        top_ = top;
     }
+
+    /** Selected cell. */
+    uint16_t selected() const
+    {
+        return sel_;
+    }
+
+    /** First visible row. */
+    uint16_t top() const
+    {
+        return top_;
+    }
+
     void move(int delta); //< step the selection, scrolling as needed
     uint32_t selectedCodePoint() const;
 
@@ -44,14 +63,20 @@ private:
  * A full-screen character picker: a scrolling grid of code points (accented
  * Latin + symbols not on the keyboard) drawn from the custom icon/fallback
  * font. Pushed on top of the text editor; ENTER selects and pops, ESC cancels.
- * The opener retrieves the choice with takeResult() when it regains focus.
+ * The selection and the choice go to the editor's request in UiMemory, which
+ * the editor reads when it is rebuilt.
  * Navigated by arrows/knob (LEFT/RIGHT step, UP/DOWN by row).
  */
 class PickerView : public View
 {
 public:
-    void build();
-    void open(); //< reset selection/scroll before pushing
+    void build() override;
+
+    /** Start a pick at the first cell. Call before pushing the picker. */
+    static void open();
+
+    /** Keep the selection while destroyed. */
+    void save(UiMemory &m) const override;
 
     void announce() override;
     NavIntent onEvent(const Event &e) override;
@@ -61,15 +86,9 @@ public:
         return screen_;
     }
 
-    /** If a code point was selected since the last call, store it in `cp` and
-     *  return true (clearing the pending result); otherwise return false. */
-    bool takeResult(uint32_t &cp);
-
 private:
     Screen screen_;
     PickerGrid grid_;
-    uint32_t result_ = 0;
-    bool resultReady_ = false;
 };
 
 } // namespace ortxui
