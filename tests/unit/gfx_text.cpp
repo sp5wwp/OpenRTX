@@ -533,7 +533,7 @@ TEST_CASE("DrawCtx::text draws the whole string, however long", "[gfx][text]")
  * sentinel, so the last glyph's end is the glyf table length -- reading
  * loca[glyph_cnt] instead hits table padding (often 0) and silently drops the
  * glyph. The icon font's last glyph is the backspace (U+F55A) and the text
- * font's is the FontAwesome battery (U+F244); a dropped glyph measures 0 wide.
+ * font's is the FontAwesome sun (U+F185); a dropped glyph measures 0 wide.
  */
 TEST_CASE("Last glyph of each font decodes (non-zero width)",
           "[gfx][text][font]")
@@ -541,9 +541,9 @@ TEST_CASE("Last glyph of each font decodes (non-zero width)",
     /* U+F55A backspace: last glyph of the custom icon/fallback font. */
     REQUIRE(gfx_getTextWidth(FONT_SIZE_8PT, "\xEF\x95\x9A") > 0);
     REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x95\x9A") > 0);
-    /* U+F244 battery: last glyph of the Ubuntu text font's FontAwesome subset. */
-    REQUIRE(gfx_getTextWidth(FONT_SIZE_8PT, "\xEF\x89\x84") > 0);
-    REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x89\x84") > 0);
+    /* U+F185 sun: last glyph of the Ubuntu text font's FontAwesome subset. */
+    REQUIRE(gfx_getTextWidth(FONT_SIZE_8PT, "\xEF\x86\x85") > 0);
+    REQUIRE(gfx_getTextWidth(FONT_SIZE_16PT, "\xEF\x86\x85") > 0);
 }
 
 /** Built-in 16 pt text font, embedded by fontData.c. */
