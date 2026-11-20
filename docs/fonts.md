@@ -44,6 +44,10 @@ Sources:
 `lv_font_conv` runs via `npx` at the version pinned in `gen_fonts.sh`, so only
 Node.js is needed (no global install).
 
+No Ubuntu font at hand regenerates the committed `ubuntu_*.bin` byte for byte,
+so unused icons were dropped from them with `scripts/drop_font_glyphs.py`,
+which keeps every other glyph and the line height as they were.
+
 > **Gotcha:** ninja does not track `.incbin` dependencies. After regenerating
 > the blobs, `touch openrtx/src/core/fontData.c` (or clean) so the embed is
 > rebuilt.
