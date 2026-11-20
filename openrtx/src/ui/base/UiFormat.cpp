@@ -83,7 +83,7 @@ uint32_t nextPower(uint32_t mw)
 
 UiText bandwidthLabel(uint8_t bandwidth)
 {
-    return (bandwidth == BW_25) ? STR(wfm) : STR(nfm);
+    return (bandwidth == BW_25) ? STR(fm) : STR(nfm);
 }
 
 UiText modeLabel(uint8_t mode)

@@ -203,8 +203,6 @@ const stringsTable_t englishStrings =
     .timeFields        = N_("hh:mm"),
     // i18n: narrow FM, the 12.5 kHz channel bandwidth; keep it short
     .nfm               = N_("NFM"),
-    // i18n: wide FM, the 25 kHz channel bandwidth; keep it short
-    .wfm               = N_("WFM"),
     // i18n: compass point and hemisphere on the GPS screen, one letter
     .north             = N_("N"),
     // i18n: compass point and hemisphere on the GPS screen, one letter
