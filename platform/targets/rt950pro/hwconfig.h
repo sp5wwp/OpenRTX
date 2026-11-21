@@ -30,6 +30,16 @@ extern "C" {
  */
 #define CONFIG_GFX_BAND_ROWS 8
 
+/* Draw text with the anti-aliased fonts */
+#define CONFIG_FONT_AA
+
+/* Home screen shows three tuners */
+#define CONFIG_UI_TUNERS 3
+
+/* Keypad keys */
+#define CONFIG_KBD_HAS_ARROWS
+#define CONFIG_KBD_HAS_NUMERIC
+
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS
 
