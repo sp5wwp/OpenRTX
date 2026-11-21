@@ -84,9 +84,8 @@ Supported:
 
 Not supported yet:
 
-- microphone capture for digital modes: PA0 only carries a rectified mic level
-  (VOX), so there is no known ADC path for the microphone audio; M17
-  transmissions use a bench clip
+- microphone capture for digital modes: a path exists (see Microphone below)
+  but is not implemented; M17 transmissions use a bench clip
 - BK4829 GPIO driver (not required for RT950 pro)
 - SI4732 AM/SSB reception
 - Bluetooth core integration (CPS over Bluetooth, menu) and audio
@@ -101,9 +100,11 @@ or the modulators' microphone input (`MICin`) when PC12 is high. So the MCU
 cannot play audio to the speaker without the receiver's audio, nor sample the
 receiver without its own audio: the receive canceller deals with that.
 
-Speaker amplifier (TDA2822): powered by PE4, enabled by PB8, muted by PE1
-(high), PE9 low selects the speaker rather than Bluetooth. `audio_rt950pro.c`
-enables it while any route plays to the speaker.
+Speaker amplifier (TDA2822): powered by PE4, muted by PE1 (high), PE9 low
+selects the speaker rather than Bluetooth. `audio_rt950pro.c` sets PB8 high
+while any route plays to the speaker, as the vendor firmware does; PB8 is in
+fact the microphone switch (see Microphone), named `rt950_amp_en` in the code
+from an earlier reading.
 
 - `drivers/audio/dac_at32.c`: TMR6 interrupt at 48 kHz, one DAC1 sample per
   interrupt, stream sample rates dividing 48 kHz, linearly interpolated.
@@ -230,9 +231,35 @@ vendor value, for FM): outer symbols at +/-2.4 kHz, a preamble peak of about
 3.4 kHz (1.41 times the outer symbols, with the RRC filter). The transmit
 phase is inverted, as on the C62.
 
-The radio has no microphone input for the MCU (PA0 only carries a rectified
-level for VOX), so the Codec2 encoder takes its audio from a clip loaded in
-RAM from the debug monitor (`benchmic.c`, `mic` commands), played in a loop.
+The microphone capture is not implemented yet (see Microphone), so the Codec2
+encoder takes its audio from a clip loaded in RAM from the debug monitor
+(`benchmic.c`, `mic` commands), played in a loop.
+
+### Microphone
+
+The microphone reaches the MCU only through a BK4829 (bench, 1 kHz tones on
+the microphone and on DAC1, RTL-SDR):
+
+- PB8 is the microphone switch: low connects the capsule to `MICin`, high
+  disconnects it (-51 dB). The vendor firmware drives it low at key-up and
+  high at unkey; OpenRTX leaves it low outside speaker playback.
+- PA0 (VOX) is a rectified level, not audio.
+- Loopback: a BK4829 receiving, with its microphone ADC and TX DSP powered
+  (`REG_30` = 0xBFF7, no PA, not keyed) and AF output 3 (`REG_47` bits 11:8,
+  "beep", the TX path), outputs its `MICP` audio on EARO, so on `VOICE_IN` and
+  PA2. A phone tone at the microphone came out 60 dB above the noise floor;
+  the response is linear (harmonics below -54 dBc), the gain follows the
+  microphone gain (`REG_7D`), about 1 count rms of noise. AF outputs 1, 4, 5,
+  9 and 12 to 15 carry it too. 0xBFF5 (microphone ADC only) does not.
+- The microphone and DAC1 (PC12 high) are summed on `MICin`, which feeds both
+  chips. During an M17 transmission with PB8 low, sound at the microphone is
+  modulated with the 4FSK (a phone tone came out 20 dB below the M17 level),
+  and a capture chip would hear the baseband with the voice.
+
+Plan: PB8 high during M17 transmissions while the voice comes from elsewhere;
+for a microphone, the idle chip in loopback with the known baseband
+subtracted from the capture (a linear model, as the receive canceller), and
+the cost of the microphone leaking into the modulation measured with speech.
 
 Verified with an RTL-SDR capture (FM demodulator, RRC matched filter, fixed
 symbol timing per 0.5 s) decoded by gr-m17: LSF (source, destination, voice
