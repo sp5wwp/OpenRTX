@@ -289,6 +289,8 @@
 /* Bluetooth serial module (SPP) */
 &usart1 {
 	pinctrl-0 = <&usart1_default>;
+	/* 9600 Bd: below the audio interrupt (dac_at32.c) */
+	interrupts = <37 1>;
 	pinctrl-names = "default";
 	current-speed = <9600>;
 	status = "okay";
@@ -296,6 +298,8 @@
 
 &usart3 {
 	pinctrl-0 = <&usart3_default>;
+	/* 9600 Bd: below the audio interrupt (dac_at32.c) */
+	interrupts = <39 1>;
 	pinctrl-names = "default";
 	current-speed = <9600>;
 	status = "okay";
