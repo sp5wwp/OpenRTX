@@ -28,6 +28,15 @@
 		};
 	};
 
+	/* External SPI NOR flash (factory data, calibration) */
+	spi2_default: spi2_default {
+		group1 {
+			pinmux = <SPI2_SCK_PB13_MASTER_NORMP>,
+				 <SPI2_MISO_PB14_MASTER_NORMP>,
+				 <SPI2_MOSI_PB15_MASTER_NORMP>;
+		};
+	};
+
 	/* LCD backlight PWM */
 	tmr8_ch1_default: tmr8_ch1_default {
 		group1 {

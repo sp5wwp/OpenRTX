@@ -36,3 +36,9 @@ CONFIG_ST7789V_RGB565=y
 
 # LCD backlight brightness control
 CONFIG_PWM=y
+
+# External SPI NOR flash (vendor calibration data)
+CONFIG_SPI=y
+CONFIG_SPI_NOR=y
+# Geometry read from the chip (SFDP): its JEDEC ID is not known in advance
+CONFIG_SPI_NOR_SFDP_RUNTIME=y

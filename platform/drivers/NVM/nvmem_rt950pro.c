@@ -4,10 +4,13 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
 #include <zephyr/sys/printk.h>
 #include "interfaces/nvmem.h"
 #include "core/crc.h"
+#include "calibration/calibInfo_RT950Pro.h"
 
 /*
  * Settings and VFO data are kept in separate erase sectors of the storage
@@ -116,9 +119,19 @@ void nvm_terminate()
     }
 }
 
+/* External SPI NOR, read only: it holds the vendor factory calibration */
+static const struct device *const extFlash =
+    DEVICE_DT_GET(DT_NODELABEL(extflash));
+
 void nvm_readCalibData(void *buf)
 {
-    (void)buf;
+    struct rt950proCalib *cal = (struct rt950proCalib *)buf;
+
+    /* Unreadable calibration reads as never programmed: no transmission */
+    if (!device_is_ready(extFlash)
+        || (flash_read(extFlash, RT950PRO_CAL_NOR_ADDR, cal, sizeof(*cal))
+            != 0))
+        memset(cal, 0xFF, sizeof(*cal));
 }
 
 void nvm_readHwInfo(hwInfo_t *info)
