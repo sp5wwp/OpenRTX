@@ -33,6 +33,6 @@ meson compile -C build_linux openrtx_linux_rt950pro
 
 On the PC keyboard, the arrows, digits, `*`, `#`, Enter and Esc are the radio
 keys, `n` is F1, F2 and F3 are F2 and F3, `m` is MONI and Page Up/Down turn the
-knob.
+knob. On the RT-950 Pro variant, F2 selects the next tuner.
 
 The golden-image UI tests run on these variants: see `scripts/run_e2e.py`.

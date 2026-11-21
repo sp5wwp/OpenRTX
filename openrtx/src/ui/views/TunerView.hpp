@@ -16,7 +16,16 @@
 #include "widgets/TextInput.hpp"
 #include "widgets/Tuner.hpp"
 #include "widgets/TunerState.hpp"
+#include "views/UiMemory.hpp"
 #include "core/state.h"
+#include "interfaces/keyboard.h"
+#include "hwconfig.h"
+#include <array>
+
+/** Number of tuners the home screen shows. */
+#ifndef CONFIG_UI_TUNERS
+#define CONFIG_UI_TUNERS 1
+#endif
 
 namespace ortxui
 {
@@ -31,6 +40,11 @@ namespace ortxui
  * As the navigation root, ENTER opens the main menu. UP/DOWN or the knob tune
  * the frequency in VFO mode or step the channel in memory mode, ESC switches
  * between the two, and a digit opens the frequency entry, RX then TX.
+ *
+ * With CONFIG_UI_TUNERS above 1 the screen stacks that many tuners, and
+ * TUNER_SELECT_KEY selects the next one, which the keys and PTT act on. The
+ * first LIVE_TUNERS follow the radio; the others are placeholders, on which
+ * the keys do nothing and PTT is blocked.
  */
 class TunerView : public View
 {
@@ -92,17 +106,51 @@ public:
     }
 
     /**
-     * Describe the tuner the radio is on.
+     * Describe a tuner.
      *
+     * @param tuner: tuner, from 0.
      * @param s: state snapshot.
      * @param opStatus: operating status from the rtx module.
      * @param squelchOpen: the rtx module has the RX squelch open.
-     * @param t: model to fill.
+     * @param t: model to fill, default-constructed.
      */
-    static void describe(const state_t &s, uint8_t opStatus, bool squelchOpen,
-                         TunerState &t);
+    static void describe(uint8_t tuner, const state_t &s, uint8_t opStatus,
+                         bool squelchOpen, TunerState &t);
+
+    /**
+     * Check whether the selected tuner follows the radio, so keys and PTT
+     * act on it.
+     *
+     * @return false on a placeholder.
+     */
+    static bool selectedLive();
+
+    /** Tuners on the screen. */
+    static constexpr uint8_t TUNER_COUNT = CONFIG_UI_TUNERS;
+
+    /** Tuners that follow the radio; the others are placeholders. */
+    static constexpr uint8_t LIVE_TUNERS = 1;
+
+    /**
+     * Key selecting the next tuner on a screen of several: F2, free on the
+     * tuner screen and on the RT-950 Pro keypad, next to ESC.
+     */
+    static constexpr uint32_t TUNER_SELECT_KEY = KEY_F2;
 
 private:
+    /** Select the next tuner, wrapping, and speak it. */
+    void selectNext();
+
+    /**
+     * Get the tuner the keys act on.
+     *
+     * @return the selected tuner.
+     */
+    Tuner &selectedTuner()
+    {
+        return tuners[uiMemory.selectedTuner];
+    }
+
     /**
      * Handle a key while a frequency is being entered.
      *
@@ -265,8 +313,8 @@ private:
         TextInput input; ///< The RX or TX digits, or the destination
     };
 
-    Screen tree;            ///< Widget tree
-    Tuner tuner;            ///< The tuner the radio is on
+    Screen tree;                           ///< Widget tree
+    std::array<Tuner, TUNER_COUNT> tuners; ///< Tuners, top to bottom
     Entry *entry = nullptr; ///< Open entry, on the heap; nullptr if none
 };
 

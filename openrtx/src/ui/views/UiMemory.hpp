@@ -177,6 +177,7 @@ struct UiMemory {
     uint32_t messageSeq;   ///< Sequence of the message shown in detail
     int16_t messageScroll; ///< Scroll offset of the message body
     uint8_t macroTile;     ///< Macro tile the knob picked
+    uint8_t selectedTuner; ///< Tuner the keys act on, from 0
     bool draftReply;       ///< Draft answers a received message
     bool keypadLocked;     ///< Keys are ignored outside the macro menu
 };

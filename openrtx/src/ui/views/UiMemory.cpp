@@ -16,8 +16,8 @@ UiMemory uiMemory;
 
 UiMemory::UiMemory() :
     lists(), edit(), inlineEdit(), draft(nullptr), inboxPinned(0),
-    messageSeq(0), messageScroll(0), macroTile(0), draftReply(false),
-    keypadLocked(false)
+    messageSeq(0), messageScroll(0), macroTile(0), selectedTuner(0),
+    draftReply(false), keypadLocked(false)
 {
     inlineEdit.owner = ViewId::Count;
 }

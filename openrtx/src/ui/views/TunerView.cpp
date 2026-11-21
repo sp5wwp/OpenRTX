@@ -29,6 +29,10 @@
 namespace ortxui
 {
 
+constexpr uint8_t TunerView::TUNER_COUNT;
+constexpr uint8_t TunerView::LIVE_TUNERS;
+constexpr uint32_t TunerView::TUNER_SELECT_KEY;
+
 /**
  * Slot mask of a frequency field, 100 MHz to 100 Hz, without separators:
  * FreqHero lays out the MHz and kHz groups.
@@ -153,19 +157,31 @@ void TunerView::build()
 {
     /* No title: the home screen's top bar shows the clock. */
     TopBar &bar = useTopBar("");
-    tuner.setup((sizeClass() >= SizeClass::Regular) ? Tuner::Style::Regular :
-                                                      Tuner::Style::Compact);
-
-    /* The bar on top, the tuner under it taking the rest of the screen. */
     const Rect screen = screenArea();
     const uint16_t barH = static_cast<uint16_t>(bar.layout().basis);
     bar.setArea({ screen.x, screen.y, screen.w, barH });
-    tuner.setArea({ screen.x, static_cast<int16_t>(screen.y + barH), screen.w,
-                    static_cast<uint16_t>(screen.h - barH) });
     tree.addChild(&bar);
-    tree.addChild(&tuner);
     bar.onLayout();
-    tuner.onLayout();
+
+    /* Several tuners, or one on the large screen, are cards. */
+    Tuner::Style style = Tuner::Style::Card;
+    if ((TUNER_COUNT == 1) && (sizeClass() < SizeClass::Large))
+        style = (sizeClass() >= SizeClass::Regular) ? Tuner::Style::Regular :
+                                                      Tuner::Style::Compact;
+
+    /* The tuners share the rest of the screen, stacked under the bar. */
+    const int32_t top = screen.y + barH;
+    const int32_t span = screen.h - barH;
+    for (uint8_t i = 0; i < TUNER_COUNT; i++) {
+        const int32_t y0 = top + span * i / TUNER_COUNT;
+        const int32_t y1 = top + span * (i + 1) / TUNER_COUNT;
+        Tuner &t = tuners[i];
+        t.setup(style, static_cast<uint8_t>(i + 1));
+        t.setArea({ screen.x, static_cast<int16_t>(y0), screen.w,
+                    static_cast<uint16_t>(y1 - y0) });
+        tree.addChild(&t);
+        t.onLayout();
+    }
 }
 
 void TunerView::save() const
@@ -236,9 +252,22 @@ static void m17DstLabel(char *out, uint16_t sz)
         sniprintf(out, sz, "@%s", dst);
 }
 
-void TunerView::describe(const state_t &s, uint8_t opStatus, bool squelchOpen,
-                         TunerState &t)
+bool TunerView::selectedLive()
 {
+    return uiMemory.selectedTuner < LIVE_TUNERS;
+}
+
+void TunerView::describe(uint8_t tuner, const state_t &s, uint8_t opStatus,
+                         bool squelchOpen, TunerState &t)
+{
+    t.selected = (tuner == uiMemory.selectedTuner);
+
+    /* A tuner with no receiver behind it never receives or transmits. */
+    if (tuner >= LIVE_TUNERS) {
+        t.placeholder = true;
+        return;
+    }
+
     const channel_t &ch = s.channel;
     const bool txing = (opStatus == TX);
 
@@ -248,7 +277,6 @@ void TunerView::describe(const state_t &s, uint8_t opStatus, bool squelchOpen,
     t.rssi = s.rssi;
     t.squelch = s.settings.sqlLevel;
     t.opMode = ch.mode;
-    t.selected = true;
     t.transmitting = txing;
     t.receiving = (opStatus == RX) && squelchOpen;
 
@@ -314,15 +342,39 @@ void TunerView::syncFromState(const state_t &s)
     }
 
     /* state.rtxStatus is the mode requested; rtx has the live one. */
-    TunerState t;
-    describe(s, rtx_getStatus()->opStatus, rtx_rxSquelchOpen(), t);
-    tuner.update(t);
+    const uint8_t status = rtx_getStatus()->opStatus;
+    const bool squelchOpen = rtx_rxSquelchOpen();
+    for (uint8_t i = 0; i < TUNER_COUNT; i++) {
+        TunerState t;
+        describe(i, s, status, squelchOpen, t);
+        tuners[i].update(t);
+    }
+}
+
+void TunerView::selectNext()
+{
+    uiMemory.selectedTuner =
+        static_cast<uint8_t>((uiMemory.selectedTuner + 1) % TUNER_COUNT);
+    announce();
 }
 
 NavIntent TunerView::onEvent(const Event &e)
 {
     if (entry != nullptr)
         return entry->destination ? onDstEditEvent(e) : onInputEvent(e);
+
+    const bool key = (e.kind == EvKind::Key);
+    if ((TUNER_COUNT > 1) && key && ((e.keys & TUNER_SELECT_KEY) != 0u)) {
+        selectNext();
+        return NavIntent::none();
+    }
+
+    /* A placeholder has nothing to tune: only the menu opens. */
+    if (!selectedLive()) {
+        if (key && ((e.keys & KEY_ENTER) != 0u))
+            return NavIntent::push(ViewId::MainMenu);
+        return NavIntent::none();
+    }
 
     /* The knob tunes in VFO mode and steps channels in memory mode. */
     if (e.kind == EvKind::Encoder) {
@@ -617,7 +669,7 @@ void TunerView::confirmInput()
 void TunerView::exitInput()
 {
     closeEntry();
-    tuner.endEntry();
+    selectedTuner().endEntry();
 }
 
 void TunerView::refreshInput()
@@ -626,7 +678,7 @@ void TunerView::refreshInput()
     char main[16];
     char sub[6];
     composeEntry(n.txField ? n.tx : n.rx, main, sub);
-    tuner.showFreqEntry(main, sub, n.txField, n.errorAt != 0);
+    selectedTuner().showFreqEntry(main, sub, n.txField, n.errorAt != 0);
 }
 
 void TunerView::clearFmTone()
@@ -641,16 +693,16 @@ void TunerView::renderDstEdit()
 {
     /* The '@' stays pinned while the rest scrolls to keep the cursor in view,
      * so a full-length destination keeps the channel line's font. */
-    const fontSize_t font = tuner.nameFont();
+    const fontSize_t font = selectedTuner().nameFont();
     const uint16_t atW = gfx_getTextWidth(font, "@");
-    const uint16_t boxW = tuner.nameWidth();
+    const uint16_t boxW = selectedTuner().nameWidth();
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;
 
     char body[36];
     entry->input.formatWindow(body, sizeof(body), bodyW, font);
     char text[sizeof(TunerState::name)];
     sniprintf(text, sizeof(text), "@%s", body);
-    tuner.showDestEntry(text);
+    selectedTuner().showDestEntry(text);
 }
 
 void TunerView::bindDst(uint16_t cursor)
@@ -697,7 +749,7 @@ void TunerView::endDstEdit(bool commit)
     }
 
     closeEntry();
-    tuner.endEntry();
+    selectedTuner().endEntry();
 }
 
 NavIntent TunerView::onDstEditEvent(const Event &e)
@@ -738,6 +790,15 @@ void TunerView::announce()
 {
     if (state.settings.vpLevel < vpLow)
         return;
+
+    /* A placeholder is its number and "none". */
+    if (!selectedLive()) {
+        vp_flush();
+        vp_queueInteger(uiMemory.selectedTuner + 1);
+        STR(None).announce(vpqDefault);
+        vp_play();
+        return;
+    }
 
     const enum vpQueueFlags flags = vp_getVoiceLevelQueueFlags();
     vp_flush();

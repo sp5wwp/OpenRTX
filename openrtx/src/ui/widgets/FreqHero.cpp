@@ -5,6 +5,7 @@
  */
 
 #include "widgets/FreqHero.hpp"
+#include "base/Layout.hpp"
 #include "render/DrawCtx.hpp"
 #include "core/graphics.h"
 
@@ -43,10 +44,16 @@ void FreqHero::setEntry(const char *main, const char *sub)
 
 void FreqHero::draw(DrawCtx &d)
 {
+    /* The large screen has room for the largest fonts. */
+    const bool large = (sizeClass() >= SizeClass::Large);
     const bool compact = (bounds.w < COMPACT_W);
-    const fontSize_t mainFont = compact ? FONT_SIZE_10PT : FONT_SIZE_12PT;
-    const fontSize_t subFont = compact ? FONT_SIZE_6PT : FONT_SIZE_8PT;
-    const fontSize_t modeFont = compact ? FONT_SIZE_6PT : FONT_SIZE_8PT;
+    const fontSize_t mainFont = large   ? FONT_SIZE_16PT :
+                                compact ? FONT_SIZE_10PT :
+                                          FONT_SIZE_12PT;
+    const fontSize_t subFont = large   ? FONT_SIZE_10PT :
+                               compact ? FONT_SIZE_6PT :
+                                         FONT_SIZE_8PT;
+    const fontSize_t modeFont = subFont;
 
     const int16_t baseY = static_cast<int16_t>(bounds.bottom() - BASELINE_RISE);
 

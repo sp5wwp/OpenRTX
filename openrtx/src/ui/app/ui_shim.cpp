@@ -315,7 +315,8 @@ static bool atHome()
 
 /**
  * Speak on F1: a press replays the last prompt, a long press speaks the
- * channel summary on the home screen or the GPS status on the GPS screen.
+ * channel summary on the home screen, of a tuner the radio follows, or the
+ * GPS status on the GPS screen.
  *
  * @param msg: F1 key event.
  */
@@ -324,7 +325,7 @@ static void speakF1(const kbd_msg_t &msg)
     if (msg.repeat)
         return;
 
-    if (msg.long_press && atHome()) {
+    if (msg.long_press && atHome() && TunerView::selectedLive()) {
         const uint16_t index = (state.tuner_mode == VFO) ?
                                    0 :
                                    (state.channel_index + 1);
@@ -498,14 +499,15 @@ static void handleTick(long long now, bool *sync_rtx)
 }
 
 /**
- * Allow transmitting only from the home screen, so a PTT press in a menu or
- * editor never keys up.
+ * Allow transmitting only from the home screen with a tuner the radio follows
+ * selected, so a PTT press in a menu or editor, or on a placeholder tuner,
+ * never keys up.
  *
  * @param sync_rtx: set when the gate changes, so the rtx thread applies it.
  */
 static void updatePttGate(bool *sync_rtx)
 {
-    const bool disable = !atHome();
+    const bool disable = !atHome() || !TunerView::selectedLive();
     if (disable != state.pttDisable) {
         state.pttDisable = disable;
         *sync_rtx = true;

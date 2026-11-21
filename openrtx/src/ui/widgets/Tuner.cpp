@@ -6,6 +6,7 @@
 
 #include "widgets/Tuner.hpp"
 #include "base/UiFormat.hpp"
+#include "render/DrawCtx.hpp"
 #include "core/graphics.h"
 #include "core/utils.h"
 #include "rtx/rtx.h"
@@ -22,6 +23,32 @@ static constexpr uint8_t METER_BAR_H = 7;
 
 /** Range of the TX meter's dB scale, which is full at POWER_MAX_MW. */
 static constexpr float POWER_SPAN_DB = 10.0f;
+
+/** Whether a card is laid out for the large screen, in larger fonts. */
+static constexpr bool LARGE = (sizeClass() >= SizeClass::Large);
+
+static constexpr int16_t CARD_INSET_X = 3; ///< Card inset from the sides
+static constexpr int16_t CARD_INSET_Y = 2; ///< Card inset, top and bottom
+static constexpr uint16_t CARD_RADIUS = 6; ///< Card corner radius
+static constexpr uint16_t CARD_BORDER = 2; ///< Border of the selected card
+static constexpr uint8_t CARD_PAD_X = 8;   ///< Content inset from the sides
+static constexpr uint8_t CARD_PAD_Y = 6;   ///< Content inset, top and bottom
+
+/** Side slots of a card's name row, for the number and the RX/TX badge. */
+static constexpr uint8_t HEADER_SIDE = LARGE ? 32 : 20;
+
+static constexpr uint16_t BADGE_W = LARGE ? 26 : 16; ///< Number and RX badge
+static constexpr uint16_t BADGE_RADIUS = 4;          ///< Badge corner radius
+
+/** Font of the number and the RX/TX badge. */
+static constexpr fontSize_t BADGE_FONT = LARGE ? FONT_SIZE_8PT : FONT_SIZE_6PT;
+
+/** Frequency of a placeholder, and its sub-kHz digits. */
+static constexpr char PLACEHOLDER_FREQ[] = "---.---";
+static constexpr char PLACEHOLDER_SUB[] = "--";
+
+/** Meter style of a placeholder, after RX (0) and TX (1). */
+static constexpr uint8_t METER_IDLE = 2;
 
 /**
  * Get the meter fill fraction for a TX power on the dB scale.
@@ -61,21 +88,27 @@ static float rssiToFrac(float rssi)
     return s / 11.0f;
 }
 
-void Tuner::setup(Style s)
+void Tuner::setup(Style s, uint8_t num)
 {
     style = s;
-    const bool regular = (style == Style::Regular);
+    number = num;
+    const bool card = (style == Style::Card);
+    const bool regular = (style != Style::Compact);
 
     setAxis(Axis::Column);
     setGrow(1);
+    if (card)
+        setPadding(CARD_PAD_X, CARD_PAD_Y);
 
     /* Taller than the text on the roomy screen; just clearing it on the
-     * compact one, so the channel line and the meter fit in 64 px. */
-    hero.setBasis(regular ? 40 : 26);
+     * compact one, so the channel line and the meter fit in 64 px. A card
+     * on the large screen fits three to a screen. */
+    hero.setBasis((card && LARGE) ? 30 : (regular ? 40 : 26));
 
     /* The channel line in one font; rows a full line high, so descenders and
-     * the '@' of a destination are not clipped. */
+     * the '@' of a destination are not clipped. A card's name is larger. */
     const fontSize_t chanFont = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
+    const fontSize_t nameFont = (card && LARGE) ? FONT_SIZE_9PT : chanFont;
     const int16_t rowH = gfx_getFontLineHeight(chanFont);
 
     /* "VFO" or the 1-based memory index, wide enough for "VFO". */
@@ -86,7 +119,7 @@ void Tuner::setup(Style s)
 
     /* Channel name or M17 destination; on the roomy screen on a line of its
      * own, so a long destination shows in full. */
-    chanName.setFont(chanFont);
+    chanName.setFont(nameFont);
     chanName.setAlign(TEXT_ALIGN_LEFT);
     chanName.setColor(Sem::Primary);
     chanName.setGrow(1);
@@ -102,7 +135,9 @@ void Tuner::setup(Style s)
 
     /* The meter sits at the bottom under a growing spacer, tall enough for
      * the label and readout over the S-scale numbers. */
-    meter.setBasis(regular ? 19 : 15);
+    meter.setBasis((card && LARGE) ? 21 : (regular ? 19 : 15));
+    if (card && LARGE)
+        meter.setFont(FONT_SIZE_8PT);
     meter.setBarHeight(METER_BAR_H);
     meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
     meter.setTextColor(Sem::RxSuccess);
@@ -110,17 +145,31 @@ void Tuner::setup(Style s)
     meter.setLabel(STR(RX));
     spacer.setGrow(1);
 
+    if (card) {
+        /* The name on top, between the number and the RX/TX badge. */
+        nameRow.setAxis(Axis::Row);
+        nameRow.setAlign(Align::Center);
+        nameRow.setJustify(Justify::Start);
+        nameRow.setPadding(HEADER_SIDE, 0);
+        nameRow.setBasis(gfx_getFontLineHeight(nameFont));
+        nameRow.addChild(&chanName);
+        addChild(&nameRow);
+    }
+
     addChild(&hero);
 
     if (regular) {
         /* Roomy layout: the name on its own line, then the index (left) and
          * the CAN / tone detail (right). */
-        nameRow.setAxis(Axis::Row);
-        nameRow.setAlign(Align::Center);
-        nameRow.setJustify(Justify::Start);
-        nameRow.setPadding(4, 0);
-        nameRow.setBasis(rowH);
-        nameRow.addChild(&chanName);
+        if (!card) {
+            nameRow.setAxis(Axis::Row);
+            nameRow.setAlign(Align::Center);
+            nameRow.setJustify(Justify::Start);
+            nameRow.setPadding(4, 0);
+            nameRow.setBasis(rowH);
+            nameRow.addChild(&chanName);
+            addChild(&nameRow);
+        }
 
         metaRow.setAxis(Axis::Row);
         metaRow.setAlign(Align::Center);
@@ -129,8 +178,6 @@ void Tuner::setup(Style s)
         metaRow.setBasis(rowH);
         metaRow.addChild(&chanIdx);
         metaRow.addChild(&chanDetail);
-
-        addChild(&nameRow);
         addChild(&metaRow);
     } else {
         /* Compact layout: no room for a second line, so the index, name and
@@ -156,6 +203,25 @@ void Tuner::setup(Style s)
 
 void Tuner::update(const TunerState &t)
 {
+    /* A card shows the selection and activity: repaint it, and the frequency
+     * in the colour of the activity, when they change. */
+    uint8_t flags = 0;
+    if (t.selected)
+        flags |= CardSelected;
+    if (t.receiving)
+        flags |= CardReceiving;
+    if (t.transmitting)
+        flags |= CardTransmitting;
+    if (t.placeholder)
+        flags |= CardPlaceholder;
+    if (flags != cardFlags) {
+        cardFlags = flags;
+        if (style == Style::Card) {
+            lastFreq = UINT32_MAX;
+            invalidate();
+        }
+    }
+
     /* A frequency entry owns the frequency and the channel line, a
      * destination entry the channel line. */
     if (entry != Entry::Frequency) {
@@ -170,16 +236,34 @@ void Tuner::update(const TunerState &t)
 
 void Tuner::updateFreq(const TunerState &t)
 {
-    /* Show the frequency the radio is on: TX while transmitting. */
-    const uint32_t shown = (t.transmitting && (t.txFreq != t.rxFreq)) ?
-                               t.txFreq :
-                               t.rxFreq;
+    /* Show the frequency the radio is on: TX while transmitting. A
+     * placeholder has none, so 0 stands for its dashes. */
+    const uint32_t shown = t.placeholder ? 0u :
+                           (t.transmitting && (t.txFreq != t.rxFreq)) ?
+                                           t.txFreq :
+                                           t.rxFreq;
     if (shown == lastFreq)
         return;
 
-    hero.setFreq(shown);
+    if (t.placeholder)
+        hero.setEntry(PLACEHOLDER_FREQ, PLACEHOLDER_SUB);
+    else
+        hero.setFreq(shown);
+    if (style == Style::Card)
+        hero.setTextColor(freqColor());
     hero.invalidate();
     lastFreq = shown;
+}
+
+Sem Tuner::freqColor() const
+{
+    if ((cardFlags & CardPlaceholder) != 0u)
+        return Sem::OnSurfaceMuted;
+    if ((cardFlags & CardTransmitting) != 0u)
+        return Sem::TxDanger;
+    if ((cardFlags & CardReceiving) != 0u)
+        return Sem::RxSuccess;
+    return Sem::OnSurface;
 }
 
 void Tuner::updateMode(const TunerState &t)
@@ -218,7 +302,21 @@ void Tuner::updateLine(const TunerState &t)
 
 void Tuner::updateMeter(const TunerState &t)
 {
-    const uint8_t tx = t.transmitting ? 1u : 0u;
+    /* A placeholder's meter is an empty track, set once. */
+    const uint8_t tx = t.placeholder ? METER_IDLE : (t.transmitting ? 1u : 0u);
+    if (t.placeholder) {
+        if (lastTx != METER_IDLE) {
+            lastTx = METER_IDLE;
+            meter.setColors(Sem::SurfaceHigh, Sem::SurfaceHigh);
+            meter.setTextColor(Sem::OnSurfaceMuted);
+            meter.setMarker(-1.0f);
+            meter.setValue(0.0f);
+            meter.setReadout(nullptr);
+            meter.invalidate();
+        }
+        return;
+    }
+
     const bool restyle = (tx != lastTx) || (t.squelch != lastSql)
                       || (t.opMode != lastMode);
     if (!restyle && (t.rssi == lastRssi))
@@ -323,6 +421,55 @@ void Tuner::endEntry()
 
     entry = Entry::None;
     invalidateReadout();
+}
+
+void Tuner::draw(DrawCtx &d)
+{
+    if (style != Style::Card) {
+        Flex::draw(d);
+        return;
+    }
+
+    /* The card, with an accent border when selected. */
+    const Rect card = { static_cast<int16_t>(bounds.x + CARD_INSET_X),
+                        static_cast<int16_t>(bounds.y + CARD_INSET_Y),
+                        static_cast<uint16_t>(bounds.w - 2 * CARD_INSET_X),
+                        static_cast<uint16_t>(bounds.h - 2 * CARD_INSET_Y) };
+    const bool selected = ((cardFlags & CardSelected) != 0u);
+    if (selected) {
+        d.fillRoundRect(card, CARD_RADIUS, Sem::Accent);
+        const Rect inner = { static_cast<int16_t>(card.x + CARD_BORDER),
+                             static_cast<int16_t>(card.y + CARD_BORDER),
+                             static_cast<uint16_t>(card.w - 2 * CARD_BORDER),
+                             static_cast<uint16_t>(card.h - 2 * CARD_BORDER) };
+        d.fillRoundRect(inner, CARD_RADIUS - CARD_BORDER, Sem::Surface);
+    } else {
+        d.fillRoundRect(card, CARD_RADIUS, Sem::Surface);
+    }
+
+    /* The number at the start of the name row, filled when selected. */
+    const Rect row = nameRow.area();
+    const uint16_t badgeH = gfx_getFontLineHeight(BADGE_FONT);
+    const int16_t badgeY = static_cast<int16_t>(row.y + (row.h - badgeH) / 2);
+    const Rect num = { row.x, badgeY, BADGE_W, badgeH };
+    char text[4];
+    sniprintf(text, sizeof(text), "%u", static_cast<unsigned>(number));
+    d.fillRoundRect(num, BADGE_RADIUS,
+                    selected ? Sem::Accent : Sem::SurfaceHigh);
+    d.textInBox(num, BADGE_FONT, TEXT_ALIGN_CENTER,
+                selected ? Sem::OnAccent : Sem::OnSurfaceMuted, text);
+
+    /* The RX or TX badge at the end of the name row while active. */
+    const bool txing = ((cardFlags & CardTransmitting) != 0u);
+    const bool rxing = ((cardFlags & CardReceiving) != 0u);
+    if (txing || rxing) {
+        const Rect badge = { static_cast<int16_t>(row.x + row.w - BADGE_W),
+                             badgeY, BADGE_W, badgeH };
+        d.fillRoundRect(badge, BADGE_RADIUS,
+                        txing ? Sem::TxDanger : Sem::RxSuccess);
+        d.textInBox(badge, BADGE_FONT, TEXT_ALIGN_CENTER, Sem::OnAccent,
+                    (txing ? STR(TX) : STR(RX)).str());
+    }
 }
 
 void Tuner::showIndex(bool editing)
