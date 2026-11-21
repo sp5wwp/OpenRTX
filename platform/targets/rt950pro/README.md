@@ -42,7 +42,9 @@ Receive, node `VOICE_IN` (details in Audio):
   puts the baseband closer to the 12-bit ADC noise; the canceller removes the
   receiver signal from the speaker by about 15 dB, with an adaptive model that
   depends on the interrupt timing and has to be measured again after timing
-  changes. A residual of the 4FSK stays audible under the voice.
+  changes. That figure is for receiver noise without a signal; with a real
+  M17 signal a residual of the 4FSK under the voice is expected, not measured
+  yet.
 - The EARO networks (coupling capacitors, 3.4 kHz RC low-pass) shape the
   baseband before PA2: its low frequencies are cut, as on the transmit side,
   and an equaliser is needed; not measured yet.
@@ -61,9 +63,9 @@ Transmit, node `MICin` (details in M17 transmission and Microphone):
 - The MCU has no microphone input of its own: the microphone audio reaches it
   only through the idle BK4829 in loopback, on the receive node.
 
-So: M17 reception with a residual of the 4FSK at the speaker, clean M17 data
-transmissions (PB8 high), and M17 voice transmissions with a modulation that
-degrades with the sound level at the microphone.
+So: M17 reception with a residual of the 4FSK expected at the speaker, clean
+M17 data transmissions (PB8 high), and M17 voice transmissions with a
+modulation that degrades with the sound level at the microphone.
 
 ## Status
 
