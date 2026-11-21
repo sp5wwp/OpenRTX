@@ -43,6 +43,14 @@ void board_early_init_hook(void)
     __DSB();
     __ISB();
 
+    /*
+     * The vendor bootloader leaves the interrupt priority grouping at 7 (no
+     * preemption bits): no interrupt would preempt another, and the audio
+     * interrupt would wait for any running handler, even PendSV. Restore the
+     * reset value, all bits for preemption, which Zephyr relies on.
+     */
+    NVIC_SetPriorityGrouping(0);
+
     rt950_iwdg_feed();
 
     /*
