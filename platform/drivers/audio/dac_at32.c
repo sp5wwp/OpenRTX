@@ -28,10 +28,10 @@
 #define SAMPLE_SHIFT 4
 
 static struct streamCtx *volatile stream;
-static volatile uint32_t pos;     /* Stream sample being output */
-static volatile uint32_t sub;     /* Output sample within it */
-static volatile uint32_t ratio;     /* Output samples per stream sample */
-static volatile int32_t prev;     /* Previous stream sample, DAC counts */
+static volatile uint32_t pos;   /* Stream sample being output */
+static volatile uint32_t sub;   /* Output sample within it */
+static volatile uint32_t ratio; /* Output samples per stream sample */
+static volatile int32_t prev;   /* Previous stream sample, DAC counts */
 static volatile bool stopRequest;
 static volatile dacAt32_hook hook;
 static K_SEM_DEFINE(syncSem, 0, 1);
