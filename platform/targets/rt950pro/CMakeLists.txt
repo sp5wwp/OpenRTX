@@ -35,6 +35,7 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/targets/rt950pro/board_init.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/bootloader.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/canceller.c
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/benchmic.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/hwconfig.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/monitor.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/optionbytes.c
@@ -50,9 +51,12 @@ set_source_files_properties(
     ${OPENRTX_ROOT}/platform/drivers/audio/dac_at32.c
     ${OPENRTX_ROOT}/platform/drivers/audio/adc_at32.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/canceller.c
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/benchmic.c
     TARGET_DIRECTORY app
     PROPERTIES COMPILE_OPTIONS "-O2"
 )
+
+target_compile_definitions(app PRIVATE PLATFORM_RT950PRO)
 
 # Audio interrupt path within the zero-wait Flash, after the signatures
 zephyr_linker_sources(ROM_START SORT_KEY 0x4audio rt950pro_audio_isr.ld)

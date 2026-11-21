@@ -9,6 +9,7 @@
 #include "interfaces/radio.h"
 #include "adc_at32.h"
 #include "dac_at32.h"
+#include "benchmic.h"
 #include "canceller.h"
 
 /*
@@ -24,10 +25,16 @@
 
 const struct audioDevice outputDevices[] = {
     { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SINK_MCU },
-    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SINK_RTX },
+    /* The modulators' microphone input, PC12 high */
     {
         .driver = &dacAt32_driver,
-        .config = NULL,
+        .config = (const void *)DAC_AT32_LINEAR,
+        .instance = 0,
+        .endpoint = SINK_RTX,
+    },
+    {
+        .driver = &dacAt32_driver,
+        .config = (const void *)DAC_AT32_SPEECH,
         .instance = 0,
         .endpoint = SINK_SPK,
     },
@@ -44,8 +51,42 @@ const struct audioDevice inputDevices[] = {
         .instance = 0,
         .endpoint = SOURCE_RTX,
     },
-    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SOURCE_MIC },
+    /* No microphone input for the MCU: the bench clip (benchmic.c) */
+    {
+        .driver = &benchMic_driver,
+        .config = NULL,
+        .instance = 0,
+        .endpoint = SOURCE_MIC,
+    },
 };
+
+/*
+ * The path from DAC1 to the modulators (MICin, PC12 high) behaves as a first
+ * order low-pass at about 230 Hz, flat chip TX filters (bench, tones on the
+ * DAC against the FM deviation measured with an SDR, 50 Hz to 4.2 kHz). The
+ * modulation is equalised with its inverse: a zero at 230 Hz, and a pole at
+ * 8 kHz bounding the boost above the band.
+ */
+#define TX_EQ_ZERO_HZ 230.0f
+#define TX_EQ_POLE_HZ 8000.0f
+
+/*
+ * Level of the modulation on DAC1, 1/256 units: with the BK4829 microphone
+ * gain of radio_rt950pro.cpp, the M17 preamble (outer symbols) deviates by
+ * 2.3 kHz, 2.4 kHz nominal (bench, SDR).
+ */
+#define TX_LEVEL 0x16
+
+static void setTxEqualiser(void)
+{
+    const float k = 2.0f * (float)DAC_AT32_RATE; /* Bilinear transform */
+    const float kz = k / (2.0f * 3.14159265f * TX_EQ_ZERO_HZ);
+    const float kp = k / (2.0f * 3.14159265f * TX_EQ_POLE_HZ);
+    const float d = 1.0f + kp;
+
+    dacAt32_setLinearFilter((1.0f + kz) / d, (1.0f - kz) / d, (1.0f - kp) / d);
+    dacAt32_setLinearGain(TX_LEVEL);
+}
 
 void audio_init()
 {
@@ -69,6 +110,7 @@ void audio_init()
     gpioPin_setMode(&rt950_amp_pwr, OUTPUT);
 
     dacAt32_init();
+    setTxEqualiser();
     adcAt32_init(RX_AUDIO_ADC_CHANNEL);
 }
 
@@ -128,6 +170,8 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 
     if ((source == SOURCE_MCU) && (sink == SINK_SPK))
         gpioPin_clear(&rt950_audio_sw);
+    if ((source == SOURCE_MCU) && (sink == SINK_RTX))
+        gpioPin_set(&rt950_audio_sw); // DAC to the microphone input
     if (source == SOURCE_RTX)
         radio_enableAfOutput();
 
@@ -138,6 +182,8 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
     paths[source][sink] = false;
+    if ((source == SOURCE_MCU) && (sink == SINK_RTX))
+        gpioPin_clear(&rt950_audio_sw); // DAC back to the receive audio node
     updateSpeaker();
     updateCanceller();
 
@@ -154,6 +200,10 @@ bool audio_checkPathCompatibility(const enum AudioSource p1Source,
      * Physical sources and sinks are exclusive. MCU is a memory endpoint, so
      * separate capture and playback streams can share it.
      */
+    /* DAC1 plays to the speaker or to the modulators, not both */
+    const bool dacShared = (p1Source == SOURCE_MCU) && (p2Source == SOURCE_MCU)
+                        && (p1Sink != SINK_MCU) && (p2Sink != SINK_MCU);
+
     return ((p1Source != p2Source) || (p1Source == SOURCE_MCU))
-        && ((p1Sink != p2Sink) || (p1Sink == SINK_MCU));
+        && ((p1Sink != p2Sink) || (p1Sink == SINK_MCU)) && !dacShared;
 }
