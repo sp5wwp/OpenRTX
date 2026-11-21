@@ -15,7 +15,7 @@ extern "C" {
 
 /** Sizes of the canceller model and filter, see canceller.c */
 #define CANCELLER_NA 6
-#define CANCELLER_NB 6
+#define CANCELLER_NB 8
 #define CANCELLER_TAPS 32
 
 /**

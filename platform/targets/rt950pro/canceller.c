@@ -4,8 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include <math.h>
-#include <string.h>
+#include <zephyr/toolchain.h>
 #include <drivers/audio/adc_at32.h>
 #include <drivers/audio/dac_at32.h>
 #include "canceller.h"
@@ -33,60 +32,98 @@
 /* Time constant of the DC estimate of s: 2^12 samples, about 85 ms */
 #define DC_SHIFT 4096.0f
 
-float canceller_A[CANCELLER_NA];
-float canceller_B[CANCELLER_NB];
-float canceller_W[CANCELLER_TAPS];
+/*
+ * Bench-measured defaults (2026-11-21, re-tools): A and B fitted to the node
+ * response to white noise from the DAC (output error -24 dB), W designed
+ * against receiver noise at the M17 receive gain (node noise -16 dB).
+ */
+float canceller_A[CANCELLER_NA] = {
+    -0.7411686f,  -0.04175713f, -0.09729238f,
+    -0.06038946f, -0.0738397f,  0.05445799f,
+};
+float canceller_B[CANCELLER_NB] = {
+    -3.595676e-05f, -0.083524f,  0.009815273f, 0.02753548f,
+    0.01695001f,    0.01428485f, 0.01330875f,  0.002427729f,
+};
+float canceller_W[CANCELLER_TAPS] = {
+    12.99095f,   0.5693383f,  -4.252877f,  -4.413603f,  -2.5091f,
+    -0.3873091f, 0.9959506f,  1.535744f,   1.421281f,   1.003693f,
+    0.550714f,   0.1371495f,  -0.1693264f, -0.3896531f, -0.4871082f,
+    -0.4587916f, -0.3181806f, -0.1178607f, 0.07528909f, 0.2533762f,
+    0.3596226f,  0.4103915f,  0.4187566f,  0.3467489f,  0.2049381f,
+    0.00347057f, -0.2260781f, -0.43455f,   -0.4910547f, -0.3448161f,
+    0.1214831f,  1.091326f,
+};
 
-static float xHist[CANCELLER_NB];   /* x[n-1], x[n-2], ... */
-static float yHist[CANCELLER_NA];   /* y[n-1], y[n-2], ... */
-static float sHist[CANCELLER_TAPS]; /* s[n] - dc, s[n-1] - dc, ... */
+/*
+ * Histories, newest first from their position. Each value is stored twice,
+ * CANCELLER_x apart, so that the window is always contiguous.
+ */
+struct history {
+    size_t pos;
+    float *buf;
+    size_t len;
+};
+
+static float xBuf[2 * CANCELLER_NB];   /* x[n-1], x[n-2], ... */
+static float yBuf[2 * CANCELLER_NA];   /* y[n-1], y[n-2], ... */
+static float sBuf[2 * CANCELLER_TAPS]; /* s[n] - dc, s[n-1] - dc, ... */
+static struct history xHist = { .pos = 0, .buf = xBuf, .len = CANCELLER_NB };
+static struct history yHist = { .pos = 0, .buf = yBuf, .len = CANCELLER_NA };
+static struct history sHist = { .pos = 0, .buf = sBuf, .len = CANCELLER_TAPS };
 static float dc;
 static volatile bool enabled;
 
-static void push(float *hist, size_t len, float value)
+/* Interrupt path: in RAM and without library calls, see dac_at32.c */
+static __ramfunc void push(struct history *h, float value)
 {
-    memmove(&hist[1], &hist[0], (len - 1) * sizeof(float));
-    hist[0] = value;
+    h->pos = (h->pos == 0) ? (h->len - 1) : (h->pos - 1);
+    h->buf[h->pos] = value;
+    h->buf[h->pos + h->len] = value;
 }
 
-static int32_t filter(uint16_t raw)
+static __ramfunc float dot(const float *coeff, const struct history *h)
 {
-    float y = 0.0f;
+    const float *v = &h->buf[h->pos];
+    float acc = 0.0f;
 
-    for (size_t j = 0; j < CANCELLER_NB; j++)
-        y += canceller_B[j] * xHist[j];
-    for (size_t i = 0; i < CANCELLER_NA; i++)
-        y -= canceller_A[i] * yHist[i];
-    push(yHist, CANCELLER_NA, y);
+    for (size_t i = 0; i < h->len; i++)
+        acc += coeff[i] * v[i];
+
+    return acc;
+}
+
+static __ramfunc int32_t roundToInt(float value)
+{
+    return (int32_t)(value + ((value >= 0.0f) ? 0.5f : -0.5f));
+}
+
+static __ramfunc int32_t filter(uint16_t raw)
+{
+    float y = dot(canceller_B, &xHist) - dot(canceller_A, &yHist);
+    push(&yHist, y);
 
     float s = (float)raw - y;
     dc += (s - dc) / DC_SHIFT;
-    push(sHist, CANCELLER_TAPS, s - dc);
+    push(&sHist, s - dc);
 
-    return (int32_t)lrintf(s);
+    return roundToInt(s);
 }
 
-static int32_t clampDac(float value)
-{
-    if (value > DAC_AT32_MAX)
-        return DAC_AT32_MAX;
-    if (value < -DAC_AT32_MAX)
-        return -DAC_AT32_MAX;
-
-    return (int32_t)lrintf(value);
-}
-
-static int32_t hook(int32_t sample)
+static __ramfunc int32_t hook(int32_t sample)
 {
     float x = (float)sample;
 
-    if (enabled) {
-        for (size_t k = 0; k < CANCELLER_TAPS; k++)
-            x += canceller_W[k] * sHist[k];
-    }
+    if (enabled)
+        x += dot(canceller_W, &sHist);
 
-    int32_t out = clampDac(x);
-    push(xHist, CANCELLER_NB, (float)out);
+    if (x > DAC_AT32_MAX)
+        x = DAC_AT32_MAX;
+    if (x < -DAC_AT32_MAX)
+        x = -DAC_AT32_MAX;
+
+    int32_t out = roundToInt(x);
+    push(&xHist, (float)out);
 
     return out;
 }

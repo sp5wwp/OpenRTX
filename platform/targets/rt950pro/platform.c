@@ -17,6 +17,7 @@
 #include "drivers/SPI/spi_zephyr.h"
 #include "drivers/I2C/i2c_bitbang.h"
 #include "optionbytes.h"
+#include "canceller.h"
 #include <zephyr/sys/reboot.h>
 #ifdef CONFIG_BLUETOOTH
 #include "bluetooth_rt950pro.h"
@@ -212,6 +213,7 @@ void platform_init()
 
     /* Mute the speaker and set up the audio path before the radio chips */
     audio_init();
+    canceller_init();
 
     /* Initialise the BK4829 serial bus and the two transceivers */
     int rfRet = spiZephyr_init(&rt950_bk4829_bus);

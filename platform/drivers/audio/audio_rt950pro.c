@@ -9,6 +9,7 @@
 #include "interfaces/radio.h"
 #include "adc_at32.h"
 #include "dac_at32.h"
+#include "canceller.h"
 
 /*
  * Audio driver for the Radtel RT-950 Pro.
@@ -110,6 +111,17 @@ static bool rtxRouted(void)
     return paths[SOURCE_RTX][SINK_SPK] || paths[SOURCE_RTX][SINK_MCU];
 }
 
+/*
+ * The receive audio canceller keeps the received baseband off the speaker
+ * while the MCU samples it (digital modes); with the receiver audio routed to
+ * the speaker (FM) that audio is the wanted one.
+ */
+static void updateCanceller(void)
+{
+    canceller_enable(paths[SOURCE_RTX][SINK_MCU]
+                     && !paths[SOURCE_RTX][SINK_SPK]);
+}
+
 void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
     paths[source][sink] = true;
@@ -120,12 +132,14 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
         radio_enableAfOutput();
 
     updateSpeaker();
+    updateCanceller();
 }
 
 void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
     paths[source][sink] = false;
     updateSpeaker();
+    updateCanceller();
 
     if ((source == SOURCE_RTX) && !rtxRouted())
         radio_disableAfOutput();
