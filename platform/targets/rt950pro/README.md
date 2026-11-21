@@ -141,8 +141,23 @@ during playback with the canceller on.
 - Priorities: the DAC interrupt (TMR6) and the programming cable UART (UART4)
   share the highest one. The UART must not be preempted by the audio
   interrupt: when it was, its received characters were corrupted. USART1
-  (Bluetooth) and USART3 (GPS) are one level below, the kernel timer below
-  them.
+  (Bluetooth), USART3 (GPS) and ADC1 (battery voltage) are below, the kernel
+  timer below them. A handler at the audio priority holds the audio interrupt
+  off until it ends: ADC1 at that priority made it lose about 11 samples per
+  second (the battery voltage is read about ten times per second). Each lost
+  sample slips the audio output by one sample: on M17 transmissions a symbol
+  timing sawtooth (36 us rms), and on the bench an apparent MCU clock error of
+  -146 to -210 ppm, varying with the battery reads. The crystal is within
+  about 5 ppm.
+- The DAC driver counts the lost samples (`dacAt32_lostTicks`, from the TMR6
+  counter at the interrupt entry), the longest interrupt latency
+  (`dacAt32_latencyMax`), the half buffers output before their refill
+  (`dacAt32_lateRefills`) and the samples clipped (`dacAt32_clipped`). Each
+  debug monitor command still costs a few lost samples (UART4 at the audio
+  priority).
+- The debug monitor thread has the lowest priority: long replies (memory
+  dumps) used to delay the M17 transmit thread, which then refilled the audio
+  buffer late, and stale samples were transmitted.
 - With 224 kB of SRAM only the first 128 kB of Flash are zero-wait, and code
   above runs many times slower. `rt950pro_hot_code.ld` places the kernel, the
   ARM interrupt and context switch code, the timer, serial and GPIO drivers and
@@ -201,22 +216,39 @@ level: the PA is not off with a zero drive.
 
 The modulation goes from DAC1 to the microphone input of the BK4829 chips
 (`MICin`, PC12 high), with the chips' TX audio filters bypassed. That path
-behaves as a first order low-pass at about 230 Hz (tones on the DAC against
-the deviation measured with an SDR): the DAC driver equalises it with the
-inverse filter in its linear mode, which leaves the response flat within
-0.7 dB from 50 Hz to 3 kHz. The level gives about 2.2-2.3 kHz of preamble
-deviation (2.4 kHz nominal). The transmit phase is inverted, as on the C62.
+behaves as a first order band-pass, a high-pass at 34 Hz and a low-pass at
+170 Hz (sine tones from 2 Hz to 4 kHz on the DAC, against the deviation
+measured with an SDR, 0.3 dB rms fit). The DAC driver equalises it in its
+linear mode with two first order sections (`audio_rt950pro.c`): a zero at
+170 Hz with a pole at 8 kHz, and the high-pass undone down to 1 Hz. In
+linear mode the DAC converts at each TMR6 overflow (hardware trigger): the
+interrupt latency (up to about 18 us) no longer moves the samples in time.
+
+The deviation is set by the DAC level (`TX_LEVEL`, DAC peaks at about 80 % of
+the range) and by the BK4829 deviation register, 0x5C2 for M17 (0x50A, the
+vendor value, for FM): outer symbols at +/-2.4 kHz, a preamble peak of about
+3.4 kHz (1.41 times the outer symbols, with the RRC filter). The transmit
+phase is inverted, as on the C62.
 
 The radio has no microphone input for the MCU (PA0 only carries a rectified
 level for VOX), so the Codec2 encoder takes its audio from a clip loaded in
 RAM from the debug monitor (`benchmic.c`, `mic` commands), played in a loop.
 
-Verified with an RTL-SDR capture decoded by gr-m17: LSF (source, destination,
-voice stream, meta text), 90 stream frames, and the Codec2 payload decodes to
-the speech of the clip. The Viterbi error metric is about 27-32, close to the
-decoder threshold of 30: the link margin is still to be checked with a proper
-receiver. The audio clock of the radio (8 MHz MCU crystal) was about 170 ppm
-from the SDR's.
+Verified with an RTL-SDR capture (FM demodulator, RRC matched filter, fixed
+symbol timing per 0.5 s) decoded by gr-m17: LSF (source, destination, voice
+stream, meta text), 120 stream frames over 5 s, Viterbi error metric 9-12
+(decoder threshold 30), and the Codec2 payload decodes to the speech of the
+clip. The modulation error ratio (MER) is about 28 dB; the receive chain
+measures 33 dB on an ideal synthetic signal, and the DAC output itself about
+32 dB. On the way there:
+
+| Step | MER |
+|------|-----|
+| start: 230 Hz equaliser, samples lost by the audio interrupt | 13.7 dB |
+| sample rate corrected for the apparent clock error | 17.3 dB |
+| 28 Hz high-pass undone | 20.8 dB |
+| ADC1 interrupt below the audio one, DAC hardware trigger | 22.8 dB |
+| path measured with tones: 170 Hz / 34 Hz, high-pass undone to 1 Hz | 27.9 dB |
 
 The M17 transmission depends on the CPU keeping up: the Codec2 encoder, the
 modulator and their tables are in the zero-wait Flash, and the modulator
@@ -235,7 +267,7 @@ line, answered by its output then `OK`, or `ERR <reason>`:
 | `update` | restart into the vendor bootloader, for flashing |
 | `xr`/`xw <v\|u> <reg> [value]` | read/write a BK4829 register (VHF/UHF chip) |
 | `mode <fm\|m17>`, `freq <hz>` | operating mode and frequency |
-| `tg <shape> [hz] [amp]` | test signal on the DAC (0 off, 1 sine, 2 square, 3 noise) |
+| `tg <shape> [hz] [amp]` | test signal on the DAC (0 off, 1 sine, 2 square, 3 noise), hex values |
 | `ar <channel> <count> [div]` | record an ADC channel with the DAC output |
 | `cx <0\|1>` | receive canceller correction off/on |
 | `c2 s/p/l/m/e` | Codec2 playback: start, push frames, load a clip into RAM, play it, end |
@@ -244,6 +276,8 @@ line, answered by its output then `OK`, or `ERR <reason>`:
 | `txdry <0\|1>` | dry run: key the transmitter with the PA drive at zero (default 1) |
 | `txdrv <value>` | PA drive below the calibration, 0 for the calibration |
 | `txlvl <gain>` | modulation level on DAC1, 1/256 units (hex) |
+| `clk <error>` | correct the audio sample rate for an MCU clock error (0.1 ppm, decimal) |
+| `cal` | measure the MCU clock against a BK4829 tone (`clockcal.c`), apply it, print it |
 | `mic a <n>`, `mic l <off> <hex>` | bench microphone clip: allocate, load 16-bit samples |
 | `rtc`, `tz` | RTC date and time (UTC), time zone |
 | `ob` | option bytes (SRAM size) |
