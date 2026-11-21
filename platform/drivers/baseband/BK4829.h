@@ -53,6 +53,45 @@ extern "C" {
 #define BITV(x, y) ((x) << (y))
 #endif
 
+/*
+ * Register fields. The audio ones match the BK4819's (datasheet and
+ * application note, see BK4819.h); on the BK4829 they are confirmed by the
+ * bench work of Ferrite (https://github.com/FerriteFW/ferrite, chip.rs and
+ * drivers/bk4829) and of this port.
+ */
+#define BK4829_REG2B_AF_RX_HPF300_DISABLE BIT(10)
+#define BK4829_REG2B_AF_RX_LPF3K_DISABLE BIT(9)
+#define BK4829_REG2B_AF_RX_DEEMPH_DISABLE BIT(8)
+#define BK4829_REG2B_AF_TX_HPF300_DISABLE BIT(2)
+#define BK4829_REG2B_AF_TX_LPF1_DISABLE BIT(1)
+#define BK4829_REG2B_AF_TX_PREEMPH_DISABLE BIT(0)
+#define BK4829_REG31_COMPANDER BIT(3)
+#define BK4829_REG31_VOX BIT(2)
+#define BK4829_REG47_AF_TX_FILTER_BYPASS BIT(0)
+/* Undocumented; the receive audio is lost when it is clear (Ferrite) */
+#define BK4829_REG47_UNDOC1 BIT(1)
+#define BK4829_REG48_AF_RX_GAIN1_MASK 0x0c00U
+#define BK4829_REG48_AF_RX_GAIN1(x) \
+    (BITV((x), 10) & BK4829_REG48_AF_RX_GAIN1_MASK)
+#define BK4829_REG48_AF_RX_GAIN2_MASK 0x03f0U
+#define BK4829_REG48_AF_RX_GAIN2(x) \
+    (BITV((x), 4) & BK4829_REG48_AF_RX_GAIN2_MASK)
+#define BK4829_REG48_AF_DAC_GAIN_MASK 0x000fU
+#define BK4829_REG48_AF_DAC_GAIN(x) ((x) & BK4829_REG48_AF_DAC_GAIN_MASK)
+#define BK4829_REG70_TONE1_ENABLE BIT(15)
+#define BK4829_REG70_TONE2_ENABLE BIT(7)
+#define BK4829_REG7E_TX_DCF_BW_MASK 0x0038U
+#define BK4829_REG7E_TX_DCF_BW(x) (BITV((x), 3) & BK4829_REG7E_TX_DCF_BW_MASK)
+#define BK4829_REG7E_RX_DCF_BW_MASK 0x0007U
+#define BK4829_REG7E_RX_DCF_BW(x) ((x) & BK4829_REG7E_RX_DCF_BW_MASK)
+
+/* Values bk4829_init() sets, restored by bk4829_set_audio_mode() */
+#define BK4829_DEFAULT_TX_DCF_BW 7
+#define BK4829_DEFAULT_RX_DCF_BW 6
+#define BK4829_DEFAULT_RX_AUDIO_GAIN1 0
+#define BK4829_DEFAULT_RX_AUDIO_GAIN2 0x3f
+#define BK4829_DEFAULT_AF_DAC_GAIN 0xf
+
 #define BK4829_REG_READ 0x80
 #define BK4829_REG_WRITE 0x00
 
@@ -132,6 +171,7 @@ typedef enum {
     BK4829_REG_28 = 0x28,
     BK4829_REG_29 = 0x29,
     BK4829_REG_2A = 0x2A,
+    BK4829_REG_2B = 0x2B,
     BK4829_REG_2C = 0x2C,
     BK4829_REG_2F = 0x2F,
     BK4829_REG_30 = 0x30,
@@ -202,6 +242,14 @@ typedef enum {
     BK4829_AF_TYPE_CTCDCSS_TEST = 6u,
     BK4829_AF_TYPE_FSK_TEST = 8u,
 } bk4829_af_type_t;
+
+/**
+ * Audio processing modes, see bk4829_set_audio_mode().
+ */
+enum bk4829_audio_mode {
+    BK4829_AUDIO_VOICE,  ///< Audio filters on, voice levels.
+    BK4829_AUDIO_BYPASS, ///< Audio filters bypassed, for digital modes.
+};
 
 /** RF filter bandwidth, REG43 bits 5:4. */
 typedef enum {
@@ -471,6 +519,29 @@ bool bk4829_get_vox(const struct BK4829 *dev);
  */
 void bk4829_set_squelch(const struct BK4829 *dev, uint8_t RTSO, uint8_t RTSC,
                         uint8_t ETSO, uint8_t ETSC, uint8_t GTSO, uint8_t GTSC);
+
+/**
+ * Set the audio processing mode. Bypass turns off the speech filters,
+ * emphasis, compander, VOX, tones and DC filters on transmit and receive, as
+ * digital modes need a flat baseband. Voice restores what bk4829_init() sets,
+ * including the receive audio gains.
+ *
+ * @param dev: pointer to device data.
+ * @param mode: audio processing mode.
+ */
+void bk4829_set_audio_mode(const struct BK4829 *dev,
+                           enum bk4829_audio_mode mode);
+
+/**
+ * Set the receive audio gains (REG_48).
+ *
+ * @param dev: pointer to device data.
+ * @param gain1: AF RX gain 1, 0 to 3.
+ * @param gain2: AF RX gain 2, 0 to 63.
+ * @param dacGain: AF DAC gain, 0 to 15.
+ */
+void bk4829_set_rx_audio_gain(const struct BK4829 *dev, uint8_t gain1,
+                              uint8_t gain2, uint8_t dacGain);
 
 /**
  * Set the AF output mode.

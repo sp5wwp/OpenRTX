@@ -9,6 +9,7 @@
 #include "drivers/baseband/BK4829.h"
 #include "peripherals/spi.h"
 #include "interfaces/delays.h"
+#include "core/utils.h"
 
 struct bk4829_reg_init {
     uint8_t reg;
@@ -316,6 +317,70 @@ void bk4829_set_squelch(const struct BK4829 *dev, uint8_t RTSO, uint8_t RTSC,
                       ((ETSC & 0x7F) << 8) | (ETSO & 0x7F));
     bk4829_update_reg(dev, BK4829_REG_4D, 0x00FF, GTSC);
     bk4829_update_reg(dev, BK4829_REG_4E, 0x00FF, GTSO);
+}
+
+/* Speech filters and emphasis, on transmit and receive */
+#define REG2B_AF_FILTERS_DISABLE                                             \
+    (BK4829_REG2B_AF_RX_HPF300_DISABLE | BK4829_REG2B_AF_RX_LPF3K_DISABLE    \
+     | BK4829_REG2B_AF_RX_DEEMPH_DISABLE | BK4829_REG2B_AF_TX_HPF300_DISABLE \
+     | BK4829_REG2B_AF_TX_LPF1_DISABLE | BK4829_REG2B_AF_TX_PREEMPH_DISABLE)
+
+/*
+ * Audio processing fields, with their values by enum bk4829_audio_mode:
+ * voice (the values bk4829_init() sets), then bypass. Unlike the BK4819's,
+ * REG_47 bit 1 stays set in both.
+ */
+struct audioModeField {
+    bk4829_reg_t reg;
+    uint16_t mask;
+    uint16_t value[2];
+};
+
+static const struct audioModeField audioModeFields[] = {
+    { BK4829_REG_2B, REG2B_AF_FILTERS_DISABLE, { 0, REG2B_AF_FILTERS_DISABLE } },
+    { BK4829_REG_31, BK4829_REG31_COMPANDER | BK4829_REG31_VOX, { 0, 0 } },
+    { BK4829_REG_47,
+      BK4829_REG47_AF_TX_FILTER_BYPASS,
+      { 0, BK4829_REG47_AF_TX_FILTER_BYPASS } },
+    { BK4829_REG_70,
+      BK4829_REG70_TONE1_ENABLE | BK4829_REG70_TONE2_ENABLE,
+      { 0, 0 } },
+    { BK4829_REG_7E,
+      BK4829_REG7E_TX_DCF_BW_MASK | BK4829_REG7E_RX_DCF_BW_MASK,
+      { BK4829_REG7E_TX_DCF_BW(BK4829_DEFAULT_TX_DCF_BW)
+            | BK4829_REG7E_RX_DCF_BW(BK4829_DEFAULT_RX_DCF_BW),
+        0 } },
+};
+
+void bk4829_set_audio_mode(const struct BK4829 *dev,
+                           enum bk4829_audio_mode mode)
+{
+    const bool bypass = (mode == BK4829_AUDIO_BYPASS);
+
+    for (size_t i = 0; i < ARRAY_SIZE(audioModeFields); i++) {
+        const struct audioModeField *field = &audioModeFields[i];
+        bk4829_update_reg(dev, field->reg, field->mask, field->value[bypass]);
+    }
+
+    if (bypass)
+        return;
+
+    bk4829_set_rx_audio_gain(dev, BK4829_DEFAULT_RX_AUDIO_GAIN1,
+                             BK4829_DEFAULT_RX_AUDIO_GAIN2,
+                             BK4829_DEFAULT_AF_DAC_GAIN);
+}
+
+void bk4829_set_rx_audio_gain(const struct BK4829 *dev, uint8_t gain1,
+                              uint8_t gain2, uint8_t dacGain)
+{
+    const uint16_t mask = BK4829_REG48_AF_RX_GAIN1_MASK
+                        | BK4829_REG48_AF_RX_GAIN2_MASK
+                        | BK4829_REG48_AF_DAC_GAIN_MASK;
+    const uint16_t value = BK4829_REG48_AF_RX_GAIN1(gain1)
+                         | BK4829_REG48_AF_RX_GAIN2(gain2)
+                         | BK4829_REG48_AF_DAC_GAIN(dacGain);
+
+    bk4829_update_reg(dev, BK4829_REG_48, mask, value);
 }
 
 void bk4829_set_af(const struct BK4829 *dev, bk4829_af_type_t af)
