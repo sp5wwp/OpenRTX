@@ -12,20 +12,43 @@
 
 #include "hwconfig.h"
 
+/*
+ * Mach-O, for the emulator built on macOS, names read-only data __TEXT,__const
+ * and prefixes C symbols with an underscore.
+ */
+#ifdef __APPLE__
+#define BLOB_SECTION ".pushsection __TEXT,__const\n"
+#define BLOB_SYM(sym) "_" sym
+#else
+#define BLOB_SECTION ".pushsection .rodata\n"
+#define BLOB_SYM(sym) sym
+#endif
+
+/**
+ * Assembly embedding a font blob as <sym>_start/_end.
+ *
+ * @param sym: symbol prefix, as C names it.
+ * @param path: blob file, relative to the build directory.
+ */
+/* The formatter splits the concatenated strings mid-name. */
+/* clang-format off */
+#define BLOB(sym, path)                        \
+    BLOB_SECTION                               \
+    ".global " BLOB_SYM(sym) "_start\n"        \
+    ".global " BLOB_SYM(sym) "_end\n"          \
+    BLOB_SYM(sym) "_start:\n"                  \
+    "    .incbin \"" path "\"\n"               \
+    ".set " BLOB_SYM(sym) "_end, .\n"          \
+    ".popsection\n"
+/* clang-format on */
+
 /**
  * Assembly embedding a text font blob as _font_<name>_start/_end.
  *
  * @param name: blob name.
  * @param path: blob file, relative to the build directory.
  */
-#define FONT_BLOB(name, path)         \
-    ".pushsection .rodata\n"          \
-    ".global _font_" #name "_start\n" \
-    ".global _font_" #name "_end\n"   \
-    "_font_" #name "_start:\n"        \
-    "    .incbin \"" path "\"\n"      \
-    ".set _font_" #name "_end, .\n"   \
-    ".popsection\n"
+#define FONT_BLOB(name, path) BLOB("_font_" #name, path)
 
 /**
  * Assembly embedding an icon font blob, the fallback of the same-size text
@@ -34,14 +57,7 @@
  * @param name: blob name.
  * @param path: blob file, relative to the build directory.
  */
-#define ICON_BLOB(name, path)          \
-    ".pushsection .rodata\n"           \
-    ".global _icons_" #name "_start\n" \
-    ".global _icons_" #name "_end\n"   \
-    "_icons_" #name "_start:\n"        \
-    "    .incbin \"" path "\"\n"       \
-    ".set _icons_" #name "_end, .\n"   \
-    ".popsection\n"
+#define ICON_BLOB(name, path) BLOB("_icons_" #name, path)
 
 #ifdef CONFIG_FONT_AA
 __asm__(FONT_BLOB(5, "../openrtx/fonts/ubuntu_5_4.bin"));

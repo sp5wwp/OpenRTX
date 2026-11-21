@@ -6,9 +6,10 @@ SPDX-License-Identifier: GPL-3.0-or-later
 
 # Linux emulator
 
-The emulator runs the firmware on a Linux PC, with the screen in an SDL window
-and a shell on the terminal (type `help` for its commands). It needs the SDL2
-development package. Each variant models the screen and keypad of a group of
+The emulator runs the firmware on a Linux PC or a Mac, with the screen in an
+SDL window and a shell on the terminal (type `help` for its commands). It needs
+the SDL2 and codec2 development packages (on macOS, `brew install sdl2
+codec2`). Each variant models the screen and keypad of a group of
 radios:
 
 | Target                      | Screen                       | Keys                    |
