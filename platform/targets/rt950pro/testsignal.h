@@ -21,12 +21,11 @@ enum testsignalShape {
     TESTSIGNAL_SINE = 1,   ///< Sine wave.
     TESTSIGNAL_SQUARE = 2, ///< Square wave.
     TESTSIGNAL_NOISE = 3,  ///< White noise, uniform, frequency ignored.
-    TESTSIGNAL_CANCEL = 4, ///< Canceller on PA2, see testsignal.c.
 };
 
 /**
- * Initialise the bench signals: ADC2 for the recorder and the canceller, and
- * the DAC driver hook. Called once, from the monitor initialisation.
+ * Initialise the bench signals: ADC2 for the recorder, and the generator
+ * hook of the DAC driver. Called once, from the monitor initialisation.
  */
 void testsignal_init(void);
 
@@ -56,16 +55,6 @@ int testsignal_start(enum testsignalShape shape, uint32_t hz, uint32_t amp);
  */
 int testsignal_record(uint8_t channel, uint32_t count, uint32_t div,
                       const uint16_t **samples, const uint16_t **dacSamples);
-
-/** Canceller model and filter sizes, see testsignal.c */
-#define TESTSIGNAL_CANCEL_NA 6
-#define TESTSIGNAL_CANCEL_NB 6
-#define TESTSIGNAL_CANCEL_TAPS 32
-
-/** Canceller coefficients, loaded by the host through the monitor */
-extern float testsignal_cancelA[TESTSIGNAL_CANCEL_NA];
-extern float testsignal_cancelB[TESTSIGNAL_CANCEL_NB];
-extern float testsignal_cancelW[TESTSIGNAL_CANCEL_TAPS];
 
 /** Maximum number of samples of a recording */
 #define TESTSIGNAL_REC_MAX 4096

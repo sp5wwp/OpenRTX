@@ -20,6 +20,8 @@
 #include "bootloader.h"
 #include "monitor.h"
 #include "testsignal.h"
+#include "canceller.h"
+#include "rtx/rtx.h"
 #include "optionbytes.h"
 #include "core/audio_codec.h"
 #include "core/audio_path.h"
@@ -41,6 +43,10 @@
  *   tg <shape> [hz] [amp]     test signal on DAC1 (PA4), 48 kHz samples from
  *                             TMR6: 0 off, 1 sine, 2 square; amp 0-7FF
  *                             (default 400) around mid-scale; 3 white noise
+ *   cx <0|1>                  receive audio canceller correction off/on
+ *   mode <fm|m17>             operating mode, set in the RTX configuration
+ *                             only: the UI still shows its own, and puts it
+ *                             back at its next change
  *   c2 s                      start decoding Codec2 3200 frames to the
  *                             speaker (MCU -> speaker audio path)
  *   c2 p <hex>                push up to 4 frames (8 bytes each), blocking
@@ -503,6 +509,34 @@ static const char *cmdOptionBytes(char **arg)
     return NULL;
 }
 
+static const char *cmdCanceller(char **arg)
+{
+    uint32_t on;
+
+    if (!parseHex(arg[0], &on) || (on > 1))
+        return "usage: cx <0|1>";
+
+    canceller_enable(on != 0);
+
+    return NULL;
+}
+
+static const char *cmdMode(char **arg)
+{
+    rtxStatus_t cfg = rtx_getCurrentStatus();
+
+    if ((arg[0] != NULL) && (strcmp(arg[0], "fm") == 0))
+        cfg.opMode = OPMODE_FM;
+    else if ((arg[0] != NULL) && (strcmp(arg[0], "m17") == 0))
+        cfg.opMode = OPMODE_M17;
+    else
+        return "usage: mode <fm|m17>";
+
+    rtx_configure(&cfg);
+
+    return NULL;
+}
+
 static const char *cmdAudioRecord(char **arg)
 {
     uint32_t channel, count, div = AR_DEFAULT_DIV;
@@ -535,6 +569,8 @@ static const struct {
     { .name = "ar", .func = cmdAudioRecord },
     { .name = "c2", .func = cmdCodec2 },
     { .name = "hp", .func = cmdHeap },
+    { .name = "cx", .func = cmdCanceller },
+    { .name = "mode", .func = cmdMode },
     { .name = "ob", .func = cmdOptionBytes },
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
