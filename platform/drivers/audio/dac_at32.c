@@ -24,8 +24,12 @@
 #define TIMER_CLOCK 120000000UL
 #define DAC_MID 2048
 #define TMR6_IRQ_PRIO 2
-/* Stream samples (int16) to DAC counts (12 bit) */
-#define SAMPLE_SHIFT 4
+/*
+ * Stream samples (int16) to DAC counts (12 bit). Speech uses a fraction of the
+ * int16 range, so it is scaled up by 4 over a plain 16 to 12 bit conversion;
+ * the rare peaks above the DAC range are clamped.
+ */
+#define SAMPLE_SHIFT 2
 
 static struct streamCtx *volatile stream;
 static volatile uint32_t pos;   /* Stream sample being output */
@@ -75,6 +79,10 @@ static void tmr6Isr(const void *arg)
     struct streamCtx *ctx = stream;
     if ((ctx != NULL) && (ctx->running != 0)) {
         int32_t cur = ctx->buffer[pos] >> SAMPLE_SHIFT;
+        if (cur > DAC_AT32_MAX)
+            cur = DAC_AT32_MAX;
+        if (cur < -DAC_AT32_MAX)
+            cur = -DAC_AT32_MAX;
         out = prev + (((cur - prev) * (int32_t)sub) / (int32_t)ratio);
         advance(ctx, cur);
     }
@@ -179,7 +187,7 @@ static int dacAt32_sync(struct streamCtx *ctx, uint8_t dirty)
 
 static void dacAt32_stop(struct streamCtx *ctx)
 {
-    if (ctx->running == 0)
+    if ((ctx != stream) || (ctx->running == 0))
         return;
 
     stopRequest = true;
@@ -189,10 +197,14 @@ static void dacAt32_terminate(struct streamCtx *ctx)
 {
     unsigned int key = irq_lock();
     ctx->running = 0;
-    stream = NULL;
+    /* Only the stream being output is detached, not one being started */
+    bool current = (ctx == stream);
+    if (current)
+        stream = NULL;
     irq_unlock(key);
 
-    k_sem_give(&syncSem);
+    if (current)
+        k_sem_give(&syncSem);
 }
 
 const struct audioDriver dacAt32_driver = {
