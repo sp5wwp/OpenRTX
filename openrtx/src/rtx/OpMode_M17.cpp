@@ -86,7 +86,7 @@ void OpMode_M17::update(rtxStatus_t *const status, const bool newCfg)
     invertTxPhase = (mod17CalData.bb_tx_invert == 1) ? true : false;
     invertRxPhase = (mod17CalData.bb_rx_invert == 1) ? true : false;
     #elif defined(PLATFORM_CS7000) || defined(PLATFORM_CS7000P) \
-        || defined(PLATFORM_C62)
+        || defined(PLATFORM_C62) || defined(PLATFORM_RT950PRO)
     invertTxPhase = true;
     #elif defined(PLATFORM_DM1701)
     invertTxPhase = true;
