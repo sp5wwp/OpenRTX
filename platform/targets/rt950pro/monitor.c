@@ -23,6 +23,8 @@
 #include "canceller.h"
 #include "rtx/rtx.h"
 #include "peripherals/rtc.h"
+#include "core/state.h"
+#include <pthread.h>
 #include "optionbytes.h"
 #include "core/audio_codec.h"
 #include "core/audio_path.h"
@@ -49,6 +51,10 @@
  *   rtc <yy> <mm> <dd> <hh> <mi> <ss> <wd>
  *                             set the RTC (UTC); decimal numbers, wd day of
  *                             the week 1-7, Monday first
+ *   tz <half-hours>           timezone setting (UTC offset in half hours,
+ *                             decimal, may be negative), as the settings menu
+ *   freq <hz>                 receive and transmit frequency, decimal, set in
+ *                             the RTX configuration only, as mode
  *   mode <fm|m17>             operating mode, set in the RTX configuration
  *                             only: the UI still shows its own, and puts it
  *                             back at its next change
@@ -565,6 +571,45 @@ static const char *cmdRtc(char **arg)
     return NULL;
 }
 
+/* Largest UTC offset, in half hours: UTC+14 */
+#define TZ_MAX_HALF_HOURS 28
+
+static const char *cmdTimezone(char **arg)
+{
+    if (arg[0] == NULL)
+        return "usage: tz <half-hours>";
+
+    char *end;
+    long tz = strtol(arg[0], &end, 10);
+    if ((*end != '\0') || (end == arg[0]) || (tz > TZ_MAX_HALF_HOURS)
+        || (tz < -TZ_MAX_HALF_HOURS))
+        return "usage: tz <half-hours>";
+
+    pthread_mutex_lock(&state_mutex);
+    state.settings.utc_timezone = (int8_t)tz;
+    pthread_mutex_unlock(&state_mutex);
+
+    return NULL;
+}
+
+static const char *cmdFreq(char **arg)
+{
+    if (arg[0] == NULL)
+        return "usage: freq <hz>";
+
+    char *end;
+    unsigned long hz = strtoul(arg[0], &end, 10);
+    if ((*end != '\0') || (end == arg[0]))
+        return "usage: freq <hz>";
+
+    rtxStatus_t cfg = rtx_getCurrentStatus();
+    cfg.rxFrequency = hz;
+    cfg.txFrequency = hz;
+    rtx_configure(&cfg);
+
+    return NULL;
+}
+
 static const char *cmdMode(char **arg)
 {
     rtxStatus_t cfg = rtx_getCurrentStatus();
@@ -615,6 +660,8 @@ static const struct {
     { .name = "hp", .func = cmdHeap },
     { .name = "cx", .func = cmdCanceller },
     { .name = "mode", .func = cmdMode },
+    { .name = "freq", .func = cmdFreq },
+    { .name = "tz", .func = cmdTimezone },
     { .name = "rtc", .func = cmdRtc },
     { .name = "ob", .func = cmdOptionBytes },
     { .name = "xr", .func = cmdBkRead },
