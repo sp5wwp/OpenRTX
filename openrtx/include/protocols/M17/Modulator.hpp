@@ -101,8 +101,10 @@ private:
 
     static constexpr float  RRC_GAIN          = 23000.0f;
     static constexpr float  RRC_OFFSET        = 0.0f;
+    static constexpr size_t RRC_SYMBOLS       = 9;   ///< Symbols spanned by the 48 kHz RRC filter
 
     std::array< int8_t, FRAME_SYMBOLS > symbols;
+    std::array< float, RRC_SYMBOLS > symbolHistory;  ///< Last symbols, newest first, for the RRC filter.
     std::unique_ptr< int16_t[] > baseband_buffer;  ///< Buffer for baseband audio handling.
     stream_sample_t              *idleBuffer;      ///< Half baseband buffer, free for processing.
     streamId                     outStream;        ///< Baseband output stream ID.

@@ -64,6 +64,8 @@ bool Modulator::start()
     if(txRunning)
         return true;
 
+    symbolHistory.fill(0.0f);
+
     #ifndef PLATFORM_LINUX
     outPath = audioPath_request(SOURCE_MCU, SINK_RTX, PRIO_TX);
     if(outPath < 0)
@@ -135,24 +137,39 @@ void Modulator::invertPhase(const bool status)
 }
 
 
+/*
+ * RRC pulse shaping of the symbols upsampled to 48 kHz. The upsampled stream
+ * is zero but at one sample per symbol, so each output sample is computed from
+ * the RRC_SYMBOLS taps aligned with a symbol (polyphase form): the same
+ * output as filtering the zero-stuffed stream, with a tenth of the products.
+ */
 void Modulator::symbolsToBaseband()
 {
-    memset(idleBuffer, 0x00, FRAME_SAMPLES * sizeof(stream_sample_t));
+    static constexpr size_t SPS  = SAMPLES_PER_SYMBOL;
+    static constexpr size_t TAPS = M17::rrc_taps_48k.size();
+    static_assert(TAPS <= (RRC_SYMBOLS * SPS),
+                  "RRC_SYMBOLS too small for the 48 kHz RRC filter");
 
     for(size_t i = 0; i < symbols.size(); i++)
     {
-        idleBuffer[i * 10] = symbols[i];
-    }
+        for(size_t j = RRC_SYMBOLS - 1; j > 0; j--)
+            symbolHistory[j] = symbolHistory[j - 1];
 
-    for(size_t i = 0; i < FRAME_SAMPLES; i++)
-    {
-        float elem    = static_cast< float >(idleBuffer[i]);
-        elem          = M17::rrc_48k(elem * RRC_GAIN) - RRC_OFFSET;
-        #if defined(PLATFORM_MD3x0) || defined(PLATFORM_MDUV3x0)
-        elem          = pwmComp(elem);
-        #endif
-        if(invPhase) elem = 0.0f - elem;    // Invert signal phase
-        idleBuffer[i] = static_cast< int16_t >(elem);
+        symbolHistory[0] = static_cast< float >(symbols[i]) * RRC_GAIN;
+
+        for(size_t p = 0; p < SPS; p++)
+        {
+            float elem = 0.0f;
+            for(size_t j = 0; (p + j * SPS) < TAPS; j++)
+                elem += M17::rrc_taps_48k[p + j * SPS] * symbolHistory[j];
+
+            elem -= RRC_OFFSET;
+            #if defined(PLATFORM_MD3x0) || defined(PLATFORM_MDUV3x0)
+            elem          = pwmComp(elem);
+            #endif
+            if(invPhase) elem = 0.0f - elem;    // Invert signal phase
+            idleBuffer[(i * SPS) + p] = static_cast< int16_t >(elem);
+        }
     }
 }
 
