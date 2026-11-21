@@ -83,13 +83,14 @@ void radio_terminate()
 }
 
 /*
- * M17 receive gains (REG_48), measured on the bench: the 4FSK stays in the
- * tens of ADC counts on the audio node, inaudible at the speaker under the
- * decoded voice played by the DAC, which shares that node.
+ * M17 receive gains (REG_48), measured on the bench: receiver noise at about
+ * 10 ADC counts RMS on the audio node, 20 dB above the ADC noise, so that the
+ * baseband stays low at the speaker under the decoded voice played by the
+ * DAC, which shares that node.
  */
 static constexpr uint8_t M17_RX_AUDIO_GAIN1 = 0;
 static constexpr uint8_t M17_RX_AUDIO_GAIN2 = 0x0a;
-static constexpr uint8_t M17_AF_DAC_GAIN = 5;
+static constexpr uint8_t M17_AF_DAC_GAIN = 1;
 
 static void setAudioMode(const struct BK4829 *chip, const enum opmode mode)
 {
