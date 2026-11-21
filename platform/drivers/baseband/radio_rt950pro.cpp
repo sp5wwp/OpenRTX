@@ -82,9 +82,33 @@ void radio_terminate()
     radio_disableRtx();
 }
 
+/*
+ * M17 receive gains (REG_48), measured on the bench: the 4FSK stays in the
+ * tens of ADC counts on the audio node, inaudible at the speaker under the
+ * decoded voice played by the DAC, which shares that node.
+ */
+static constexpr uint8_t M17_RX_AUDIO_GAIN1 = 0;
+static constexpr uint8_t M17_RX_AUDIO_GAIN2 = 0x0a;
+static constexpr uint8_t M17_AF_DAC_GAIN = 5;
+
+static void setAudioMode(const struct BK4829 *chip, const enum opmode mode)
+{
+    if (mode == OPMODE_M17) {
+        bk4829_set_audio_mode(chip, BK4829_AUDIO_BYPASS);
+        bk4829_set_rx_audio_gain(chip, M17_RX_AUDIO_GAIN1, M17_RX_AUDIO_GAIN2,
+                                 M17_AF_DAC_GAIN);
+    } else {
+        bk4829_set_audio_mode(chip, BK4829_AUDIO_VOICE);
+    }
+}
+
 void radio_setOpmode(const enum opmode mode)
 {
-    (void)mode;
+    // The core calls this before disabling the old mode
+    radio_disableRtx();
+
+    setAudioMode(&rt950_bk4829_vhf, mode);
+    setAudioMode(&rt950_bk4829_uhf_hf, mode);
 }
 
 bool radio_checkRxDigitalSquelch()
@@ -95,14 +119,22 @@ bool radio_checkRxDigitalSquelch()
     return bk4829_get_ctcss(rxChip);
 }
 
+/*
+ * AF output requested by the audio routes, applied to the receiving chip now
+ * and whenever a reception starts: a route can be connected before it.
+ */
+static bool afOutput = false;
+
 void radio_enableAfOutput()
 {
+    afOutput = true;
     if (rxChip != NULL)
         bk4829_set_af(rxChip, BK4829_AF_TYPE_FM);
 }
 
 void radio_disableAfOutput()
 {
+    afOutput = false;
     if (rxChip != NULL)
         bk4829_set_af(rxChip, BK4829_AF_TYPE_MUTE);
 }
@@ -157,6 +189,9 @@ void radio_enableRx()
 
     rxChip = chip;
     radioStatus = RX;
+
+    if (afOutput)
+        bk4829_set_af(chip, BK4829_AF_TYPE_FM);
 }
 
 void radio_enableTx()

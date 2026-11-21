@@ -7,6 +7,7 @@
 #include <hwconfig.h>
 #include "interfaces/audio.h"
 #include "interfaces/radio.h"
+#include "adc_at32.h"
 #include "dac_at32.h"
 
 /*
@@ -31,10 +32,18 @@ const struct audioDevice outputDevices[] = {
     },
 };
 
+/* PA2, ADC channel 2: the receive audio node */
+#define RX_AUDIO_ADC_CHANNEL 2
+
 const struct audioDevice inputDevices[] = {
-    { NULL, 0, 0, SINK_MCU },
-    { NULL, 0, 0, SINK_RTX },
-    { NULL, 0, 0, SINK_SPK },
+    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SOURCE_MCU },
+    {
+        .driver = &adcAt32_driver,
+        .config = NULL,
+        .instance = 0,
+        .endpoint = SOURCE_RTX,
+    },
+    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SOURCE_MIC },
 };
 
 void audio_init()
@@ -59,6 +68,7 @@ void audio_init()
     gpioPin_setMode(&rt950_amp_pwr, OUTPUT);
 
     dacAt32_init();
+    adcAt32_init(RX_AUDIO_ADC_CHANNEL);
 }
 
 void audio_terminate()
@@ -91,13 +101,22 @@ static void updateSpeaker(void)
     }
 }
 
+/*
+ * The receiving chip drives the audio node while any route takes audio from
+ * it: to the speaker (FM) or to the MCU (digital modes, through the ADC).
+ */
+static bool rtxRouted(void)
+{
+    return paths[SOURCE_RTX][SINK_SPK] || paths[SOURCE_RTX][SINK_MCU];
+}
+
 void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
     paths[source][sink] = true;
 
     if ((source == SOURCE_MCU) && (sink == SINK_SPK))
         gpioPin_clear(&rt950_audio_sw);
-    if ((source == SOURCE_RTX) && (sink == SINK_SPK))
+    if (source == SOURCE_RTX)
         radio_enableAfOutput();
 
     updateSpeaker();
@@ -108,7 +127,7 @@ void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
     paths[source][sink] = false;
     updateSpeaker();
 
-    if ((source == SOURCE_RTX) && (sink == SINK_SPK))
+    if ((source == SOURCE_RTX) && !rtxRouted())
         radio_disableAfOutput();
 }
 

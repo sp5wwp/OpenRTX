@@ -36,6 +36,9 @@ extern "C" {
 #define CONFIG_NMEA_RBUF_SIZE 128
 #define CONFIG_RTC
 
+/* M17 digital voice */
+#define CONFIG_M17
+
 /* Broadcast FM receiver */
 //#define CONFIG_BROADCAST_FM
 
