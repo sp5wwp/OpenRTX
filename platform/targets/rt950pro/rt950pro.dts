@@ -306,6 +306,12 @@
 };
 
 &adc1 {
+	/*
+	 * Below the audio interrupt (dac_at32.c): at the same priority, its
+	 * handler (the battery voltage, read about ten times per second) delayed
+	 * the audio interrupt past the next sample, which was lost.
+	 */
+	interrupts = <18 2>;
 	at,adc-clock-source = "SYNC";
 	at,adc-prescaler = <2>;
 	status = "okay";
