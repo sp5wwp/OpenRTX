@@ -15,7 +15,7 @@
 #include <cstddef>
 #include <cstdint>
 #include "views/ViewId.hpp"
-#include "views/VfoView.hpp"
+#include "views/TunerView.hpp"
 #include "views/MacroView.hpp"
 #include "views/MenuView.hpp"
 #include "views/InfoView.hpp"
@@ -51,7 +51,7 @@ class ViewSlot
 public:
     /** Bytes of the largest view. */
     static constexpr size_t SIZE = std::max({
-        sizeof(VfoView),
+        sizeof(TunerView),
         sizeof(MacroView),
         sizeof(MenuView),
         sizeof(InfoView),

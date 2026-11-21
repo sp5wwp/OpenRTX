@@ -4,10 +4,10 @@
 # variants: default smallscreen mduv3x0
 # codeplug: channels.rtxc
 
-# VFO shows the TX frequency while transmitting a channel with an RX/TX
+# The tuner shows the TX frequency while transmitting a channel with an RX/TX
 # offset. Load 70cm Rptr (idx 1: RX 446.000 / TX 446.600), then PTT: the
 # frequency hero switches 446.000 -> 446.600 and reverts on release. Pin a
-# strong signal so the RX S-meter saturates identically (see vfo_mem).
+# strong signal so the RX S-meter saturates identically (see tuner_mem).
 rssi 0
 wait_stable 5000 3
 # ESC toggles VFO -> memory (loads channel 001), UP steps to 002 70cm Rptr.

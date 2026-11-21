@@ -19,7 +19,7 @@ namespace ortxui
 {
 
 /**
- * The VFO frequency: a large frequency to kHz, small sub-kHz digits and the
+ * The tuner frequency: a large frequency to kHz, small sub-kHz digits and the
  * mode label (FM/NFM/M17) right-aligned, all on one baseline. It draws itself
  * because the box layout cannot align mixed font sizes on a baseline.
  */

@@ -5,5 +5,5 @@
 
 # The home screen after boot.
 wait_stable 5000 3
-screenshot_sync vfo.bmp
+screenshot_sync tuner.bmp
 quit

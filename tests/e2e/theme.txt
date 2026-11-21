@@ -31,14 +31,14 @@ wait_stable
 key ENTER
 wait_stable
 screenshot_sync theme_display_crisp.bmp
-# back out to the VFO home screen: white-on-black, crisp
+# back out to the tuner screen: white-on-black, crisp
 key ESC
 wait_stable
 key ESC
 wait_stable
 key ESC
 wait_stable
-screenshot_sync theme_vfo.bmp
+screenshot_sync theme_tuner.bmp
 # the main menu list also renders pure mono
 key ENTER
 wait_stable

@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#include "views/VfoView.hpp"
+#include "views/TunerView.hpp"
 #include "style/Symbols.hpp"
 #include "widgets/Charsets.hpp"
 #include "base/Event.hpp"
@@ -188,13 +188,13 @@ static void composeEntry(const char *digits, char *main, char *sub)
     sub[2] = '\0';
 }
 
-VfoView::~VfoView()
+TunerView::~TunerView()
 {
     if (entry != nullptr)
         closeEntry();
 }
 
-void VfoView::build()
+void TunerView::build()
 {
     const bool regular = (sizeClass() == SizeClass::Regular);
 
@@ -292,7 +292,7 @@ void VfoView::build()
     invalidateReadout();
 }
 
-void VfoView::save() const
+void TunerView::save() const
 {
     if (entry == nullptr)
         return;
@@ -309,7 +309,7 @@ void VfoView::save() const
     uiMemory.inlineEdit.keep(id(), s);
 }
 
-void VfoView::restore()
+void TunerView::restore()
 {
     EntryState s;
     if (!uiMemory.inlineEdit.take(id(), s) || !openEntry(s.destination))
@@ -328,7 +328,7 @@ void VfoView::restore()
     refreshInput();
 }
 
-bool VfoView::openEntry(bool destination)
+bool TunerView::openEntry(bool destination)
 {
     void *mem = malloc(sizeof(Entry));
     if (mem == nullptr)
@@ -339,14 +339,14 @@ bool VfoView::openEntry(bool destination)
     return true;
 }
 
-void VfoView::closeEntry()
+void TunerView::closeEntry()
 {
     entry->~Entry();
     free(entry);
     entry = nullptr;
 }
 
-void VfoView::syncMode(const channel_t &ch, bool txing)
+void TunerView::syncMode(const channel_t &ch, bool txing)
 {
     const char *m1 = "--";
     switch (ch.mode) {
@@ -400,7 +400,7 @@ void VfoView::syncMode(const channel_t &ch, bool txing)
     chanDetail.invalidate();
 }
 
-void VfoView::syncMeter(const state_t &s, uint8_t status)
+void TunerView::syncMeter(const state_t &s, uint8_t status)
 {
     const uint8_t sql = s.settings.sqlLevel;
     const uint8_t mode = s.channel.mode;
@@ -468,7 +468,7 @@ void VfoView::syncMeter(const state_t &s, uint8_t status)
     lastFill = fill;
 }
 
-void VfoView::syncFromState(const state_t &s)
+void TunerView::syncFromState(const state_t &s)
 {
     View::syncFromState(s); /* refresh the shared top bar */
 
@@ -523,7 +523,7 @@ void VfoView::syncFromState(const state_t &s)
     syncMeter(s, status);
 }
 
-NavIntent VfoView::onEvent(const Event &e)
+NavIntent TunerView::onEvent(const Event &e)
 {
     if (entry != nullptr)
         return entry->destination ? onDstEditEvent(e) : onInputEvent(e);
@@ -586,7 +586,7 @@ NavIntent VfoView::onEvent(const Event &e)
     return NavIntent::none();
 }
 
-NavIntent VfoView::onInputEvent(const Event &e)
+NavIntent TunerView::onInputEvent(const Event &e)
 {
     if (e.kind != EvKind::Key)
         return NavIntent::none();
@@ -623,7 +623,7 @@ NavIntent VfoView::onInputEvent(const Event &e)
     return NavIntent::none();
 }
 
-void VfoView::step(int dir)
+void TunerView::step(int dir)
 {
     if (state.tuner_mode == VFO)
         stepFreq(dir);
@@ -631,7 +631,7 @@ void VfoView::step(int dir)
         stepChannel(dir);
 }
 
-void VfoView::stepFreq(int dir)
+void TunerView::stepFreq(int dir)
 {
     const freq_t step = freq_steps[state.step_index];
     freq_t rx = state.channel.rx_frequency;
@@ -649,7 +649,7 @@ void VfoView::stepFreq(int dir)
     announceFreq();
 }
 
-void VfoView::stepChannel(int dir)
+void TunerView::stepChannel(int dir)
 {
     const int32_t index = state.channel_index + dir;
     if (loadChannel(static_cast<int16_t>(index))) {
@@ -661,7 +661,7 @@ void VfoView::stepChannel(int dir)
     }
 }
 
-void VfoView::toggleVfoMem()
+void TunerView::toggleVfoMem()
 {
     if (state.tuner_mode == VFO) {
         /* Keep the VFO to come back to. */
@@ -684,7 +684,7 @@ void VfoView::toggleVfoMem()
     }
 }
 
-bool VfoView::loadChannel(int16_t index)
+bool TunerView::loadChannel(int16_t index)
 {
     const int16_t selected = index;
     int16_t readIndex = index;
@@ -709,7 +709,7 @@ bool VfoView::loadChannel(int16_t index)
     return true;
 }
 
-bool VfoView::openInput()
+bool TunerView::openInput()
 {
     if (!openEntry(false))
         return false;
@@ -728,7 +728,7 @@ bool VfoView::openInput()
     return true;
 }
 
-void VfoView::beginInput(uint8_t firstDigit)
+void TunerView::beginInput(uint8_t firstDigit)
 {
     if (!openInput())
         return;
@@ -740,14 +740,14 @@ void VfoView::beginInput(uint8_t firstDigit)
     refreshInput();
 }
 
-void VfoView::beginInputTweak()
+void TunerView::beginInputTweak()
 {
     /* Left pre-filled: '*' backspaces from the end, a digit retypes it. */
     if (openInput())
         refreshInput();
 }
 
-void VfoView::switchField()
+void TunerView::switchField()
 {
     Entry &n = *entry;
     if (!n.txField && n.txPristine)
@@ -767,7 +767,7 @@ void VfoView::switchField()
         vp_announceInputReceiveOrTransmit(n.txField, vpqDefault);
 }
 
-void VfoView::deriveTx()
+void TunerView::deriveTx()
 {
     Entry &n = *entry;
     const freq_t rx = freqFromSlots(n.rx);
@@ -777,7 +777,7 @@ void VfoView::deriveTx()
     n.txSlot = FREQ_SLOTS;
 }
 
-void VfoView::bindField(bool tx, uint8_t slot)
+void TunerView::bindField(bool tx, uint8_t slot)
 {
     /* Binding lays the mask over the buffer: put the digits back after. */
     Entry &n = *entry;
@@ -790,7 +790,7 @@ void VfoView::bindField(bool tx, uint8_t slot)
     n.input.setCursorSlot(slot);
 }
 
-void VfoView::confirmInput()
+void TunerView::confirmInput()
 {
     /* ENTER on RX shows TX first; ENTER on TX applies both. */
     Entry &n = *entry;
@@ -818,13 +818,13 @@ void VfoView::confirmInput()
     }
 }
 
-void VfoView::exitInput()
+void TunerView::exitInput()
 {
     closeEntry();
     invalidateReadout();
 }
 
-void VfoView::invalidateReadout()
+void TunerView::invalidateReadout()
 {
     /* No shown text starts with \1, so the next sync repaints them all. */
     lastFreq = UINT32_MAX;
@@ -834,7 +834,7 @@ void VfoView::invalidateReadout()
     tree.markAllDirty();
 }
 
-void VfoView::refreshInput()
+void TunerView::refreshInput()
 {
     const Entry &n = *entry;
     char main[16];
@@ -857,7 +857,7 @@ void VfoView::refreshInput()
     chanDetail.invalidate();
 }
 
-void VfoView::clearFmTone()
+void TunerView::clearFmTone()
 {
     if (state.tone_enabled) {
         state.tone_enabled = false;
@@ -865,7 +865,7 @@ void VfoView::clearFmTone()
     }
 }
 
-void VfoView::m17DstLabel(char *out, uint16_t sz)
+void TunerView::m17DstLabel(char *out, uint16_t sz)
 {
     const char *dst = state.settings.m17_dest;
     if (dst[0] == '\0')
@@ -874,7 +874,7 @@ void VfoView::m17DstLabel(char *out, uint16_t sz)
         sniprintf(out, sz, "@%s", dst);
 }
 
-void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
+void TunerView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
                               uint16_t nameSz)
 {
     const channel_t &ch = s.channel;
@@ -893,7 +893,7 @@ void VfoView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
     }
 }
 
-void VfoView::renderDstEdit()
+void TunerView::renderDstEdit()
 {
     /* The '@' stays pinned while the rest scrolls to keep the cursor in view,
      * so a full-length destination keeps the channel line's font. */
@@ -912,7 +912,7 @@ void VfoView::renderDstEdit()
     chanName.invalidate();
 }
 
-void VfoView::showDstEdit(bool editing)
+void TunerView::showDstEdit(bool editing)
 {
     if (sizeClass() == SizeClass::Regular)
         return;
@@ -921,7 +921,7 @@ void VfoView::showDstEdit(bool editing)
     nameRow.onLayout();
 }
 
-void VfoView::bindDst(uint16_t cursor)
+void TunerView::bindDst(uint16_t cursor)
 {
     Entry &n = *entry;
     n.input.configure(n.dst, sizeof(n.dst), CHARSET_CALLSIGN,
@@ -930,19 +930,19 @@ void VfoView::bindDst(uint16_t cursor)
     n.input.resume(cursor, 0);
 }
 
-void VfoView::announceDigit(uint8_t d)
+void TunerView::announceDigit(uint8_t d)
 {
     if (state.settings.vpLevel >= vpLow)
         vp_announceInputChar(static_cast<char>('0' + d));
 }
 
-void VfoView::announceDstChar()
+void TunerView::announceDstChar()
 {
     if (state.settings.vpLevel >= vpLow)
         vp_announceInputChar(entry->input.cursorChar());
 }
 
-void VfoView::beginDstEdit()
+void TunerView::beginDstEdit()
 {
     if (!openEntry(true))
         return;
@@ -957,7 +957,7 @@ void VfoView::beginDstEdit()
     announceDstChar();
 }
 
-void VfoView::endDstEdit(bool commit)
+void TunerView::endDstEdit(bool commit)
 {
     if (commit) {
         strncpy(state.settings.m17_dest, entry->dst,
@@ -971,7 +971,7 @@ void VfoView::endDstEdit(bool commit)
     invalidateReadout();
 }
 
-NavIntent VfoView::onDstEditEvent(const Event &e)
+NavIntent TunerView::onDstEditEvent(const Event &e)
 {
     /* An empty destination is stored as is, and shown as @ALL. */
     switch (entry->input.handleEvent(e, getTick())) {
@@ -994,7 +994,7 @@ NavIntent VfoView::onDstEditEvent(const Event &e)
     return NavIntent::none();
 }
 
-void VfoView::announceFreq()
+void TunerView::announceFreq()
 {
     if (state.settings.vpLevel < vpLow)
         return;
@@ -1005,7 +1005,7 @@ void VfoView::announceFreq()
     vp_play();
 }
 
-void VfoView::announce()
+void TunerView::announce()
 {
     if (state.settings.vpLevel < vpLow)
         return;

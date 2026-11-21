@@ -30,7 +30,7 @@
 #include "render/DrawCtx.hpp"
 #include "style/SemanticColor.hpp"
 #include "views/LowBatteryScreen.hpp"
-#include "views/VfoView.hpp"
+#include "views/TunerView.hpp"
 #include "app/ViewSlot.hpp"
 #include "views/VolumeOverlayView.hpp"
 
@@ -192,7 +192,7 @@ extern "C" void ui_init()
     lastState = state;
 
     volumeOverlay.build();
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
 
     /* The theme needs no applying: themeColor() reads it when drawing. */
     gfx_setFontCrisp(state.settings.crispText);
@@ -279,7 +279,7 @@ static void lowBatteryKey(const kbd_msg_t &msg, long long now)
     lowBatteryShown = false;
     macroOpen = false;
     macroLatched = false;
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
 }
 #endif
 
@@ -292,7 +292,7 @@ static void lowBatteryKey(const kbd_msg_t &msg, long long now)
  */
 static bool isToneBurstKey(const kbd_msg_t &msg)
 {
-    if ((nav.activeId() != ViewId::Vfo) || (state.channel.mode != OPMODE_FM))
+    if ((nav.activeId() != ViewId::Tuner) || (state.channel.mode != OPMODE_FM))
         return false;
 
     return (msg.keys == KEY_HASH) || state.tone_enabled;
@@ -305,12 +305,12 @@ static bool isToneBurstKey(const kbd_msg_t &msg)
  */
 static bool atHome()
 {
-    if (macroOpen || (nav.activeId() != ViewId::Vfo))
+    if (macroOpen || (nav.activeId() != ViewId::Tuner))
         return false;
 
     /* The slot holds the home screen while it tops the stack. */
-    const VfoView *vfo = static_cast<const VfoView *>(viewSlot.view());
-    return !vfo->freqEntryOpen();
+    const TunerView *tuner = static_cast<const TunerView *>(viewSlot.view());
+    return !tuner->freqEntryOpen();
 }
 
 /**

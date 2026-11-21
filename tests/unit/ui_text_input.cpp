@@ -195,7 +195,7 @@ TEST_CASE("Escape restores the callsign being edited", "[ui][textinput]")
     uiMemory.lists.fill({ 0, 0 });
     strcpy(state.settings.callsign, "N0CALL");
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::M17);
     nav.dispatch(press(KEY_ENTER)); /* edit the callsign */
     nav.dispatch(press(KEY_2));
@@ -215,7 +215,7 @@ TEST_CASE("Only a long digit opens the character picker", "[ui][textinput]")
     uiMemory.lists.fill({ 0, 0 });
     strcpy(state.settings.M17_meta_text, "ABC");
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::M17);
     nav.dispatch(press(KEY_DOWN)); /* Meta Txt */
     nav.dispatch(press(KEY_ENTER));

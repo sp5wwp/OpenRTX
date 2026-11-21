@@ -104,7 +104,7 @@ void MacroView::build()
     footer.setBasis(regular ? FOOTER_H_REGULAR : FOOTER_H_COMPACT);
     sqlBar.setFont(regular ? FONT_SIZE_8PT : FONT_SIZE_6PT);
     sqlBar.setLabel(STR(squelch), SYMBOL_VOLUME);
-    /* Red, like the squelch mark on the VFO meter. */
+    /* Red, like the squelch mark on the tuner meter. */
     sqlBar.setColors(Sem::SurfaceHigh, Sem::TxDanger);
     sqlBar.setTextColor(Sem::OnSurface);
     sqlBar.setReadout(sqlBuf);

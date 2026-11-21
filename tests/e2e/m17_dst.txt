@@ -4,10 +4,10 @@
 # variants: default smallscreen
 # codeplug: channels.rtxc
 
-# M17 destination editor on the VFO. Load the M17 CQ channel (idx 2), then #
+# M17 destination editor on the tuner screen. Load the M17 CQ channel (idx 2), then #
 # opens the destination editor: the channel-line slot shows "@" and a bracket
 # cursor, UP cycles the character and RIGHT extends onto a new one. Pin a
-# strong signal so the saturated S-meter is deterministic (see vfo_tune).
+# strong signal so the saturated S-meter is deterministic (see tuner_tune).
 rssi 0
 wait_stable 5000 3
 key ENTER

@@ -12,5 +12,5 @@ rssi 0
 wait_stable 5000 3
 key UP UP UP
 wait_stable
-screenshot_sync vfo_tune.bmp
+screenshot_sync tuner_tune.bmp
 quit

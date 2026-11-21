@@ -6,7 +6,7 @@
 # The FM CTCSS tone in the VFO mode stack follows the direction: a
 # decode (RX) tone shows while receiving and hides while transmitting; an
 # encode (TX) tone would show only on TX. Enable a decode tone via
-# Settings > FM (CTCSS En. -> Decode), return to the VFO, then PTT.
+# Settings > FM (CTCSS En. -> Decode), return to the tuner screen, then PTT.
 rssi 0
 wait_stable 5000 3
 key ENTER
@@ -26,7 +26,7 @@ key UP
 wait_stable
 key ENTER
 wait_stable
-# ESC back to the VFO.
+# ESC back to the tuner screen.
 key ESC
 wait_stable
 key ESC

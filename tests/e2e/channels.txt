@@ -8,7 +8,7 @@
 # channels.rtxc holds four channels (2m Calling, 70cm Rptr, M17 CQ, PMR ch1),
 # two banks (2m Repeaters, M17 Nets) and three contacts (CQ M17, W1AW, Local
 # Net). Pin a strong signal so the S-meter saturates identically across the
-# rtx reconfigure a channel load triggers (see vfo_tune).
+# rtx reconfigure a channel load triggers (see tuner_tune).
 rssi 0
 wait_stable 5000 3
 key ENTER
@@ -32,7 +32,7 @@ screenshot_sync channels_after_volume.bmp
 key MONI
 wait_stable
 screenshot_sync channels_after_macro.bmp
-# ENTER loads the channel and pops to the VFO home: M17 CQ, 433.475.
+# ENTER loads the channel and pops to the tuner screen: M17 CQ, 433.475.
 key ENTER
 wait_stable
 screenshot_sync channels_loaded.bmp

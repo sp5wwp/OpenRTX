@@ -110,9 +110,9 @@ TEST_CASE("Push and pop rebuild the screens below", "[ui][slot]")
     Navigator nav(slot, uiMemory);
     forgetLists();
 
-    nav.setRoot(ViewId::Vfo);
-    REQUIRE(nav.activeId() == ViewId::Vfo);
-    REQUIRE(nav.active()->id() == ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
+    REQUIRE(nav.activeId() == ViewId::Tuner);
+    REQUIRE(nav.active()->id() == ViewId::Tuner);
 
     SECTION("a parent comes back on the row it was left on")
     {
@@ -133,7 +133,7 @@ TEST_CASE("Push and pop rebuild the screens below", "[ui][slot]")
 
         /* The position outlives the menu being popped. */
         nav.dispatch(key(KEY_ESC));
-        REQUIRE(nav.active()->id() == ViewId::Vfo);
+        REQUIRE(nav.active()->id() == ViewId::Tuner);
         nav.dispatch(key(KEY_ENTER));
         REQUIRE(nav.active()->id() == ViewId::MainMenu);
         REQUIRE(selectedRow(nav) == 2);
@@ -146,14 +146,14 @@ TEST_CASE("Push and pop rebuild the screens below", "[ui][slot]")
         REQUIRE(nav.active()->id() == ViewId::Banks);
 
         nav.dispatch(key(KEY_ENTER)); /* all channels */
-        REQUIRE(nav.activeId() == ViewId::Vfo);
-        REQUIRE(nav.active()->id() == ViewId::Vfo);
+        REQUIRE(nav.activeId() == ViewId::Tuner);
+        REQUIRE(nav.active()->id() == ViewId::Tuner);
     }
 
     SECTION("the root is never popped")
     {
         nav.dispatch(key(KEY_ESC));
-        REQUIRE(nav.activeId() == ViewId::Vfo);
+        REQUIRE(nav.activeId() == ViewId::Tuner);
     }
 }
 
@@ -163,7 +163,7 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     Navigator nav(slot, uiMemory);
     forgetLists();
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::Radio);
     REQUIRE(nav.active()->id() == ViewId::Radio);
 
@@ -192,7 +192,7 @@ TEST_CASE("The macro menu replaces and restores the screen below", "[ui][slot]")
     nav.dispatch(key(KEY_ESC));
     REQUIRE(nav.active()->id() == ViewId::Radio);
     nav.dispatch(key(KEY_ESC));
-    REQUIRE(nav.active()->id() == ViewId::Vfo);
+    REQUIRE(nav.active()->id() == ViewId::Tuner);
 }
 
 TEST_CASE("Dismissing an overlay leaves the screen below as it was",
@@ -202,7 +202,7 @@ TEST_CASE("Dismissing an overlay leaves the screen below as it was",
     Navigator nav(slot, uiMemory);
     ProbeOverlay probe;
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::TimeDate);
     nav.dispatch(key(KEY_ENTER)); /* opens the time editor */
 
@@ -220,7 +220,7 @@ TEST_CASE("Dismissing an overlay leaves the screen below as it was",
     nav.dispatch(key(KEY_ESC));
     REQUIRE(nav.activeId() == ViewId::TimeDate);
     nav.dispatch(key(KEY_ESC));
-    REQUIRE(nav.activeId() == ViewId::Vfo);
+    REQUIRE(nav.activeId() == ViewId::Tuner);
 }
 
 TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")
@@ -231,12 +231,12 @@ TEST_CASE("A VFO frequency entry survives the macro menu", "[ui][slot]")
     state.channel.rx_frequency = 430000000;
     state.channel.tx_frequency = 430000000;
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.dispatch(key(KEY_4)); /* opens the entry, retyping RX */
     nav.dispatch(key(KEY_3));
 
     nav.openModal(ViewId::Macro);
-    REQUIRE(uiMemory.inlineEdit.owner == ViewId::Vfo);
+    REQUIRE(uiMemory.inlineEdit.owner == ViewId::Tuner);
 
     nav.closeModal();
     REQUIRE(uiMemory.inlineEdit.owner == ViewId::Count);
@@ -260,7 +260,7 @@ TEST_CASE("A Time & Date entry survives the macro menu", "[ui][slot]")
     state.settings.utc_timezone = 0;
     state.time = {};
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::TimeDate);
     nav.dispatch(key(KEY_ENTER)); /* opens the entry */
     for (const uint32_t k : { KEY_2, KEY_5, KEY_1, KEY_2 })
@@ -282,7 +282,7 @@ TEST_CASE("A Time & Date entry survives the macro menu", "[ui][slot]")
     REQUIRE(state.time.minute == 45);
 
     nav.dispatch(key(KEY_ESC));
-    REQUIRE(nav.activeId() == ViewId::Vfo);
+    REQUIRE(nav.activeId() == ViewId::Tuner);
 }
 
 TEST_CASE("The editor survives the picker", "[ui][slot]")
@@ -293,7 +293,7 @@ TEST_CASE("The editor survives the picker", "[ui][slot]")
     memset(state.settings.M17_meta_text, 0,
            sizeof(state.settings.M17_meta_text));
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.openModal(ViewId::M17);
     nav.dispatch(key(KEY_DOWN)); /* Meta Txt */
     nav.dispatch(key(KEY_ENTER));

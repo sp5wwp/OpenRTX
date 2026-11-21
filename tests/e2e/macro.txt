@@ -7,7 +7,7 @@
 # number key acts on the current channel. MONI is held past the long press,
 # which latches the menu open, so another MONI press closes it. Locking the
 # keypad (key 9) shows a lock glyph in the top bar of every screen, including
-# the VFO after the menu closes.
+# the tuner screen after the menu closes.
 rssi 0
 wait_stable 5000 3
 keyhold MONI
@@ -24,8 +24,8 @@ wait_stable
 keyrelease
 wait_stable
 screenshot_sync macro_latched.bmp
-# MONI closes it; the VFO shows the lock glyph in its top bar.
+# MONI closes it; the tuner screen shows the lock glyph in its top bar.
 key MONI
 wait_stable
-screenshot_sync macro_vfo_locked.bmp
+screenshot_sync macro_tuner_locked.bmp
 quit

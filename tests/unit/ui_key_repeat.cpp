@@ -90,7 +90,7 @@ TEST_CASE("A held arrow keeps scrolling a list", "[ui][repeat]")
     Navigator nav(slot, uiMemory);
     resetVfo();
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.dispatch(press(KEY_ENTER));
     REQUIRE(nav.active()->id() == ViewId::MainMenu);
 
@@ -112,7 +112,7 @@ TEST_CASE("A held arrow keeps tuning the VFO", "[ui][repeat]")
     resetVfo();
     const freq_t step = freq_steps[0];
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.dispatch(press(KEY_UP));
     nav.dispatch(repeat(KEY_UP));
     nav.dispatch(repeat(KEY_UP));
@@ -123,7 +123,7 @@ TEST_CASE("A held arrow keeps tuning the VFO", "[ui][repeat]")
 
     /* A held ENTER does not open the menu. */
     nav.dispatch(repeat(KEY_ENTER));
-    REQUIRE(nav.active()->id() == ViewId::Vfo);
+    REQUIRE(nav.active()->id() == ViewId::Tuner);
 }
 
 TEST_CASE("The frequency entry ignores repeats", "[ui][repeat]")
@@ -132,7 +132,7 @@ TEST_CASE("The frequency entry ignores repeats", "[ui][repeat]")
     Navigator nav(slot, uiMemory);
     resetVfo();
 
-    nav.setRoot(ViewId::Vfo);
+    nav.setRoot(ViewId::Tuner);
     nav.dispatch(press(KEY_4)); /* opens the entry, retyping RX */
     nav.dispatch(press(KEY_3));
 

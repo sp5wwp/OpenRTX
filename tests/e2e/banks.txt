@@ -17,7 +17,7 @@ screenshot_sync banks_list.bmp
 key DOWN
 wait_stable
 screenshot_sync banks_selected.bmp
-# ENTER enables the bank and loads its first channel, popping to the VFO:
+# ENTER enables the bank and loads its first channel, popping to the tuner screen:
 # 2m Calling, 146.520. A strong signal keeps the S-meter steady.
 key ENTER
 wait_stable

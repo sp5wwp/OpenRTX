@@ -173,7 +173,7 @@ target_sources(app
     openrtx/src/ui/widgets/TextInput.cpp
     openrtx/src/ui/widgets/TextBlock.cpp
     openrtx/src/ui/app/ViewSlot.cpp
-    openrtx/src/ui/views/VfoView.cpp
+    openrtx/src/ui/views/TunerView.cpp
     openrtx/src/ui/views/VolumeOverlayView.cpp
     openrtx/src/ui/views/VolumeHud.cpp
     openrtx/src/ui/views/LowBatteryScreen.cpp

@@ -39,7 +39,7 @@ struct Builder {
 
 /** How to construct each screen, in ViewId order. */
 static constexpr Builder BUILDERS[] = {
-    { ViewId::Vfo, make<VfoView> },
+    { ViewId::Tuner, make<TunerView> },
     { ViewId::MainMenu, make<MenuView> },
     { ViewId::SettingsMenu, make<MenuView> },
     { ViewId::Macro, make<MacroView> },

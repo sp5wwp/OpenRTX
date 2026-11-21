@@ -22,7 +22,7 @@ namespace ortxui
  * target lacks keep their id but cannot be built.
  */
 enum class ViewId : uint8_t {
-    Vfo,            ///< Home screen
+    Tuner,          ///< Home screen: the tuners
     MainMenu,       ///< Main menu
     SettingsMenu,   ///< Settings menu
     Macro,          ///< Macro menu, shown while MONI is held

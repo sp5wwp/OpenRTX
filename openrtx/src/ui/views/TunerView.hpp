@@ -4,8 +4,8 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
-#ifndef ORTX_UI_VFOVIEW_HPP
-#define ORTX_UI_VFOVIEW_HPP
+#ifndef ORTX_UI_TUNERVIEW_HPP
+#define ORTX_UI_TUNERVIEW_HPP
 
 #ifndef __cplusplus
 #error This header is C++ only!
@@ -25,23 +25,24 @@ namespace ortxui
 {
 
 /**
- * The home screen: the frequency and mode, the channel name or M17
- * destination, the channel index with the CAN or CTCSS tone, and the signal
- * meter at the bottom. The compact screen puts the index, name and detail on
- * one row.
+ * The tuner screen, home of the UI. A tuner is what the radio is tuned to: a
+ * VFO, tuned freely, or a memory channel. The screen shows its frequency and
+ * mode, the channel name or M17 destination, the channel index with the CAN
+ * or CTCSS tone, and the signal meter at the bottom. The compact screen puts
+ * the index, name and detail on one row.
  *
  * As the navigation root, ENTER opens the main menu. UP/DOWN or the knob tune
  * the frequency in VFO mode or step the channel in memory mode, ESC switches
  * between the two, and a digit opens the frequency entry, RX then TX.
  */
-class VfoView : public View
+class TunerView : public View
 {
 public:
     /** Constructor. */
-    VfoView() = default;
+    TunerView() = default;
 
     /** Destructor. */
-    ~VfoView();
+    ~TunerView();
 
     /** Build the widget tree. */
     void build() override;
@@ -334,4 +335,4 @@ private:
 
 } // namespace ortxui
 
-#endif /* ORTX_UI_VFOVIEW_HPP */
+#endif /* ORTX_UI_TUNERVIEW_HPP */

@@ -7,16 +7,16 @@ wait_stable 5000 3
 # Switch from FM to M17 with MONI+5
 keycombo MONI 5
 wait_stable
-screenshot_sync vfo_m17_mode.bmp
+screenshot_sync tuner_m17_mode.bmp
 # Edit the M17 destination with #
 key HASH
 wait_stable
-screenshot_sync vfo_callsign_edit_empty.bmp
+screenshot_sync tuner_callsign_edit_empty.bmp
 # Type "A"
 key 2
 wait_stable
-screenshot_sync vfo_callsign_edit_typing.bmp
+screenshot_sync tuner_callsign_edit_typing.bmp
 key ENTER
 wait_stable
-screenshot_sync vfo_callsign_confirmed.bmp
+screenshot_sync tuner_callsign_confirmed.bmp
 quit

@@ -6,7 +6,7 @@
 
 # Picking from the channel list turns off the enabled bank, so stepping goes
 # through every channel again. Pin a strong signal so the S-meter saturates
-# identically across the rtx reconfigures (see vfo_tune).
+# identically across the rtx reconfigures (see tuner_tune).
 rssi 0
 wait_stable 5000 3
 key ENTER
