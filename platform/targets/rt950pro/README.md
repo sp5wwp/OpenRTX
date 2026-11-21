@@ -256,10 +256,13 @@ the microphone and on DAC1, RTL-SDR):
   modulated with the 4FSK (a phone tone came out 20 dB below the M17 level),
   and a capture chip would hear the baseband with the voice.
 
-Plan: PB8 high during M17 transmissions while the voice comes from elsewhere;
-for a microphone, the idle chip in loopback with the known baseband
-subtracted from the capture (a linear model, as the receive canceller), and
-the cost of the microphone leaking into the modulation measured with speech.
+Speech at the microphone during an M17 transmission (PB8 low, as now) costs
+little: MER 27.8 dB quiet, 27.3 dB median and 25.4 dB at worst while talking
+loudly, gr-m17 decoding unchanged (max Viterbi metric 11-12).
+
+Plan: the idle chip in loopback captures the microphone, the known baseband
+is subtracted from the capture (a linear model, as the receive canceller),
+and Codec2 encodes the result; PB8 stays low while transmitting.
 
 Verified with an RTL-SDR capture (FM demodulator, RRC matched filter, fixed
 symbol timing per 0.5 s) decoded by gr-m17: LSF (source, destination, voice
