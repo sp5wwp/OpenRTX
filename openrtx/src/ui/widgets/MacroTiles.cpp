@@ -68,7 +68,7 @@ struct ScratchTile {
 
 void MacroTiles::setUp(uint8_t tile, char *keyBuf, const char *value)
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
     ScratchTile &scratch = Scratch::get<ScratchTile>();
 
     /* The key over the value on a regular screen, beside it on a compact

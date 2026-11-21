@@ -153,7 +153,7 @@ void TunerView::build()
 {
     /* No title: the home screen's top bar shows the clock. */
     TopBar &bar = useTopBar("");
-    tuner.setup((sizeClass() == SizeClass::Regular) ? Tuner::Style::Regular :
+    tuner.setup((sizeClass() >= SizeClass::Regular) ? Tuner::Style::Regular :
                                                       Tuner::Style::Compact);
 
     /* The bar on top, the tuner under it taking the rest of the screen. */

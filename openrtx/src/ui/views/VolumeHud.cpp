@@ -21,7 +21,7 @@ namespace ortxui
 {
 
 /** Whether the HUD is laid out for the roomy screen. */
-static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
+static constexpr bool REGULAR = (sizeClass() >= SizeClass::Regular);
 
 /** Inset of the column from the left and right screen edges. */
 static constexpr int16_t PAD_X = 6;

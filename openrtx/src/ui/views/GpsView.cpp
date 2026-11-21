@@ -15,7 +15,7 @@ namespace ortxui
 
 void GpsView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea({ 0, 0, static_cast<uint16_t>(CONFIG_SCREEN_WIDTH),
                    static_cast<uint16_t>(CONFIG_SCREEN_HEIGHT) });

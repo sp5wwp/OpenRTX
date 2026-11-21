@@ -20,7 +20,7 @@ namespace ortxui
 {
 
 /** Whether the screen is the regular size class. */
-static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
+static constexpr bool REGULAR = (sizeClass() >= SizeClass::Regular);
 
 /** Height of the header line. */
 static constexpr int16_t HEADER_H = REGULAR ? 14 : 10;

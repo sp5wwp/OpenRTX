@@ -16,7 +16,7 @@ namespace ortxui
 static constexpr uint8_t LINE_GAP = 6;
 
 /** Height of the prompt line. */
-static constexpr int16_t PROMPT_H = (sizeClass() == SizeClass::Regular) ? 18 :
+static constexpr int16_t PROMPT_H = (sizeClass() >= SizeClass::Regular) ? 18 :
                                                                           14;
 
 /** Height of the hint line. */
@@ -24,7 +24,7 @@ static constexpr int16_t HINT_H = 12;
 
 void DefaultsView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
     root.setAxis(Axis::Column);

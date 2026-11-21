@@ -103,11 +103,11 @@ private:
 
     /** Label font; smaller on the compact screen to keep the list dense. */
     static constexpr fontSize_t LABEL_FONT =
-        (sizeClass() == SizeClass::Regular) ? FONT_SIZE_8PT : FONT_SIZE_6PT;
+        (sizeClass() >= SizeClass::Regular) ? FONT_SIZE_8PT : FONT_SIZE_6PT;
 
     /** Value font. */
     static constexpr fontSize_t VALUE_FONT =
-        (sizeClass() == SizeClass::Regular) ? FONT_SIZE_6PT : FONT_SIZE_5PT;
+        (sizeClass() >= SizeClass::Regular) ? FONT_SIZE_6PT : FONT_SIZE_5PT;
 
     Label nameLabel;            ///< Row label
     Label valueLabel;           ///< Row value, for a value row

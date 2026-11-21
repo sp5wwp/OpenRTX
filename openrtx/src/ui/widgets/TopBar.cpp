@@ -26,20 +26,27 @@ static constexpr const char *LEFT_GLYPHS[] = {
 };
 
 /** Whether the bar is laid out for the regular screen. */
-static constexpr bool REGULAR = (sizeClass() == SizeClass::Regular);
+static constexpr bool REGULAR = (sizeClass() >= SizeClass::Regular);
+
+/** Whether the bar is laid out for the large screen, in a larger font. */
+static constexpr bool LARGE = (sizeClass() >= SizeClass::Large);
 
 static constexpr int16_t PAD_X = 4; ///< Inset of the slots from the bar ends
 static constexpr int16_t GAP = 4;   ///< Gap between slots
 
 /** Width of the left slot; fixed, so it balances the right one. */
-static constexpr int16_t LOCK_W = REGULAR ? 28 : 22;
+static constexpr int16_t LOCK_W = LARGE ? 36 : (REGULAR ? 28 : 22);
 
 /** The widest battery percentage, which sizes its slot. */
 static constexpr char FULL_CHARGE[] = "100%";
 
-static constexpr int16_t BAR_H = REGULAR ? 16 : 12;  ///< Bar height
+/** Bar height. */
+static constexpr int16_t BAR_H = LARGE ? 22 : (REGULAR ? 16 : 12);
+
 static constexpr int16_t ICON_W = REGULAR ? 16 : 12; ///< Battery icon slot
-static constexpr fontSize_t FONT = FONT_SIZE_6PT;    ///< Text font of the bar
+
+/** Text font of the bar. */
+static constexpr fontSize_t FONT = LARGE ? FONT_SIZE_8PT : FONT_SIZE_6PT;
 
 /**
  * Paint a text in its box, clipped to it.

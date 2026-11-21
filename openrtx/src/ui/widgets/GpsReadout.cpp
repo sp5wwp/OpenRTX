@@ -84,7 +84,7 @@ static void formatLocator(int32_t lat, int32_t lon, char *out, size_t outSize)
 
 GpsReadout::GpsReadout()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     /* A value and a small unit, right-aligned and sharing one baseline. */
     textRow.setRun(0, regular ? FONT_SIZE_8PT : FONT_SIZE_6PT, Sem::OnSurface);

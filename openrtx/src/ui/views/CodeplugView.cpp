@@ -26,7 +26,7 @@ CodeplugView::CodeplugView(const UiText &title, const UiText &none,
 
 void CodeplugView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     /* The codeplug keeps no count, so probe it, once per opening. */
     while ((entries < MAX_ENTRIES) && (readName(entries, nameBuf) == 0))

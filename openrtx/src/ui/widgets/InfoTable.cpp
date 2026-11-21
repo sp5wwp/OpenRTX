@@ -29,7 +29,7 @@ static constexpr int16_t PAD_X = 4;      ///< Inset of the texts in the row
 static constexpr size_t VALUE_SIZE = 20; ///< Size of a composed value
 
 /** Text font of the table. */
-static constexpr fontSize_t FONT = (sizeClass() == SizeClass::Regular) ?
+static constexpr fontSize_t FONT = (sizeClass() >= SizeClass::Regular) ?
                                        FONT_SIZE_8PT :
                                        FONT_SIZE_6PT;
 

@@ -88,7 +88,7 @@ void MacroView::build()
 {
     const int16_t W = CONFIG_SCREEN_WIDTH;
     const int16_t H = CONFIG_SCREEN_HEIGHT;
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea({ 0, 0, static_cast<uint16_t>(W), static_cast<uint16_t>(H) });
     root.setAxis(Axis::Column);

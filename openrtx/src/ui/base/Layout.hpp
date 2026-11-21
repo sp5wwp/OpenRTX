@@ -73,20 +73,25 @@ struct LayoutHints {
 /**
  * Size class of the panel. Views pick fonts and fixed extents by class, so one
  * layout serves both the small monochrome panels and the larger colour ones.
+ * The classes grow in order: a view without a layout of its own for a class
+ * uses the one of the class below, so views test for "at least Regular".
  */
 enum class SizeClass : uint8_t {
     Compact, ///< Small panels, such as 128x64 mono
-    Regular, ///< 160x128 and larger colour panels
+    Regular, ///< 160x128 colour panels
+    Large,   ///< Tall colour panels, such as 240x320 portrait
 };
 
 /**
  * Get the size class of the panel.
  *
- * @return Regular for panels 128 px tall or more, Compact otherwise.
+ * @return Large for panels 240 px tall or more, Regular for 128 px or more,
+ * Compact otherwise.
  */
 constexpr SizeClass sizeClass()
 {
-    return (CONFIG_SCREEN_HEIGHT >= 128) ? SizeClass::Regular :
+    return (CONFIG_SCREEN_HEIGHT >= 240) ? SizeClass::Large :
+           (CONFIG_SCREEN_HEIGHT >= 128) ? SizeClass::Regular :
                                            SizeClass::Compact;
 }
 

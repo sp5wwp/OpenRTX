@@ -39,7 +39,7 @@ static constexpr uint8_t LOW_CHARGE = 20;
 
 Size BatteryIcon::size()
 {
-    return (sizeClass() == SizeClass::Regular) ? SIZE_REGULAR : SIZE_COMPACT;
+    return (sizeClass() >= SizeClass::Regular) ? SIZE_REGULAR : SIZE_COMPACT;
 }
 
 void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)

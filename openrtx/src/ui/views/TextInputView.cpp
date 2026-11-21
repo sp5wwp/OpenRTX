@@ -23,7 +23,7 @@ namespace ortxui
 
 void TextInputView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea(screenArea());
     root.setAxis(Axis::Column);
@@ -68,7 +68,7 @@ void TextInputView::configureField()
 
     titleLabel.setText(r.title);
 
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
     const fontSize_t f = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
     field.configure(r.work, r.cap, *r.charset,
                     r.multiline ? TextInput::Mode::MultiLine :
@@ -109,7 +109,7 @@ void TextInputView::afterEdit()
 
 void TextInputView::refreshHint()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     if (kbdHasNumeric() && kbdSpaceOnHash())
         hint.setText(regular ? STR(hintKeypadSpace) :

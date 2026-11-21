@@ -45,13 +45,13 @@ static uint32_t codePointAt(uint16_t i)
  */
 static int16_t cellH()
 {
-    return (sizeClass() == SizeClass::Regular) ? CELL_H_REGULAR :
+    return (sizeClass() >= SizeClass::Regular) ? CELL_H_REGULAR :
                                                  CELL_H_COMPACT;
 }
 
 uint16_t PickerGrid::cols() const
 {
-    return (sizeClass() == SizeClass::Regular) ? COLS_REGULAR : COLS_COMPACT;
+    return (sizeClass() >= SizeClass::Regular) ? COLS_REGULAR : COLS_COMPACT;
 }
 
 uint32_t PickerGrid::selectedCodePoint() const
@@ -86,7 +86,7 @@ void PickerGrid::draw(DrawCtx &d)
     const uint16_t c = cols();
     const int16_t cw = static_cast<int16_t>(bounds.w / c);
     const int16_t ch = cellH();
-    const fontSize_t font = (sizeClass() == SizeClass::Regular) ?
+    const fontSize_t font = (sizeClass() >= SizeClass::Regular) ?
                                 FONT_SIZE_12PT :
                                 FONT_SIZE_8PT;
     const uint16_t visRows =

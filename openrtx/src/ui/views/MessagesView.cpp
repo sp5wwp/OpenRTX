@@ -24,7 +24,7 @@ namespace ortxui
 
 void MessagesView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea({ 0, 0, CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT });
     root.setAxis(Axis::Column);

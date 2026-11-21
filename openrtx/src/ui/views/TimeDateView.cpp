@@ -33,7 +33,7 @@ enum EntryField : uint8_t {
 
 void TimeDateView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
+    const bool regular = (sizeClass() >= SizeClass::Regular);
 
     root.setArea(screenArea());
     root.setAxis(Axis::Column);
