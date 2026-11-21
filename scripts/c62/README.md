@@ -9,9 +9,15 @@
 ## Prebuilt firmware
 
 Every push builds the C62 firmware in GitHub Actions (the "Build C62"
-workflow, with the Docker image below and the default options). The
-`openrtx-c62` artifact of a run holds `zephyr.bin`, `dsp_firmware.bin`,
-their SHA-256 sums and `FLASHING.txt`; flash them as in section 2.
+workflow, with the Docker image below and the default options). The latest
+build of the `c62/tetra` branch is the
+[`c62-latest`](https://github.com/sp5wwp/OpenRTX/releases/tag/c62-latest)
+pre-release, downloadable without a GitHub account:
+[`zephyr.bin`](https://github.com/sp5wwp/OpenRTX/releases/download/c62-latest/zephyr.bin),
+[`dsp_firmware.bin`](https://github.com/sp5wwp/OpenRTX/releases/download/c62-latest/dsp_firmware.bin),
+their SHA-256 sums and `FLASHING.txt`. Flash them as in section 2.
+Builds of other branches and pull requests are in the `openrtx-c62` artifact
+of their run (a GitHub account is needed to download artifacts).
 
 ## 1. Build with Docker
 
