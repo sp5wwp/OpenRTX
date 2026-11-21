@@ -215,6 +215,16 @@ static void busSetFastOutputs()
  * Set the panel memory window and start a memory write: the pixel data has
  * to be sent right after, between busStartData() and busEndData().
  */
+/*
+ * Hash of each framebuffer row as last sent to the panel. The UI renders the
+ * whole frame about ten times per second (status updates), and a full frame
+ * takes about 32 ms on the bit-banged bus, while the UI thread also scans the
+ * keys: only the rows that changed are sent. Cleared whenever the panel
+ * content is lost.
+ */
+static uint32_t rowHash[CONFIG_SCREEN_HEIGHT];
+static bool rowHashValid;
+
 static void setWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
 {
     uint16_t xEnd = x + w - 1;
@@ -399,6 +409,7 @@ void display_init()
     clearPanel();
     display_blanking_off(displayDev);
     displayReady = true;
+    rowHashValid = false;
 
     LOG_INF("Display ready, %dx%d frame scaled to %dx%d at (%d,%d)",
             CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT, OUT_WIDTH, OUT_HEIGHT,
@@ -415,9 +426,21 @@ void display_terminate()
         clearPanel();
         display_blanking_on(displayDev);
         displayReady = false;
+        rowHashValid = false;
     }
 
     k_mutex_unlock(&displayMutex);
+}
+
+static uint32_t hashRow(const uint16_t *row)
+{
+    uint32_t h = 2166136261U; /* FNV-1a */
+
+    for (size_t i = 0; i < CONFIG_SCREEN_WIDTH; i++) {
+        h = (h ^ row[i]) * 16777619U;
+    }
+
+    return h;
 }
 
 void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
@@ -425,10 +448,34 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
     if ((startRow > endRow) || (endRow >= CONFIG_SCREEN_HEIGHT))
         return;
 
+    const uint16_t *pixels = (const uint16_t *)fb;
+
     k_mutex_lock(&displayMutex, K_FOREVER);
 
-    if (displayReady)
-        writeRows(startRow, endRow, (const uint16_t *)fb);
+    if (displayReady) {
+        int runStart = -1;
+
+        for (int row = startRow; row <= endRow + 1; row++) {
+            bool changed = false;
+
+            if (row <= endRow) {
+                uint32_t h = hashRow(&pixels[row * CONFIG_SCREEN_WIDTH]);
+                changed = !rowHashValid || (h != rowHash[row]);
+                rowHash[row] = h;
+            }
+
+            if (changed && (runStart < 0))
+                runStart = row;
+
+            if (!changed && (runStart >= 0)) {
+                writeRows(runStart, row - 1, pixels);
+                runStart = -1;
+            }
+        }
+
+        if ((startRow == 0) && (endRow == CONFIG_SCREEN_HEIGHT - 1))
+            rowHashValid = true;
+    }
 
     k_mutex_unlock(&displayMutex);
 }
