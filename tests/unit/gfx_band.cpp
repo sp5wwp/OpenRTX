@@ -66,7 +66,7 @@ void display_render(void *fb)
 }
 
 /** Display stub: keep the rows of a band, see display.h. */
-void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
 {
     memcpy(&screen[startRow * W], band,
            (endRow - startRow) * W * sizeof(uint16_t));
@@ -96,7 +96,7 @@ static void drawScreen(Scene scene)
         screen[i] = UNSENT;
 
     for (uint16_t y = 0; y < H; y += GFX_BAND_ROWS) {
-        gfx_beginBand(static_cast<uint8_t>(y));
+        gfx_beginBand(y);
         gfx_resetClipRect();
         gfx_clearScreen();
         scene();

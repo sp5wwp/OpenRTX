@@ -72,7 +72,7 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb);
  * @param endRow: screen row after the last one of the band.
  * @param band: pixels of the band, starting from column 0 of startRow.
  */
-void display_renderBand(uint8_t startRow, uint8_t endRow, void *band);
+void display_renderBand(uint16_t startRow, uint16_t endRow, void *band);
 
 /**
  * Copy framebuffer content to the display internal buffer, to be called

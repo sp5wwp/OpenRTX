@@ -101,7 +101,7 @@ template <typename Paint>
 static void drawScreen(Paint paint)
 {
     for (uint16_t y = 0; y < CONFIG_SCREEN_HEIGHT; y += GFX_BAND_ROWS) {
-        gfx_beginBand(static_cast<uint8_t>(y));
+        gfx_beginBand(y);
         const Rect band = { 0, static_cast<int16_t>(y), CONFIG_SCREEN_WIDTH,
                             GFX_BAND_ROWS };
         DrawCtx d(band);

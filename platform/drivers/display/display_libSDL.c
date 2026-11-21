@@ -125,7 +125,7 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
 }
 
 #ifdef CONFIG_PIX_FMT_RGB565
-void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
 {
     size_t rowSize = CONFIG_SCREEN_WIDTH * sizeof(PIXEL_SIZE);
     memcpy(&screen[startRow * CONFIG_SCREEN_WIDTH], band,

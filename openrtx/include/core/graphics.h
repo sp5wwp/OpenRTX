@@ -117,7 +117,7 @@ void gfx_terminate();
  *
  * @param startRow: first screen row of the band.
  */
-void gfx_beginBand(uint8_t startRow);
+void gfx_beginBand(uint16_t startRow);
 
 /**
  * This function calls the correspondent method of the low level interface display.h
@@ -127,7 +127,7 @@ void gfx_beginBand(uint8_t startRow);
  * @param startRow: first row of the framebuffer section to be copied
  * @param endRow: last row of the framebuffer section to be copied
  */
-void gfx_renderRows(uint8_t startRow, uint8_t endRow);
+void gfx_renderRows(uint16_t startRow, uint16_t endRow);
 
 /**
  * This function calls the correspondent method of the low level interface display.h

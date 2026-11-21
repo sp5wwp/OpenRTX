@@ -395,7 +395,7 @@ void gfx_terminate()
     display_terminate();
 }
 
-void gfx_beginBand(uint8_t startRow)
+void gfx_beginBand(uint16_t startRow)
 {
 #if CONFIG_GFX_BAND_ROWS > 0
     band_y0 = startRow;
@@ -405,7 +405,7 @@ void gfx_beginBand(uint8_t startRow)
 #endif
 }
 
-void gfx_renderRows(uint8_t startRow, uint8_t endRow)
+void gfx_renderRows(uint16_t startRow, uint16_t endRow)
 {
 #if CONFIG_GFX_BAND_ROWS > 0
     int16_t first = (startRow > band_y0) ? startRow : band_y0;
@@ -417,10 +417,10 @@ void gfx_renderRows(uint8_t startRow, uint8_t endRow)
     if (first >= end)
         return;
 
-    display_renderBand((uint8_t)first, (uint8_t)end,
+    display_renderBand((uint16_t)first, (uint16_t)end,
                        &framebuffer[(first - band_y0) * CONFIG_SCREEN_WIDTH]);
 #else
-    display_renderRows(startRow, endRow, framebuffer);
+    display_renderRows((uint8_t)startRow, (uint8_t)endRow, framebuffer);
 #endif
 }
 

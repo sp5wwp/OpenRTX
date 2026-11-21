@@ -499,7 +499,7 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
     sendRows(startRow, endRow, frameBuffer + (startRow * CONFIG_SCREEN_WIDTH));
 }
 
-void display_renderBand(uint8_t startRow, uint8_t endRow, void *band)
+void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
 {
     sendRows(startRow, endRow, (uint16_t *) band);
 }
