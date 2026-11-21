@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen module17
+# variants: default smallscreen module17 rt950pro
 
 wait_stable 5000 3
 key ENTER

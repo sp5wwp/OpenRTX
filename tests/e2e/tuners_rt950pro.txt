@@ -1,0 +1,37 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+# The tuner screen with three tuners: the first follows the radio, the other
+# two are placeholders. With no signal the first one is selected and idle.
+rssi -127
+wait_stable 5000 3
+screenshot_sync tuners_idle.bmp
+# A signal over the squelch: the first tuner shows it is receiving.
+rssi -60
+wait_stable
+screenshot_sync tuners_rx.bmp
+# F2 selects the second tuner, a placeholder: the first one keeps receiving.
+key F2
+wait_stable
+screenshot_sync tuners_select2.bmp
+# Tuning and frequency entry do nothing on a placeholder.
+key UP 1
+wait_stable
+screenshot_sync tuners_select2_keys.bmp
+# F2 selects the third tuner, then wraps to the first.
+rssi -127
+key F2
+wait_stable
+screenshot_sync tuners_select3.bmp
+key F2
+wait_stable
+screenshot_sync tuners_select1.bmp
+# Transmitting on the first tuner.
+ptt
+wait_rtx TX
+wait_stable
+screenshot_sync tuners_tx.bmp
+ptt
+wait_rtx RX
+quit

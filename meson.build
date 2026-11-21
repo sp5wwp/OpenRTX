@@ -1483,6 +1483,12 @@ ui_text_input_test = executable('ui_text_input_test',
 ui_settings_test = executable('ui_settings_test',
                               sources : unit_test_src + ['tests/unit/ui_settings.cpp'],
                               kwargs  : unit_test_opts)
+# Built as the RT-950 Pro emulator, the target with several tuners
+ui_tuners_test = executable('ui_tuners_test',
+                            sources : unit_test_src + ['tests/unit/ui_tuners.cpp'],
+                            kwargs  : unit_test_opts + {
+                              'c_args'   : linux_rt950pro_c_args,
+                              'cpp_args' : linux_rt950pro_cpp_args})
 
 m17_packet_test = executable('m17_packet_test',
                               sources : unit_test_src + ['tests/unit/M17_packet.cpp'],
@@ -1618,6 +1624,7 @@ test('UI Key Repeat Test', ui_key_repeat_test)
 test('UI List Test', ui_list_test)
 test('UI Text Input Test', ui_text_input_test)
 test('UI Settings Test', ui_settings_test)
+test('UI Tuners Test', ui_tuners_test)
 test('M17 Packet Frame Test', m17_packet_test)
 test('C62 Calibration Test', c62_calib_test)
 test('DSP Oversampling Test', dsp_oversampling_test)

@@ -1,7 +1,7 @@
 # SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
 #
 # SPDX-License-Identifier: GPL-3.0-or-later
-# variants: default smallscreen
+# variants: default smallscreen rt950pro
 
 # Macro menu: holding MONI shows the icon-tile grid of quick actions and a
 # number key acts on the current channel. MONI is held past the long press,
