@@ -19,7 +19,8 @@
  * DAC clock keeps input and output sample-locked, for processing that uses
  * both.
  *
- * The interrupt path runs from RAM, see dac_at32.c.
+ * The interrupt path runs in the DAC interrupt, see dac_at32.c: no kernel
+ * calls there.
  *
  * Stream samples are the average of the ADC samples of their period, with the
  * DC level removed by a first-order high-pass, scaled from 12 to 16 bit.
@@ -39,6 +40,13 @@ static volatile adcAt32_filter filterFn;
 static volatile int32_t dc;     /* DC level, 2^DC_SHIFT scaled, ADC counts */
 static volatile bool stopRequest;
 static K_SEM_DEFINE(syncSem, 0, 1);
+static int syncDeferred;
+
+/* Half of the stream buffer filled: wake up the thread waiting in sync() */
+static void syncEvent(void)
+{
+    k_sem_give(&syncSem);
+}
 
 static AUDIO_ISR_CODE stream_sample_t toStream(int32_t sum)
 {
@@ -74,7 +82,7 @@ static AUDIO_ISR_CODE void store(struct streamCtx *ctx, stream_sample_t s)
     if (stopRequest || (end && (ctx->bufMode == BUF_LINEAR)))
         ctx->running = 0;
 
-    k_sem_give(&syncSem);
+    dacAt32_defer(syncDeferred);
 }
 
 static AUDIO_ISR_CODE void tick(void)
@@ -134,6 +142,7 @@ void adcAt32_init(uint8_t channel)
         ;
 
     adc_ordinary_software_trigger_enable(ADC3, TRUE);
+    syncDeferred = dacAt32_addDeferred(syncEvent);
     dacAt32_setTick(tick);
 }
 
@@ -160,7 +169,7 @@ static int adcAt32_start(const uint8_t instance, const void *config,
     if ((stream != NULL) && (stream->running != 0))
         return -EBUSY;
 
-    unsigned int key = irq_lock();
+    unsigned int key = dacAt32_lock();
     pos = 0;
     sub = 0;
     acc = 0;
@@ -170,7 +179,7 @@ static int adcAt32_start(const uint8_t instance, const void *config,
     k_sem_reset(&syncSem);
     ctx->running = 1;
     stream = ctx;
-    irq_unlock(key);
+    dacAt32_unlock(key);
 
     return 0;
 }
@@ -210,13 +219,13 @@ static void adcAt32_stop(struct streamCtx *ctx)
 
 static void adcAt32_terminate(struct streamCtx *ctx)
 {
-    unsigned int key = irq_lock();
+    unsigned int key = dacAt32_lock();
     ctx->running = 0;
     /* Only the stream being acquired is detached, not one being started */
     bool current = (ctx == stream);
     if (current)
         stream = NULL;
-    irq_unlock(key);
+    dacAt32_unlock(key);
 
     if (current)
         k_sem_give(&syncSem);

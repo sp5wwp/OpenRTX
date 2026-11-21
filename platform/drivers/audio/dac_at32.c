@@ -26,19 +26,50 @@
  */
 
 #define DAC_MID 2048
-#define TMR6_IRQ_PRIO 2
 /*
- * Stream samples (int16) to DAC counts (12 bit). Speech uses a fraction of the
- * int16 range, so it is scaled up by 4 over a plain 16 to 12 bit conversion;
- * the rare peaks above the DAC range are clamped.
+ * The DAC interrupt has the highest priority, with the debug serial port (a
+ * short handler, which must not be preempted by it: the commands it received
+ * were corrupted). The DAC update and the ADC sample of the receive audio
+ * canceller (canceller.c) must be on time, or the timing error on the played
+ * audio is fed back to the speaker as clicks. Its kernel calls are deferred to
+ * DEFER_IRQ, an unused timer interrupt line triggered by software, so that it
+ * stays short and regular.
  */
-#define SAMPLE_SHIFT 2
+#define DEFER_IRQ TMR7_GLOBAL_IRQn
+#define DEFER_IRQ_PRIO 2
+/*
+ * Stream samples (int16) to DAC counts (12 bit), through a look-ahead peak
+ * limiter. Speech uses a fraction of the int16 range: it is scaled up by 8 over
+ * a plain 16 to 12 bit conversion, and the limiter lowers the gain where the
+ * peaks would exceed LIMIT_LEVEL, instead of clipping them.
+ *
+ * The samples are delayed by LIMIT_LOOKAHEAD stream samples, and the envelope
+ * follows the peak of the delay line: it rises over the look-ahead time,
+ * reaching a peak before the peak is output, so that the gain never steps
+ * (a step is heard as a click). Attack coefficient: 1 - exp(-5 / 64), within
+ * 1% of the peak in 64 samples. Exponential release.
+ *
+ * The margin below full scale is left to the hooks (e.g. the receive audio
+ * canceller correction, up to about 400 counts) and to the residual attack
+ * error: at the maximum volume, peaks above about 1800 counts overdrive the
+ * speaker amplifier.
+ */
+#define STREAM_GAIN (8.0f / 16.0f)
+#define LIMIT_LEVEL 1500.0f
+#define LIMIT_LOOKAHEAD 64
+#define LIMIT_ATTACK 0.075f
+#define LIMIT_RELEASE_S 0.15f
 
 static struct streamCtx *volatile stream;
 static volatile uint32_t pos;   /* Stream sample being output */
 static volatile uint32_t sub;   /* Output sample within it */
 static volatile uint32_t ratio; /* Output samples per stream sample */
 static volatile int32_t prev;   /* Previous stream sample, DAC counts */
+static volatile int32_t cur;    /* Current stream sample, DAC counts */
+static float delayLine[LIMIT_LOOKAHEAD]; /* Limiter delay line, DAC counts */
+static uint32_t delayPos;                /* Oldest sample in the delay line */
+static float envelope;                   /* Limiter peak envelope, DAC counts */
+static float release;                    /* Limiter release factor per sample */
 static volatile bool stopRequest;
 static dacAt32_hook hooks[DAC_AT32_MAX_HOOKS];
 static volatile size_t numHooks;
@@ -55,7 +86,59 @@ volatile uint32_t dacAt32_isrMax;
  * Advance in the stream; at the middle and at the end of the buffer, wake up
  * the thread waiting in sync() and stop if requested.
  */
-static AUDIO_ISR_CODE void advance(struct streamCtx *ctx, int32_t cur)
+static AUDIO_ISR_CODE int32_t limit(stream_sample_t sample)
+{
+    float x = (float)sample * STREAM_GAIN;
+    float out = delayLine[delayPos];
+
+    delayLine[delayPos] = x;
+    delayPos = (delayPos + 1) % LIMIT_LOOKAHEAD;
+
+    float peak = LIMIT_LEVEL;
+    for (uint32_t i = 0; i < LIMIT_LOOKAHEAD; i++) {
+        float a = (delayLine[i] < 0.0f) ? -delayLine[i] : delayLine[i];
+        if (a > peak)
+            peak = a;
+    }
+
+    if (peak > envelope)
+        envelope += (peak - envelope) * LIMIT_ATTACK;
+    else
+        envelope = LIMIT_LEVEL + ((envelope - LIMIT_LEVEL) * release);
+
+    return (int32_t)(out * (LIMIT_LEVEL / envelope));
+}
+
+static volatile uint32_t deferredPending;
+static dacAt32_deferred deferredFns[DAC_AT32_MAX_DEFERRED];
+static volatile int numDeferred;
+static int syncDeferred;
+
+AUDIO_ISR_CODE void dacAt32_defer(int id)
+{
+    __atomic_fetch_or(&deferredPending, 1U << id, __ATOMIC_RELAXED);
+    NVIC_SetPendingIRQ(DEFER_IRQ);
+}
+
+static void deferIsr(const void *arg)
+{
+    (void)arg;
+
+    uint32_t pending = __atomic_exchange_n(&deferredPending, 0,
+                                           __ATOMIC_RELAXED);
+    for (int i = 0; i < numDeferred; i++) {
+        if ((pending & (1U << i)) != 0)
+            deferredFns[i]();
+    }
+}
+
+/* Half of the stream buffer output: wake up the thread waiting in sync() */
+static void syncEvent(void)
+{
+    dacAt32_defer(syncDeferred);
+}
+
+static AUDIO_ISR_CODE void advance(struct streamCtx *ctx)
 {
     if (++sub < ratio)
         return;
@@ -96,13 +179,11 @@ static AUDIO_ISR_CODE void tmr6Isr(const void *arg)
     int32_t out = 0;
     struct streamCtx *ctx = stream;
     if ((ctx != NULL) && (ctx->running != 0)) {
-        int32_t cur = ctx->buffer[pos] >> SAMPLE_SHIFT;
-        if (cur > DAC_AT32_MAX)
-            cur = DAC_AT32_MAX;
-        if (cur < -DAC_AT32_MAX)
-            cur = -DAC_AT32_MAX;
+        /* Each stream sample goes through the limiter once, as it starts */
+        if (sub == 0)
+            cur = limit(ctx->buffer[pos]);
         out = prev + (((cur - prev) * (int32_t)sub) / (int32_t)ratio);
-        advance(ctx, cur);
+        advance(ctx);
     }
 
     for (size_t i = 0; i < numHooks; i++)
@@ -156,7 +237,17 @@ void dacAt32_init(void)
     tmr_cnt_dir_set(TMR6, TMR_COUNT_UP);
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, TRUE);
 
-    IRQ_CONNECT(TMR6_GLOBAL_IRQn, TMR6_IRQ_PRIO, tmr6Isr, NULL, 0);
+    syncDeferred = dacAt32_addDeferred(syncEvent);
+    IRQ_CONNECT(DEFER_IRQ, DEFER_IRQ_PRIO, deferIsr, NULL, 0);
+    irq_enable(DEFER_IRQ);
+
+    IRQ_CONNECT(TMR6_GLOBAL_IRQn, 0, tmr6Isr, NULL, 0);
+
+    /*
+     * The kernel puts its timer at the highest priority too: move it below,
+     * so that it never delays the audio interrupt.
+     */
+    NVIC_SetPriority(SysTick_IRQn, NVIC_GetPriority(SysTick_IRQn) + 2);
     irq_enable(TMR6_GLOBAL_IRQn);
 
     tmr_counter_enable(TMR6, TRUE);
@@ -180,6 +271,32 @@ void dacAt32_setTick(dacAt32_tick tick)
     tickFn = tick;
 }
 
+int dacAt32_addDeferred(dacAt32_deferred fn)
+{
+    if (numDeferred >= DAC_AT32_MAX_DEFERRED)
+        return -ENOMEM;
+
+    deferredFns[numDeferred] = fn;
+    return numDeferred++;
+}
+
+unsigned int dacAt32_lock(void)
+{
+    unsigned int key = irq_lock();
+
+    irq_disable(TMR6_GLOBAL_IRQn);
+    __DSB();
+    __ISB();
+
+    return key;
+}
+
+void dacAt32_unlock(unsigned int key)
+{
+    irq_enable(TMR6_GLOBAL_IRQn);
+    irq_unlock(key);
+}
+
 static int dacAt32_start(const uint8_t instance, const void *config,
                          struct streamCtx *ctx)
 {
@@ -193,16 +310,22 @@ static int dacAt32_start(const uint8_t instance, const void *config,
     if ((stream != NULL) && (stream->running != 0))
         return -EBUSY;
 
-    unsigned int key = irq_lock();
+    unsigned int key = dacAt32_lock();
     pos = 0;
     sub = 0;
     prev = 0;
+    cur = 0;
+    for (size_t i = 0; i < LIMIT_LOOKAHEAD; i++)
+        delayLine[i] = 0.0f;
+    delayPos = 0;
+    envelope = LIMIT_LEVEL;
+    release = 1.0f - (1.0f / (LIMIT_RELEASE_S * (float)ctx->sampleRate));
     ratio = DAC_AT32_RATE / ctx->sampleRate;
     stopRequest = false;
     k_sem_reset(&syncSem);
     ctx->running = 1;
     stream = ctx;
-    irq_unlock(key);
+    dacAt32_unlock(key);
 
     return 0;
 }
@@ -242,13 +365,13 @@ static void dacAt32_stop(struct streamCtx *ctx)
 
 static void dacAt32_terminate(struct streamCtx *ctx)
 {
-    unsigned int key = irq_lock();
+    unsigned int key = dacAt32_lock();
     ctx->running = 0;
     /* Only the stream being output is detached, not one being started */
     bool current = (ctx == stream);
     if (current)
         stream = NULL;
-    irq_unlock(key);
+    dacAt32_unlock(key);
 
     if (current)
         k_sem_give(&syncSem);

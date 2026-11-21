@@ -51,6 +51,12 @@ typedef int32_t (*dacAt32_hook)(int32_t sample);
 typedef void (*dacAt32_tick)(void);
 
 /**
+ * Function run on behalf of the DAC interrupt at a normal interrupt priority,
+ * for the kernel calls the DAC interrupt cannot make (see dacAt32_defer()).
+ */
+typedef void (*dacAt32_deferred)(void);
+
+/**
  * Initialise DAC1 (PA4) and its sample timer, TMR6. The DAC outputs
  * mid-scale until a stream is started.
  */
@@ -76,6 +82,44 @@ int dacAt32_addHook(dacAt32_hook hook);
  * @param tick: tick function.
  */
 void dacAt32_setTick(dacAt32_tick tick);
+
+/**
+ * Maximum number of deferred functions.
+ */
+#define DAC_AT32_MAX_DEFERRED 4
+
+/**
+ * Register a deferred function.
+ *
+ * @param fn: deferred function.
+ * @return its identifier for dacAt32_defer(), -ENOMEM if all the slots are in
+ * use.
+ */
+int dacAt32_addDeferred(dacAt32_deferred fn);
+
+/**
+ * From the DAC interrupt (hooks, tick): run a deferred function, at a lower
+ * priority, as soon as the interrupt returns. Kernel calls (e.g. giving a
+ * semaphore) go there, so that the DAC interrupt stays short and regular.
+ *
+ * @param id: identifier returned by dacAt32_addDeferred().
+ */
+void dacAt32_defer(int id);
+
+/**
+ * Mask the DAC interrupt, and all the interrupts irq_lock() masks, to update
+ * state shared with it.
+ *
+ * @return key for dacAt32_unlock().
+ */
+unsigned int dacAt32_lock(void);
+
+/**
+ * Unmask the interrupts masked by dacAt32_lock().
+ *
+ * @param key: key returned by dacAt32_lock().
+ */
+void dacAt32_unlock(unsigned int key);
 
 /**
  * Audio driver for output streams on DAC1. Instance and configuration are
