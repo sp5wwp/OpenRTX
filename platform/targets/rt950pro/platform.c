@@ -11,6 +11,7 @@
 #include <interfaces/delays.h>
 #include <interfaces/nvmem.h>
 #include <hwconfig.h>
+#include "bench.h"
 #include <peripherals/rtc.h>
 #include "core/gps.h"
 #include "drivers/GPS/gps_zephyr.h"
@@ -334,7 +335,7 @@ int8_t platform_getChSelector()
 
 bool platform_getPttStatus()
 {
-    return !gpioPin_read(&rt950_ptt);
+    return !gpioPin_read(&rt950_ptt) || bench_getPtt();
 }
 
 bool platform_pwrButtonStatus()

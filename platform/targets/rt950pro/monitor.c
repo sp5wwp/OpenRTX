@@ -13,10 +13,13 @@
 #include <string.h>
 #include <soc.h>
 #include <zephyr/device.h>
+#include <zephyr/drivers/flash.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
+#include <zephyr/sys/crc.h>
 #include <zephyr/sys/ring_buffer.h>
+#include "bench.h"
 #include "bootloader.h"
 #include "monitor.h"
 #include "testsignal.h"
@@ -267,6 +270,57 @@ static const char *cmdReadBytes(char **arg)
         return "too long";
 
     hexLines(addr, (const uint8_t *)addr, len);
+
+    return NULL;
+}
+
+/*
+ * External SPI NOR flash, read only: the vendor firmware keeps its factory
+ * data there (calibration). Nothing here writes or erases it.
+ */
+static const struct device *const extFlash =
+    DEVICE_DT_GET(DT_NODELABEL(extflash));
+
+static const char *cmdSpiFlash(char **arg)
+{
+    if (!device_is_ready(extFlash))
+        return "flash not ready";
+
+    if ((arg[0] != NULL) && (strcmp(arg[0], "id") == 0)) {
+        uint8_t id[3];
+        if (flash_read_jedec_id(extFlash, id) != 0)
+            return "id read failed";
+        out("%02X%02X%02X\n", id[0], id[1], id[2]);
+        return NULL;
+    }
+
+    static uint8_t buf[MAX_READ];
+    uint32_t addr, len;
+    if ((arg[0] == NULL) || !parseHex(arg[1], &addr) || !parseHex(arg[2], &len))
+        return "usage: sf id | sf r <addr> <len> | sf c <addr> <len>";
+
+    /* CRC-32 (IEEE) of a region, to check a dump made with "sf r" */
+    if (strcmp(arg[0], "c") == 0) {
+        uint32_t crc = 0;
+        for (uint32_t pos = 0; pos < len; pos += MAX_READ) {
+            uint32_t n = MIN(MAX_READ, len - pos);
+            if (flash_read(extFlash, addr + pos, buf, n) != 0)
+                return "read failed";
+            crc = crc32_ieee_update(crc, buf, n);
+        }
+        out("%08lX\n", (unsigned long)crc);
+        return NULL;
+    }
+
+    if (strcmp(arg[0], "r") != 0)
+        return "usage: sf id | sf r <addr> <len> | sf c <addr> <len>";
+    if (len > MAX_READ)
+        return "too long";
+
+    if (flash_read(extFlash, addr, buf, len) != 0)
+        return "read failed";
+
+    hexLines(addr, buf, len);
 
     return NULL;
 }
@@ -528,6 +582,89 @@ static const char *cmdCodec2(char **arg)
     return "usage: c2 <s|p|l|m|e> [args]";
 }
 
+/*
+ * Bench transmitter control. The bench PTT releases itself after its time,
+ * at most PTT_MAX_MS: a lost serial link cannot leave the radio transmitting.
+ */
+#define PTT_MAX_MS 10000
+
+static volatile bool benchPtt;
+static volatile bool txDryRun = true;
+static volatile uint8_t txDrive;
+
+static void pttExpired(struct k_timer *timer)
+{
+    (void)timer;
+    benchPtt = false;
+}
+
+static K_TIMER_DEFINE(pttTimer, pttExpired, NULL);
+
+bool bench_getPtt(void)
+{
+    return benchPtt;
+}
+
+bool bench_txDryRun(void)
+{
+    return txDryRun;
+}
+
+uint8_t bench_txDrive(void)
+{
+    return txDrive;
+}
+
+static const char *cmdTxDrive(char **arg)
+{
+    uint32_t value;
+
+    if (!parseHex(arg[0], &value) || (value > 0xFF))
+        return "usage: txdrv <0 (calibration) | 1-ff>";
+    if (benchPtt)
+        return "release the PTT first";
+
+    txDrive = (uint8_t)value;
+
+    return NULL;
+}
+
+static const char *cmdPtt(char **arg)
+{
+    if (arg[0] == NULL)
+        return "usage: ptt <ms> | ptt off";
+
+    if (strcmp(arg[0], "off") == 0) {
+        benchPtt = false;
+        k_timer_stop(&pttTimer);
+        return NULL;
+    }
+
+    char *end;
+    unsigned long ms = strtoul(arg[0], &end, 10);
+    if ((*end != '\0') || (ms == 0) || (ms > PTT_MAX_MS))
+        return "usage: ptt <ms, 1 to 10000> | ptt off";
+
+    k_timer_start(&pttTimer, K_MSEC(ms), K_NO_WAIT);
+    benchPtt = true;
+
+    return NULL;
+}
+
+static const char *cmdTxDry(char **arg)
+{
+    uint32_t on;
+
+    if (!parseHex(arg[0], &on) || (on > 1))
+        return "usage: txdry <0|1>";
+    if (benchPtt)
+        return "release the PTT first";
+
+    txDryRun = (on != 0);
+
+    return NULL;
+}
+
 #define HP_STEP 256
 
 static const char *cmdHeap(char **arg)
@@ -705,6 +842,7 @@ static const struct {
 } commands[] = {
     { .name = "ping", .func = cmdPing },
     { .name = "rb", .func = cmdReadBytes },
+    { .name = "sf", .func = cmdSpiFlash },
     { .name = "rw", .func = cmdReadWords },
     { .name = "wb", .func = cmdWriteByte },
     { .name = "ww", .func = cmdWriteWord },
@@ -714,6 +852,9 @@ static const struct {
     { .name = "c2", .func = cmdCodec2 },
     { .name = "hp", .func = cmdHeap },
     { .name = "cx", .func = cmdCanceller },
+    { .name = "ptt", .func = cmdPtt },
+    { .name = "txdry", .func = cmdTxDry },
+    { .name = "txdrv", .func = cmdTxDrive },
     { .name = "mode", .func = cmdMode },
     { .name = "freq", .func = cmdFreq },
     { .name = "tz", .func = cmdTimezone },

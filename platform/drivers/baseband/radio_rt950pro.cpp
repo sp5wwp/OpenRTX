@@ -5,21 +5,29 @@
  */
 
 #include <hwconfig.h>
+#include <soc.h>
 #include <interfaces/radio.h>
 #include <interfaces/delays.h>
+#include <interfaces/nvmem.h>
+#include <calibration/calibInfo_RT950Pro.h>
+#include "bench.h"
 #include "radioUtils.h"
 
 /*
- * Reception-only radio driver for the Radtel RT-950 Pro.
+ * Radio driver for the Radtel RT-950 Pro.
  *
  * The radio has two BK4829 transceivers, the first one wired to the VHF LNA
- * and PA and the second to the UHF ones. Only the receive RF path switches
- * are controlled. Transmission is not supported yet.
+ * and PA and the second to the UHF ones. Each band has a receive and a
+ * transmit RF path switch (active high), and the PA drive (APC) is DAC2 on
+ * PA5. The transmit sequence follows the vendor firmware (V0.27, see the
+ * rt950pro README), with the PA drive ramped up last and taken down first.
  */
 
 static const rtxStatus_t *config;   // Pointer to the radio configuration
 static enum opstatus radioStatus;   // Current operating status
 static const struct BK4829 *rxChip; // Chip currently receiving, or NULL
+static const struct BK4829 *txChip; // Chip currently transmitting, or NULL
+static struct rt950proCalib calib;  // Factory calibration
 
 static const struct BK4829 *getChip(const enum Band band)
 {
@@ -34,6 +42,94 @@ static void rfPathIdle()
     gpioPin_clear(&rt950_rf_v3r);
     gpioPin_clear(&rt950_rf_u3r);
     gpioPin_clear(&rt950_rf_u6r);
+}
+
+/**
+ * Switch off the transmit RF paths. PE14 (HF) is never switched on here.
+ */
+static void rfPathTxOff()
+{
+    gpioPin_clear(&rt950_rf_u3t);
+    gpioPin_clear(&rt950_rf_v3t);
+    gpioPin_clear(&rt950_rf_sw3t);
+}
+
+/*
+ * PA drive, DAC2 on PA5, 8 bit. Ramped up in steps as Ferrite does, written at
+ * once by the vendor firmware.
+ */
+static constexpr uint8_t APC_RAMP_STEPS = 4;
+
+static void apcInit()
+{
+    gpio_init_type pin;
+
+    gpio_default_para_init(&pin);
+    pin.gpio_pins = GPIO_PINS_5;
+    pin.gpio_mode = GPIO_MODE_ANALOG;
+    gpio_init(GPIOA, &pin);
+
+    dac_2_data_set(DAC2_8BIT_RIGHT, 0);
+    dac_output_buffer_enable(DAC2_SELECT, TRUE);
+    dac_trigger_enable(DAC2_SELECT, FALSE);
+    dac_enable(DAC2_SELECT, TRUE);
+}
+
+static void apcSet(uint8_t value)
+{
+    dac_2_data_set(DAC2_8BIT_RIGHT, value);
+}
+
+/*
+ * PA settings per power level (vendor firmware V0.27, REG_36 table at
+ * 0x0802B724: 0x7F high, 0x57 mid and low).
+ */
+static constexpr uint8_t PA_GAIN1[RT950PRO_CAL_LEVELS] = { 7, 2, 2 };
+static constexpr uint8_t PA_GAIN2 = 7;
+
+/* Microphone gain and deviation of the vendor firmware (V0.27, 0x0801EAF8) */
+static constexpr uint8_t TX_MIC_GAIN = 0x24;
+static constexpr uint16_t TX_DEVIATION = 0x50A;
+
+/* Pause between the PA drive going to zero and the chip leaving TX */
+static constexpr uint32_t PA_OFF_DELAY_MS = 100;
+
+static enum rt950proPowerLevel powerLevel(uint32_t mW)
+{
+    if (mW >= 5000)
+        return RT950PRO_POWER_HIGH;
+    if (mW >= 2000)
+        return RT950PRO_POWER_MID;
+    return RT950PRO_POWER_LOW;
+}
+
+/**
+ * Factory calibration point for a transmit frequency (vendor firmware V0.27,
+ * lookup at 0x0801E2E0).
+ *
+ * @return the PA drive, 0 if the frequency has no programmed point.
+ */
+static uint8_t txDrive(uint32_t freq, enum rt950proPowerLevel level)
+{
+    const uint32_t mhz = freq / 1000000;
+    enum rt950proCalRow row;
+    uint32_t point;
+
+    if (calib.blank == 0xFF)
+        return 0;
+
+    if (mhz >= 400) {
+        row = RT950PRO_CAL_UHF;
+        point = MIN((mhz - 400) / 10, 12U);
+    } else if ((mhz >= 130) && (mhz < 200)) {
+        row = RT950PRO_CAL_VHF;
+        point = MIN((mhz - 130) / 3, 15U);
+    } else {
+        return 0;
+    }
+
+    uint8_t drive = calib.txPower[level][row][point];
+    return ((drive == 0x00) || (drive == 0xFF)) ? 0 : drive;
 }
 
 /**
@@ -65,11 +161,20 @@ void radio_init(const rtxStatus_t *rtxState)
     radioStatus = OFF;
     rxChip = NULL;
 
-    rfPathIdle();
+    txChip = NULL;
 
-    gpioPin_setMode(&rt950_rf_u6r, OUTPUT); // HF RX switch
-    gpioPin_setMode(&rt950_rf_u3r, OUTPUT); // UHF RX switch
-    gpioPin_setMode(&rt950_rf_v3r, OUTPUT); // VHF RX switch
+    apcInit();
+    rfPathIdle();
+    rfPathTxOff();
+
+    gpioPin_setMode(&rt950_rf_u6r, OUTPUT);  // HF RX switch
+    gpioPin_setMode(&rt950_rf_u3r, OUTPUT);  // UHF RX switch
+    gpioPin_setMode(&rt950_rf_v3r, OUTPUT);  // VHF RX switch
+    gpioPin_setMode(&rt950_rf_u3t, OUTPUT);  // UHF TX switch
+    gpioPin_setMode(&rt950_rf_v3t, OUTPUT);  // VHF TX switch
+    gpioPin_setMode(&rt950_rf_sw3t, OUTPUT); // HF TX switch
+
+    nvm_readCalibData(&calib);
 
     bk4829_rtx_off(&rt950_bk4829_vhf);
     bk4829_rtx_off(&rt950_bk4829_uhf_hf);
@@ -171,6 +276,10 @@ void radio_enableRx()
         return;
     }
 
+    // Never a receive path switched on with a transmit one: leave TX first
+    if (txChip != NULL)
+        radio_disableRtx();
+
     const struct BK4829 *chip = getChip(band);
     const struct BK4829 *other = (chip == &rt950_bk4829_vhf) ?
                                    &rt950_bk4829_uhf_hf :
@@ -197,11 +306,64 @@ void radio_enableRx()
 
 void radio_enableTx()
 {
-    // Transmission is not supported yet
+    const enum Band band = getBandFromFrequency(config->txFrequency);
+    if ((config->txDisable != 0) || ((band != BND_VHF) && (band != BND_UHF)))
+        return;
+
+    const enum rt950proPowerLevel level = powerLevel(config->txPower);
+    uint8_t drive = txDrive(config->txFrequency, level);
+    if (drive == 0)
+        return;
+
+    // Bench measurements below the lowest calibrated power, never above
+    if ((bench_txDrive() != 0) && (bench_txDrive() < drive))
+        drive = bench_txDrive();
+
+    const struct BK4829 *chip = getChip(band);
+
+    // Break before make: PA drive off, receive paths off, then the TX path
+    radio_disableRtx();
+    apcSet(0);
+    gpioPin_set((band == BND_VHF) ? &rt950_rf_v3t : &rt950_rf_u3t);
+
+    if (bk4829_set_freq(chip, config->txFrequency) < 0) {
+        rfPathTxOff();
+        return;
+    }
+
+    bk4829_set_filter_bandwidth(
+        chip, (config->bandwidth == BW_25) ? BK4829_BW_25K : BK4829_BW_12_5K);
+    bk4829_disable_ctdcss(chip);
+    if (config->txToneEn)
+        bk4829_enable_tx_ctcss(chip, config->txTone);
+
+    bk4829_set_mic_gain(chip, TX_MIC_GAIN);
+    bk4829_set_tx_deviation(chip, TX_DEVIATION);
+    bk4829_tx_on(chip);
+    bk4829_set_pa_gain(chip, PA_GAIN1[level], PA_GAIN2);
+
+    txChip = chip;
+    radioStatus = TX;
+
+    if (bench_txDryRun())
+        return;
+
+    for (uint8_t step = 1; step <= APC_RAMP_STEPS; step++) {
+        apcSet((drive * step) / APC_RAMP_STEPS);
+        delayMs(1);
+    }
 }
 
 void radio_disableRtx()
 {
+    // PA drive first, and time for the PA to settle before leaving TX
+    if (txChip != NULL) {
+        apcSet(0);
+        delayMs(PA_OFF_DELAY_MS);
+        txChip = NULL;
+    }
+
+    rfPathTxOff();
     bk4829_rtx_off(&rt950_bk4829_vhf);
     bk4829_rtx_off(&rt950_bk4829_uhf_hf);
     bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);
