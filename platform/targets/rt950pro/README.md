@@ -26,6 +26,45 @@ The hardware description comes from the reverse engineering work done in
 | GPS              | ATGM336H                                   |
 | Bluetooth        | BLE module, transparent UART link          |
 
+## Hardware limits for M17
+
+The radio is built for analog FM: in each direction the two BK4829 chips,
+the MCU and the user side share one analog node, and the signals on it add.
+Software can work around part of it; without a hardware change, M17 voice on
+this radio is a compromise.
+
+Receive, node `VOICE_IN` (details in Audio):
+
+- Both chips' AF outputs, DAC1 (PC12 low), the speaker amplifier input and the
+  ADC (PA2) are all on it. The received 4FSK baseband goes to the speaker
+  together with the decoded voice the DAC plays: routing cannot keep it off.
+- Workarounds and their cost: the receive gain is kept low (`REG_48`), which
+  puts the baseband closer to the 12-bit ADC noise; the canceller removes the
+  receiver signal from the speaker by about 15 dB, with an adaptive model that
+  depends on the interrupt timing and has to be measured again after timing
+  changes. A residual of the 4FSK stays audible under the voice.
+- The EARO networks (coupling capacitors, 3.4 kHz RC low-pass) shape the
+  baseband before PA2: its low frequencies are cut, as on the transmit side,
+  and an equaliser is needed; not measured yet.
+- M17 decoding of a real signal: not tested yet.
+
+Transmit, node `MICin` (details in M17 transmission and Microphone):
+
+- DAC1 (PC12 high) and the microphone (PB8 low) are summed on it, and it
+  feeds both chips' modulators. The path is a 34 Hz high-pass and a 170 Hz
+  low-pass, equalised in software: without speech the 4FSK is clean (MER
+  about 28 dB).
+- With the microphone on, speech is modulated with the 4FSK: normal speech
+  took the MER to 11-17 dB and the gr-m17 Viterbi metric above its threshold.
+  It cannot be cancelled from the DAC: the MCU only hears the microphone
+  through a BK4829, after it has reached the modulator.
+- The MCU has no microphone input of its own: the microphone audio reaches it
+  only through the idle BK4829 in loopback, on the receive node.
+
+So: M17 reception with a residual of the 4FSK at the speaker, clean M17 data
+transmissions (PB8 high), and M17 voice transmissions with a modulation that
+degrades with the sound level at the microphone.
+
 ## Status
 
 Supported:
