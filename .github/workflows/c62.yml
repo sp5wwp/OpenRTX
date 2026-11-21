@@ -12,23 +12,41 @@ on:
   push:
   pull_request:
 
+# A newer push to the same branch replaces the build (and the pre-release)
+concurrency:
+  group: c62-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build-c62:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
+    permissions:
+      contents: write # The c62-latest pre-release
     steps:
-      # west wants a workspace folder that holds the OpenRTX checkout
+      # west wants a workspace folder that holds the OpenRTX checkout. Full
+      # history and OpenRTX's release tags: the firmware's version string
+      # comes from git describe (v0.4.5-111-g34e1da8e5, not 34e1da8), as in
+      # a local build
       - name: Checkout
         uses: actions/checkout@v4
         with:
           path: OpenRTX
           submodules: recursive
+          fetch-depth: 0
+
+      - name: Fetch the OpenRTX release tags
+        run: |
+          git -C OpenRTX fetch --tags https://github.com/OpenRTX/OpenRTX.git ||
+              echo "::warning::No OpenRTX tags: the version is the commit hash"
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Build the C62 build environment
         uses: docker/build-push-action@v6
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
         with:
           context: OpenRTX/scripts/c62
           tags: openrtx-c62:ci
@@ -87,3 +105,19 @@ jobs:
           name: openrtx-c62
           path: c62/
           if-no-files-found: error
+
+      # A download for everyone, without a GitHub account and without
+      # expiry: the c62-latest pre-release, replaced at each push to the
+      # c62/tetra branch, at fixed URLs such as
+      # https://github.com/<owner>/OpenRTX/releases/download/c62-latest/zephyr.bin
+      - name: Publish the c62-latest pre-release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/c62/tetra'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh release delete c62-latest --repo "$REPO" --cleanup-tag --yes || true
+          gh release create c62-latest c62/* --repo "$REPO" \
+              --target "$GITHUB_SHA" --prerelease \
+              --title "C62 latest build ($(git -C OpenRTX describe --tags --always))" \
+              --notes-file c62/FLASHING.txt
