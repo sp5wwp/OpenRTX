@@ -6,6 +6,13 @@
 
 # Retevis C62: build, flash, capture RX baseband
 
+## Prebuilt firmware
+
+Every push builds the C62 firmware in GitHub Actions (the "Build C62"
+workflow, with the Docker image below and the default options). The
+`openrtx-c62` artifact of a run holds `zephyr.bin`, `dsp_firmware.bin`,
+their SHA-256 sums and `FLASHING.txt`; flash them as in section 2.
+
 ## 1. Build with Docker
 
 You only need Docker and git. The image holds the toolchain (Zephyr SDK
