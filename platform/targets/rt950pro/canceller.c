@@ -29,31 +29,34 @@
  * is designed from it and from recorded receiver baseband (the re-tools).
  */
 
+/* Bound of the model output, far beyond what the DAC can put on the node */
+#define MODEL_LIMIT 65536.0f
+
 /* Time constant of the DC estimate of s: 2^12 samples, about 85 ms */
 #define DC_SHIFT 4096.0f
 
 /*
  * Bench-measured defaults (2026-11-21, re-tools): A and B fitted to the node
- * response to white noise from the DAC (output error -24 dB), W designed
+ * response to white noise from the DAC (output error -23 dB), W designed
  * against receiver noise at the M17 receive gain, REG_48 0xB0A1 (node noise
- * -15 dB).
+ * -14 dB). Both depend on the timing of the DAC interrupt (dac_at32.c): measure
+ * them again after changing it.
  */
 float canceller_A[CANCELLER_NA] = {
-    -0.7411686f,  -0.04175713f, -0.09729238f,
-    -0.06038946f, -0.0738397f,  0.05445799f,
+    -2.655914f, 2.514668f, -1.142548f, 0.3952799f, -0.1295428f, 0.01816994f,
 };
 float canceller_B[CANCELLER_NB] = {
-    -3.595676e-05f, -0.083524f,  0.009815273f, 0.02753548f,
-    0.01695001f,    0.01428485f, 0.01330875f,  0.002427729f,
+    -0.0001303004f, -0.09520151f,  0.2101778f,   -0.1375548f,
+    0.0299244f,     -0.009969073f, 0.001960546f, 0.0007914269f,
 };
 float canceller_W[CANCELLER_TAPS] = {
-    12.40678f,    -0.9530387f, -2.918308f,   -2.676152f,   -1.753629f,
-    -0.7907171f,  -0.2392252f, 0.4702322f,   1.04497f,     1.087806f,
-    1.205316f,    0.5957534f,  0.1747287f,   -0.3464253f,  -0.4895755f,
-    -0.6232552f,  -0.3814345f, -0.02886299f, -0.07446212f, -0.1370498f,
-    0.04678791f,  0.2754506f,  0.6620709f,   0.7132238f,   0.6702173f,
-    -0.09124659f, -0.3701508f, -0.574864f,   -0.4562318f,  -0.4480191f,
-    -0.3116762f,  1.456502f,
+    11.70068f,   -0.3121707f, -2.696583f,  -2.689268f,   -2.021695f,
+    -0.8237088f, 0.09395762f, 0.612531f,   1.01026f,     0.8198051f,
+    1.042926f,   0.6431663f,  0.3165381f,  -0.4427603f,  -0.7419629f,
+    -0.5339395f, -0.1457942f, 0.1453318f,  -0.08167463f, -0.08432216f,
+    -0.1434417f, 0.1606878f,  0.8160624f,  0.515118f,    0.4351506f,
+    0.05934558f, -0.1136553f, -0.4595875f, -0.6254457f,  -0.4171143f,
+    -0.3288724f, 1.440938f,
 };
 
 /*
@@ -112,9 +115,29 @@ static inline __attribute__((always_inline)) int32_t roundToInt(float value)
     return (int32_t)(value + ((value >= 0.0f) ? 0.5f : -0.5f));
 }
 
+/* Restart from silence, after a model output out of range */
+static AUDIO_ISR_CODE void reset(float level)
+{
+    for (size_t i = 0; i < 2 * CANCELLER_NA; i++)
+        yBuf[i] = 0.0f;
+    for (size_t i = 0; i < 2 * CANCELLER_TAPS; i++)
+        sBuf[i] = 0.0f;
+    dc = level;
+}
+
 static AUDIO_ISR_CODE int32_t filter(uint16_t raw)
 {
     float y = dot(canceller_B, &xHist) - dot(canceller_A, &yHist);
+
+    /*
+     * The model is stable, but a NaN or an overflow (e.g. coefficients being
+     * replaced while it runs) would otherwise stay in its state for good: the
+     * comparisons are false for a NaN too.
+     */
+    if (!((y < MODEL_LIMIT) && (y > -MODEL_LIMIT))) {
+        reset((float)raw);
+        y = 0.0f;
+    }
     push(&yHist, y);
 
     float s = (float)raw - y;
