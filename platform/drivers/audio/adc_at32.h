@@ -24,6 +24,22 @@ extern "C" {
 void adcAt32_init(uint8_t channel);
 
 /**
+ * Filter applied to each ADC sample before it goes into the stream, in the
+ * DAC interrupt.
+ *
+ * @param raw: ADC sample, 12 bit right-aligned.
+ * @return sample for the stream, in ADC counts (DC level included).
+ */
+typedef int32_t (*adcAt32_filter)(uint16_t raw);
+
+/**
+ * Set the sample filter, or remove it with NULL.
+ *
+ * @param filter: filter function.
+ */
+void adcAt32_setFilter(adcAt32_filter filter);
+
+/**
  * Last ADC sample converted, 12 bit right-aligned, for per-sample processing
  * running in the DAC interrupt after the ADC tick.
  *

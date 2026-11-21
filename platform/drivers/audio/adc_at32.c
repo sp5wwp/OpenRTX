@@ -19,6 +19,8 @@
  * DAC clock keeps input and output sample-locked, for processing that uses
  * both.
  *
+ * The interrupt path runs from RAM, see dac_at32.c.
+ *
  * Stream samples are the average of the ADC samples of their period, with the
  * DC level removed by a first-order high-pass, scaled from 12 to 16 bit.
  */
@@ -32,14 +34,15 @@ static volatile uint16_t lastSample;
 static volatile uint32_t pos;   /* Stream sample being acquired */
 static volatile uint32_t sub;   /* ADC sample within it */
 static volatile uint32_t ratio; /* ADC samples per stream sample */
-static volatile uint32_t acc;   /* Sum of the ADC samples of the period */
+static volatile int32_t acc;    /* Sum of the ADC samples of the period */
+static volatile adcAt32_filter filterFn;
 static volatile int32_t dc;     /* DC level, 2^DC_SHIFT scaled, ADC counts */
 static volatile bool stopRequest;
 static K_SEM_DEFINE(syncSem, 0, 1);
 
-static stream_sample_t toStream(uint32_t sum)
+static __ramfunc stream_sample_t toStream(int32_t sum)
 {
-    int32_t x = (int32_t)(sum / ratio);
+    int32_t x = sum / (int32_t)ratio;
     int32_t level = dc >> DC_SHIFT;
 
     dc += x - level;
@@ -57,7 +60,7 @@ static stream_sample_t toStream(uint32_t sum)
  * Store a stream sample; at the middle and at the end of the buffer wake up
  * the thread waiting in sync() and stop if requested.
  */
-static void store(struct streamCtx *ctx, stream_sample_t s)
+static __ramfunc void store(struct streamCtx *ctx, stream_sample_t s)
 {
     ctx->buffer[pos++] = s;
 
@@ -74,18 +77,21 @@ static void store(struct streamCtx *ctx, stream_sample_t s)
     k_sem_give(&syncSem);
 }
 
-static void tick(void)
+static __ramfunc void tick(void)
 {
     /* The conversion was started one sample period ago */
-    if (adc_flag_get(ADC3, ADC_CCE_FLAG) == SET)
-        lastSample = adc_ordinary_conversion_data_get(ADC3);
-    adc_ordinary_software_trigger_enable(ADC3, TRUE);
+    if ((ADC3->sts & ADC_CCE_FLAG) != 0)
+        lastSample = (uint16_t)ADC3->odt_bit.odt;
+    ADC3->ctrl2_bit.ocswtrg = TRUE;
+
+    adcAt32_filter filter = filterFn;
+    int32_t sample = (filter != NULL) ? filter(lastSample) : lastSample;
 
     struct streamCtx *ctx = stream;
     if ((ctx == NULL) || (ctx->running == 0))
         return;
 
-    acc += lastSample;
+    acc += sample;
     if (++sub < ratio)
         return;
 
@@ -129,6 +135,11 @@ void adcAt32_init(uint8_t channel)
 
     adc_ordinary_software_trigger_enable(ADC3, TRUE);
     dacAt32_setTick(tick);
+}
+
+void adcAt32_setFilter(adcAt32_filter filter)
+{
+    filterFn = filter;
 }
 
 uint16_t adcAt32_lastSample(void)

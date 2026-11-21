@@ -17,6 +17,10 @@
  * the stream samples. Interrupt-driven rather than DMA-driven so that a hook
  * can process every output sample.
  *
+ * The interrupt path runs from RAM and touches the registers directly: with
+ * 224 kB of SRAM only the first 128 kB of Flash are zero-wait, and code above
+ * them is too slow for a 48 kHz interrupt (AT32F403A reference manual 2.3).
+ *
  * Timer clock: SYSCLK 120 MHz, APB1 /2, so the APB1 timers run at 120 MHz
  * (AT32F403A reference manual, clock tree).
  */
@@ -37,7 +41,8 @@ static volatile uint32_t sub;   /* Output sample within it */
 static volatile uint32_t ratio; /* Output samples per stream sample */
 static volatile int32_t prev;   /* Previous stream sample, DAC counts */
 static volatile bool stopRequest;
-static volatile dacAt32_hook hook;
+static dacAt32_hook hooks[DAC_AT32_MAX_HOOKS];
+static volatile size_t numHooks;
 static volatile dacAt32_tick tickFn;
 static K_SEM_DEFINE(syncSem, 0, 1);
 
@@ -45,7 +50,7 @@ static K_SEM_DEFINE(syncSem, 0, 1);
  * Advance in the stream; at the middle and at the end of the buffer, wake up
  * the thread waiting in sync() and stop if requested.
  */
-static void advance(struct streamCtx *ctx, int32_t cur)
+static __ramfunc void advance(struct streamCtx *ctx, int32_t cur)
 {
     if (++sub < ratio)
         return;
@@ -67,14 +72,14 @@ static void advance(struct streamCtx *ctx, int32_t cur)
     k_sem_give(&syncSem);
 }
 
-static void tmr6Isr(const void *arg)
+static __ramfunc void tmr6Isr(const void *arg)
 {
     (void)arg;
 
-    if (tmr_interrupt_flag_get(TMR6, TMR_OVF_FLAG) == RESET)
+    if ((TMR6->ists & TMR_OVF_FLAG) == 0)
         return;
 
-    tmr_flag_clear(TMR6, TMR_OVF_FLAG);
+    TMR6->ists = ~TMR_OVF_FLAG;
 
     dacAt32_tick tick = tickFn;
     if (tick != NULL)
@@ -92,16 +97,15 @@ static void tmr6Isr(const void *arg)
         advance(ctx, cur);
     }
 
-    dacAt32_hook h = hook;
-    if (h != NULL)
-        out = h(out);
+    for (size_t i = 0; i < numHooks; i++)
+        out = hooks[i](out);
 
     if (out > DAC_AT32_MAX)
         out = DAC_AT32_MAX;
     if (out < -DAC_AT32_MAX)
         out = -DAC_AT32_MAX;
 
-    dac_1_data_set(DAC1_12BIT_RIGHT, (uint16_t)(DAC_MID + out));
+    *(volatile uint32_t *)DAC1_12BIT_RIGHT = (uint32_t)(DAC_MID + out);
 }
 
 void dacAt32_init(void)
@@ -133,9 +137,17 @@ void dacAt32_init(void)
     tmr_counter_enable(TMR6, TRUE);
 }
 
-void dacAt32_setHook(dacAt32_hook newHook)
+int dacAt32_addHook(dacAt32_hook hook)
 {
-    hook = newHook;
+    if (numHooks >= DAC_AT32_MAX_HOOKS)
+        return -ENOMEM;
+
+    /* The slot is filled before it is counted, so the interrupt never sees
+     * an empty one */
+    hooks[numHooks] = hook;
+    numHooks++;
+
+    return 0;
 }
 
 void dacAt32_setTick(dacAt32_tick tick)

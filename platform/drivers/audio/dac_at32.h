@@ -48,11 +48,18 @@ typedef void (*dacAt32_tick)(void);
 void dacAt32_init(void);
 
 /**
- * Set the per-sample hook, or remove it with NULL.
+ * Maximum number of per-sample hooks.
+ */
+#define DAC_AT32_MAX_HOOKS 4
+
+/**
+ * Add a per-sample hook. Hooks run in the order they were added, each one
+ * receiving the value the previous one returned.
  *
  * @param hook: hook function.
+ * @return 0 on success, -ENOMEM if all the hook slots are in use.
  */
-void dacAt32_setHook(dacAt32_hook hook);
+int dacAt32_addHook(dacAt32_hook hook);
 
 /**
  * Set the function called at each sample period, or remove it with NULL.
