@@ -21,6 +21,15 @@ extern "C" {
 #define DAC_AT32_RATE 48000
 
 /**
+ * Placement of the functions on the 48 kHz interrupt path: section
+ * .audio_isr, which the target links within the zero-wait Flash. With 224 kB
+ * of SRAM only the first 128 kB of Flash are zero-wait (AT32F403A reference
+ * manual 2.3), and code there runs faster than from SRAM, where instruction
+ * fetches compete with data accesses (bench: about 1.5 times).
+ */
+#define AUDIO_ISR_CODE __attribute__((noinline, section(".audio_isr")))
+
+/**
  * Largest output value, in DAC counts around mid-scale.
  */
 #define DAC_AT32_MAX 2047

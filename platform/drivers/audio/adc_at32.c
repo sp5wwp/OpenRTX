@@ -40,7 +40,7 @@ static volatile int32_t dc;     /* DC level, 2^DC_SHIFT scaled, ADC counts */
 static volatile bool stopRequest;
 static K_SEM_DEFINE(syncSem, 0, 1);
 
-static __ramfunc stream_sample_t toStream(int32_t sum)
+static AUDIO_ISR_CODE stream_sample_t toStream(int32_t sum)
 {
     int32_t x = sum / (int32_t)ratio;
     int32_t level = dc >> DC_SHIFT;
@@ -60,7 +60,7 @@ static __ramfunc stream_sample_t toStream(int32_t sum)
  * Store a stream sample; at the middle and at the end of the buffer wake up
  * the thread waiting in sync() and stop if requested.
  */
-static __ramfunc void store(struct streamCtx *ctx, stream_sample_t s)
+static AUDIO_ISR_CODE void store(struct streamCtx *ctx, stream_sample_t s)
 {
     ctx->buffer[pos++] = s;
 
@@ -77,7 +77,7 @@ static __ramfunc void store(struct streamCtx *ctx, stream_sample_t s)
     k_sem_give(&syncSem);
 }
 
-static __ramfunc void tick(void)
+static AUDIO_ISR_CODE void tick(void)
 {
     /* The conversion was started one sample period ago */
     if ((ADC3->sts & ADC_CCE_FLAG) != 0)

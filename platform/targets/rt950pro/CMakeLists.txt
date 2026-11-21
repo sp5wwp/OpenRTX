@@ -45,6 +45,18 @@ target_sources(app
 # Vendor bootloader model signatures, right after the vector table
 zephyr_linker_sources(ROM_START SORT_KEY 0x3rt950 rt950pro_model_sig.ld)
 
+# The 48 kHz audio interrupt path, optimised for speed rather than size
+set_source_files_properties(
+    ${OPENRTX_ROOT}/platform/drivers/audio/dac_at32.c
+    ${OPENRTX_ROOT}/platform/drivers/audio/adc_at32.c
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/canceller.c
+    TARGET_DIRECTORY app
+    PROPERTIES COMPILE_OPTIONS "-O2"
+)
+
+# Audio interrupt path within the zero-wait Flash, after the signatures
+zephyr_linker_sources(ROM_START SORT_KEY 0x4audio rt950pro_audio_isr.ld)
+
 # Package the raw binary in the .BTF format accepted by the vendor bootloader
 set(RT950PRO_BTF ${CMAKE_BINARY_DIR}/openrtx_rt950pro.BTF)
 

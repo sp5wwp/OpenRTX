@@ -52,7 +52,7 @@ static bool recFromDriver;
 static bool recHooked;
 
 /* Interrupt path: in RAM and without library calls, see dac_at32.c */
-static __ramfunc int32_t generate(void)
+static AUDIO_ISR_CODE int32_t generate(void)
 {
     uint32_t idx = phase >> (32 - TABLE_BITS);
     int32_t value = 0;
@@ -80,12 +80,12 @@ static __ramfunc int32_t generate(void)
     return value;
 }
 
-static __ramfunc int32_t generatorHook(int32_t sample)
+static AUDIO_ISR_CODE int32_t generatorHook(int32_t sample)
 {
     return sample + generate();
 }
 
-static __ramfunc int32_t recorderHook(int32_t x)
+static AUDIO_ISR_CODE int32_t recorderHook(int32_t x)
 {
     if (recIdx >= recCount)
         return x;

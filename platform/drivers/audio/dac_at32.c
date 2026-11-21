@@ -45,12 +45,18 @@ static dacAt32_hook hooks[DAC_AT32_MAX_HOOKS];
 static volatile size_t numHooks;
 static volatile dacAt32_tick tickFn;
 static K_SEM_DEFINE(syncSem, 0, 1);
+/* Sync points reached before the previous one was consumed: late refills */
+volatile uint32_t dacAt32_underruns;
+/* Interrupt cost: sum of cycles and number of interrupts, and the maximum */
+volatile uint32_t dacAt32_isrCycles;
+volatile uint32_t dacAt32_isrCount;
+volatile uint32_t dacAt32_isrMax;
 
 /*
  * Advance in the stream; at the middle and at the end of the buffer, wake up
  * the thread waiting in sync() and stop if requested.
  */
-static __ramfunc void advance(struct streamCtx *ctx, int32_t cur)
+static AUDIO_ISR_CODE void advance(struct streamCtx *ctx, int32_t cur)
 {
     if (++sub < ratio)
         return;
@@ -69,10 +75,12 @@ static __ramfunc void advance(struct streamCtx *ctx, int32_t cur)
     if (stopRequest || (end && (ctx->bufMode == BUF_LINEAR)))
         ctx->running = 0;
 
+    if (k_sem_count_get(&syncSem) != 0)
+        dacAt32_underruns++;
     k_sem_give(&syncSem);
 }
 
-static __ramfunc void tmr6Isr(const void *arg)
+static AUDIO_ISR_CODE void tmr6Isr(const void *arg)
 {
     (void)arg;
 
@@ -80,6 +88,7 @@ static __ramfunc void tmr6Isr(const void *arg)
         return;
 
     TMR6->ists = ~TMR_OVF_FLAG;
+    uint32_t t0 = DWT->CYCCNT;
 
     dacAt32_tick tick = tickFn;
     if (tick != NULL)
@@ -106,6 +115,12 @@ static __ramfunc void tmr6Isr(const void *arg)
         out = -DAC_AT32_MAX;
 
     *(volatile uint32_t *)DAC1_12BIT_RIGHT = (uint32_t)(DAC_MID + out);
+
+    uint32_t dt = DWT->CYCCNT - t0;
+    dacAt32_isrCycles += dt;
+    dacAt32_isrCount++;
+    if (dt > dacAt32_isrMax)
+        dacAt32_isrMax = dt;
 }
 
 void dacAt32_init(void)
@@ -126,6 +141,10 @@ void dacAt32_init(void)
     dac_trigger_enable(DAC1_SELECT, FALSE);
     dac_1_data_set(DAC1_12BIT_RIGHT, DAC_MID);
     dac_enable(DAC1_SELECT, TRUE);
+
+    /* Cycle counter, for the interrupt cost figures */
+    CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
+    DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
     tmr_base_init(TMR6, (TIMER_CLOCK / DAC_AT32_RATE) - 1, 0);
     tmr_cnt_dir_set(TMR6, TMR_COUNT_UP);

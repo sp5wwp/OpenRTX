@@ -75,30 +75,43 @@ static float dc;
 static volatile bool enabled;
 
 /* Interrupt path: in RAM and without library calls, see dac_at32.c */
-static __ramfunc void push(struct history *h, float value)
+static inline __attribute__((always_inline)) void push(struct history *h,
+                                                       float value)
 {
     h->pos = (h->pos == 0) ? (h->len - 1) : (h->pos - 1);
     h->buf[h->pos] = value;
     h->buf[h->pos + h->len] = value;
 }
 
-static __ramfunc float dot(const float *coeff, const struct history *h)
+static inline __attribute__((always_inline)) float dot(const float *coeff,
+                                                       const struct history *h)
 {
     const float *v = &h->buf[h->pos];
-    float acc = 0.0f;
+    float acc[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
+    size_t i = 0;
 
-    for (size_t i = 0; i < h->len; i++)
-        acc += coeff[i] * v[i];
+    /*
+     * Four independent sums, so that each multiply-add does not wait for the
+     * previous one: the compiler may not reorder float additions itself.
+     */
+    for (; (i + 4) <= h->len; i += 4) {
+        acc[0] += coeff[i] * v[i];
+        acc[1] += coeff[i + 1] * v[i + 1];
+        acc[2] += coeff[i + 2] * v[i + 2];
+        acc[3] += coeff[i + 3] * v[i + 3];
+    }
+    for (; i < h->len; i++)
+        acc[0] += coeff[i] * v[i];
 
-    return acc;
+    return (acc[0] + acc[1]) + (acc[2] + acc[3]);
 }
 
-static __ramfunc int32_t roundToInt(float value)
+static inline __attribute__((always_inline)) int32_t roundToInt(float value)
 {
     return (int32_t)(value + ((value >= 0.0f) ? 0.5f : -0.5f));
 }
 
-static __ramfunc int32_t filter(uint16_t raw)
+static AUDIO_ISR_CODE int32_t filter(uint16_t raw)
 {
     float y = dot(canceller_B, &xHist) - dot(canceller_A, &yHist);
     push(&yHist, y);
@@ -110,7 +123,7 @@ static __ramfunc int32_t filter(uint16_t raw)
     return roundToInt(s);
 }
 
-static __ramfunc int32_t hook(int32_t sample)
+static AUDIO_ISR_CODE int32_t hook(int32_t sample)
 {
     float x = (float)sample;
 
