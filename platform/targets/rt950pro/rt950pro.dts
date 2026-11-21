@@ -311,6 +311,14 @@
 	};
 };
 
+/*
+ * 224 kB of SRAM, selected by EOPB0 in the option bytes: platform_init()
+ * makes sure it is (optionbytes.c).
+ */
+&sram0 {
+	reg = <0x20000000 DT_SIZE_K(224)>;
+};
+
 &flash0 {
 	partitions {
 		compatible = "fixed-partitions";

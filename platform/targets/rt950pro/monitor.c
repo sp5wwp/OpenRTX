@@ -11,6 +11,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <soc.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/init.h>
@@ -19,6 +20,7 @@
 #include "bootloader.h"
 #include "monitor.h"
 #include "testsignal.h"
+#include "optionbytes.h"
 #include "core/audio_codec.h"
 #include "core/audio_path.h"
 #include <drivers/baseband/BK4829.h>
@@ -45,6 +47,9 @@
  *                             while the decoder queue is full
  *   c2 e                      stop decoding
  *   hp                        largest block the heap can allocate now
+ *   ob                        option bytes: SRAM size and Flash protection
+ *   ob 224 i-know             select 224 kB of SRAM in the option bytes, see
+ *                             optionbytes.c; effective after a restart
  *   xr <v|u> <reg>            read a BK4829 register (v: VHF chip, u: UHF/HF)
  *   xw <v|u> <reg> <value>    write a BK4829 register
  *   ar <channel> <count> [div]
@@ -456,7 +461,7 @@ static const char *cmdHeap(char **arg)
 {
     (void)arg;
 
-    size_t size = 96 * 1024;
+    size_t size = 224 * 1024;
     while (size > 0) {
         void *p = malloc(size);
         if (p != NULL) {
@@ -467,6 +472,33 @@ static const char *cmdHeap(char **arg)
     }
 
     out("%u\n", (unsigned int)size);
+
+    return NULL;
+}
+
+#define OB_CONFIRM "i-know"
+
+static const char *cmdOptionBytes(char **arg)
+{
+    if (arg[0] == NULL) {
+        out("sram %s fap %s usd %08lX\n",
+            optionbytes_sram224() ? "224k" : "96k",
+            (flash_fap_status_get() != RESET) ? "protected" : "unprotected",
+            (unsigned long)FLASH->usd);
+        return NULL;
+    }
+
+    if ((strcmp(arg[0], "224") != 0) || (arg[1] == NULL)
+        || (strcmp(arg[1], OB_CONFIRM) != 0))
+        return "usage: ob [224 " OB_CONFIRM "]";
+
+    int ret = optionbytes_setSram224();
+    if (ret == -EAGAIN)
+        return "battery too low";
+    if (ret == -EPERM)
+        return "Flash not protected, not handled";
+    if (ret < 0)
+        return "failed, check with ob before restarting";
 
     return NULL;
 }
@@ -503,6 +535,7 @@ static const struct {
     { .name = "ar", .func = cmdAudioRecord },
     { .name = "c2", .func = cmdCodec2 },
     { .name = "hp", .func = cmdHeap },
+    { .name = "ob", .func = cmdOptionBytes },
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
 };
