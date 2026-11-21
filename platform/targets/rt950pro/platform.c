@@ -75,6 +75,32 @@ static void gpsDisable(void *priv)
     gpioPin_set(&rt950_gps_pwr);
 }
 
+/* Bench: the sentences received from the GNSS module, read by the monitor */
+static char nmeaLog[2048];
+static size_t nmeaLogLen;
+static K_MUTEX_DEFINE(nmeaLogMutex);
+
+static void nmeaLogAppend(const char *sentence, size_t len)
+{
+    k_mutex_lock(&nmeaLogMutex, K_FOREVER);
+    if ((nmeaLogLen + len) <= sizeof(nmeaLog)) {
+        memcpy(&nmeaLog[nmeaLogLen], sentence, len);
+        nmeaLogLen += len;
+    }
+    k_mutex_unlock(&nmeaLogMutex);
+}
+
+size_t bench_nmeaTake(char *buf, size_t size)
+{
+    k_mutex_lock(&nmeaLogMutex, K_FOREVER);
+    size_t len = (nmeaLogLen < size) ? nmeaLogLen : size;
+    memcpy(buf, nmeaLog, len);
+    nmeaLogLen = 0;
+    k_mutex_unlock(&nmeaLogMutex);
+
+    return len;
+}
+
 static int gpsGetSentence(void *priv, char *buf, const size_t maxLength)
 {
     /*
@@ -97,6 +123,7 @@ static int gpsGetSentence(void *priv, char *buf, const size_t maxLength)
             ret = -EMSGSIZE;
         } else {
             memcpy(buf, sentence, ret + 1);
+            nmeaLogAppend(sentence, ret);
         }
     } else if (ret < 0) {
         LOG_ERR("GPS sentence read failed: %d", ret);

@@ -53,6 +53,16 @@ void bench_paOff(void);
  */
 void bench_calibrateClock(void);
 
+/**
+ * Take the sentences received from the GNSS module since the previous call
+ * (up to 2 kB, later ones are dropped until then), as received.
+ *
+ * @param buf: destination.
+ * @param size: destination size.
+ * @return number of bytes copied.
+ */
+size_t bench_nmeaTake(char *buf, size_t size);
+
 #ifdef __cplusplus
 }
 #endif

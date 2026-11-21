@@ -85,6 +85,8 @@
  *                             error, 0.1 ppm units, decimal (negative: slow)
  *   cal                       measure the MCU clock against a BK4829 tone
  *                             (clockcal.c), apply it with clk, print it
+ *   nmea                      GNSS sentences received since the previous
+ *                             call (2 kB at most), one per line
  *
  * A restart into the bootloader update mode is also triggered, from the
  * UART interrupt, by:
@@ -659,6 +661,29 @@ static const char *cmdClockTrim(char **arg)
     return NULL;
 }
 
+/* Bench: the GNSS sentences received since the previous call, one per line */
+static const char *cmdNmea(char **arg)
+{
+    static char buf[2048];
+    (void)arg;
+
+    size_t len = bench_nmeaTake(buf, sizeof(buf));
+    size_t start = 0;
+    for (size_t i = 0; i < len; i++) {
+        if ((buf[i] != '\n') && (i + 1 < len))
+            continue;
+        size_t end = i + 1;
+        while ((end > start)
+               && ((buf[end - 1] == '\n') || (buf[end - 1] == '\r')))
+            end--;
+        if (end > start)
+            out("%.*s\n", (int)(end - start), &buf[start]);
+        start = i + 1;
+    }
+
+    return NULL;
+}
+
 /* Bench: measure the MCU clock against a BK4829 tone, apply the correction */
 static const char *cmdCalibrate(char **arg)
 {
@@ -985,6 +1010,7 @@ static const struct {
     { .name = "txlvl", .func = cmdTxLevel },
     { .name = "clk", .func = cmdClockTrim },
     { .name = "cal", .func = cmdCalibrate },
+    { .name = "nmea", .func = cmdNmea },
     { .name = "mode", .func = cmdMode },
     { .name = "freq", .func = cmdFreq },
     { .name = "tz", .func = cmdTimezone },
