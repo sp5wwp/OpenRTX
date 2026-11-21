@@ -19,7 +19,11 @@ python3 "$ROOT/scripts/rt950_flash.py" upload "$PORT" "$BTF"
 # OpenRTX answers the monitor once it has started; the stock firmware does not
 i=0
 while [ $i -lt 20 ]; do
-    if python3 "$DIR/monitor.py" --port "$PORT" ping 2>/dev/null; then exit 0; fi
+    if python3 "$DIR/monitor.py" --port "$PORT" ping 2>/dev/null; then
+        # The RTC runs from the main oscillator, stopped while flashing
+        python3 "$DIR/rtcsync.py" --port "$PORT"
+        exit 0
+    fi
     sleep 0.5; i=$((i + 1))
 done
 echo "no answer from the OpenRTX monitor (stock firmware flashed?)" >&2
