@@ -417,7 +417,8 @@ static const char *cmdI2cWrite(char **arg)
 #define REC_WAIT_MS 60000
 
 /* In SRAM3, which the linker script leaves unused (it maps SRAM1 only) */
-#define REC_BUF ((uint16_t(*)[2])0x20040000)
+typedef uint16_t recFrame_t[2]; /* one sample pair: AF, MIC */
+#define REC_BUF ((recFrame_t *)0x20040000)
 
 static const char *cmdAudioRecord(char **arg)
 {
@@ -693,7 +694,7 @@ static const uint8_t msR30[MS_R30] = { 0x77, 0x76, 0x75, 0x73, 0x7F,
 /* Frequency measured by msMeasure, neighbours at -100, -50, +50, +100Hz */
 static float msTone = 1000.0f;
 
-static float goertzel(const uint16_t (*buf)[2], int ch, float mean, float hz)
+static float goertzel(const recFrame_t *buf, int ch, float mean, float hz)
 {
     float w = 2.0f * 3.14159265f * hz / 8000.0f;
     float c = 2.0f * cosf(w);
