@@ -103,10 +103,11 @@
 #define MAX_ARGS 8
 #define STACK_SIZE 1536
 /*
- * Cooperative: the command thread is not preempted by OpenRTX threads busy
- * with the display, and only runs when a byte arrives.
+ * Lowest application priority: long replies (memory dumps) must not delay
+ * the radio threads, which refill the audio streams in real time (a
+ * cooperative monitor made M17 transmissions splice stale samples).
  */
-#define PRIORITY K_PRIO_COOP(7)
+#define PRIORITY K_PRIO_PREEMPT(CONFIG_NUM_PREEMPT_PRIORITIES - 1)
 
 /* After "PROGRAMBT9000U", "UPDATE" is accepted for this time */
 #define HANDSHAKE_TIMEOUT_MS 3000

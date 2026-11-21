@@ -34,12 +34,36 @@ class Monitor:
                 raise RuntimeError(f'{line!r}: {l}')
             out.append(l)
 
+    def _chunk(self, addr, n):
+        """One rb reply, checked line by line: None if a line is damaged."""
+        data = bytearray()
+        for l in self.cmd(f'rb {addr:x} {n:x}'):
+            parts = l.split()
+            try:
+                ok = (len(parts) == 2
+                      and int(parts[0], 16) == addr + len(data)
+                      and len(parts[1]) == 2 * min(32, n - len(data)))
+                if ok:
+                    data += bytes.fromhex(parts[1])
+            except ValueError:
+                ok = False
+            if not ok:
+                return None
+        return bytes(data) if len(data) == n else None
+
     def mem(self, addr, length):
+        # Other threads print on the same port (Zephyr console): a line of
+        # theirs can split a reply line, which is then read again
         data = bytearray()
         while length > 0:
             n = min(length, 4096)
-            for l in self.cmd(f'rb {addr:x} {n:x}'):
-                data += bytes.fromhex(l.split()[1])
+            for _ in range(5):
+                chunk = self._chunk(addr, n)
+                if chunk is not None:
+                    break
+            else:
+                raise RuntimeError(f'rb {addr:x} {n:x}: damaged replies')
+            data += chunk
             addr += n; length -= n
         return bytes(data)
 
