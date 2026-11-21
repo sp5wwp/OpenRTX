@@ -62,29 +62,56 @@ const struct audioDevice inputDevices[] = {
 
 /*
  * The path from DAC1 to the modulators (MICin, PC12 high) behaves as a first
- * order low-pass at about 230 Hz, flat chip TX filters (bench, tones on the
- * DAC against the FM deviation measured with an SDR, 50 Hz to 4.2 kHz). The
- * modulation is equalised with its inverse: a zero at 230 Hz, and a pole at
- * 8 kHz bounding the boost above the band.
+ * order band-pass: a high-pass at 34 Hz (coupling) and a low-pass at 170 Hz,
+ * flat chip TX filters. Measured on the air with sine tones from 2 Hz to
+ * 4 kHz on the DAC after the equaliser, against the FM deviation seen by an
+ * SDR (0.3 dB rms fit). Both are undone (bench M17 MER, simulated through
+ * the measured path: 33 dB, 9 dB without equaliser):
+ * - the low-pass by a zero at 170 Hz, with a pole at 8 kHz bounding the
+ *   boost above the band;
+ * - the high-pass, which makes the 4FSK levels wander, by a pole at 1 Hz:
+ *   not down to DC, which would need an infinite gain.
  */
-#define TX_EQ_ZERO_HZ 230.0f
+#define TX_EQ_ZERO_HZ 170.0f
 #define TX_EQ_POLE_HZ 8000.0f
+#define TX_EQ_HPF_HZ 34.0f
+#define TX_EQ_HPF_FLOOR_HZ 1.0f
 
 /*
  * Level of the modulation on DAC1, 1/256 units: with the BK4829 microphone
  * gain of radio_rt950pro.cpp, the M17 preamble (outer symbols) deviates by
- * 2.3 kHz, 2.4 kHz nominal (bench, SDR).
+ * about 2.4 kHz, the nominal value (bench, SDR), with the DAC peaks at about
+ * 80 % of its range.
  */
-#define TX_LEVEL 0x16
+#define TX_LEVEL 0x0F
+
+/*
+ * First order section with a zero and a pole, bilinear transform:
+ * g (1 + s / wz) / (1 + s / wp), gain g at DC.
+ */
+static void setSection(unsigned int section, float g, float zeroHz,
+                       float poleHz)
+{
+    const float k = 2.0f * (float)DAC_AT32_RATE;
+    const float kz = k / (2.0f * 3.14159265f * zeroHz);
+    const float kp = k / (2.0f * 3.14159265f * poleHz);
+    const float d = 1.0f + kp;
+
+    dacAt32_setLinearFilter(section, g * (1.0f + kz) / d, g * (1.0f - kz) / d,
+                            (1.0f - kp) / d);
+}
 
 static void setTxEqualiser(void)
 {
-    const float k = 2.0f * (float)DAC_AT32_RATE; /* Bilinear transform */
-    const float kz = k / (2.0f * 3.14159265f * TX_EQ_ZERO_HZ);
-    const float kp = k / (2.0f * 3.14159265f * TX_EQ_POLE_HZ);
-    const float d = 1.0f + kp;
+    /* The low-pass undone, up to the pole */
+    setSection(0, 1.0f, TX_EQ_ZERO_HZ, TX_EQ_POLE_HZ);
 
-    dacAt32_setLinearFilter((1.0f + kz) / d, (1.0f - kz) / d, (1.0f - kp) / d);
+    /*
+     * The high-pass undone down to the floor: (s + wh) / (s + wl), unity gain
+     * above wh, wh / wl at DC.
+     */
+    setSection(1, TX_EQ_HPF_HZ / TX_EQ_HPF_FLOOR_HZ, TX_EQ_HPF_HZ,
+               TX_EQ_HPF_FLOOR_HZ);
     dacAt32_setLinearGain(TX_LEVEL);
 }
 

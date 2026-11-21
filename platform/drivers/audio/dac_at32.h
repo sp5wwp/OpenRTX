@@ -65,7 +65,10 @@ void dacAt32_init(void);
 /**
  * Maximum number of per-sample hooks.
  */
-#define DAC_AT32_MAX_HOOKS 4
+#define DAC_AT32_MAX_HOOKS 6
+
+/* First order sections of the linear mode equaliser */
+#define DAC_AT32_EQ_SECTIONS 2
 
 /**
  * Add a per-sample hook. Hooks run in the order they were added, each one
@@ -122,6 +125,21 @@ unsigned int dacAt32_lock(void);
 void dacAt32_unlock(unsigned int key);
 
 /**
+ * Correct the sample rate for the error of the MCU clock: the timer period is
+ * dithered between whole ticks for the exact average rate.
+ *
+ * @param error: MCU clock error, in units of 0.1 ppm (negative when slow).
+ */
+void dacAt32_setClockTrim(int32_t error);
+
+/**
+ * MCU clock error the sample rate is currently corrected for.
+ *
+ * @return clock error, 0.1 ppm units, negative when slow.
+ */
+int32_t dacAt32_getClockTrim(void);
+
+/**
  * Set the gain of the linear output mode.
  *
  * @param gain: gain in 1/256 units, 256 for unity (16 to 12 bit conversion).
@@ -129,13 +147,16 @@ void dacAt32_unlock(unsigned int key);
 void dacAt32_setLinearGain(uint16_t gain);
 
 /**
- * Set the first order equaliser of the linear output mode, applied to each
- * stream sample: y = b0 x + b1 x[-1] - a1 y[-1]. Unity by default.
+ * Set a section of the equaliser of the linear output mode. The sections are
+ * first order, cascaded, applied to each stream sample:
+ * y = b0 x + b1 x[-1] - a1 y[-1]. Unity by default.
  *
+ * @param section: section index, below DAC_AT32_EQ_SECTIONS.
  * @param b0, b1: numerator coefficients.
  * @param a1: denominator coefficient.
+ * @return 0 on success, -EINVAL for a bad section.
  */
-void dacAt32_setLinearFilter(float b0, float b1, float a1);
+int dacAt32_setLinearFilter(unsigned int section, float b0, float b1, float a1);
 
 /**
  * Output stream modes, passed as the configuration of the audio device, cast

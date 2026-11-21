@@ -14,7 +14,8 @@
 /*
  * Audio output on the AT32F403A DAC1 (PA4). TMR6 interrupts at DAC_AT32_RATE
  * and one 12-bit sample is written per interrupt, linearly interpolated from
- * the stream samples. Interrupt-driven rather than DMA-driven so that a hook
+ * the stream samples. In linear mode the DAC converts it at the next TMR6
+ * overflow (hardware trigger, see setHwTrigger()). Interrupt-driven rather than DMA-driven so that a hook
  * can process every output sample.
  *
  * The interrupt path runs from RAM and touches the registers directly: with
@@ -26,6 +27,8 @@
  */
 
 #define DAC_MID 2048
+/* DAC1 trigger enable bit, DAC_CTRL */
+#define DAC_D1TRGEN BIT(2)
 /*
  * The DAC interrupt has the highest priority, with the debug serial port (a
  * short handler, which must not be preempted by it: the commands it received
@@ -79,6 +82,19 @@ static volatile dacAt32_tick tickFn;
 static K_SEM_DEFINE(syncSem, 0, 1);
 /* Sync points reached before the previous one was consumed: late refills */
 volatile uint32_t dacAt32_underruns;
+/*
+ * Halves output before their refill was complete (a sync after it): the
+ * output splices stale samples with new ones.
+ */
+volatile uint32_t dacAt32_lateRefills;
+/* Interrupts delayed past the next sample: samples lost, the output slips */
+volatile uint32_t dacAt32_lostTicks;
+/* Output samples clipped to the DAC range */
+volatile uint32_t dacAt32_clipped;
+/* Longest delay from a TMR6 overflow to its interrupt, CPU cycles */
+volatile uint32_t dacAt32_latencyMax;
+static volatile bool halfReady[2];
+static volatile unsigned int idleHalf;
 /* Interrupt cost: sum of cycles and number of interrupts, and the maximum */
 volatile uint32_t dacAt32_isrCycles;
 volatile uint32_t dacAt32_isrCount;
@@ -141,21 +157,57 @@ static void syncEvent(void)
 }
 
 /*
- * Linear mode: first order equaliser, y = b0 x + b1 x[-1] - a1 y[-1], then
- * the gain, in DAC counts.
+ * Linear mode: cascaded first order equaliser sections,
+ * y = b0 x + b1 x[-1] - a1 y[-1], then the gain, in DAC counts.
  */
-static float eqB0 = 1.0f, eqB1, eqA1;
-static float eqX, eqY;
+struct eqSection {
+    float b0, b1, a1;
+    float x, y;
+};
+
+static struct eqSection eq[DAC_AT32_EQ_SECTIONS] = {
+    { .b0 = 1.0f },
+    { .b0 = 1.0f },
+};
 
 static AUDIO_ISR_CODE int32_t equalise(stream_sample_t sample)
 {
-    float x = (float)sample;
-    float y = (eqB0 * x) + (eqB1 * eqX) - (eqA1 * eqY);
+    float v = (float)sample;
 
-    eqX = x;
-    eqY = y;
+    for (int i = 0; i < DAC_AT32_EQ_SECTIONS; i++) {
+        struct eqSection *s = &eq[i];
+        float y = (s->b0 * v) + (s->b1 * s->x) - (s->a1 * s->y);
+        s->x = v;
+        s->y = y;
+        v = y;
+    }
 
-    return (int32_t)((y * (float)linearGain) * (1.0f / (16.0f * 256.0f)));
+    return (int32_t)((v * (float)linearGain) * (1.0f / (16.0f * 256.0f)));
+}
+
+static void resetEqualiser(void)
+{
+    for (int i = 0; i < DAC_AT32_EQ_SECTIONS; i++) {
+        eq[i].x = 0.0f;
+        eq[i].y = 0.0f;
+    }
+}
+
+/*
+ * DAC1 conversion trigger. Linear mode (modulation): at each TMR6 overflow
+ * (TRGO on update), from the value the interrupt wrote one period earlier,
+ * so that the output timing is exact, not moved by the interrupt latency
+ * (jitter that adds noise to the modulation, M17 symbol timing). Otherwise
+ * (speaker, receive canceller): as the interrupt writes it, at the same delay
+ * from the ADC sample taken in the same interrupt, as the canceller model
+ * requires.
+ */
+static AUDIO_ISR_CODE void setHwTrigger(bool on)
+{
+    if (on)
+        DAC->ctrl |= DAC_D1TRGEN;
+    else
+        DAC->ctrl &= ~DAC_D1TRGEN;
 }
 
 static AUDIO_ISR_CODE void advance(struct streamCtx *ctx)
@@ -174,23 +226,64 @@ static AUDIO_ISR_CODE void advance(struct streamCtx *ctx)
 
     if (end)
         pos = 0;
-    if (stopRequest || (end && (ctx->bufMode == BUF_LINEAR)))
+
+    /* The half starting now must have been refilled since it was output */
+    unsigned int next = end ? 0 : 1;
+    if (!halfReady[next])
+        dacAt32_lateRefills++;
+    halfReady[next] = false;
+
+    if (stopRequest || (end && (ctx->bufMode == BUF_LINEAR))) {
         ctx->running = 0;
+        setHwTrigger(false);
+    }
 
     if (k_sem_count_get(&syncSem) != 0)
         dacAt32_underruns++;
     k_sem_give(&syncSem);
 }
 
+/*
+ * Sample period in timer ticks, 16.16 fixed point: the nominal one, corrected
+ * for the error of the MCU clock (dacAt32_setClockTrim()).
+ */
+static uint32_t nominalPeriod;
+static volatile uint32_t periodInt;
+static volatile uint32_t periodFrac;
+static uint32_t periodAcc;
+static int32_t clockTrim;
+static uint32_t lastOverflow;
+
 static AUDIO_ISR_CODE void tmr6Isr(const void *arg)
 {
     (void)arg;
+
+    /* Entry time and latency: the counter restarted at the overflow */
+    uint32_t t0 = DWT->CYCCNT;
+    uint32_t latency = TMR6->cval;
 
     if ((TMR6->ists & TMR_OVF_FLAG) == 0)
         return;
 
     TMR6->ists = ~TMR_OVF_FLAG;
-    uint32_t t0 = DWT->CYCCNT;
+
+    /* Next period, dithered for the trimmed average rate */
+    periodAcc += periodFrac;
+    TMR6->pr = periodInt + (periodAcc >> 16) - 1;
+    periodAcc &= 0xFFFFU;
+
+    /*
+     * An overflow more than one and a half periods after the previous one
+     * serviced: the interrupt was delayed past a whole period, and the
+     * sample in between was lost (the output slips). The timer counts the
+     * CPU clock (TMR6 clock = AHB clock, checked at init).
+     */
+    uint32_t overflow = t0 - latency;
+    if ((overflow - lastOverflow) > (3 * nominalPeriod / 2))
+        dacAt32_lostTicks++;
+    lastOverflow = overflow;
+    if (latency > dacAt32_latencyMax)
+        dacAt32_latencyMax = latency;
 
     dacAt32_tick tick = tickFn;
     if (tick != NULL)
@@ -209,10 +302,14 @@ static AUDIO_ISR_CODE void tmr6Isr(const void *arg)
     for (size_t i = 0; i < numHooks; i++)
         out = hooks[i](out);
 
-    if (out > DAC_AT32_MAX)
+    if (out > DAC_AT32_MAX) {
         out = DAC_AT32_MAX;
-    if (out < -DAC_AT32_MAX)
+        dacAt32_clipped++;
+    }
+    if (out < -DAC_AT32_MAX) {
         out = -DAC_AT32_MAX;
+        dacAt32_clipped++;
+    }
 
     *(volatile uint32_t *)DAC1_12BIT_RIGHT = (uint32_t)(DAC_MID + out);
 
@@ -238,6 +335,8 @@ void dacAt32_init(void)
 
     /* Output buffer on: the bench measurements of the paths were made so */
     dac_output_buffer_enable(DAC1_SELECT, TRUE);
+    /* Hardware trigger source, enabled for linear mode streams only */
+    dac_trigger_select(DAC1_SELECT, DAC_TMR6_TRGOUT_EVENT);
     dac_trigger_enable(DAC1_SELECT, FALSE);
     dac_1_data_set(DAC1_12BIT_RIGHT, DAC_MID);
     dac_enable(DAC1_SELECT, TRUE);
@@ -252,8 +351,15 @@ void dacAt32_init(void)
     if (clocks.apb1_freq != clocks.ahb_freq)
         timerClock *= 2;
 
-    tmr_base_init(TMR6,
-                  ((timerClock + (DAC_AT32_RATE / 2)) / DAC_AT32_RATE) - 1, 0);
+    /* The lost sample detection compares timer and CPU cycle counts */
+    __ASSERT(timerClock == clocks.ahb_freq, "TMR6 clock differs from AHB");
+
+    nominalPeriod = (timerClock + (DAC_AT32_RATE / 2)) / DAC_AT32_RATE;
+    periodInt = nominalPeriod;
+    periodFrac = 0;
+    tmr_base_init(TMR6, nominalPeriod - 1, 0);
+    tmr_period_buffer_enable(TMR6, TRUE);
+    tmr_primary_mode_select(TMR6, TMR_PRIMARY_SEL_OVERFLOW);
     tmr_cnt_dir_set(TMR6, TMR_COUNT_UP);
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, TRUE);
 
@@ -273,20 +379,42 @@ void dacAt32_init(void)
     tmr_counter_enable(TMR6, TRUE);
 }
 
+void dacAt32_setClockTrim(int32_t error)
+{
+    /* Ticks of a clock off by error / 10^7 in one nominal sample period */
+    int64_t p = ((int64_t)nominalPeriod << 16);
+    p += (p * error) / 10000000;
+
+    unsigned int key = dacAt32_lock();
+    periodInt = (uint32_t)(p >> 16);
+    periodFrac = (uint32_t)(p & 0xFFFF);
+    clockTrim = error;
+    dacAt32_unlock(key);
+}
+
+int32_t dacAt32_getClockTrim(void)
+{
+    return clockTrim;
+}
+
 void dacAt32_setLinearGain(uint16_t gain)
 {
     linearGain = gain;
 }
 
-void dacAt32_setLinearFilter(float b0, float b1, float a1)
+int dacAt32_setLinearFilter(unsigned int section, float b0, float b1, float a1)
 {
+    if (section >= DAC_AT32_EQ_SECTIONS)
+        return -EINVAL;
+
     unsigned int key = dacAt32_lock();
-    eqB0 = b0;
-    eqB1 = b1;
-    eqA1 = a1;
-    eqX = 0.0f;
-    eqY = 0.0f;
+    eq[section].b0 = b0;
+    eq[section].b1 = b1;
+    eq[section].a1 = a1;
+    resetEqualiser();
     dacAt32_unlock(key);
+
+    return 0;
 }
 
 int dacAt32_addHook(dacAt32_hook hook)
@@ -347,8 +475,8 @@ static int dacAt32_start(const uint8_t instance, const void *config,
 
     unsigned int key = dacAt32_lock();
     linear = ((enum dacAt32Mode)(uintptr_t)config == DAC_AT32_LINEAR);
-    eqX = 0.0f;
-    eqY = 0.0f;
+    setHwTrigger(linear);
+    resetEqualiser();
     pos = 0;
     sub = 0;
     prev = 0;
@@ -361,6 +489,10 @@ static int dacAt32_start(const uint8_t instance, const void *config,
     ratio = DAC_AT32_RATE / ctx->sampleRate;
     stopRequest = false;
     k_sem_reset(&syncSem);
+    /* The stream starts with the whole buffer filled by the caller */
+    halfReady[0] = true;
+    halfReady[1] = true;
+    idleHalf = 1;
     ctx->running = 1;
     stream = ctx;
     dacAt32_unlock(key);
@@ -373,10 +505,8 @@ static int dacAt32_data(struct streamCtx *ctx, stream_sample_t **buf)
     size_t half = ctx->bufSize / 2;
 
     /* The idle half is the one not being output */
-    if (pos < half)
-        *buf = &ctx->buffer[half];
-    else
-        *buf = &ctx->buffer[0];
+    idleHalf = (pos < half) ? 1 : 0;
+    *buf = &ctx->buffer[idleHalf * half];
 
     return half;
 }
@@ -388,6 +518,7 @@ static int dacAt32_sync(struct streamCtx *ctx, uint8_t dirty)
     if (ctx->running == 0)
         return -1;
 
+    halfReady[idleHalf] = true;
     k_sem_take(&syncSem, K_FOREVER);
 
     return 0;
@@ -407,8 +538,10 @@ static void dacAt32_terminate(struct streamCtx *ctx)
     ctx->running = 0;
     /* Only the stream being output is detached, not one being started */
     bool current = (ctx == stream);
-    if (current)
+    if (current) {
         stream = NULL;
+        setHwTrigger(false);
+    }
     dacAt32_unlock(key);
 
     if (current)
