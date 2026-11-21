@@ -65,6 +65,7 @@ tags
 # subprojects
 subprojects/radio_tool
 subprojects/codec2
+subprojects/codec2-mod
 subprojects/tinyusb
 subprojects/XPowersLib
 subprojects/catch2

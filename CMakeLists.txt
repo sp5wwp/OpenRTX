@@ -93,8 +93,6 @@ target_include_directories(app
     openrtx/include
     platform
 
-    subprojects/codec2
-    subprojects/codec2/src
 
     lib/minmea/include
     lib/qdec/include
@@ -146,6 +144,38 @@ target_sources(app
     openrtx/src/ui/default/ui_menu.c
     openrtx/src/ui/default/ui_strings.c
 
+    lib/minmea/minmea.c
+    lib/QRCode/qrcode.c
+)
+
+#
+# Codec2: Codec2-mod (3200 bps mode only, fixed-size states) when the target
+# selects it, the reference implementation otherwise.
+#
+if(CONFIG_OPENRTX_CODEC2_MOD)
+  target_include_directories(app PRIVATE subprojects/codec2-mod/inc)
+  target_sources(app
+    PRIVATE
+    subprojects/codec2-mod/src/analysis.c
+    subprojects/codec2-mod/src/codec2_mod.c
+    subprojects/codec2-mod/src/delta_lsp_cb.c
+    subprojects/codec2-mod/src/interp.c
+    subprojects/codec2-mod/src/kiss_fft.c
+    subprojects/codec2-mod/src/kiss_fftr.c
+    subprojects/codec2-mod/src/lpc.c
+    subprojects/codec2-mod/src/nlp.c
+    subprojects/codec2-mod/src/quantise.c
+    subprojects/codec2-mod/src/synthesis.c
+    subprojects/codec2-mod/src/util.c
+  )
+else()
+  target_include_directories(app
+    PRIVATE
+      subprojects/codec2
+      subprojects/codec2/src
+  )
+  target_sources(app
+    PRIVATE
     subprojects/codec2/src/dump.c
     subprojects/codec2/src/lpc.c
     subprojects/codec2/src/nlp.c
@@ -165,7 +195,5 @@ target_sources(app
     subprojects/codec2/src/pack.c
     subprojects/codec2/src/codebooknewamp1.c
     subprojects/codec2/src/codebooknewamp1_energy.c
-
-    lib/minmea/minmea.c
-    lib/QRCode/qrcode.c
-)
+  )
+endif()

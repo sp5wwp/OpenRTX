@@ -18,7 +18,12 @@
 #else
 #define RTX_THREAD_STKSIZE    512
 #endif
+#if defined(CONFIG_OPENRTX_CODEC2_MOD)
+/* Codec2-mod keeps its state off the stack: about 5 kB are used, at most */
+#define CODEC2_THREAD_STKSIZE 8192
+#else
 #define CODEC2_THREAD_STKSIZE 16384
+#endif
 #define AUDIO_THREAD_STKSIZE  512
 
 /**

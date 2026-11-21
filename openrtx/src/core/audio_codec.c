@@ -9,7 +9,9 @@
 #include <pthread.h>
 #include "core/threads.h"
 // codec2 system library has a weird include prefix
-#if defined(PLATFORM_LINUX)
+#if defined(CONFIG_OPENRTX_CODEC2_MOD)
+#include "codec2_mod.h"
+#elif defined(PLATFORM_LINUX)
 #include <codec2/codec2.h>
 #else
 #include "codec2.h"
@@ -53,6 +55,46 @@ static uint64_t dataBuffer[BUF_SIZE];
 
 static void *encodeFunc(void *arg);
 static void *decodeFunc(void *arg);
+
+/*
+ * Codec2 state handling. Codec2-mod (3200 bps mode only, fixed-size states,
+ * https://github.com/M17-Project/codec2-mod) keeps encoder and decoder apart,
+ * so only the one in use is allocated, for the lifetime of the thread.
+ */
+static void *encoderCreate()
+{
+#if defined(CONFIG_OPENRTX_CODEC2_MOD)
+    codec2_encoder_t *enc = malloc(sizeof(codec2_encoder_t));
+    if (enc != NULL)
+        codec2_encoder_init(enc);
+
+    return enc;
+#else
+    return codec2_create(CODEC2_MODE_3200);
+#endif
+}
+
+static void *decoderCreate()
+{
+#if defined(CONFIG_OPENRTX_CODEC2_MOD)
+    codec2_decoder_t *dec = malloc(sizeof(codec2_decoder_t));
+    if (dec != NULL)
+        codec2_decoder_init(dec);
+
+    return dec;
+#else
+    return codec2_create(CODEC2_MODE_3200);
+#endif
+}
+
+static void codecDestroy(void *state)
+{
+#if defined(CONFIG_OPENRTX_CODEC2_MOD)
+    free(state);
+#else
+    codec2_destroy(state);
+#endif
+}
 static bool startThread(const pathId path, void *(*func)(void *));
 static void stopThread();
 
@@ -180,7 +222,7 @@ static void *encodeFunc(void *arg)
 {
     streamId iStream;
     pathId iPath = *((pathId *)arg);
-    struct CODEC2 *codec2;
+    void *codec2;
     struct dcBlock dcBlock;
     struct decimatorState decimator;
 
@@ -200,7 +242,11 @@ static void *encodeFunc(void *arg)
 
     dsp_resetState(dcBlock);
     dsp_resetState(decimator);
-    codec2 = codec2_create(CODEC2_MODE_3200);
+    codec2 = encoderCreate();
+    if (codec2 == NULL) {
+        audioStream_terminate(iStream);
+        goto exit;
+    }
 
     while (reqStop == false) {
         // Invalid audio path, quit
@@ -255,7 +301,7 @@ static void *encodeFunc(void *arg)
     }
 
     audioStream_terminate(iStream);
-    codec2_destroy(codec2);
+    codecDestroy(codec2);
 
 exit:
     free(adcBuf);
@@ -274,7 +320,7 @@ static void *decodeFunc(void *arg)
     streamId oStream;
     pathId oPath = *((pathId *)arg);
     int16_t audioBuf[DMA_BUF_SAMPLES];
-    struct CODEC2 *codec2;
+    void *codec2;
 
     // Open output stream
     memset(audioBuf, 0x00, DMA_BUF_SAMPLES * sizeof(stream_sample_t));
@@ -286,7 +332,13 @@ static void *decodeFunc(void *arg)
         return NULL;
     }
 
-    codec2 = codec2_create(CODEC2_MODE_3200);
+    codec2 = decoderCreate();
+    if (codec2 == NULL) {
+        audioStream_terminate(oStream);
+        pthread_detach(pthread_self());
+        running = false;
+        return NULL;
+    }
 
     // Ensure that thread start is correctly synchronized with the output
     // stream to avoid having the decode function writing in a memory area
@@ -339,7 +391,7 @@ static void *decodeFunc(void *arg)
 
     // Stop stream and wait until its effective termination
     audioStream_stop(oStream);
-    codec2_destroy(codec2);
+    codecDestroy(codec2);
 
     // In case thread terminates due to invalid path or stream error, detach it
     // to ensure that its memory gets freed by the OS.
