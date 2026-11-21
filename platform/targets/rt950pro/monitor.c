@@ -437,10 +437,56 @@ static const char *c2Push(const char *hex)
     return NULL;
 }
 
+/*
+ * Bench: a clip of frames loaded into RAM beforehand ("c2 l"), then played
+ * with no serial traffic ("c2 m"), as frames from the demodulator would be.
+ */
+#define C2_CLIP_FRAMES 160
+static uint8_t c2Clip[C2_CLIP_FRAMES * C2_FRAME_SIZE];
+
+static const char *c2Load(const char *offset, const char *hex)
+{
+    uint32_t off;
+    size_t len = (hex != NULL) ? strlen(hex) : 0;
+
+    if (!parseHex(offset, &off) || (len == 0) || ((len % 2) != 0)
+        || (off + (len / 2) > sizeof(c2Clip)))
+        return "usage: c2 l <offset> <hex>";
+
+    for (size_t i = 0; i < len / 2; i++) {
+        int hi = hexNibble(hex[2 * i]);
+        int lo = hexNibble(hex[(2 * i) + 1]);
+        if ((hi < 0) || (lo < 0))
+            return "bad hex";
+        c2Clip[off + i] = (uint8_t)((hi << 4) | lo);
+    }
+
+    return NULL;
+}
+
+static const char *c2PlayClip(const char *count)
+{
+    uint32_t n;
+
+    if (!parseHex(count, &n) || (n == 0) || (n > C2_CLIP_FRAMES))
+        return "usage: c2 m <frames>";
+
+    for (uint32_t f = 0; f < n; f++) {
+        int64_t deadline = k_uptime_get() + C2_PUSH_TIMEOUT_MS;
+        while (codec_pushFrame(&c2Clip[f * C2_FRAME_SIZE], false) == -EAGAIN) {
+            if (k_uptime_get() > deadline)
+                return "decoder stalled";
+            k_msleep(2);
+        }
+    }
+
+    return NULL;
+}
+
 static const char *cmdCodec2(char **arg)
 {
     if (arg[0] == NULL)
-        return "usage: c2 <s|p|e> [hex]";
+        return "usage: c2 <s|p|l|m|e> [args]";
 
     if (strcmp(arg[0], "s") == 0) {
         if (c2Path >= 0)
@@ -460,6 +506,15 @@ static const char *cmdCodec2(char **arg)
         return c2Push(arg[1]);
     }
 
+    if (strcmp(arg[0], "l") == 0)
+        return c2Load(arg[1], arg[2]);
+
+    if (strcmp(arg[0], "m") == 0) {
+        if (c2Path < 0)
+            return "not running";
+        return c2PlayClip(arg[1]);
+    }
+
     if (strcmp(arg[0], "e") == 0) {
         if (c2Path < 0)
             return "not running";
@@ -470,7 +525,7 @@ static const char *cmdCodec2(char **arg)
         return NULL;
     }
 
-    return "usage: c2 <s|p|e> [hex]";
+    return "usage: c2 <s|p|l|m|e> [args]";
 }
 
 #define HP_STEP 256
