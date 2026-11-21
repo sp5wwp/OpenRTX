@@ -39,6 +39,13 @@ bool bench_txDryRun(void);
  */
 uint8_t bench_txDrive(void);
 
+/**
+ * Take the PA drive to zero at once, from any context (timer, interrupt):
+ * the bench PTT does it when it expires, in case the radio thread does not
+ * end the transmission. The RF path switches are not touched.
+ */
+void bench_paOff(void);
+
 #ifdef __cplusplus
 }
 #endif

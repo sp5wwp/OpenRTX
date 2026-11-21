@@ -19,7 +19,9 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/ring_buffer.h>
+#include <drivers/audio/dac_at32.h>
 #include "bench.h"
+#include "benchmic.h"
 #include "bootloader.h"
 #include "monitor.h"
 #include "testsignal.h"
@@ -589,6 +591,19 @@ static const char *cmdCodec2(char **arg)
 #define PTT_MAX_MS 10000
 
 static volatile bool benchPtt;
+
+/* Time the radio thread gets to end a transmission normally */
+#define PA_OFF_GRACE_MS 500
+
+static void paOffExpired(struct k_timer *timer)
+{
+    (void)timer;
+
+    if (!benchPtt)
+        bench_paOff();
+}
+
+static K_TIMER_DEFINE(paOffTimer, paOffExpired, NULL);
 static volatile bool txDryRun = true;
 static volatile uint8_t txDrive;
 
@@ -596,6 +611,12 @@ static void pttExpired(struct k_timer *timer)
 {
     (void)timer;
     benchPtt = false;
+
+    /*
+     * Backstop: if the radio thread is stuck, it never ends the
+     * transmission; the PA drive at least goes to zero now.
+     */
+    k_timer_start(&paOffTimer, K_MSEC(PA_OFF_GRACE_MS), K_NO_WAIT);
 }
 
 static K_TIMER_DEFINE(pttTimer, pttExpired, NULL);
@@ -613,6 +634,19 @@ bool bench_txDryRun(void)
 uint8_t bench_txDrive(void)
 {
     return txDrive;
+}
+
+/* Bench: level of the baseband sent to the modulators (DAC linear mode) */
+static const char *cmdTxLevel(char **arg)
+{
+    uint32_t gain;
+
+    if (!parseHex(arg[0], &gain) || (gain == 0) || (gain > 0x400))
+        return "usage: txlvl <gain, 1/256 units, hex, 100 = unity>";
+
+    dacAt32_setLinearGain((uint16_t)gain);
+
+    return NULL;
 }
 
 static const char *cmdTxDrive(char **arg)
@@ -663,6 +697,41 @@ static const char *cmdTxDry(char **arg)
     txDryRun = (on != 0);
 
     return NULL;
+}
+
+/*
+ * Bench microphone clip (benchmic.c): "mic a <samples>" allocates it,
+ * "mic l <offset> <hex>" loads 16-bit little-endian samples.
+ */
+static const char *cmdMic(char **arg)
+{
+    uint32_t a;
+
+    if ((arg[0] == NULL) || !parseHex(arg[1], &a))
+        return "usage: mic a <samples> | mic l <offset> <hex>";
+
+    if (strcmp(arg[0], "a") == 0)
+        return (benchMic_alloc(a) == 0) ? NULL : "no memory";
+
+    size_t len = (arg[2] != NULL) ? strlen(arg[2]) : 0;
+    if ((strcmp(arg[0], "l") != 0) || (len == 0) || ((len % 4) != 0))
+        return "usage: mic a <samples> | mic l <offset> <hex>";
+
+    int16_t samples[32];
+    size_t count = len / 4;
+    if (count > ARRAY_SIZE(samples))
+        return "too long";
+
+    for (size_t i = 0; i < count; i++) {
+        int n[4];
+        for (size_t k = 0; k < 4; k++)
+            n[k] = hexNibble(arg[2][(4 * i) + k]);
+        if ((n[0] < 0) || (n[1] < 0) || (n[2] < 0) || (n[3] < 0))
+            return "bad hex";
+        samples[i] = (int16_t)((n[2] << 12) | (n[3] << 8) | (n[0] << 4) | n[1]);
+    }
+
+    return (benchMic_write(a, samples, count) == 0) ? NULL : "outside the clip";
 }
 
 #define HP_STEP 256
@@ -784,6 +853,25 @@ static const char *cmdTimezone(char **arg)
     return NULL;
 }
 
+/*
+ * Mode and frequency go to the radio state, as the UI sets them, then to the
+ * rtx thread: a configuration given to the rtx thread alone is overwritten by
+ * the next UI synchronisation, and two commands in a row would read the
+ * configuration before the first one is applied.
+ */
+static void configureRtx(void)
+{
+    rtxStatus_t cfg = rtx_getCurrentStatus();
+
+    pthread_mutex_lock(&state_mutex);
+    cfg.opMode = state.channel.mode;
+    cfg.rxFrequency = state.channel.rx_frequency;
+    cfg.txFrequency = state.channel.tx_frequency;
+    pthread_mutex_unlock(&state_mutex);
+
+    rtx_configure(&cfg);
+}
+
 static const char *cmdFreq(char **arg)
 {
     if (arg[0] == NULL)
@@ -794,26 +882,30 @@ static const char *cmdFreq(char **arg)
     if ((*end != '\0') || (end == arg[0]))
         return "usage: freq <hz>";
 
-    rtxStatus_t cfg = rtx_getCurrentStatus();
-    cfg.rxFrequency = hz;
-    cfg.txFrequency = hz;
-    rtx_configure(&cfg);
+    pthread_mutex_lock(&state_mutex);
+    state.channel.rx_frequency = hz;
+    state.channel.tx_frequency = hz;
+    pthread_mutex_unlock(&state_mutex);
+    configureRtx();
 
     return NULL;
 }
 
 static const char *cmdMode(char **arg)
 {
-    rtxStatus_t cfg = rtx_getCurrentStatus();
+    uint8_t mode;
 
     if ((arg[0] != NULL) && (strcmp(arg[0], "fm") == 0))
-        cfg.opMode = OPMODE_FM;
+        mode = OPMODE_FM;
     else if ((arg[0] != NULL) && (strcmp(arg[0], "m17") == 0))
-        cfg.opMode = OPMODE_M17;
+        mode = OPMODE_M17;
     else
         return "usage: mode <fm|m17>";
 
-    rtx_configure(&cfg);
+    pthread_mutex_lock(&state_mutex);
+    state.channel.mode = mode;
+    pthread_mutex_unlock(&state_mutex);
+    configureRtx();
 
     return NULL;
 }
@@ -853,8 +945,10 @@ static const struct {
     { .name = "hp", .func = cmdHeap },
     { .name = "cx", .func = cmdCanceller },
     { .name = "ptt", .func = cmdPtt },
+    { .name = "mic", .func = cmdMic },
     { .name = "txdry", .func = cmdTxDry },
     { .name = "txdrv", .func = cmdTxDrive },
+    { .name = "txlvl", .func = cmdTxLevel },
     { .name = "mode", .func = cmdMode },
     { .name = "freq", .func = cmdFreq },
     { .name = "tz", .func = cmdTimezone },

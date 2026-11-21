@@ -25,7 +25,8 @@ class Monitor:
             if not l:
                 raise TimeoutError(f'no reply to {line!r}')
             l = l.decode(errors='replace').strip()
-            if not l or l.startswith('['):
+            # Zephyr log lines, and a debug printk of the Artery PWM driver
+            if not l or l.startswith('[') or l.startswith('set cycles'):
                 continue
             if l == 'OK':
                 return out

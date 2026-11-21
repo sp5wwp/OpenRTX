@@ -80,6 +80,11 @@ static void apcSet(uint8_t value)
     dac_2_data_set(DAC2_8BIT_RIGHT, value);
 }
 
+void bench_paOff(void)
+{
+    apcSet(0);
+}
+
 /*
  * PA settings per power level (vendor firmware V0.27, REG_36 table at
  * 0x0802B724: 0x7F high, 0x57 mid and low).
