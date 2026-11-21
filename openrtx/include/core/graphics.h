@@ -397,7 +397,7 @@ void gfx_drawSmeterLevel(point_t start, uint16_t width, uint16_t height,
  * @param width: Bar graph width
  * @param height: Bar graph height
  * @param sats: pointer to the array of satellites data
- * @param active_sats: bitset representing which sats are part of the fix
+ * @param active_sats: bit i set if sats[i] is part of the fix
  */
 void gfx_drawGPSgraph(point_t start, uint16_t width, uint16_t height,
                       gpssat_t *sats, uint32_t active_sats);

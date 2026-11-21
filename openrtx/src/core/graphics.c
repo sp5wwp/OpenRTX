@@ -958,8 +958,7 @@ void gfx_drawGPSgraph(point_t start, uint16_t width, uint16_t height,
         point_t bar_pos = start;
         bar_pos.x += 2 + i * (bar_width + 2);
         bar_pos.y += (height - 8) - bar_height;
-        color_t bar_color = (active_sats & 1 << (sats[i].id - 1)) ? yellow :
-                                                                    white;
+        color_t bar_color = (active_sats & (1u << i)) ? yellow : white;
         gfx_drawRect(bar_pos, bar_width, bar_height, bar_color, true);
         point_t id_pos = { bar_pos.x, (uint8_t)(start.y + height) };
         gfx_print(id_pos, FONT_SIZE_5PT, TEXT_ALIGN_LEFT, bar_color, "%2d ",

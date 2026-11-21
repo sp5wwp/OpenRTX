@@ -56,9 +56,9 @@ typedef struct
     uint8_t    fix_quality;          // 0: no fix, 1: GPS, 2: GPS SPS, 3: GPS PPS
     uint8_t    fix_type;             // 0: no fix, 1: 2D,  2: 3D
     uint8_t    satellites_tracked;   // Number of tracked satellites
-    uint8_t    satellites_in_view;   // Satellites in view
-    gpssat_t   satellites[12];       // Details about satellites in view
-    uint32_t   active_sats;          // Bitmap representing which sats are part of the fix
+    uint8_t    satellites_in_view;   // Satellites in view, all constellations
+    gpssat_t   satellites[12];       // Strongest satellites in view, by decreasing SNR
+    uint32_t   active_sats;          // Bit i set: satellites[i] is part of the fix
     int32_t    latitude;             // Latitude coordinates
     int32_t    longitude;            // Longitude coordinates
     int16_t    altitude;             // Antenna altitude above mean sea level (geoid) in m
