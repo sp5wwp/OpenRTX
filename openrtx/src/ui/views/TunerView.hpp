@@ -12,13 +12,10 @@
 #endif
 
 #include "views/View.hpp"
-#include "layout/Flex.hpp"
-#include "widgets/Label.hpp"
-#include "widgets/TextRow.hpp"
 #include "widgets/TopBar.hpp"
-#include "widgets/FreqHero.hpp"
-#include "widgets/BarRow.hpp"
 #include "widgets/TextInput.hpp"
+#include "widgets/Tuner.hpp"
+#include "widgets/TunerState.hpp"
 #include "core/state.h"
 
 namespace ortxui
@@ -94,24 +91,18 @@ public:
         return (entry != nullptr) && !entry->destination;
     }
 
-private:
     /**
-     * Follow the mode label and the CAN or CTCSS detail.
-     *
-     * @param ch: channel shown.
-     * @param txing: whether the radio is transmitting.
-     */
-    void syncMode(const channel_t &ch, bool txing);
-
-    /**
-     * Follow the meter: RSSI on an S-scale with the squelch mark while
-     * receiving, power while transmitting.
+     * Describe the tuner the radio is on.
      *
      * @param s: state snapshot.
-     * @param status: operating status from the rtx module.
+     * @param opStatus: operating status from the rtx module.
+     * @param squelchOpen: the rtx module has the RX squelch open.
+     * @param t: model to fill.
      */
-    void syncMeter(const state_t &s, uint8_t status);
+    static void describe(const state_t &s, uint8_t opStatus, bool squelchOpen,
+                         TunerState &t);
 
+private:
     /**
      * Handle a key while a frequency is being entered.
      *
@@ -192,9 +183,6 @@ private:
     /** Close the frequency entry and show the live readout again. */
     void exitInput();
 
-    /** Repaint the change-gated readout from live state at the next sync. */
-    void invalidateReadout();
-
     /** Show the entry in the frequency and channel line. */
     void refreshInput();
 
@@ -210,26 +198,6 @@ private:
 
     /** Drop the FM tone burst if it is keyed. */
     void clearFmTone();
-
-    /**
-     * Compose the channel line: "VFO" or the memory index, and the channel
-     * name or the M17 destination.
-     *
-     * @param s: state snapshot.
-     * @param idxOut: index text, sizeof(idxCache) bytes.
-     * @param nameOut: name text.
-     * @param nameSz: size of nameOut.
-     */
-    void composeChanLine(const state_t &s, char *idxOut, char *nameOut,
-                         uint16_t nameSz);
-
-    /**
-     * Compose the M17 destination label, "@" and the destination or "ALL".
-     *
-     * @param out: output buffer.
-     * @param sz: size of out.
-     */
-    void m17DstLabel(char *out, uint16_t sz);
 
     /**
      * Handle an event while the destination is edited.
@@ -255,14 +223,6 @@ private:
      * @param cursor: cursor position.
      */
     void bindDst(uint16_t cursor);
-
-    /**
-     * Give the destination the index slot while it is edited, on the compact
-     * screen where the two share a row.
-     *
-     * @param editing: the destination is being edited.
-     */
-    void showDstEdit(bool editing);
 
     /** Show "@W1[A]W" with the bracketed cursor in the channel line. */
     void renderDstEdit();
@@ -305,31 +265,8 @@ private:
         TextInput input; ///< The RX or TX digits, or the destination
     };
 
-    Screen tree;        ///< Widget tree
-    Flex root;          ///< Column of the rows
-    FreqHero hero;      ///< Frequency and mode label
-    Flex nameRow;       ///< Name headline; compact: index + name + detail
-    Flex metaRow;       ///< Regular only: index (left) + CAN / tone (right)
-    Label chanIdx;      ///< "VFO" or the memory index
-    Label chanName;     ///< Channel name or M17 destination
-    TextRow chanDetail; ///< CAN (M17) or CTCSS tone (FM), right-aligned
-    BarRow meter;       ///< RSSI or TX power
-    Flex spacer;        ///< Pushes the meter to the bottom
-
-    char idxCache[8] = { 0 };        ///< Index shown
-    char nameCache[40] = { 0 };      ///< Name or destination shown
-    char readoutBuf[12] = { 0 };     ///< Meter readout
-    char modeSub[8] = { 0 };         ///< Detail value: CAN (M17) or tone (FM)
-    const char *shownMode = nullptr; ///< Mode label shown, nullptr to repaint
-    const char *shownTag = "";       ///< CAN / CTCSS tag shown
-
-    uint32_t lastFreq = UINT32_MAX;  ///< Frequency shown
-    uint8_t lastStatus = 0xFFu;      ///< TX/RX status on the meter
-    int32_t lastRssi = INT32_MIN;    ///< RSSI on the meter
-    uint8_t lastSql = 0xFFu;         ///< Squelch level on the meter mark
-    uint8_t lastMode = 0xFFu;        ///< Mode on the meter: FM shows the mark
-    uint16_t lastFill = UINT16_MAX;  ///< Meter fill width shown
-
+    Screen tree;            ///< Widget tree
+    Tuner tuner;            ///< The tuner the radio is on
     Entry *entry = nullptr; ///< Open entry, on the heap; nullptr if none
 };
 

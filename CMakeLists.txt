@@ -169,6 +169,7 @@ target_sources(app
     openrtx/src/ui/widgets/TopBar.cpp
     openrtx/src/ui/widgets/BarRow.cpp
     openrtx/src/ui/widgets/FreqHero.cpp
+    openrtx/src/ui/widgets/Tuner.cpp
     openrtx/src/ui/widgets/Compass.cpp
     openrtx/src/ui/widgets/TextInput.cpp
     openrtx/src/ui/widgets/TextBlock.cpp

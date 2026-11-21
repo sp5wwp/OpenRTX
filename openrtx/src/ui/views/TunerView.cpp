@@ -21,7 +21,6 @@
 #include "core/voicePromptUtils.h"
 
 #include <algorithm>
-#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -44,50 +43,6 @@ static constexpr char PLACEHOLDER = '-';
 
 /** How long an out-of-band entry stays flagged. */
 static constexpr long long INPUT_ERROR_MS = 1500;
-
-/** Thickness of the meter's bar. */
-static constexpr uint8_t METER_BAR_H = 7;
-
-/** Range of the TX meter's dB scale, which is full at POWER_MAX_MW. */
-static constexpr float POWER_SPAN_DB = 10.0f;
-
-/**
- * Get the meter fill fraction for a TX power on the dB scale.
- *
- * @param mw: power in mW.
- * @return the fraction, below 0 under the scale; the meter clamps it.
- */
-static float powerToFrac(uint32_t mw)
-{
-    if (mw == 0u)
-        return 0.0f;
-    const float db =
-        10.0f
-        * std::log10(static_cast<float>(mw) / static_cast<float>(POWER_MAX_MW));
-    return 1.0f + db / POWER_SPAN_DB;
-}
-
-/**
- * Get the meter fill fraction for an RSSI: rssiToSlevel() made continuous and
- * scaled to S11, so the fill and the squelch mark do not snap to S-points.
- *
- * @param rssi: RSSI in dBm.
- * @return the fraction, [0, 1].
- */
-static float rssiToFrac(float rssi)
-{
-    /* S1-S9 rise 6 dB a point (-121 to -73), S9-S11 10 dB (-73 to -53). */
-    float s;
-    if (rssi <= -121.0f)
-        s = 0.0f;
-    else if (rssi < -73.0f)
-        s = (127.0f + rssi) / 6.0f;
-    else if (rssi < -53.0f)
-        s = (163.0f + rssi) / 10.0f;
-    else
-        s = 11.0f;
-    return s / 11.0f;
-}
 
 /**
  * Get the digit of a bare number key (KEY_0..KEY_9 are bits 0..9).
@@ -196,100 +151,21 @@ TunerView::~TunerView()
 
 void TunerView::build()
 {
-    const bool regular = (sizeClass() == SizeClass::Regular);
-
-    root.setArea(screenArea());
-    root.setAxis(Axis::Column);
-
     /* No title: the home screen's top bar shows the clock. */
     TopBar &bar = useTopBar("");
+    tuner.setup((sizeClass() == SizeClass::Regular) ? Tuner::Style::Regular :
+                                                      Tuner::Style::Compact);
 
-    /* Taller than the text on the roomy screen; just clearing it on the
-     * compact one, so the channel line and the meter fit in 64 px. */
-    hero.setBasis(regular ? 40 : 26);
-
-    /* The channel line in one font; rows a full line high, so descenders and
-     * the '@' of a destination are not clipped. */
-    const fontSize_t chanFont = regular ? FONT_SIZE_8PT : FONT_SIZE_6PT;
-    const int16_t rowH = gfx_getFontLineHeight(chanFont);
-
-    /* "VFO" or the 1-based memory index, wide enough for "VFO". */
-    chanIdx.setFont(chanFont);
-    chanIdx.setAlign(TEXT_ALIGN_LEFT);
-    chanIdx.setColor(Sem::OnSurfaceMuted);
-    chanIdx.setBasis(regular ? 34 : 26);
-
-    /* Channel name or M17 destination; on the roomy screen on a line of its
-     * own, so a long destination shows in full. */
-    chanName.setFont(chanFont);
-    chanName.setAlign(TEXT_ALIGN_LEFT);
-    chanName.setColor(Sem::Primary);
-    chanName.setGrow(1);
-    /* A name wider than the line ellipsizes rather than wrapping. */
-    chanName.setOverflow(Label::Overflow::Ellipsize);
-
-    /* A small CAN or CTCSS tag, then the value. */
-    chanDetail.setRun(0, FONT_SIZE_5PT, Sem::OnSurfaceMuted);
-    chanDetail.setRun(1, chanFont, Sem::OnSurfaceMuted);
-    chanDetail.setGap(3);
-    /* Wide enough for the longest tagged value, "CTCSS 254.1". */
-    chanDetail.setBasis(regular ? 70 : 48);
-
-    /* The meter sits at the bottom under a growing spacer, tall enough for
-     * the label and readout over the S-scale numbers. */
-    meter.setBasis(regular ? 19 : 15);
-    meter.setBarHeight(METER_BAR_H);
-    meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
-    meter.setTextColor(Sem::RxSuccess);
-    meter.setShowScale(true);
-    meter.setLabel(STR(RX));
-    spacer.setGrow(1);
-
-    root.addChild(&bar);
-    root.addChild(&hero);
-
-    if (regular) {
-        /* Roomy layout: the name on its own line, then the index (left) and
-         * the CAN / tone detail (right). */
-        nameRow.setAxis(Axis::Row);
-        nameRow.setAlign(Align::Center);
-        nameRow.setJustify(Justify::Start);
-        nameRow.setPadding(4, 0);
-        nameRow.setBasis(rowH);
-        nameRow.addChild(&chanName);
-
-        metaRow.setAxis(Axis::Row);
-        metaRow.setAlign(Align::Center);
-        metaRow.setJustify(Justify::SpaceBetween);
-        metaRow.setPadding(4, 0);
-        metaRow.setBasis(rowH);
-        metaRow.addChild(&chanIdx);
-        metaRow.addChild(&chanDetail);
-
-        root.addChild(&nameRow);
-        root.addChild(&metaRow);
-    } else {
-        /* Compact layout: no room for a second line, so the index, name and
-         * detail share one row and the name ellipsizes. */
-        nameRow.setAxis(Axis::Row);
-        nameRow.setAlign(Align::Center);
-        nameRow.setJustify(Justify::Start);
-        nameRow.setPadding(4, 0);
-        nameRow.setGap(6);
-        nameRow.setBasis(rowH);
-        nameRow.addChild(&chanIdx);
-        nameRow.addChild(&chanName);
-        nameRow.addChild(&chanDetail);
-
-        root.addChild(&nameRow);
-    }
-
-    root.addChild(&spacer);
-    root.addChild(&meter);
-    tree.addChild(&root);
-    root.onLayout();
-
-    invalidateReadout();
+    /* The bar on top, the tuner under it taking the rest of the screen. */
+    const Rect screen = screenArea();
+    const uint16_t barH = static_cast<uint16_t>(bar.layout().basis);
+    bar.setArea({ screen.x, screen.y, screen.w, barH });
+    tuner.setArea({ screen.x, static_cast<int16_t>(screen.y + barH), screen.w,
+                    static_cast<uint16_t>(screen.h - barH) });
+    tree.addChild(&bar);
+    tree.addChild(&tuner);
+    bar.onLayout();
+    tuner.onLayout();
 }
 
 void TunerView::save() const
@@ -319,7 +195,6 @@ void TunerView::restore()
     static_cast<EntryState &>(n) = s;
     if (n.destination) {
         bindDst(n.dstCursor);
-        showDstEdit(true);
         renderDstEdit();
         return;
     }
@@ -346,181 +221,102 @@ void TunerView::closeEntry()
     entry = nullptr;
 }
 
-void TunerView::syncMode(const channel_t &ch, bool txing)
+/**
+ * Compose the M17 destination label, "@" and the destination or "ALL".
+ *
+ * @param out: output buffer.
+ * @param sz: size of out.
+ */
+static void m17DstLabel(char *out, uint16_t sz)
 {
-    const char *m1 = "--";
+    const char *dst = state.settings.m17_dest;
+    if (dst[0] == '\0')
+        sniprintf(out, sz, "@%s", STR(broadcast).str());
+    else
+        sniprintf(out, sz, "@%s", dst);
+}
+
+void TunerView::describe(const state_t &s, uint8_t opStatus, bool squelchOpen,
+                         TunerState &t)
+{
+    const channel_t &ch = s.channel;
+    const bool txing = (opStatus == TX);
+
+    t.rxFreq = ch.rx_frequency;
+    t.txFreq = ch.tx_frequency;
+    t.txPower = ch.power;
+    t.rssi = s.rssi;
+    t.squelch = s.settings.sqlLevel;
+    t.opMode = ch.mode;
+    t.selected = true;
+    t.transmitting = txing;
+    t.receiving = (opStatus == RX) && squelchOpen;
+
     switch (ch.mode) {
         case OPMODE_FM:
-            m1 = bandwidthLabel(ch.bandwidth).str();
+            t.mode = bandwidthLabel(ch.bandwidth).str();
             break;
         case OPMODE_DMR:
-            m1 = STR(dmr).str();
+            t.mode = STR(dmr).str();
             break;
         case OPMODE_M17:
-            m1 = SYMBOL_M17;
+            t.mode = SYMBOL_M17;
             break;
         default:
+            t.mode = "--";
             break;
     }
 
     /* The CAN shows only while it filters something: on TX or with the CAN
      * RX check on. The tone shows only when the current direction uses it. */
-    const char *tag = "";
-    char sub[sizeof(modeSub)] = "";
+    t.detailTag = "";
+    t.detail[0] = '\0';
     if (ch.mode == OPMODE_M17) {
         if (txing || state.settings.m17_can_rx) {
-            tag = STR(CAN).str();
-            sniprintf(sub, sizeof(sub), "%u",
+            t.detailTag = STR(CAN).str();
+            sniprintf(t.detail, sizeof(t.detail), "%u",
                       static_cast<unsigned>(state.settings.m17_can));
         }
     } else if (ch.mode == OPMODE_FM) {
         const bool showTx = txing && (ch.fm.txToneEn != 0u);
         const bool showRx = !txing && (ch.fm.rxToneEn != 0u);
         if (showTx || showRx) {
-            tag = STR(CTCSS).str();
-            formatTone(showTx ? ch.fm.txTone : ch.fm.rxTone, sub, sizeof(sub));
+            t.detailTag = STR(CTCSS).str();
+            formatTone(showTx ? ch.fm.txTone : ch.fm.rxTone, t.detail,
+                       sizeof(t.detail));
         }
     }
 
-    /* The texts are literals or table entries, so the pointers kept stay
-     * valid. */
-    const bool same = (shownMode != nullptr) && (strcmp(m1, shownMode) == 0)
-                   && (strcmp(tag, shownTag) == 0)
-                   && (strcmp(sub, modeSub) == 0);
-    if (same)
-        return;
-    shownMode = m1;
-    shownTag = tag;
-    memcpy(modeSub, sub, sizeof(modeSub));
-
-    hero.setMode(m1);
-    hero.invalidate();
-    chanDetail.setText(0, tag);
-    chanDetail.setText(1, modeSub);
-    chanDetail.invalidate();
-}
-
-void TunerView::syncMeter(const state_t &s, uint8_t status)
-{
-    const uint8_t sql = s.settings.sqlLevel;
-    const uint8_t mode = s.channel.mode;
-    const bool restyle = (status != lastStatus) || (sql != lastSql)
-                      || (mode != lastMode);
-    if (!restyle && (s.rssi == lastRssi))
-        return;
-
-    lastStatus = status;
-    lastRssi = s.rssi;
-    lastSql = sql;
-    lastMode = mode;
-
-    char readout[sizeof(readoutBuf)];
-    if (status == TX) {
-        const uint32_t mw = s.channel.power;
-
-        if (restyle) {
-            meter.setLabel(STR(TX));
-            meter.setColors(Sem::SurfaceHigh, Sem::TxDanger);
-            meter.setTextColor(Sem::TxDanger);
-            meter.setShowScale(false);
-            meter.setMarker(-1.0f); /* squelch gates RX only */
-        }
-        meter.setValue(powerToFrac(mw));
-
-        formatPower(mw, readout, sizeof(readout));
-    } else {
-        const uint8_t level = rssiToSlevel(s.rssi);
-
-        if (restyle) {
-            meter.setLabel(STR(RX));
-            meter.setColors(Sem::SurfaceHigh, Sem::RxSuccess);
-            meter.setTextColor(Sem::RxSuccess);
-            meter.setShowScale(true);
-
-            /* The mark sits where the signal has to reach; only FM gates on
-             * RSSI. */
-            if (mode == OPMODE_FM)
-                meter.setMarker(
-                    rssiToFrac(static_cast<float>(squelchToRssi(sql))));
-            else
-                meter.setMarker(-1.0f);
-        }
-        meter.setValue(rssiToFrac(static_cast<float>(s.rssi)));
-
-        if (level > 9u)
-            sniprintf(readout, sizeof(readout), "+%u",
-                      static_cast<unsigned>((level - 9u) * 10u));
+    /* The channel line: "VFO" or the memory index, and the channel name or
+     * the M17 destination. An FM VFO has no name. */
+    if (s.tuner_mode == VFO) {
+        sniprintf(t.index, sizeof(t.index), "%s", STR(VFO).str());
+        if (ch.mode == OPMODE_M17)
+            m17DstLabel(t.name, sizeof(t.name));
         else
-            sniprintf(readout, sizeof(readout), "S%u",
-                      static_cast<unsigned>(level));
+            t.name[0] = '\0';
+    } else {
+        sniprintf(t.index, sizeof(t.index), "%03u", s.channel_index + 1);
+        sniprintf(t.name, sizeof(t.name), "%s",
+                  (ch.name[0] != '\0') ? ch.name : "---");
     }
-
-    /* Repaint on a change of the readout or of the fill in pixels, not on
-     * every dBm. */
-    const bool text = (strcmp(readout, readoutBuf) != 0);
-    if (text) {
-        memcpy(readoutBuf, readout, sizeof(readoutBuf));
-        meter.setReadout(readoutBuf);
-    }
-    const uint16_t fill = meter.fillWidth();
-    if (restyle || text || (fill != lastFill))
-        meter.invalidate();
-    lastFill = fill;
 }
 
 void TunerView::syncFromState(const state_t &s)
 {
     View::syncFromState(s); /* refresh the shared top bar */
 
-    /* state.rtxStatus is the mode requested; rtx has the live one. */
-    const uint8_t status = rtx_getStatus()->opStatus;
-    const bool txing = (status == TX);
-
-    /* An open frequency entry owns the hero and the channel line. */
-    const bool input = (entry != nullptr) && !entry->destination;
-    if (!input) {
-        const channel_t &ch = s.channel;
-
-        /* Show the frequency the radio is on: TX while transmitting. */
-        const freq_t shown = (txing && (ch.tx_frequency != ch.rx_frequency)) ?
-                                 ch.tx_frequency :
-                                 ch.rx_frequency;
-        if (static_cast<uint32_t>(shown) != lastFreq) {
-            hero.setFreq(static_cast<uint32_t>(shown));
-            hero.invalidate();
-            lastFreq = static_cast<uint32_t>(shown);
-        }
-
-        syncMode(ch, txing);
-
-        /* An open destination edit owns the channel line. */
-        if (entry == nullptr) {
-            char idxText[sizeof(idxCache)];
-            char nameText[sizeof(nameCache)];
-            composeChanLine(s, idxText, nameText, sizeof(nameText));
-
-            if (strncmp(idxText, idxCache, sizeof(idxCache)) != 0) {
-                strncpy(idxCache, idxText, sizeof(idxCache) - 1);
-                idxCache[sizeof(idxCache) - 1] = '\0';
-                chanIdx.setText(idxCache);
-                chanIdx.invalidate();
-            }
-            if (strncmp(nameText, nameCache, sizeof(nameCache)) != 0) {
-                strncpy(nameCache, nameText, sizeof(nameCache) - 1);
-                nameCache[sizeof(nameCache) - 1] = '\0';
-                chanName.setText(nameCache);
-                chanName.invalidate();
-            }
-        }
-    } else if (entry->errorAt != 0) {
-        /* Clear the out-of-band flag once it has been shown long enough. */
-        if ((getTick() - entry->errorAt) >= INPUT_ERROR_MS) {
-            entry->errorAt = 0;
-            refreshInput();
-        }
+    /* Clear the out-of-band flag once it has been shown long enough. */
+    if ((entry != nullptr) && (entry->errorAt != 0)
+        && ((getTick() - entry->errorAt) >= INPUT_ERROR_MS)) {
+        entry->errorAt = 0;
+        refreshInput();
     }
 
-    syncMeter(s, status);
+    /* state.rtxStatus is the mode requested; rtx has the live one. */
+    TunerState t;
+    describe(s, rtx_getStatus()->opStatus, rtx_rxSquelchOpen(), t);
+    tuner.update(t);
 }
 
 NavIntent TunerView::onEvent(const Event &e)
@@ -821,17 +617,7 @@ void TunerView::confirmInput()
 void TunerView::exitInput()
 {
     closeEntry();
-    invalidateReadout();
-}
-
-void TunerView::invalidateReadout()
-{
-    /* No shown text starts with \1, so the next sync repaints them all. */
-    lastFreq = UINT32_MAX;
-    shownMode = nullptr;
-    idxCache[0] = '\1';
-    nameCache[0] = '\1';
-    tree.markAllDirty();
+    tuner.endEntry();
 }
 
 void TunerView::refreshInput()
@@ -840,21 +626,7 @@ void TunerView::refreshInput()
     char main[16];
     char sub[6];
     composeEntry(n.txField ? n.tx : n.rx, main, sub);
-
-    const bool err = (n.errorAt != 0);
-    hero.setEntry(main, sub);
-    hero.setMode((n.txField ? STR(TX) : STR(RX)).str());
-    hero.setTextColor(err ? Sem::Mark : Sem::Accent);
-    hero.invalidate();
-
-    chanIdx.setText("");
-    chanName.setText(err ? STR(outOfBand) :
-                           (n.txField ? STR(enterTx) : STR(enterRx)));
-    chanDetail.setText(0, "");
-    chanDetail.setText(1, "");
-    chanIdx.invalidate();
-    chanName.invalidate();
-    chanDetail.invalidate();
+    tuner.showFreqEntry(main, sub, n.txField, n.errorAt != 0);
 }
 
 void TunerView::clearFmTone()
@@ -865,60 +637,20 @@ void TunerView::clearFmTone()
     }
 }
 
-void TunerView::m17DstLabel(char *out, uint16_t sz)
-{
-    const char *dst = state.settings.m17_dest;
-    if (dst[0] == '\0')
-        sniprintf(out, sz, "@%s", STR(broadcast).str());
-    else
-        sniprintf(out, sz, "@%s", dst);
-}
-
-void TunerView::composeChanLine(const state_t &s, char *idxOut, char *nameOut,
-                              uint16_t nameSz)
-{
-    const channel_t &ch = s.channel;
-
-    if (s.tuner_mode == VFO) {
-        /* An FM VFO has no name; M17 shows the destination there. */
-        sniprintf(idxOut, sizeof(idxCache), "%s", STR(VFO).str());
-        if (ch.mode == OPMODE_M17)
-            m17DstLabel(nameOut, nameSz);
-        else
-            nameOut[0] = '\0';
-    } else {
-        sniprintf(idxOut, sizeof(idxCache), "%03u", s.channel_index + 1);
-        sniprintf(nameOut, nameSz, "%s",
-                  (ch.name[0] != '\0') ? ch.name : "---");
-    }
-}
-
 void TunerView::renderDstEdit()
 {
     /* The '@' stays pinned while the rest scrolls to keep the cursor in view,
      * so a full-length destination keeps the channel line's font. */
-    const fontSize_t font = chanName.font();
+    const fontSize_t font = tuner.nameFont();
     const uint16_t atW = gfx_getTextWidth(font, "@");
-    const uint16_t boxW = chanName.area().w;
+    const uint16_t boxW = tuner.nameWidth();
     const uint16_t bodyW = (boxW > atW) ? static_cast<uint16_t>(boxW - atW) : 0;
 
     char body[36];
     entry->input.formatWindow(body, sizeof(body), bodyW, font);
-    sniprintf(nameCache, sizeof(nameCache), "@%s", body);
-    idxCache[0] = '\0';
-    chanIdx.setText(idxCache);
-    chanName.setText(nameCache);
-    chanIdx.invalidate();
-    chanName.invalidate();
-}
-
-void TunerView::showDstEdit(bool editing)
-{
-    if (sizeClass() == SizeClass::Regular)
-        return;
-
-    chanIdx.setFlag(FlagHidden, editing);
-    nameRow.onLayout();
+    char text[sizeof(TunerState::name)];
+    sniprintf(text, sizeof(text), "@%s", body);
+    tuner.showDestEntry(text);
 }
 
 void TunerView::bindDst(uint16_t cursor)
@@ -951,9 +683,7 @@ void TunerView::beginDstEdit()
     strncpy(n.dst, state.settings.m17_dest, sizeof(n.dst) - 1);
     n.dst[sizeof(n.dst) - 1] = '\0';
     bindDst(0);
-    showDstEdit(true);
     renderDstEdit();
-    tree.markAllDirty();
     announceDstChar();
 }
 
@@ -967,8 +697,7 @@ void TunerView::endDstEdit(bool commit)
     }
 
     closeEntry();
-    showDstEdit(false);
-    invalidateReadout();
+    tuner.endEntry();
 }
 
 NavIntent TunerView::onDstEditEvent(const Event &e)
