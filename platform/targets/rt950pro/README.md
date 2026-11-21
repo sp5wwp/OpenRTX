@@ -257,7 +257,7 @@ the microphone and on DAC1, RTL-SDR):
   and a capture chip would hear the baseband with the voice.
 
 Speech at the microphone during an M17 transmission (PB8 low, as now) is
-modulated with the 4FSK: keyed from the radio's PTT while talking loudly, the
+modulated with the 4FSK: keyed from the radio's PTT while talking normally, the
 MER fell from 27.8 dB to 11-17 dB (residual FM 250-530 Hz rms instead of
 52 Hz), and gr-m17 reported Viterbi metrics up to 45, above its threshold of
 30. Cancelling it through the DAC would need the speech before it reaches the
