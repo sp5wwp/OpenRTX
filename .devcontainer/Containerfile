@@ -29,6 +29,7 @@ RUN apt-get update -y && apt-get install -y --no-install-recommends \
   ca-certificates \
   cmake \
   dfu-util \
+  faketime \
   file \
   git \
   libcodec2-dev \
