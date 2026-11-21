@@ -21,11 +21,10 @@
  * 224 kB of SRAM only the first 128 kB of Flash are zero-wait, and code above
  * them is too slow for a 48 kHz interrupt (AT32F403A reference manual 2.3).
  *
- * Timer clock: SYSCLK 120 MHz, APB1 /2, so the APB1 timers run at 120 MHz
+ * TMR6 is on APB1; its clock is twice the APB1 clock when APB1 is divided
  * (AT32F403A reference manual, clock tree).
  */
 
-#define TIMER_CLOCK 120000000UL
 #define DAC_MID 2048
 #define TMR6_IRQ_PRIO 2
 /*
@@ -146,7 +145,14 @@ void dacAt32_init(void)
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
 
-    tmr_base_init(TMR6, (TIMER_CLOCK / DAC_AT32_RATE) - 1, 0);
+    crm_clocks_freq_type clocks;
+    crm_clocks_freq_get(&clocks);
+    uint32_t timerClock = clocks.apb1_freq;
+    if (clocks.apb1_freq != clocks.ahb_freq)
+        timerClock *= 2;
+
+    tmr_base_init(TMR6,
+                  ((timerClock + (DAC_AT32_RATE / 2)) / DAC_AT32_RATE) - 1, 0);
     tmr_cnt_dir_set(TMR6, TMR_COUNT_UP);
     tmr_interrupt_enable(TMR6, TMR_OVF_INT, TRUE);
 
