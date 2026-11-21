@@ -191,16 +191,20 @@ void rtc_init(void)
     wait_flag(&RTC->ctrll, RTC_CFGF_FLAG);
     RTC->ctrlh = 0;
 
-    uint32_t divider = ((RTC->divh & 0xfU) << 16) | (RTC->divl & 0xffffU);
+    /*
+     * The divider registers are write-only (they do not read back what was
+     * written), so the divider cannot be checked: it is written at every
+     * start, which leaves the counter running.
+     */
+    RTC->ctrll_bit.cfgen = 1;
+    RTC->divh = RTC_DIVIDER >> 16;
+    RTC->divl = RTC_DIVIDER & 0xffffU;
+    RTC->ctrll_bit.cfgen = 0;
+    wait_flag(&RTC->ctrll, RTC_CFGF_FLAG);
+
     datetime_t time;
-    retained = retained && divider == RTC_DIVIDER
-            && calendar_from_seconds(read_counter(), &time);
+    retained = retained && calendar_from_seconds(read_counter(), &time);
     if (!retained) {
-        RTC->ctrll_bit.cfgen = 1;
-        RTC->divh = RTC_DIVIDER >> 16;
-        RTC->divl = RTC_DIVIDER & 0xffffU;
-        RTC->ctrll_bit.cfgen = 0;
-        wait_flag(&RTC->ctrll, RTC_CFGF_FLAG);
         write_counter(0);
         BPR->dt42 = RTC_FORMAT;
         LOG_WRN("RTC initialized to 2000-01-01 UTC; set date/time or use GPS");
