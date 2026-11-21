@@ -69,8 +69,9 @@ static const char hsProgram[] = "PROGRAMBT9000U";
 static const char hsUpdate[] = "UPDATE";
 
 /* Bootloader "enter update" frame, see bootloader.c */
-static const uint8_t blProbe[] = { 0xAA, 0x42, 0x00, 0x00, 0x00,
-                                   0x00, 0x55, 0xEB, 0x55, };
+static const uint8_t blProbe[] = {
+    0xAA, 0x42, 0x00, 0x00, 0x00, 0x00, 0x55, 0xEB, 0x55,
+};
 
 static const struct device *const uart = MON_UART;
 static uint8_t rxData[RX_BUF_SIZE];
@@ -90,8 +91,8 @@ static void restartToUpdate()
  * comes around them. This runs in the UART interrupt, so that an update can
  * be started even when no thread gets to run.
  */
-static bool tailMatches(const uint8_t *tail, size_t tailLen,
-                        const uint8_t *str, size_t len)
+static bool tailMatches(const uint8_t *tail, size_t tailLen, const uint8_t *str,
+                        size_t len)
 {
     return (tailLen >= len) && (memcmp(tail + tailLen - len, str, len) == 0);
 }
@@ -119,8 +120,9 @@ static void matchTriggers(uint8_t c)
         return;
     }
 
-    if ((armedAt >= 0) && tailMatches(tail, tailLen, (const uint8_t *)hsUpdate,
-                                      sizeof(hsUpdate) - 1)) {
+    if ((armedAt >= 0)
+        && tailMatches(tail, tailLen, (const uint8_t *)hsUpdate,
+                       sizeof(hsUpdate) - 1)) {
         if ((k_uptime_get() - armedAt) <= HANDSHAKE_TIMEOUT_MS) {
             uart_poll_out(uart, ACK);
             restartToUpdate();
@@ -200,7 +202,6 @@ static bool parseHex(const char *str, uint32_t *value)
 
     return (*end == '\0') && (end != str);
 }
-
 
 static const char *cmdPing(char **arg)
 {
@@ -286,8 +287,8 @@ static const struct {
     const char *name;
     const char *(*func)(char **arg);
 } commands[] = {
-    { "ping", cmdPing },       { "rb", cmdReadBytes }, { "rw", cmdReadWords },
-    { "wb", cmdWriteByte },    { "ww", cmdWriteWord }, { "update", cmdUpdate },
+    { "ping", cmdPing },    { "rb", cmdReadBytes }, { "rw", cmdReadWords },
+    { "wb", cmdWriteByte }, { "ww", cmdWriteWord }, { "update", cmdUpdate },
 };
 
 void monitor_exec(char *line)

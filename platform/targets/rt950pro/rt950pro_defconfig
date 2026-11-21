@@ -36,3 +36,7 @@ CONFIG_ST7789V_RGB565=y
 
 # LCD backlight brightness control
 CONFIG_PWM=y
+
+# Debug monitor on the programming cable (monitor.c): UART receive interrupts
+# and the restart into the bootloader for keyless firmware updates
+CONFIG_REBOOT=y
