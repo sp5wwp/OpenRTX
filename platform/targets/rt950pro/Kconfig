@@ -12,3 +12,12 @@ config RT950PRO_DAC
 	help
 	  Artery HAL DAC, timer and ADC modules, for the audio output on DAC1
 	  (PA4) timed by TMR6 and the bench recorder on ADC2.
+
+config OPENRTX_CODEC2_MOD
+	bool
+	default y
+	depends on BOARD_RT950PRO
+	help
+	  Use Codec2-mod (3200 bps mode only, fixed-size states) instead of the
+	  reference Codec2: the reference decoder needs about 46 kB of heap and
+	  stack, more than this target has free.

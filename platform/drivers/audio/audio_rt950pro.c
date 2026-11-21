@@ -7,21 +7,28 @@
 #include <hwconfig.h>
 #include "interfaces/audio.h"
 #include "interfaces/radio.h"
+#include "dac_at32.h"
 
 /*
- * Audio driver for the Radtel RT-950 Pro, supporting only the reception path
- * from the BK4829 chips to the speaker.
+ * Audio driver for the Radtel RT-950 Pro.
  *
- * The signal chain is: BK4829 AF output -> audio switch (PC12) -> amplifier
- * (powered by PE4, enabled by PB8) -> speaker, with PE1 muting the speaker.
- * The BK4829 chips share the same analog audio bus, the radio driver keeps the
- * chip which is not receiving disconnected from it.
+ * Both BK4829 AF outputs drive the receive audio node, which feeds the speaker
+ * amplifier (powered by PE4, enabled by PB8; PE1 routes it to the internal
+ * speaker when low) and is read by the MCU on PA2. DAC1 (PA4) reaches either
+ * that node, with PC12 low, or the BK4829 microphone input, with PC12 high
+ * (bench measurements, see platform/targets/rt950pro). The radio driver keeps
+ * the chip which is not receiving disconnected from the node.
  */
 
 const struct audioDevice outputDevices[] = {
-    { NULL, 0, 0, SINK_MCU },
-    { NULL, 0, 0, SINK_RTX },
-    { NULL, 0, 0, SINK_SPK },
+    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SINK_MCU },
+    { .driver = NULL, .config = NULL, .instance = 0, .endpoint = SINK_RTX },
+    {
+        .driver = &dacAt32_driver,
+        .config = NULL,
+        .instance = 0,
+        .endpoint = SINK_SPK,
+    },
 };
 
 const struct audioDevice inputDevices[] = {
@@ -42,7 +49,7 @@ void audio_init()
     gpioPin_clear(&rt950_bt_sw); // Speaker, not Bluetooth
     gpioPin_setMode(&rt950_bt_sw, OUTPUT);
 
-    gpioPin_set(&rt950_audio_sw); // BK4829 chips, not the MCU DAC
+    gpioPin_clear(&rt950_audio_sw); // DAC to the receive audio node
     gpioPin_setMode(&rt950_audio_sw, OUTPUT);
 
     gpioPin_clear(&rt950_amp_en);
@@ -50,6 +57,8 @@ void audio_init()
 
     gpioPin_set(&rt950_amp_pwr);
     gpioPin_setMode(&rt950_amp_pwr, OUTPUT);
+
+    dacAt32_init();
 }
 
 void audio_terminate()
@@ -59,8 +68,19 @@ void audio_terminate()
     gpioPin_clear(&rt950_amp_pwr);
 }
 
+static void speakerOn(void)
+{
+    gpioPin_set(&rt950_amp_en);
+    gpioPin_clear(&rt950_spk_mute);
+}
+
 void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
+    if ((source == SOURCE_MCU) && (sink == SINK_SPK)) {
+        gpioPin_clear(&rt950_audio_sw);
+        speakerOn();
+    }
+
     if (source == SOURCE_RTX && sink == SINK_SPK) {
         radio_enableAfOutput();
         gpioPin_set(&rt950_amp_en);
@@ -70,6 +90,11 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 
 void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
+    if ((source == SOURCE_MCU) && (sink == SINK_SPK)) {
+        gpioPin_set(&rt950_spk_mute);
+        gpioPin_clear(&rt950_amp_en);
+    }
+
     if (source == SOURCE_RTX && sink == SINK_SPK) {
         gpioPin_set(&rt950_spk_mute);
         gpioPin_clear(&rt950_amp_en);
@@ -82,13 +107,10 @@ bool audio_checkPathCompatibility(const enum AudioSource p1Source,
                                   const enum AudioSource p2Source,
                                   const enum AudioSink p2Sink)
 {
-    static const uint8_t RTX_SPK = (SOURCE_RTX * 3) + SINK_SPK;
-    static const uint8_t MIC_RTX = (SOURCE_MIC * 3) + SINK_RTX;
-
-    const uint8_t p1 = (p1Source * 3) + p1Sink;
-    const uint8_t p2 = (p2Source * 3) + p2Sink;
-
-    // RTX-SPK and MIC-RTX are compatible, all the other combinations are not
-    return ((p1 == RTX_SPK) && (p2 == MIC_RTX))
-        || ((p1 == MIC_RTX) && (p2 == RTX_SPK));
+    /*
+     * Physical sources and sinks are exclusive. MCU is a memory endpoint, so
+     * separate capture and playback streams can share it.
+     */
+    return ((p1Source != p2Source) || (p1Source == SOURCE_MCU))
+        && ((p1Sink != p2Sink) || (p1Sink == SINK_MCU));
 }

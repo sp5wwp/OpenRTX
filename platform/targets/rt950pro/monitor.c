@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <errno.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -18,6 +19,8 @@
 #include "bootloader.h"
 #include "monitor.h"
 #include "testsignal.h"
+#include "core/audio_codec.h"
+#include "core/audio_path.h"
 #include <drivers/baseband/BK4829.h>
 #include <hwconfig.h>
 
@@ -36,6 +39,12 @@
  *   tg <shape> [hz] [amp]     test signal on DAC1 (PA4), 48 kHz samples from
  *                             TMR6: 0 off, 1 sine, 2 square; amp 0-7FF
  *                             (default 400) around mid-scale; 3 white noise
+ *   c2 s                      start decoding Codec2 3200 frames to the
+ *                             speaker (MCU -> speaker audio path)
+ *   c2 p <hex>                push up to 4 frames (8 bytes each), blocking
+ *                             while the decoder queue is full
+ *   c2 e                      stop decoding
+ *   hp                        largest block the heap can allocate now
  *   xr <v|u> <reg>            read a BK4829 register (v: VHF chip, u: UHF/HF)
  *   xw <v|u> <reg> <value>    write a BK4829 register
  *   ar <channel> <count> [div]
@@ -357,6 +366,111 @@ static const char *cmdBkWrite(char **arg)
 
 #define AR_DEFAULT_DIV 6
 
+#define C2_FRAME_SIZE 8
+#define C2_MAX_FRAMES 4
+#define C2_PUSH_TIMEOUT_MS 1000
+
+static pathId c2Path = -1;
+
+static int hexNibble(char c)
+{
+    if ((c >= '0') && (c <= '9'))
+        return c - '0';
+    if ((c >= 'a') && (c <= 'f'))
+        return c - 'a' + 10;
+    if ((c >= 'A') && (c <= 'F'))
+        return c - 'A' + 10;
+
+    return -1;
+}
+
+static const char *c2Push(const char *hex)
+{
+    uint8_t frames[C2_FRAME_SIZE * C2_MAX_FRAMES];
+    size_t len = (hex != NULL) ? strlen(hex) : 0;
+
+    if ((len == 0) || ((len % (2 * C2_FRAME_SIZE)) != 0)
+        || (len > (2 * sizeof(frames))))
+        return "need 1 to 4 frames of 8 bytes";
+
+    for (size_t i = 0; i < len / 2; i++) {
+        int hi = hexNibble(hex[2 * i]);
+        int lo = hexNibble(hex[(2 * i) + 1]);
+        if ((hi < 0) || (lo < 0))
+            return "bad hex";
+        frames[i] = (uint8_t)((hi << 4) | lo);
+    }
+
+    /* Not blocking: a stalled decoder must not hang the monitor */
+    for (size_t f = 0; f < len / (2 * C2_FRAME_SIZE); f++) {
+        int64_t deadline = k_uptime_get() + C2_PUSH_TIMEOUT_MS;
+        while (codec_pushFrame(&frames[f * C2_FRAME_SIZE], false) == -EAGAIN) {
+            if (k_uptime_get() > deadline)
+                return "decoder stalled";
+            k_msleep(2);
+        }
+    }
+
+    return NULL;
+}
+
+static const char *cmdCodec2(char **arg)
+{
+    if (arg[0] == NULL)
+        return "usage: c2 <s|p|e> [hex]";
+
+    if (strcmp(arg[0], "s") == 0) {
+        if (c2Path >= 0)
+            return "already running";
+        c2Path = audioPath_request(SOURCE_MCU, SINK_SPK, PRIO_PROMPT);
+        if (c2Path < 0)
+            return "audio path busy";
+        codec_init();
+        if (!codec_startDecode(c2Path))
+            return "decoder start failed";
+        return NULL;
+    }
+
+    if (strcmp(arg[0], "p") == 0) {
+        if (c2Path < 0)
+            return "not running";
+        return c2Push(arg[1]);
+    }
+
+    if (strcmp(arg[0], "e") == 0) {
+        if (c2Path < 0)
+            return "not running";
+        codec_stop(c2Path);
+        codec_terminate();
+        audioPath_release(c2Path);
+        c2Path = -1;
+        return NULL;
+    }
+
+    return "usage: c2 <s|p|e> [hex]";
+}
+
+#define HP_STEP 256
+
+static const char *cmdHeap(char **arg)
+{
+    (void)arg;
+
+    size_t size = 96 * 1024;
+    while (size > 0) {
+        void *p = malloc(size);
+        if (p != NULL) {
+            free(p);
+            break;
+        }
+        size -= HP_STEP;
+    }
+
+    out("%u\n", (unsigned int)size);
+
+    return NULL;
+}
+
 static const char *cmdAudioRecord(char **arg)
 {
     uint32_t channel, count, div = AR_DEFAULT_DIV;
@@ -387,6 +501,8 @@ static const struct {
     { .name = "update", .func = cmdUpdate },
     { .name = "tg", .func = cmdTestSignal },
     { .name = "ar", .func = cmdAudioRecord },
+    { .name = "c2", .func = cmdCodec2 },
+    { .name = "hp", .func = cmdHeap },
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
 };
@@ -472,6 +588,7 @@ static int monitor_init(void)
         return ret;
 
     uart_irq_rx_enable(uart);
+    testsignal_init();
 
     return 0;
 }
