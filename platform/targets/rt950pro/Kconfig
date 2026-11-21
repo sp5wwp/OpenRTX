@@ -1,0 +1,14 @@
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+
+config RT950PRO_DAC
+	bool
+	default y
+	depends on BOARD_RT950PRO
+	select USE_AT32_DAC
+	select USE_AT32_TIMER
+	select USE_AT32_ADC
+	help
+	  Artery HAL DAC, timer and ADC modules, for the audio output on DAC1
+	  (PA4) timed by TMR6 and the bench recorder on ADC2.

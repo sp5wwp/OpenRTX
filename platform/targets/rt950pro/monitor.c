@@ -17,6 +17,9 @@
 #include <zephyr/sys/ring_buffer.h>
 #include "bootloader.h"
 #include "monitor.h"
+#include "testsignal.h"
+#include <drivers/baseband/BK4829.h>
+#include <hwconfig.h>
 
 /*
  * Debug monitor on the programming cable (UART4, 115200 8N1), shared with the
@@ -30,6 +33,17 @@
  *   wb <addr> <value>         write a byte
  *   ww <addr> <value>         write a 32-bit word
  *   update                    restart into the bootloader update mode
+ *   tg <shape> [hz] [amp]     test signal on DAC1 (PA4), 48 kHz samples from
+ *                             TMR6: 0 off, 1 sine, 2 square; amp 0-7FF
+ *                             (default 400) around mid-scale; 3 white noise
+ *   xr <v|u> <reg>            read a BK4829 register (v: VHF chip, u: UHF/HF)
+ *   xw <v|u> <reg> <value>    write a BK4829 register
+ *   ar <channel> <count> [div]
+ *                             record ADC2 <channel> (0 = PA0, 2 = PA2) at
+ *                             48 kHz / div (default 6, 8 kHz), synchronous
+ *                             with tg; prints the addresses of the samples
+ *                             and of the DAC values written alongside, and
+ *                             the count; read them with rb
  *
  * A restart into the bootloader update mode is also triggered, from the
  * UART interrupt, by:
@@ -283,12 +297,98 @@ static const char *cmdUpdate(char **arg)
     return NULL;
 }
 
+#define TG_DEFAULT_HZ 1000
+#define TG_DEFAULT_AMP 0x400
+
+static const char *cmdTestSignal(char **arg)
+{
+    uint32_t shape, hz = TG_DEFAULT_HZ, amp = TG_DEFAULT_AMP;
+
+    if (!parseHex(arg[0], &shape))
+        return "usage: tg <shape> [hz] [amp]";
+    if ((arg[1] != NULL) && !parseHex(arg[1], &hz))
+        return "bad frequency";
+    if ((arg[2] != NULL) && !parseHex(arg[2], &amp))
+        return "bad amplitude";
+    if (testsignal_start((enum testsignalShape)shape, hz, amp) < 0)
+        return "bad parameters";
+
+    return NULL;
+}
+
+static const struct BK4829 *parseChip(const char *str)
+{
+    if (str == NULL)
+        return NULL;
+    if (strcmp(str, "v") == 0)
+        return &rt950_bk4829_vhf;
+    if (strcmp(str, "u") == 0)
+        return &rt950_bk4829_uhf_hf;
+
+    return NULL;
+}
+
+static const char *cmdBkRead(char **arg)
+{
+    const struct BK4829 *chip = parseChip(arg[0]);
+    uint32_t reg;
+
+    if ((chip == NULL) || !parseHex(arg[1], &reg) || (reg > 0x7F))
+        return "usage: xr <v|u> <reg>";
+
+    out("%04X\n", bk4829_read_reg(chip, (bk4829_reg_t)reg));
+
+    return NULL;
+}
+
+static const char *cmdBkWrite(char **arg)
+{
+    const struct BK4829 *chip = parseChip(arg[0]);
+    uint32_t reg, value;
+
+    if ((chip == NULL) || !parseHex(arg[1], &reg) || (reg > 0x7F)
+        || !parseHex(arg[2], &value) || (value > 0xFFFF))
+        return "usage: xw <v|u> <reg> <value>";
+
+    bk4829_write_reg(chip, (bk4829_reg_t)reg, value);
+
+    return NULL;
+}
+
+#define AR_DEFAULT_DIV 6
+
+static const char *cmdAudioRecord(char **arg)
+{
+    uint32_t channel, count, div = AR_DEFAULT_DIV;
+    const uint16_t *samples, *dacSamples;
+
+    if (!parseHex(arg[0], &channel) || !parseHex(arg[1], &count))
+        return "usage: ar <channel> <count> [div]";
+    if ((arg[2] != NULL) && !parseHex(arg[2], &div))
+        return "bad divider";
+    if (testsignal_record(channel, count, div, &samples, &dacSamples) < 0)
+        return "bad parameters";
+
+    out("%08lX %08lX %lX\n", (unsigned long)samples, (unsigned long)dacSamples,
+        (unsigned long)count);
+
+    return NULL;
+}
+
 static const struct {
     const char *name;
     const char *(*func)(char **arg);
 } commands[] = {
-    { "ping", cmdPing },    { "rb", cmdReadBytes }, { "rw", cmdReadWords },
-    { "wb", cmdWriteByte }, { "ww", cmdWriteWord }, { "update", cmdUpdate },
+    { .name = "ping", .func = cmdPing },
+    { .name = "rb", .func = cmdReadBytes },
+    { .name = "rw", .func = cmdReadWords },
+    { .name = "wb", .func = cmdWriteByte },
+    { .name = "ww", .func = cmdWriteWord },
+    { .name = "update", .func = cmdUpdate },
+    { .name = "tg", .func = cmdTestSignal },
+    { .name = "ar", .func = cmdAudioRecord },
+    { .name = "xr", .func = cmdBkRead },
+    { .name = "xw", .func = cmdBkWrite },
 };
 
 void monitor_exec(char *line)
