@@ -99,6 +99,15 @@ static constexpr uint8_t PA_GAIN2 = 7;
 static constexpr uint8_t TX_MIC_GAIN = 0x24;
 static constexpr uint16_t TX_DEVIATION = 0x50A;
 
+/*
+ * M17 deviation: the outer symbols at +/-2.4 kHz with the DAC level of
+ * audio_rt950pro.c. The deviation grows linearly with the register above
+ * about 0x404, by 5.4 Hz per unit (bench, SDR: 0x50A gives +/-1.4 kHz).
+ */
+static constexpr uint16_t TX_DEVIATION_M17 = 0x5C2;
+
+static enum opmode opMode = OPMODE_NONE;
+
 /* Pause between the PA drive going to zero and the chip leaving TX */
 static constexpr uint32_t PA_OFF_DELAY_MS = 100;
 
@@ -260,6 +269,8 @@ void radio_setOpmode(const enum opmode mode)
     // The core calls this before disabling the old mode
     radio_disableRtx();
 
+    opMode = mode;
+
     setAudioMode(&rt950_bk4829_vhf, mode);
     setAudioMode(&rt950_bk4829_uhf_hf, mode);
 }
@@ -385,7 +396,8 @@ void radio_enableTx()
         bk4829_enable_tx_ctcss(chip, config->txTone);
 
     bk4829_set_mic_gain(chip, TX_MIC_GAIN);
-    bk4829_set_tx_deviation(chip, TX_DEVIATION);
+    bk4829_set_tx_deviation(chip, (opMode == OPMODE_M17) ? TX_DEVIATION_M17 :
+                                                           TX_DEVIATION);
     bk4829_tx_on(chip);
     bk4829_set_pa_gain(chip, PA_GAIN1[level], PA_GAIN2);
 
