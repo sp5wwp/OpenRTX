@@ -21,6 +21,7 @@
 #include <zephyr/sys/ring_buffer.h>
 #include <drivers/audio/dac_at32.h>
 #include "bench.h"
+#include "clockcal.h"
 #include "benchmic.h"
 #include "bootloader.h"
 #include "monitor.h"
@@ -80,6 +81,10 @@
  *                             with tg; prints the addresses of the samples
  *                             and of the DAC values written alongside, and
  *                             the count; read them with rb
+ *   clk <error>               correct the audio sample rate for an MCU clock
+ *                             error, 0.1 ppm units, decimal (negative: slow)
+ *   cal                       measure the MCU clock against a BK4829 tone
+ *                             (clockcal.c), apply it with clk, print it
  *
  * A restart into the bootloader update mode is also triggered, from the
  * UART interrupt, by:
@@ -637,6 +642,34 @@ uint8_t bench_txDrive(void)
     return txDrive;
 }
 
+/* Bench: MCU clock error, 0.1 ppm units, decimal, for the audio sample rate */
+static const char *cmdClockTrim(char **arg)
+{
+    char *end;
+
+    if (arg[0] == NULL)
+        return "usage: clk <error, 0.1 ppm, e.g. -1460>";
+
+    long v = strtol(arg[0], &end, 10);
+    if ((*end != '\0') || (v < -10000) || (v > 10000))
+        return "usage: clk <error, 0.1 ppm, e.g. -1460>";
+
+    dacAt32_setClockTrim((int32_t)v);
+
+    return NULL;
+}
+
+/* Bench: measure the MCU clock against a BK4829 tone, apply the correction */
+static const char *cmdCalibrate(char **arg)
+{
+    (void)arg;
+
+    bench_calibrateClock();
+    out("%ld\n", (long)clockcal_lastError());
+
+    return NULL;
+}
+
 /* Bench: level of the baseband sent to the modulators (DAC linear mode) */
 static const char *cmdTxLevel(char **arg)
 {
@@ -950,6 +983,8 @@ static const struct {
     { .name = "txdry", .func = cmdTxDry },
     { .name = "txdrv", .func = cmdTxDrive },
     { .name = "txlvl", .func = cmdTxLevel },
+    { .name = "clk", .func = cmdClockTrim },
+    { .name = "cal", .func = cmdCalibrate },
     { .name = "mode", .func = cmdMode },
     { .name = "freq", .func = cmdFreq },
     { .name = "tz", .func = cmdTimezone },

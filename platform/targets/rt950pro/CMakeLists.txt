@@ -35,6 +35,7 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/targets/rt950pro/board_init.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/bootloader.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/canceller.c
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/clockcal.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/benchmic.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/hwconfig.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/monitor.c

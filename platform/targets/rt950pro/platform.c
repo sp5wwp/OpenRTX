@@ -13,6 +13,7 @@
 #include <hwconfig.h>
 #include "bench.h"
 #include "benchmic.h"
+#include "clockcal.h"
 #include <peripherals/rtc.h>
 #include "core/gps.h"
 #include "drivers/GPS/gps_zephyr.h"
@@ -217,6 +218,7 @@ void platform_init()
     audio_init();
     canceller_init();
     benchMic_init();
+    clockcal_init();
 
     /* Initialise the BK4829 serial bus and the two transceivers */
     int rfRet = spiZephyr_init(&rt950_bk4829_bus);

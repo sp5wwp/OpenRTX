@@ -46,6 +46,13 @@ uint8_t bench_txDrive(void);
  */
 void bench_paOff(void);
 
+/**
+ * Measure the MCU clock against a BK4829 tone and correct the audio sample
+ * rate (clockcal.h). Uses the UHF chip, left off afterwards: the next
+ * reception start sets it up again. Skipped while the speaker is on.
+ */
+void bench_calibrateClock(void);
+
 #ifdef __cplusplus
 }
 #endif

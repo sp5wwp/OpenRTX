@@ -176,3 +176,8 @@ void canceller_enable(bool enable)
 {
     enabled = enable;
 }
+
+bool canceller_isEnabled(void)
+{
+    return enabled;
+}

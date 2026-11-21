@@ -11,6 +11,9 @@
 #include <interfaces/nvmem.h>
 #include <calibration/calibInfo_RT950Pro.h>
 #include "bench.h"
+#include "canceller.h"
+#include "clockcal.h"
+#include <drivers/audio/dac_at32.h>
 #include "radioUtils.h"
 
 /*
@@ -135,6 +138,45 @@ static uint8_t txDrive(uint32_t freq, enum rt950proPowerLevel level)
 
     uint8_t drive = calib.txPower[level][row][point];
     return ((drive == 0x00) || (drive == 0xFF)) ? 0 : drive;
+}
+
+/*
+ * Bench MCU clock measurement (clockcal.c): the UHF chip, receiving, plays a
+ * tone from its TCXO on the audio node; its frequency measured on the audio
+ * ticks gives the MCU clock error, which trims the audio sample rate. The
+ * HEXT crystal measured -5 ppm on the bench, negligible for the M17 symbol
+ * clock, so the radio does not run it by itself. Not while the speaker is
+ * on: the tone would be heard.
+ */
+/* Not a frequency used by the UI beeps, which come from the MCU clock */
+static constexpr uint32_t CAL_TONE_HZ = 1777;
+static constexpr uint32_t CAL_RX_FREQ = 435000000;
+
+void bench_calibrateClock(void)
+{
+    if (gpioPin_read(&rt950_amp_en))
+        return;
+
+    const struct BK4829 *chip = &rt950_bk4829_uhf_hf;
+    const uint16_t word = bk4829_tone_word(CAL_TONE_HZ);
+    const bool cancel = canceller_isEnabled();
+
+    canceller_enable(false);
+    bk4829_set_freq(chip, CAL_RX_FREQ);
+    bk4829_rx_on(chip);
+    bk4829_rx_tone_start(chip, word);
+
+    int32_t error;
+    int ret = clockcal_measure(bk4829_tone_hz(word), &error);
+
+    bk4829_rx_tone_stop(chip);
+    bk4829_rtx_off(chip);
+    canceller_enable(cancel);
+
+    if (ret < 0)
+        return;
+
+    dacAt32_setClockTrim(error);
 }
 
 /**

@@ -41,6 +41,13 @@ void canceller_init();
  */
 void canceller_enable(bool enable);
 
+/**
+ * Whether the correction output is enabled.
+ *
+ * @return true if enabled.
+ */
+bool canceller_isEnabled(void);
+
 #ifdef __cplusplus
 }
 #endif
