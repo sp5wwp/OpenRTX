@@ -509,7 +509,18 @@ class FirmwareUploader:
     def version_handshake(self) -> bool:
         """Send version identification (cmd 0x0A, "BOOTLOADER_V3")."""
         print("  Version handshake (cmd 0x0A)...")
-        resp = self.send_command(CMD_VERSION, data=VERSION_STRING)
+        # After accepting the probe the bootloader erases the application
+        # area, and bytes received meanwhile are lost: resend until answered,
+        # skipping the replies to any extra probe.
+        resp = None
+        deadline = time.time() + 10.0
+        while time.time() < deadline:
+            resp = self.send_command(CMD_VERSION, data=VERSION_STRING,
+                                     timeout=0.5)
+            if resp is not None and resp.get("cmd", CMD_VERSION) == CMD_VERSION:
+                break
+            resp = None
+            self.ser.reset_input_buffer()
         if resp is None:
             print("  ERROR: No response to version handshake")
             return False
