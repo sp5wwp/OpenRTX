@@ -44,8 +44,11 @@ LOG_MODULE_REGISTER(keyboard, LOG_LEVEL_INF);
 
 #define USER_NODE DT_PATH(zephyr_user)
 
+/* clang-format 18 and 21 disagree on this macro: keep it as written */
+// clang-format off
 #define GPIO_PIN(port_, prop_, idx_) \
     { .port = &(port_), .pin = DT_GPIO_PIN_BY_IDX(USER_NODE, prop_, idx_) }
+// clang-format on
 
 static const struct gpioPin cols[NUM_COLS] = {
     GPIO_PIN(GpioC, kbd_col_gpios, 0),
