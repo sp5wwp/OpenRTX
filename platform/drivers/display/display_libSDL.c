@@ -89,7 +89,16 @@ void display_terminate()
     chan_terminate(&fb_sync);
 }
 
-void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+/**
+ * @internal
+ * Send rows of a whole-screen buffer to the window. Rows are unsigned int, as
+ * a screen can be taller than the uint8_t rows of display_renderRows().
+ *
+ * @param startRow: first row to send.
+ * @param endRow: row after the last one to send.
+ * @param fb: whole-screen buffer.
+ */
+static void sendRows(unsigned int startRow, unsigned int endRow, void *fb)
 {
     (void) startRow;
     (void) endRow;
@@ -124,6 +133,11 @@ void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
     inProgress = false;
 }
 
+void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+{
+    sendRows(startRow, endRow, fb);
+}
+
 #ifdef CONFIG_PIX_FMT_RGB565
 void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
 {
@@ -132,13 +146,13 @@ void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
            (endRow - startRow) * rowSize);
 
     if(endRow == CONFIG_SCREEN_HEIGHT)
-        display_renderRows(0, CONFIG_SCREEN_HEIGHT, screen);
+        sendRows(0, CONFIG_SCREEN_HEIGHT, screen);
 }
 #endif
 
 void display_render(void *fb)
 {
-    display_renderRows(0, CONFIG_SCREEN_HEIGHT, fb);
+    sendRows(0, CONFIG_SCREEN_HEIGHT, fb);
 }
 
 void display_setContrast(uint8_t contrast)

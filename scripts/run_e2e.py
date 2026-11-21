@@ -11,11 +11,15 @@ line is an assertion: once the emulator exits, the screenshot is compared
 pixel by pixel against tests/e2e/golden/<test>/<variant>/<name>.png. Lines
 starting with "#" are comments and are not sent to the emulator.
 
-A test runs on every emulator variant unless its name ends in _<variant>,
-which restricts it to that variant (about_module17.txt runs on module17 and
-stores its goldens under golden/about/module17/), or it has a line such as
+A test runs on every emulator variant but rt950pro unless its name ends in
+_<variant>, which restricts it to that variant (about_module17.txt runs on
+module17 and stores its goldens under golden/about/module17/), or it has a
+line such as
 
     # variants: default smallscreen
+
+rt950pro runs only the tests that name it, so its screen size is tested
+where it differs without doubling every golden.
 
 A line such as "# codeplug: channels.rtxc" runs the test with that file
 from tests/e2e as the emulator's codeplug.
@@ -30,6 +34,9 @@ The variants and the meson targets they are built from are:
                                              and no LEFT/RIGHT, as on most radios
     module17     openrtx_linux_mod17         128x64 mono, arrows, no GPS, RTC or
                                              0-9 keys
+    rt950pro     openrtx_linux_rt950pro      240x320 colour drawn in 8-row
+                                             bands, three tuners, GPS, RTC,
+                                             arrows and 0-9 keys
 
 Configured with -Dgfx_band_rows=16, the default variant draws in bands as
 the colour radios do, and must match the same goldens.
@@ -51,7 +58,7 @@ screen does not change with every commit:
 
     meson setup build_linux -Dtest_version=e2e-test
     meson compile -C build_linux openrtx_linux openrtx_linux_mod17 \\
-        openrtx_linux_smallscreen openrtx_linux_mduv3x0
+        openrtx_linux_smallscreen openrtx_linux_mduv3x0 openrtx_linux_rt950pro
 
 Then run every test, or only some of them:
 
@@ -98,8 +105,12 @@ VARIANTS = {
     "default": "openrtx_linux",
     "mduv3x0": "openrtx_linux_mduv3x0",
     "module17": "openrtx_linux_mod17",
+    "rt950pro": "openrtx_linux_rt950pro",
     "smallscreen": "openrtx_linux_smallscreen",
 }
+
+# Variants that run only the tests naming them
+OPT_IN_VARIANTS = {"rt950pro"}
 
 # Version string the emulators must be built with (-Dtest_version=...)
 TEST_VERSION = "e2e-test"
@@ -138,7 +149,7 @@ class TestScript:
     def __init__(self, path):
         self.path = path
         self.name = path.stem
-        self.variants = list(VARIANTS)
+        self.variants = [v for v in VARIANTS if v not in OPT_IN_VARIANTS]
         self.codeplug = None
         self.commands = []
         self.screenshots = []

@@ -37,6 +37,9 @@ static uint32_t frameCount;
 #define FNV_OFFSET_BASIS 0xcbf29ce484222325ULL ///< 64-bit FNV-1a basis
 #define FNV_PRIME 0x100000001b3ULL             ///< 64-bit FNV-1a prime
 
+/** Window pixels per screen pixel: a tall screen still fits a laptop. */
+#define WINDOW_SCALE ((CONFIG_SCREEN_HEIGHT > 128) ? 2 : 3)
+
 static bool ready = false;  // Signal if the main loop is ready
 static keyboard_t sdl_keys; // Store the keyboard status
 
@@ -109,6 +112,14 @@ static bool sdk_key_code_to_key(SDL_Keycode sym, keyboard_t *key)
 
         case SDLK_n:
             *key = KEY_F1;
+            return true;
+
+        case SDLK_F2:
+            *key = KEY_F2;
+            return true;
+
+        case SDLK_F3:
+            *key = KEY_F3;
             return true;
 
         case SDLK_m:
@@ -319,8 +330,10 @@ void sdlEngine_init()
     chan_init(&fb_sync);
 
     window = SDL_CreateWindow("OpenRTX", SDL_WINDOWPOS_UNDEFINED,
-                              SDL_WINDOWPOS_UNDEFINED, CONFIG_SCREEN_WIDTH * 3,
-                              CONFIG_SCREEN_HEIGHT * 3, SDL_WINDOW_SHOWN);
+                              SDL_WINDOWPOS_UNDEFINED,
+                              CONFIG_SCREEN_WIDTH * WINDOW_SCALE,
+                              CONFIG_SCREEN_HEIGHT * WINDOW_SCALE,
+                              SDL_WINDOW_SHOWN);
 
     renderer = SDL_CreateRenderer(window, -1, 0);
     SDL_RenderSetLogicalSize(renderer, CONFIG_SCREEN_WIDTH,

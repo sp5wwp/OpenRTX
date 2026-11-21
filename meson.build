@@ -452,6 +452,15 @@ linux_mod17_src = linux_src + ui_src
 linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIGHT': '64', 'CONFIG_PIX_FMT_BW': '',
                                'CONFIG_KBD_HAS_ARROWS': ''}
 
+#
+# RT-950 Pro emulator: 240x320 portrait colour, GPS, RTC, arrows, 0-9 keys and
+# three tuners. It draws in bands of 8 rows as the radio does: 3840 bytes of
+# RAM instead of the 150 KB of a framebuffer.
+#
+linux_rt950pro_def = linux_def + {'CONFIG_SCREEN_WIDTH': '240', 'CONFIG_SCREEN_HEIGHT': '320', 'CONFIG_PIX_FMT_RGB565': '',
+                                  'CONFIG_GFX_BAND_ROWS': '8', 'CONFIG_UI_TUNERS': '3',
+                                  'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_ARROWS': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
+
 linux_c_args   = ['-ffunction-sections', '-fdata-sections', '-std=gnu17']
 linux_cpp_args = ['-ffunction-sections', '-fdata-sections', '-std=c++14']
 linux_l_args   = ['-lm', '-lreadline']
@@ -710,6 +719,8 @@ linux_uv3x0_c_args   = linux_c_args
 linux_uv3x0_cpp_args = linux_cpp_args
 linux_mod17_c_args   = linux_c_args
 linux_mod17_cpp_args = linux_cpp_args
+linux_rt950pro_c_args   = linux_c_args
+linux_rt950pro_cpp_args = linux_cpp_args
 
 foreach k, v : linux_default_def
   if v == ''
@@ -748,6 +759,16 @@ foreach k, v : linux_mod17_def
   else
     linux_mod17_c_args   += '-D@0@=@1@'.format(k, v)
     linux_mod17_cpp_args += '-D@0@=@1@'.format(k, v)
+  endif
+endforeach
+
+foreach k, v : linux_rt950pro_def
+  if v == ''
+    linux_rt950pro_c_args   += '-D@0@'.format(k)
+    linux_rt950pro_cpp_args += '-D@0@'.format(k)
+  else
+    linux_rt950pro_c_args   += '-D@0@=@1@'.format(k, v)
+    linux_rt950pro_cpp_args += '-D@0@=@1@'.format(k, v)
   endif
 endforeach
 
@@ -874,6 +895,15 @@ linux_mod17_opts = {
     'dependencies'       : [sdl_dep, threads_dep, codec2_dep],
     'c_args'             : linux_mod17_c_args,
     'cpp_args'           : linux_mod17_cpp_args,
+    'link_args'          : linux_l_args
+}
+
+linux_rt950pro_opts = {
+    'sources'            : linux_default_src,
+    'include_directories': linux_inc,
+    'dependencies'       : [sdl_dep, threads_dep, codec2_dep],
+    'c_args'             : linux_rt950pro_c_args,
+    'cpp_args'           : linux_rt950pro_cpp_args,
     'link_args'          : linux_l_args
 }
 
@@ -1022,6 +1052,12 @@ targets = [
   {
     'name'     : 'linux_mod17',
     'opts'     : linux_mod17_opts,
+    'flashable': false,
+    'cpu'      : 'linux'
+  },
+  {
+    'name'     : 'linux_rt950pro',
+    'opts'     : linux_rt950pro_opts,
     'flashable': false,
     'cpu'      : 'linux'
   },

@@ -215,7 +215,7 @@ jobs:
           push: never
           runCmd: |
             meson setup build_e2e -Dtest_version=e2e-test &&
-            meson compile -C build_e2e openrtx_linux openrtx_linux_smallscreen openrtx_linux_mduv3x0 openrtx_linux_mod17 &&
+            meson compile -C build_e2e openrtx_linux openrtx_linux_smallscreen openrtx_linux_mduv3x0 openrtx_linux_mod17 openrtx_linux_rt950pro &&
             python3 scripts/run_e2e.py --build-dir build_e2e &&
             meson setup build_e2e_band -Dtest_version=e2e-test -Dgfx_band_rows=16 &&
             meson compile -C build_e2e_band openrtx_linux &&
