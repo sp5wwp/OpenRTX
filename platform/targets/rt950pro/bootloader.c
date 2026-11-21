@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <zephyr/fatal.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys/reboot.h>
 #include "bootloader.h"
@@ -31,4 +32,17 @@ void bootloader_restartToUpdate()
 
     while (1)
         ;
+}
+
+/*
+ * Restart on a fatal error instead of halting, so that the bootloader start-up
+ * window keeps keyless updates possible after a crash. Overrides the weak
+ * handler of the Zephyr kernel (kernel/fatal.c), after its error report.
+ */
+void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
+{
+    (void)reason;
+    (void)esf;
+
+    sys_reboot(SYS_REBOOT_COLD);
 }
