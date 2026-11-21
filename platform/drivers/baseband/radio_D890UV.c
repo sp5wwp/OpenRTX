@@ -371,12 +371,15 @@ struct sctPacket {
     uint8_t fields[24];
 };
 
+/* clang-format 18 and 21 disagree on this macro's layout */
+/* clang-format off */
 #define SCT_PKT(t, ...)                            \
     {                                              \
         .type = (t),                               \
         .len = sizeof((uint8_t[]){ __VA_ARGS__ }), \
         .fields = { __VA_ARGS__ },                 \
     }
+/* clang-format on */
 
 #define CTL SCT3288_PKT_CONTROL
 #define DMR SCT3288_PKT_DMR
