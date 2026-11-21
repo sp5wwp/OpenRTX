@@ -22,9 +22,11 @@ LOG_MODULE_REGISTER(display, LOG_LEVEL_INF);
 
 /*
  * The OpenRTX framebuffer (CONFIG_SCREEN_WIDTH x CONFIG_SCREEN_HEIGHT) is
- * smaller than the panel: it is scaled up by SCALE_NUM / SCALE_DEN with a
- * nearest-neighbour filter and drawn centered on the panel, the rest of the
- * panel is kept black.
+ * smaller than the panel: it is scaled up by 3/2 and drawn centered on the
+ * panel, the rest of the panel is kept black. Every 2 source pixels give 3
+ * panel pixels, the middle one their average, in both directions: with a
+ * nearest-neighbour filter one source pixel in two would be doubled, and
+ * lines and text strokes would alternate between thin and thick.
  */
 #define DISPLAY_NODE DT_CHOSEN(zephyr_display)
 #define MIPI_NODE DT_PARENT(DISPLAY_NODE)
@@ -40,7 +42,9 @@ LOG_MODULE_REGISTER(display, LOG_LEVEL_INF);
 
 BUILD_ASSERT(PANEL_WIDTH >= OUT_WIDTH);
 BUILD_ASSERT(PANEL_HEIGHT >= OUT_HEIGHT);
-BUILD_ASSERT(SCALE_NUM >= SCALE_DEN);
+BUILD_ASSERT((SCALE_NUM == 3) && (SCALE_DEN == 2), "3/2 scaler");
+BUILD_ASSERT(((CONFIG_SCREEN_WIDTH % 2) == 0)
+             && ((CONFIG_SCREEN_HEIGHT % 2) == 0));
 
 /*
  * The rows above the scaled frame are never touched by the framebuffer
@@ -115,15 +119,17 @@ static const struct mipi_dbi_config dbiConfig = {
     .mode = MIPI_DBI_MODE_8080_BUS_8_BIT,
 };
 
-static uint8_t srcColumn[OUT_WIDTH];
+/* Average of two source rows, the middle panel row of a pair */
+static uint16_t midRow[CONFIG_SCREEN_WIDTH];
 static bool displayReady;
 static bool headerDrawn;
 static uint8_t backlightLevel;
 static K_MUTEX_DEFINE(displayMutex);
 
-static inline uint16_t srcCoord(uint16_t outCoord)
+/* Average of two RGB565 pixels, per channel, without carries between them */
+static inline uint16_t average(uint16_t a, uint16_t b)
 {
-    return (outCoord * SCALE_DEN) / SCALE_NUM;
+    return (a & b) + (((a ^ b) & 0xF7DEU) >> 1);
 }
 
 /*
@@ -276,25 +282,36 @@ static void clearPanel()
     busEndData();
 }
 
+/* One panel row from a source row: 2 pixels give 3, the middle averaged */
+static void writeScaledRow(const uint16_t *src)
+{
+    for (uint16_t x = 0; x < CONFIG_SCREEN_WIDTH; x += 2) {
+        busWritePixel(src[x]);
+        busWritePixel(average(src[x], src[x + 1]));
+        busWritePixel(src[x + 1]);
+    }
+}
+
 static void writeRows(uint8_t startRow, uint8_t endRow, const uint16_t *fb)
 {
-    /* Range of output rows whose source row is within startRow and endRow */
-    uint16_t outStart = ((startRow * SCALE_NUM) + SCALE_DEN - 1) / SCALE_DEN;
-    uint16_t outEnd = (((endRow + 1) * SCALE_NUM) + SCALE_DEN - 1) / SCALE_DEN;
-    outEnd = MIN(outEnd, OUT_HEIGHT);
+    /* The middle panel row of a pair depends on both its source rows */
+    uint8_t firstPair = startRow / 2;
+    uint8_t lastPair = endRow / 2;
 
-    if (outStart >= outEnd)
-        return;
-
-    setWindow(OUT_X_OFFSET, OUT_Y_OFFSET + outStart, OUT_WIDTH,
-              outEnd - outStart);
+    setWindow(OUT_X_OFFSET, OUT_Y_OFFSET + (firstPair * 3), OUT_WIDTH,
+              (lastPair - firstPair + 1) * 3);
     busStartData();
 
-    for (uint16_t row = outStart; row < outEnd; row++) {
-        const uint16_t *src = &fb[srcCoord(row) * CONFIG_SCREEN_WIDTH];
+    for (uint16_t pair = firstPair; pair <= lastPair; pair++) {
+        const uint16_t *a = &fb[(pair * 2) * CONFIG_SCREEN_WIDTH];
+        const uint16_t *b = a + CONFIG_SCREEN_WIDTH;
 
-        for (uint16_t x = 0; x < OUT_WIDTH; x++)
-            busWritePixel(src[srcColumn[x]]);
+        for (uint16_t x = 0; x < CONFIG_SCREEN_WIDTH; x++)
+            midRow[x] = average(a[x], b[x]);
+
+        writeScaledRow(a);
+        writeScaledRow(midRow);
+        writeScaledRow(b);
     }
 
     busEndData();
@@ -394,9 +411,6 @@ void display_init()
     } else {
         LOG_ERR("Backlight PWM not ready");
     }
-
-    for (uint16_t x = 0; x < OUT_WIDTH; x++)
-        srcColumn[x] = srcCoord(x);
 
     if (!device_is_ready(displayDev)) {
         LOG_ERR("Display device not ready");
