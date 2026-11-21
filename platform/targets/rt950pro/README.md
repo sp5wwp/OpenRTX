@@ -74,7 +74,8 @@ Supported:
   (minmea); a position fix is not validated yet.
 - transmission, UHF and VHF, with the vendor key-up sequence and the factory
   power calibration of the external flash (see [Transmission](#transmission)).
-  Verified on UHF at the low power level with an SDR.
+  Verified on UHF at the low power level with an SDR. M17 transmissions
+  decode with gr-m17 (see [M17 transmission](#m17-transmission)).
 - SI4732 driver (FM only)
 - Bluetooth BLE module on USART1 (TX PA9, RX PA10), driven by
   `bluetooth_rt950pro.c` as a transparent data link. The module is enabled by
@@ -84,7 +85,8 @@ Supported:
 Not supported yet:
 
 - microphone capture for digital modes: PA0 only carries a rectified mic level
-  (VOX), so there is no known ADC path for the microphone audio
+  (VOX), so there is no known ADC path for the microphone audio; M17
+  transmissions use a bench clip
 - BK4829 GPIO driver (not required for RT950 pro)
 - SI4732 AM/SSB reception
 - Bluetooth core integration (CPS over Bluetooth, menu) and audio
@@ -195,6 +197,31 @@ SDR tolerance (+390 Hz), spurious below -62 dBc within 1.2 MHz, residual FM
 about 3 Hz rms. A PA drive of 0x10 or less gives about 35 dB below the low
 level: the PA is not off with a zero drive.
 
+### M17 transmission
+
+The modulation goes from DAC1 to the microphone input of the BK4829 chips
+(`MICin`, PC12 high), with the chips' TX audio filters bypassed. That path
+behaves as a first order low-pass at about 230 Hz (tones on the DAC against
+the deviation measured with an SDR): the DAC driver equalises it with the
+inverse filter in its linear mode, which leaves the response flat within
+0.7 dB from 50 Hz to 3 kHz. The level gives about 2.2-2.3 kHz of preamble
+deviation (2.4 kHz nominal). The transmit phase is inverted, as on the C62.
+
+The radio has no microphone input for the MCU (PA0 only carries a rectified
+level for VOX), so the Codec2 encoder takes its audio from a clip loaded in
+RAM from the debug monitor (`benchmic.c`, `mic` commands), played in a loop.
+
+Verified with an RTL-SDR capture decoded by gr-m17: LSF (source, destination,
+voice stream, meta text), 90 stream frames, and the Codec2 payload decodes to
+the speech of the clip. The Viterbi error metric is about 27-32, close to the
+decoder threshold of 30: the link margin is still to be checked with a proper
+receiver. The audio clock of the radio (8 MHz MCU crystal) was about 170 ppm
+from the SDR's.
+
+The M17 transmission depends on the CPU keeping up: the Codec2 encoder, the
+modulator and their tables are in the zero-wait Flash, and the modulator
+shapes the symbols in polyphase form.
+
 ## Bench tools
 
 The firmware includes a debug monitor on the programming cable (UART4, 115200
@@ -216,6 +243,8 @@ line, answered by its output then `OK`, or `ERR <reason>`:
 | `ptt <ms>`, `ptt off` | transmit through the normal path, released after at most 10 s |
 | `txdry <0\|1>` | dry run: key the transmitter with the PA drive at zero (default 1) |
 | `txdrv <value>` | PA drive below the calibration, 0 for the calibration |
+| `txlvl <gain>` | modulation level on DAC1, 1/256 units (hex) |
+| `mic a <n>`, `mic l <off> <hex>` | bench microphone clip: allocate, load 16-bit samples |
 | `rtc`, `tz` | RTC date and time (UTC), time zone |
 | `ob` | option bytes (SRAM size) |
 | `hp` | largest free heap block |
