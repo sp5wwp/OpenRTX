@@ -19,14 +19,16 @@
 extern "C" {
 #endif
 
-/*
- * The panel is a 240x320 ST7789V. To fit the 96kB of SRAM, OpenRTX draws a
- * 160x128 RGB565 frame, which is scaled by 1.5 and shown centered on the
- * panel.
- */
-#define CONFIG_SCREEN_WIDTH 160
-#define CONFIG_SCREEN_HEIGHT 128
+/* Screen: 240x320 ST7789V panel, portrait */
+#define CONFIG_SCREEN_WIDTH 240
+#define CONFIG_SCREEN_HEIGHT 320
 #define CONFIG_PIX_FMT_RGB565
+
+/*
+ * Draw the screen 8 rows at a time instead of keeping a framebuffer, which
+ * would not fit in the 96kB of SRAM
+ */
+#define CONFIG_GFX_BAND_ROWS 8
 
 /* Screen has adjustable brightness */
 #define CONFIG_SCREEN_BRIGHTNESS

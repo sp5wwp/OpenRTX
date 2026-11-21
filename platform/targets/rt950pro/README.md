@@ -30,10 +30,8 @@ The hardware description comes from the reverse engineering work done in
 Supported:
 
 - display: ST7789V 240x320 panel on a bit-banged 8-bit 8080 bus. The OpenRTX
-  UI is drawn in a 160x128 frame, scaled by 1.5 to 240x192 and centered on the
-  panel. The unused 240x128 area at the top of the panel shows the OpenRTX
-  logo and the callsign at boot, drawn row by row directly to the panel
-  without using the framebuffer. The backlight brightness is adjustable from the OpenRTX settings
+  UI covers the whole panel, drawn 8 rows at a time instead of in a
+  framebuffer. The backlight brightness is adjustable from the OpenRTX settings
   (PWM on PC6, TMR8 channel 1). The keypad backlight (PB3) is switched on and
   off together with the display one.
 - keypad, side keys, PTT and rotary encoder

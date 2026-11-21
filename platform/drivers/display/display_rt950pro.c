@@ -5,55 +5,21 @@
  */
 
 #include <interfaces/display.h>
-#include <core/state.h>
 #include <hwconfig.h>
 #include <zephyr/dt-bindings/gpio/gpio.h>
 #include <zephyr/drivers/display.h>
 #include <zephyr/drivers/mipi_dbi.h>
 #include <zephyr/logging/log.h>
 #include <zephyr/sys/sys_io.h>
-#include <string.h>
-
-#include "fonts/adafruit/gfxfont.h"
-#include "fonts/adafruit/UbuntuRegular12pt7b.h"
-#include "fonts/adafruit/UbuntuRegular16pt7b.h"
 
 LOG_MODULE_REGISTER(display, LOG_LEVEL_INF);
 
-/*
- * The OpenRTX framebuffer (CONFIG_SCREEN_WIDTH x CONFIG_SCREEN_HEIGHT) is
- * smaller than the panel: it is scaled up by SCALE_NUM / SCALE_DEN with a
- * nearest-neighbour filter and drawn centered on the panel, the rest of the
- * panel is kept black.
- */
+/* The OpenRTX screen is the whole panel, drawn without scaling */
 #define DISPLAY_NODE DT_CHOSEN(zephyr_display)
 #define MIPI_NODE DT_PARENT(DISPLAY_NODE)
-#define PANEL_WIDTH DT_PROP(DISPLAY_NODE, width)
-#define PANEL_HEIGHT DT_PROP(DISPLAY_NODE, height)
 
-#define SCALE_NUM 3
-#define SCALE_DEN 2
-#define OUT_WIDTH ((CONFIG_SCREEN_WIDTH * SCALE_NUM) / SCALE_DEN)
-#define OUT_HEIGHT ((CONFIG_SCREEN_HEIGHT * SCALE_NUM) / SCALE_DEN)
-#define OUT_X_OFFSET ((PANEL_WIDTH - OUT_WIDTH) / 2)
-#define OUT_Y_OFFSET ((PANEL_HEIGHT - OUT_HEIGHT) / 1)
-
-BUILD_ASSERT(PANEL_WIDTH >= OUT_WIDTH);
-BUILD_ASSERT(PANEL_HEIGHT >= OUT_HEIGHT);
-BUILD_ASSERT(SCALE_NUM >= SCALE_DEN);
-
-/*
- * The rows above the scaled frame are never touched by the framebuffer
- * rendering. They are used to show the OpenRTX logo and the callsign shown by
- * the boot screen, rasterized one row at a time to avoid a framebuffer for
- * this area.
- */
-#define HEADER_WIDTH PANEL_WIDTH
-#define HEADER_HEIGHT OUT_Y_OFFSET
-#define HEADER_LOGO_Y 40
-#define HEADER_CALLSIGN_Y 112
-#define HEADER_LOGO_COLOR 0xFDA2 /* RGB565 of 0xFAB413 */
-#define HEADER_CALLSIGN_COLOR 0xFFFF
+BUILD_ASSERT(DT_PROP(DISPLAY_NODE, width) == CONFIG_SCREEN_WIDTH);
+BUILD_ASSERT(DT_PROP(DISPLAY_NODE, height) == CONFIG_SCREEN_HEIGHT);
 
 /* Timer driving the LCD backlight PWM output */
 #define LCD_BL_TIMER_BASE \
@@ -115,16 +81,9 @@ static const struct mipi_dbi_config dbiConfig = {
     .mode = MIPI_DBI_MODE_8080_BUS_8_BIT,
 };
 
-static uint8_t srcColumn[OUT_WIDTH];
 static bool displayReady;
-static bool headerDrawn;
 static uint8_t backlightLevel;
 static K_MUTEX_DEFINE(displayMutex);
-
-static inline uint16_t srcCoord(uint16_t outCoord)
-{
-    return (outCoord * SCALE_DEN) / SCALE_NUM;
-}
 
 /*
  * Write to the port set/clear register and wait for the write to reach the
@@ -255,113 +214,25 @@ static void backlight(uint8_t level)
     gpioPin_set(&rt950_kbd_bl);
 }
 
-static void clearPanel()
-{
-    setWindow(0, 0, PANEL_WIDTH, PANEL_HEIGHT);
-    busStartData();
-
-    for (uint32_t i = 0; i < (PANEL_WIDTH * PANEL_HEIGHT); i++)
-        busWritePixel(0x0000);
-
-    busEndData();
-}
-
-static void writeRows(uint8_t startRow, uint8_t endRow, const uint16_t *fb)
-{
-    /* Range of output rows whose source row is within startRow and endRow */
-    uint16_t outStart = ((startRow * SCALE_NUM) + SCALE_DEN - 1) / SCALE_DEN;
-    uint16_t outEnd = (((endRow + 1) * SCALE_NUM) + SCALE_DEN - 1) / SCALE_DEN;
-    outEnd = MIN(outEnd, OUT_HEIGHT);
-
-    if (outStart >= outEnd)
-        return;
-
-    setWindow(OUT_X_OFFSET, OUT_Y_OFFSET + outStart, OUT_WIDTH,
-              outEnd - outStart);
-    busStartData();
-
-    for (uint16_t row = outStart; row < outEnd; row++) {
-        const uint16_t *src = &fb[srcCoord(row) * CONFIG_SCREEN_WIDTH];
-
-        for (uint16_t x = 0; x < OUT_WIDTH; x++)
-            busWritePixel(src[srcColumn[x]]);
-    }
-
-    busEndData();
-}
-
-/*
- * Draw the pixels of a centered text which lie on a row of the header area.
- * Same glyph rendering of the OpenRTX graphics code: y is the baseline of the
- * first line and '\n' starts a new line.
+/**
+ * Send rows of pixels to the panel.
+ *
+ * @param startRow: first panel row.
+ * @param endRow: panel row after the last one.
+ * @param pixels: RGB565 pixels of the rows, starting from column 0 of
+ * startRow, or NULL to send black ones.
  */
-static void headerTextRow(uint16_t *line, int16_t row, const GFXfont *font,
-                          int16_t baseline, uint16_t color, const char *text)
+static void sendRows(uint16_t startRow, uint16_t endRow, const uint16_t *pixels)
 {
-    int16_t y = baseline;
-    const char *ptr = text;
+    uint32_t count = (uint32_t)(endRow - startRow) * CONFIG_SCREEN_WIDTH;
 
-    while (*ptr != '\0') {
-        uint16_t lineWidth = 0;
+    setWindow(0, startRow, CONFIG_SCREEN_WIDTH, endRow - startRow);
+    busStartData();
 
-        for (const char *c = ptr; *c != '\0' && *c != '\n'; c++) {
-            if ((*c >= font->first) && (*c <= font->last))
-                lineWidth += font->glyph[*c - font->first].xAdvance;
-        }
+    for (uint32_t i = 0; i < count; i++)
+        busWritePixel((pixels != NULL) ? pixels[i] : 0x0000);
 
-        int16_t x = (HEADER_WIDTH > lineWidth) ?
-                        (HEADER_WIDTH - lineWidth) / 2 :
-                        0;
-
-        for (; *ptr != '\0' && *ptr != '\n'; ptr++) {
-            if ((*ptr < font->first) || (*ptr > font->last))
-                continue;
-
-            const GFXglyph *glyph = &font->glyph[*ptr - font->first];
-            int16_t glyphRow = row - (y + glyph->yOffset);
-
-            if ((glyphRow >= 0) && (glyphRow < glyph->height)) {
-                for (uint8_t gx = 0; gx < glyph->width; gx++) {
-                    uint16_t bit = (glyphRow * glyph->width) + gx;
-                    uint8_t bits =
-                        font->bitmap[glyph->bitmapOffset + (bit >> 3)];
-                    int16_t px = x + glyph->xOffset + gx;
-
-                    if ((bits & (0x80 >> (bit & 7))) && (px >= 0)
-                        && (px < HEADER_WIDTH))
-                        line[px] = color;
-                }
-            }
-
-            x += glyph->xAdvance;
-        }
-
-        if (*ptr == '\n')
-            ptr++;
-
-        y += font->yAdvance;
-    }
-}
-
-static void drawHeader()
-{
-    uint16_t line[HEADER_WIDTH];
-
-    for (uint16_t row = 0; row < HEADER_HEIGHT; row++) {
-        memset(line, 0x00, sizeof(line));
-        headerTextRow(line, row, &UbuntuRegular16pt7b, HEADER_LOGO_Y,
-                      HEADER_LOGO_COLOR, "O P N\nR T X");
-        headerTextRow(line, row, &UbuntuRegular12pt7b, HEADER_CALLSIGN_Y,
-                      HEADER_CALLSIGN_COLOR, state.settings.callsign);
-
-        setWindow(0, row, HEADER_WIDTH, 1);
-        busStartData();
-
-        for (uint16_t x = 0; x < HEADER_WIDTH; x++)
-            busWritePixel(line[x]);
-
-        busEndData();
-    }
+    busEndData();
 }
 
 void display_init()
@@ -385,9 +256,6 @@ void display_init()
         LOG_ERR("Backlight PWM not ready");
     }
 
-    for (uint16_t x = 0; x < OUT_WIDTH; x++)
-        srcColumn[x] = srcCoord(x);
-
     if (!device_is_ready(displayDev)) {
         LOG_ERR("Display device not ready");
         return;
@@ -395,14 +263,19 @@ void display_init()
 
     busSetFastOutputs();
 
-    /* The panel memory content is undefined at power on */
-    clearPanel();
+    /*
+     * The panel memory content is undefined at power on. Clearing it sends a
+     * whole frame: log how long it takes.
+     */
+    uint32_t start = k_cycle_get_32();
+    sendRows(0, CONFIG_SCREEN_HEIGHT, NULL);
+    uint32_t cycles = k_cycle_get_32() - start;
+
     display_blanking_off(displayDev);
     displayReady = true;
 
-    LOG_INF("Display ready, %dx%d frame scaled to %dx%d at (%d,%d)",
-            CONFIG_SCREEN_WIDTH, CONFIG_SCREEN_HEIGHT, OUT_WIDTH, OUT_HEIGHT,
-            OUT_X_OFFSET, OUT_Y_OFFSET);
+    LOG_INF("Display ready, %dx%d frame sent in %u us", CONFIG_SCREEN_WIDTH,
+            CONFIG_SCREEN_HEIGHT, k_cyc_to_us_floor32(cycles));
 }
 
 void display_terminate()
@@ -412,7 +285,7 @@ void display_terminate()
     backlight(0);
 
     if (displayReady) {
-        clearPanel();
+        sendRows(0, CONFIG_SCREEN_HEIGHT, NULL);
         display_blanking_on(displayDev);
         displayReady = false;
     }
@@ -420,37 +293,30 @@ void display_terminate()
     k_mutex_unlock(&displayMutex);
 }
 
-void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
 {
-    if ((startRow > endRow) || (endRow >= CONFIG_SCREEN_HEIGHT))
+    if ((startRow >= endRow) || (endRow > CONFIG_SCREEN_HEIGHT))
         return;
 
     k_mutex_lock(&displayMutex, K_FOREVER);
 
     if (displayReady)
-        writeRows(startRow, endRow, (const uint16_t *)fb);
+        sendRows(startRow, endRow, (const uint16_t *)band);
 
     k_mutex_unlock(&displayMutex);
 }
 
+void display_renderRows(uint8_t startRow, uint8_t endRow, void *fb)
+{
+    const uint16_t *frame = (const uint16_t *)fb;
+
+    display_renderBand(startRow, endRow + 1,
+                       (void *)&frame[startRow * CONFIG_SCREEN_WIDTH]);
+}
+
 void display_render(void *fb)
 {
-    display_renderRows(0, CONFIG_SCREEN_HEIGHT - 1, fb);
-
-    /*
-     * The boot screen is rendered while the device is starting up. Draw the
-     * header with the first frame rendered afterwards, the main screen.
-     */
-    if (!headerDrawn && (state.devStatus == RUNNING)) {
-        k_mutex_lock(&displayMutex, K_FOREVER);
-
-        if (displayReady) {
-            drawHeader();
-            headerDrawn = true;
-        }
-
-        k_mutex_unlock(&displayMutex);
-    }
+    display_renderBand(0, CONFIG_SCREEN_HEIGHT, fb);
 }
 
 void display_setContrast(uint8_t contrast)
