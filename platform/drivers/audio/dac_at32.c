@@ -38,6 +38,7 @@ static volatile uint32_t ratio; /* Output samples per stream sample */
 static volatile int32_t prev;   /* Previous stream sample, DAC counts */
 static volatile bool stopRequest;
 static volatile dacAt32_hook hook;
+static volatile dacAt32_tick tickFn;
 static K_SEM_DEFINE(syncSem, 0, 1);
 
 /*
@@ -74,6 +75,10 @@ static void tmr6Isr(const void *arg)
         return;
 
     tmr_flag_clear(TMR6, TMR_OVF_FLAG);
+
+    dacAt32_tick tick = tickFn;
+    if (tick != NULL)
+        tick();
 
     int32_t out = 0;
     struct streamCtx *ctx = stream;
@@ -131,6 +136,11 @@ void dacAt32_init(void)
 void dacAt32_setHook(dacAt32_hook newHook)
 {
     hook = newHook;
+}
+
+void dacAt32_setTick(dacAt32_tick tick)
+{
+    tickFn = tick;
 }
 
 static int dacAt32_start(const uint8_t instance, const void *config,

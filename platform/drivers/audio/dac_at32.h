@@ -36,6 +36,12 @@ extern "C" {
 typedef int32_t (*dacAt32_hook)(int32_t sample);
 
 /**
+ * Function called first in the DAC interrupt, at DAC_AT32_RATE, for drivers
+ * that share its sample clock.
+ */
+typedef void (*dacAt32_tick)(void);
+
+/**
  * Initialise DAC1 (PA4) and its sample timer, TMR6. The DAC outputs
  * mid-scale until a stream is started.
  */
@@ -47,6 +53,13 @@ void dacAt32_init(void);
  * @param hook: hook function.
  */
 void dacAt32_setHook(dacAt32_hook hook);
+
+/**
+ * Set the function called at each sample period, or remove it with NULL.
+ *
+ * @param tick: tick function.
+ */
+void dacAt32_setTick(dacAt32_tick tick);
 
 /**
  * Audio driver for output streams on DAC1. Instance and configuration are
