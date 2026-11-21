@@ -68,38 +68,48 @@ void audio_terminate()
     gpioPin_clear(&rt950_amp_pwr);
 }
 
-static void speakerOn(void)
+/* Active routes, by source and sink */
+static bool paths[SOURCE_MCU + 1][SINK_MCU + 1];
+
+/*
+ * Keep the speaker on while any active route plays to it: a suspended route
+ * is disconnected while the route taking over is already connected.
+ */
+static void updateSpeaker(void)
 {
-    gpioPin_set(&rt950_amp_en);
-    gpioPin_clear(&rt950_spk_mute);
+    bool speaker = false;
+
+    for (size_t i = 0; i <= SOURCE_MCU; i++)
+        speaker |= paths[i][SINK_SPK];
+
+    if (speaker) {
+        gpioPin_set(&rt950_amp_en);
+        gpioPin_clear(&rt950_spk_mute);
+    } else {
+        gpioPin_set(&rt950_spk_mute);
+        gpioPin_clear(&rt950_amp_en);
+    }
 }
 
 void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
-    if ((source == SOURCE_MCU) && (sink == SINK_SPK)) {
-        gpioPin_clear(&rt950_audio_sw);
-        speakerOn();
-    }
+    paths[source][sink] = true;
 
-    if (source == SOURCE_RTX && sink == SINK_SPK) {
+    if ((source == SOURCE_MCU) && (sink == SINK_SPK))
+        gpioPin_clear(&rt950_audio_sw);
+    if ((source == SOURCE_RTX) && (sink == SINK_SPK))
         radio_enableAfOutput();
-        gpioPin_set(&rt950_amp_en);
-        gpioPin_clear(&rt950_spk_mute);
-    }
+
+    updateSpeaker();
 }
 
 void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
-    if ((source == SOURCE_MCU) && (sink == SINK_SPK)) {
-        gpioPin_set(&rt950_spk_mute);
-        gpioPin_clear(&rt950_amp_en);
-    }
+    paths[source][sink] = false;
+    updateSpeaker();
 
-    if (source == SOURCE_RTX && sink == SINK_SPK) {
-        gpioPin_set(&rt950_spk_mute);
-        gpioPin_clear(&rt950_amp_en);
+    if ((source == SOURCE_RTX) && (sink == SINK_SPK))
         radio_disableAfOutput();
-    }
 }
 
 bool audio_checkPathCompatibility(const enum AudioSource p1Source,
