@@ -22,6 +22,7 @@
 #include "testsignal.h"
 #include "canceller.h"
 #include "rtx/rtx.h"
+#include "peripherals/rtc.h"
 #include "optionbytes.h"
 #include "core/audio_codec.h"
 #include "core/audio_path.h"
@@ -44,6 +45,10 @@
  *                             TMR6: 0 off, 1 sine, 2 square; amp 0-7FF
  *                             (default 400) around mid-scale; 3 white noise
  *   cx <0|1>                  receive audio canceller correction off/on
+ *   rtc                       read the RTC (UTC)
+ *   rtc <yy> <mm> <dd> <hh> <mi> <ss> <wd>
+ *                             set the RTC (UTC); decimal numbers, wd day of
+ *                             the week 1-7, Monday first
  *   mode <fm|m17>             operating mode, set in the RTX configuration
  *                             only: the UI still shows its own, and puts it
  *                             back at its next change
@@ -84,6 +89,7 @@
 #define RX_BUF_SIZE 256
 #define LINE_SIZE 96
 #define MAX_READ 4096
+#define MAX_ARGS 8
 #define STACK_SIZE 1536
 /*
  * Cooperative: the command thread is not preempted by OpenRTX threads busy
@@ -521,6 +527,44 @@ static const char *cmdCanceller(char **arg)
     return NULL;
 }
 
+static bool parseDec(const char *str, uint32_t max, int8_t *value)
+{
+    if (str == NULL)
+        return false;
+
+    char *end;
+    unsigned long v = strtoul(str, &end, 10);
+    if ((*end != '\0') || (end == str) || (v > max))
+        return false;
+
+    *value = (int8_t)v;
+
+    return true;
+}
+
+static const char *cmdRtc(char **arg)
+{
+    if (arg[0] == NULL) {
+        datetime_t t = rtc_getTime();
+        out("20%02u-%02u-%02u %02u:%02u:%02u UTC, day %u\n", t.year, t.month,
+            t.date, t.hour, t.minute, t.second, t.day);
+        return NULL;
+    }
+
+    datetime_t t;
+    int8_t year;
+    if (!parseDec(arg[0], 99, &year) || !parseDec(arg[1], 12, &t.month)
+        || !parseDec(arg[2], 31, &t.date) || !parseDec(arg[3], 23, &t.hour)
+        || !parseDec(arg[4], 59, &t.minute) || !parseDec(arg[5], 59, &t.second)
+        || !parseDec(arg[6], 7, &t.day))
+        return "usage: rtc [yy mm dd hh mi ss wd]";
+
+    t.year = (uint8_t)year;
+    rtc_setTime(t);
+
+    return NULL;
+}
+
 static const char *cmdMode(char **arg)
 {
     rtxStatus_t cfg = rtx_getCurrentStatus();
@@ -571,6 +615,7 @@ static const struct {
     { .name = "hp", .func = cmdHeap },
     { .name = "cx", .func = cmdCanceller },
     { .name = "mode", .func = cmdMode },
+    { .name = "rtc", .func = cmdRtc },
     { .name = "ob", .func = cmdOptionBytes },
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
@@ -578,14 +623,14 @@ static const struct {
 
 void monitor_exec(char *line)
 {
-    char *arg[4] = { NULL };
+    char *arg[MAX_ARGS] = { NULL };
     char *save;
 
     char *cmd = strtok_r(line, " \t", &save);
     if (cmd == NULL)
         return;
 
-    for (int i = 0; i < 4; i++)
+    for (int i = 0; i < MAX_ARGS; i++)
         arg[i] = strtok_r(NULL, " \t", &save);
 
     k_mutex_lock(&txMutex, K_FOREVER);
