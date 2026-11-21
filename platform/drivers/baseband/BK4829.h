@@ -459,6 +459,38 @@ void bk4829_set_pa_gain(const struct BK4829 *dev, uint8_t gain1, uint8_t gain2);
 void bk4829_set_tx_deviation(const struct BK4829 *dev, uint16_t deviation);
 
 /**
+ * Tone 1 control word (REG_71) for a frequency: the tone is word * 26 MHz /
+ * 2^28, from the chip's reference oscillator.
+ *
+ * @param hz: frequency in Hz.
+ * @return control word.
+ */
+uint16_t bk4829_tone_word(uint32_t hz);
+
+/**
+ * Frequency of a tone 1 control word, in Hz.
+ *
+ * @param word: control word.
+ * @return frequency.
+ */
+float bk4829_tone_hz(uint16_t word);
+
+/**
+ * Play tone 1 on the receive audio output, in place of the received audio.
+ *
+ * @param dev: pointer to device data.
+ * @param word: control word, see bk4829_tone_word().
+ */
+void bk4829_rx_tone_start(const struct BK4829 *dev, uint16_t word);
+
+/**
+ * Stop tone 1 on the receive audio output and mute it.
+ *
+ * @param dev: pointer to device data.
+ */
+void bk4829_rx_tone_stop(const struct BK4829 *dev);
+
+/**
  * Set the microphone sensitivity.
  *
  * @param dev: pointer to device data.

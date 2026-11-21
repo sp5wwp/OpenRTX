@@ -236,6 +236,33 @@ void bk4829_set_tx_deviation(const struct BK4829 *dev, uint16_t deviation)
                       deviation & BK4829_REG40_DEVIATION_MASK);
 }
 
+/* Tone 1 level on the receive audio output (REG_70 bits 14:8) */
+#define RX_TONE_GAIN 0x20
+
+uint16_t bk4829_tone_word(uint32_t hz)
+{
+    return (uint16_t)((((uint64_t)hz << 28) + 13000000U) / 26000000U);
+}
+
+float bk4829_tone_hz(uint16_t word)
+{
+    return (float)word * (26e6f / 268435456.0f);
+}
+
+void bk4829_rx_tone_start(const struct BK4829 *dev, uint16_t word)
+{
+    bk4829_write_reg(dev, BK4829_REG_71, word);
+    bk4829_update_reg(dev, BK4829_REG_70, BK4829_REG70_TONE1_ENABLE | 0x7F00,
+                      BK4829_REG70_TONE1_ENABLE | BITV(RX_TONE_GAIN, 8));
+    bk4829_set_af(dev, BK4829_AF_TYPE_TONE_RX);
+}
+
+void bk4829_rx_tone_stop(const struct BK4829 *dev)
+{
+    bk4829_set_af(dev, BK4829_AF_TYPE_MUTE);
+    bk4829_update_reg(dev, BK4829_REG_70, BK4829_REG70_TONE1_ENABLE, 0);
+}
+
 void bk4829_set_mic_gain(const struct BK4829 *dev, uint8_t gain)
 {
     bk4829_update_reg(dev, BK4829_REG_7D, 0x003F, gain);
