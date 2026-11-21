@@ -122,8 +122,33 @@ unsigned int dacAt32_lock(void);
 void dacAt32_unlock(unsigned int key);
 
 /**
- * Audio driver for output streams on DAC1. Instance and configuration are
- * not used.
+ * Set the gain of the linear output mode.
+ *
+ * @param gain: gain in 1/256 units, 256 for unity (16 to 12 bit conversion).
+ */
+void dacAt32_setLinearGain(uint16_t gain);
+
+/**
+ * Set the first order equaliser of the linear output mode, applied to each
+ * stream sample: y = b0 x + b1 x[-1] - a1 y[-1]. Unity by default.
+ *
+ * @param b0, b1: numerator coefficients.
+ * @param a1: denominator coefficient.
+ */
+void dacAt32_setLinearFilter(float b0, float b1, float a1);
+
+/**
+ * Output stream modes, passed as the configuration of the audio device, cast
+ * to (const void *).
+ */
+enum dacAt32Mode {
+    DAC_AT32_SPEECH = 0, ///< Through the peak limiter, for the speaker
+    DAC_AT32_LINEAR = 1, ///< 16 to 12 bit, unprocessed, e.g. modulation
+};
+
+/**
+ * Audio driver for output streams on DAC1. The configuration selects the
+ * mode (enum dacAt32Mode); the instance is not used.
  */
 extern const struct audioDriver dacAt32_driver;
 

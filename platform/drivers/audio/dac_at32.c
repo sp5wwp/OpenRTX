@@ -66,10 +66,12 @@ static volatile uint32_t sub;   /* Output sample within it */
 static volatile uint32_t ratio; /* Output samples per stream sample */
 static volatile int32_t prev;   /* Previous stream sample, DAC counts */
 static volatile int32_t cur;    /* Current stream sample, DAC counts */
-static float delayLine[LIMIT_LOOKAHEAD]; /* Limiter delay line, DAC counts */
-static uint32_t delayPos;                /* Oldest sample in the delay line */
-static float envelope;                   /* Limiter peak envelope, DAC counts */
-static float release;                    /* Limiter release factor per sample */
+static volatile bool linear;    /* Linear mode: no limiter */
+static volatile int32_t linearGain = 256; /* Linear mode gain, 1/256 */
+static float delayLine[LIMIT_LOOKAHEAD];  /* Limiter delay line, DAC counts */
+static uint32_t delayPos;                 /* Oldest sample in the delay line */
+static float envelope; /* Limiter peak envelope, DAC counts */
+static float release;  /* Limiter release factor per sample */
 static volatile bool stopRequest;
 static dacAt32_hook hooks[DAC_AT32_MAX_HOOKS];
 static volatile size_t numHooks;
@@ -138,6 +140,24 @@ static void syncEvent(void)
     dacAt32_defer(syncDeferred);
 }
 
+/*
+ * Linear mode: first order equaliser, y = b0 x + b1 x[-1] - a1 y[-1], then
+ * the gain, in DAC counts.
+ */
+static float eqB0 = 1.0f, eqB1, eqA1;
+static float eqX, eqY;
+
+static AUDIO_ISR_CODE int32_t equalise(stream_sample_t sample)
+{
+    float x = (float)sample;
+    float y = (eqB0 * x) + (eqB1 * eqX) - (eqA1 * eqY);
+
+    eqX = x;
+    eqY = y;
+
+    return (int32_t)((y * (float)linearGain) * (1.0f / (16.0f * 256.0f)));
+}
+
 static AUDIO_ISR_CODE void advance(struct streamCtx *ctx)
 {
     if (++sub < ratio)
@@ -181,7 +201,7 @@ static AUDIO_ISR_CODE void tmr6Isr(const void *arg)
     if ((ctx != NULL) && (ctx->running != 0)) {
         /* Each stream sample goes through the limiter once, as it starts */
         if (sub == 0)
-            cur = limit(ctx->buffer[pos]);
+            cur = linear ? equalise(ctx->buffer[pos]) : limit(ctx->buffer[pos]);
         out = prev + (((cur - prev) * (int32_t)sub) / (int32_t)ratio);
         advance(ctx);
     }
@@ -253,6 +273,22 @@ void dacAt32_init(void)
     tmr_counter_enable(TMR6, TRUE);
 }
 
+void dacAt32_setLinearGain(uint16_t gain)
+{
+    linearGain = gain;
+}
+
+void dacAt32_setLinearFilter(float b0, float b1, float a1)
+{
+    unsigned int key = dacAt32_lock();
+    eqB0 = b0;
+    eqB1 = b1;
+    eqA1 = a1;
+    eqX = 0.0f;
+    eqY = 0.0f;
+    dacAt32_unlock(key);
+}
+
 int dacAt32_addHook(dacAt32_hook hook)
 {
     if (numHooks >= DAC_AT32_MAX_HOOKS)
@@ -301,7 +337,6 @@ static int dacAt32_start(const uint8_t instance, const void *config,
                          struct streamCtx *ctx)
 {
     (void)instance;
-    (void)config;
 
     if ((ctx == NULL) || (ctx->running != 0) || (ctx->sampleRate == 0))
         return -EINVAL;
@@ -311,6 +346,9 @@ static int dacAt32_start(const uint8_t instance, const void *config,
         return -EBUSY;
 
     unsigned int key = dacAt32_lock();
+    linear = ((enum dacAt32Mode)(uintptr_t)config == DAC_AT32_LINEAR);
+    eqX = 0.0f;
+    eqY = 0.0f;
     pos = 0;
     sub = 0;
     prev = 0;
