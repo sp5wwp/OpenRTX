@@ -53,6 +53,24 @@ extern "C" {
 #define BITV(x, y) ((x) << (y))
 #endif
 
+/*
+ * Register fields.
+ */
+/* Undocumented, cleared by the vendor firmware before each transmission */
+#define BK4829_REG31_UNDOC1 BIT(1)
+/*
+ * PA control: PACTL output enable, and the two PA gain stages. Bit 6 is
+ * undocumented: the vendor firmware of the RT-950 Pro writes 0x7F and 0x57
+ * (V0.27, table at 0x0802B724), bit 6 set and PACTL off, its PA being driven
+ * by an external bias (DAC).
+ */
+#define BK4829_REG36_PACTL_ENABLE BIT(7)
+#define BK4829_REG36_UNDOC6 BIT(6)
+#define BK4829_REG36_PA_GAIN1(x) BITV((x) & 0x07, 3)
+#define BK4829_REG36_PA_GAIN2(x) BITV((x) & 0x07, 0)
+/* TX FM deviation, low 12 bits; the vendor firmware writes 0x50A */
+#define BK4829_REG40_DEVIATION_MASK 0x0FFFU
+
 #define BK4829_REG_READ 0x80
 #define BK4829_REG_WRITE 0x00
 
@@ -379,6 +397,24 @@ void bk4829_set_filter_bandwidth(const struct BK4829 *dev,
  */
 void bk4829_set_tx_power(const struct BK4829 *dev, uint8_t bias, uint8_t gain1,
                          uint8_t gain2);
+
+/**
+ * Set the PA gain stages, for radios whose PA bias comes from an external
+ * control (e.g. a DAC): the PACTL output stays off.
+ *
+ * @param dev: pointer to device data.
+ * @param gain1: PA gain 1 tuning, 0 to 7.
+ * @param gain2: PA gain 2 tuning, 0 to 7.
+ */
+void bk4829_set_pa_gain(const struct BK4829 *dev, uint8_t gain1, uint8_t gain2);
+
+/**
+ * Set the transmit FM deviation.
+ *
+ * @param dev: pointer to device data.
+ * @param deviation: deviation setting, 0 to 0xFFF.
+ */
+void bk4829_set_tx_deviation(const struct BK4829 *dev, uint16_t deviation);
 
 /**
  * Set the microphone sensitivity.
