@@ -400,14 +400,22 @@ static bool startThread(const pathId path, void *(*func)(void *))
 #elif defined(__ZEPHYR__)
     // Allocate and set the stack for CODEC2 thread
     void *codec_thread_stack = malloc(CODEC2_THREAD_STKSIZE * sizeof(uint8_t));
+    if (codec_thread_stack == NULL) {
+        running = false;
+        return false;
+    }
     pthread_attr_setstack(&codecAttr, codec_thread_stack,
                           CODEC2_THREAD_STKSIZE);
 #endif
 
-    // Start thread
+    // Start thread: pthread_create() returns a positive error number on failure
     int ret = pthread_create(&codecThread, &codecAttr, func, &audioPath);
-    if (ret < 0)
+    if (ret != 0) {
         running = false;
+#ifdef __ZEPHYR__
+        free(codec_thread_stack);
+#endif
+    }
 
     return running;
 }
