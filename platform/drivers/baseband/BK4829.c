@@ -186,6 +186,9 @@ void bk4829_rx_on(const struct BK4829 *dev)
 
 void bk4829_tx_on(const struct BK4829 *dev)
 {
+    /* As the vendor firmware does before keying (RT-950 Pro V0.27, 0x0801EAF8) */
+    bk4829_update_reg(dev, BK4829_REG_31, BK4829_REG31_UNDOC1, 0);
+
     bk4829_write_reg(dev, BK4829_REG_30, 0x00);
     delayUs(BK4829_VCO_CAL_US);
     bk4829_write_reg(dev, BK4829_REG_30, BK4829_REG30_TX_PRESET);
@@ -218,6 +221,19 @@ void bk4829_set_tx_power(const struct BK4829 *dev, uint8_t bias, uint8_t gain1,
         value &= ~BIT(7);
 
     bk4829_write_reg(dev, BK4829_REG_36, value);
+}
+
+void bk4829_set_pa_gain(const struct BK4829 *dev, uint8_t gain1, uint8_t gain2)
+{
+    bk4829_write_reg(dev, BK4829_REG_36,
+                     BK4829_REG36_UNDOC6 | BK4829_REG36_PA_GAIN1(gain1)
+                         | BK4829_REG36_PA_GAIN2(gain2));
+}
+
+void bk4829_set_tx_deviation(const struct BK4829 *dev, uint16_t deviation)
+{
+    bk4829_update_reg(dev, BK4829_REG_40, BK4829_REG40_DEVIATION_MASK,
+                      deviation & BK4829_REG40_DEVIATION_MASK);
 }
 
 void bk4829_set_mic_gain(const struct BK4829 *dev, uint8_t gain)
