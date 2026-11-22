@@ -53,6 +53,18 @@ struct Rect {
 };
 
 /**
+ * Compare two rectangles.
+ *
+ * @param a: first rectangle.
+ * @param b: second rectangle.
+ * @return true when they have the same corner and size.
+ */
+constexpr bool operator==(const Rect &a, const Rect &b)
+{
+    return (a.x == b.x) && (a.y == b.y) && (a.w == b.w) && (a.h == b.h);
+}
+
+/**
  * Intersect two rectangles.
  *
  * @param a: first rectangle.

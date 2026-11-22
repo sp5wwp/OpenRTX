@@ -30,21 +30,45 @@ void Object::addChild(Object *child)
     *link = child;
 }
 
+void Object::setArea(const Rect &r)
+{
+    if (r == bounds)
+        return;
+
+    bounds = r;
+    invalidateScreen();
+}
+
 void Object::setFlag(ObjFlag f, bool on)
 {
+    const bool wasHidden = hasFlag(FlagHidden);
+
     if (on)
         objFlags |= f;
     else
         objFlags = static_cast<uint8_t>(objFlags & ~f);
+
+    if (hasFlag(FlagHidden) != wasHidden)
+        invalidateScreen();
 }
 
 void Object::invalidate()
 {
-    Object *root = this;
-    while (root->parentLink != nullptr)
-        root = root->parentLink;
+    root()->onInvalidated(bounds);
+}
 
-    root->onInvalidated();
+void Object::invalidateScreen()
+{
+    root()->onInvalidated({ 0, 0, 0, 0 });
+}
+
+Object *Object::root()
+{
+    Object *node = this;
+    while (node->parentLink != nullptr)
+        node = node->parentLink;
+
+    return node;
 }
 
 void Object::paintTree(DrawCtx &d)

@@ -17,8 +17,10 @@ namespace ortxui
 {
 
 /**
- * Root of a view's widget tree: owns the focus and the repaint flag, and sends
- * events to the focused object. A repaint redraws the whole screen.
+ * Root of a view's widget tree: owns the focus and the rows to repaint, and
+ * sends events to the focused object. A repaint draws the rows of the objects
+ * that invalidated since the last one; an object that moved, hid or showed
+ * invalidates the whole screen.
  */
 class Screen : public Object
 {
@@ -68,7 +70,19 @@ public:
      */
     bool dirty() const
     {
-        return needsRepaint;
+        return dirtyEnd > dirtyBegin;
+    }
+
+    /** Get the first row needing a repaint. */
+    int16_t dirtyTop() const
+    {
+        return dirtyBegin;
+    }
+
+    /** Get the row after the last one needing a repaint. */
+    int16_t dirtyBottom() const
+    {
+        return dirtyEnd;
     }
 
     /** Ask for a repaint. */
@@ -78,8 +92,12 @@ public:
     void clearDirty();
 
 protected:
-    /** Ask for a repaint when an object in the tree invalidates. */
-    void onInvalidated() override;
+    /**
+     * Ask for a repaint of an area's rows when an object invalidates.
+     *
+     * @param area: the area to repaint; an empty one is the whole screen.
+     */
+    void onInvalidated(const Rect &area) override;
 
 private:
     /**
@@ -89,8 +107,9 @@ private:
      */
     void setFocus(Object *obj);
 
-    Object *focus = nullptr;  ///< Focused object, nullptr if none
-    bool needsRepaint = true; ///< The screen needs a repaint
+    Object *focus = nullptr;      ///< Focused object, nullptr if none
+    int16_t dirtyBegin = 0;       ///< First row needing a repaint
+    int16_t dirtyEnd = INT16_MAX; ///< Row after the last one, 0 if none
 };
 
 } // namespace ortxui

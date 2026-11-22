@@ -6,6 +6,7 @@
 
 #include "base/Screen.hpp"
 #include "base/Event.hpp"
+#include <algorithm>
 
 namespace ortxui
 {
@@ -23,19 +24,27 @@ void Screen::draw(DrawCtx &d)
     (void)d;
 }
 
-void Screen::onInvalidated()
+void Screen::onInvalidated(const Rect &area)
 {
-    needsRepaint = true;
+    if (area.empty()) {
+        markAllDirty();
+        return;
+    }
+
+    dirtyBegin = std::min(dirtyBegin, area.y);
+    dirtyEnd = std::max<int16_t>(dirtyEnd, area.bottom() + 1);
 }
 
 void Screen::markAllDirty()
 {
-    needsRepaint = true;
+    dirtyBegin = 0;
+    dirtyEnd = INT16_MAX;
 }
 
 void Screen::clearDirty()
 {
-    needsRepaint = false;
+    dirtyBegin = INT16_MAX;
+    dirtyEnd = 0;
 }
 
 void Screen::setFocus(Object *obj)

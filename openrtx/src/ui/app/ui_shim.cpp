@@ -91,16 +91,22 @@ static constexpr uint32_t CLICK_KEYS = KBD_CHAR_MASK | KEY_ENTER | KEY_ESC
                                      | KEY_UP | KEY_DOWN;
 
 /**
- * Draw the whole screen and send it to the display: in one go, or a band at a
- * time on targets drawing in bands, each band drawing everything and keeping
- * what lands in it.
+ * Draw the screen and send it to the display: in one go, or a band at a time
+ * on targets drawing in bands, each band drawing everything and keeping what
+ * lands in it. Bands clear of the rows to draw are left as the display has
+ * them.
  *
  * @param paint: draws the screen content with the DrawCtx it is given.
+ * @param top: first row to draw.
+ * @param bottom: row after the last one to draw.
  */
 template <typename Paint>
-static void drawScreen(Paint paint)
+static void drawScreen(Paint paint, int16_t top = 0, int16_t bottom = INT16_MAX)
 {
     for (uint16_t y = 0; y < CONFIG_SCREEN_HEIGHT; y += GFX_BAND_ROWS) {
+        if ((static_cast<int32_t>(y) + GFX_BAND_ROWS <= top) || (y >= bottom))
+            continue;
+
         gfx_beginBand(y);
         const Rect band = { 0, static_cast<int16_t>(y), CONFIG_SCREEN_WIDTH,
                             GFX_BAND_ROWS };
@@ -109,6 +115,17 @@ static void drawScreen(Paint paint)
         paint(d);
         gfx_render();
     }
+}
+
+/**
+ * Draw a screen's rows needing a repaint.
+ *
+ * @param screen: screen to draw.
+ */
+static void drawDirtyRows(Screen &screen)
+{
+    drawScreen([&](DrawCtx &d) { screen.paintTree(d); }, screen.dirtyTop(),
+               screen.dirtyBottom());
 }
 
 /**
@@ -528,7 +545,7 @@ extern "C" void ui_updateGUI()
 #if !defined(PLATFORM_TTWRPLUS)
     if (lowBatteryShown) {
         if (lowBattery.dirty()) {
-            drawScreen([&](DrawCtx &d) { lowBattery.paintTree(d); });
+            drawDirtyRows(lowBattery);
             lowBattery.clearDirty();
         }
         return;
@@ -545,7 +562,7 @@ extern "C" void ui_updateGUI()
     if (!screen.dirty())
         return;
 
-    drawScreen([&](DrawCtx &d) { screen.paintTree(d); });
+    drawDirtyRows(screen);
     screen.clearDirty();
 }
 

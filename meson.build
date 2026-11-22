@@ -1470,6 +1470,10 @@ ui_view_slot_test = executable('ui_view_slot_test',
                                sources : unit_test_src + ['tests/unit/ui_view_slot.cpp'],
                                kwargs  : unit_test_opts)
 
+ui_screen_test = executable('ui_screen_test',
+                            sources : unit_test_src + ['tests/unit/ui_screen.cpp'],
+                            kwargs  : unit_test_opts)
+
 ui_key_repeat_test = executable('ui_key_repeat_test',
                                 sources : unit_test_src + ['tests/unit/ui_key_repeat.cpp'],
                                 kwargs  : unit_test_opts)
@@ -1620,6 +1624,7 @@ test('UI PTT Gate Test', ui_ptt_gate_test)
 test('UI Event Queue Test', ui_event_queue_test)
 test('UI Strings Test', ui_strings_test)
 test('UI View Slot Test', ui_view_slot_test)
+test('UI Screen Test', ui_screen_test)
 test('UI Key Repeat Test', ui_key_repeat_test)
 test('UI List Test', ui_list_test)
 test('UI Text Input Test', ui_text_input_test)

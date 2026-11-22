@@ -92,14 +92,12 @@ public:
     }
 
     /**
-     * Place the object.
+     * Place the object. Moving or resizing one asks for a repaint of the
+     * whole screen: what its old area held is someone else's to draw now.
      *
      * @param r: area in absolute screen coordinates.
      */
-    void setArea(const Rect &r)
-    {
-        bounds = r;
-    }
+    void setArea(const Rect &r);
 
     /** Get the area, in absolute screen coordinates. */
     const Rect &area() const
@@ -108,7 +106,8 @@ public:
     }
 
     /**
-     * Set or clear a flag.
+     * Set or clear a flag. Hiding or showing an object asks for a repaint of
+     * the whole screen, as its siblings are laid out around it.
      *
      * @param f: flag.
      * @param on: whether to set it.
@@ -191,7 +190,12 @@ public:
     {
     }
 
-    /** Mark this object as needing repaint, by telling the tree root. */
+    /**
+     * Mark this object's area as needing repaint, by telling the tree root:
+     * an object draws inside its area only, so its rows are all a change of
+     * its content can touch. An object not placed yet repaints the whole
+     * screen.
+     */
     void invalidate();
 
     /**
@@ -202,10 +206,21 @@ public:
     void paintTree(DrawCtx &d);
 
 protected:
-    /** Called on the tree root when an object in the tree invalidates. */
-    virtual void onInvalidated()
+    /**
+     * Called on the tree root when an object in the tree invalidates.
+     *
+     * @param area: the area to repaint; an empty one is the whole screen.
+     */
+    virtual void onInvalidated(const Rect &area)
     {
+        (void)area;
     }
+
+    /** Ask the tree root for a repaint of the whole screen. */
+    void invalidateScreen();
+
+    /** Get the root of the tree this object is in. */
+    Object *root();
 
     Object *parentLink = nullptr;      ///< Parent, nullptr for a root
     Object *firstChildLink = nullptr;  ///< First child
