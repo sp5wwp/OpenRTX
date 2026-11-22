@@ -1,0 +1,62 @@
+/*
+ * SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+ *
+ * SPDX-License-Identifier: GPL-3.0-or-later
+ */
+
+#ifndef BK4829_TONE_H
+#define BK4829_TONE_H
+
+#include "interfaces/audio.h"
+#include "BK4829.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+/**
+ * M17 transmitter of the Radtel RT-950 Pro: a BK4829's tone generator as the
+ * baseband source, its mic ADC off.
+ *
+ * The radio's DAC reaches the BK4829s only through the microphone line,
+ * which the microphone shares, so a baseband sent there carries the speech
+ * too. Instead the keyed chip transmits its tone 1, started at 1kHz and
+ * stopped at its peak: from then on the tone's 7-bit gain (REG_70) is the
+ * deviation, and it is rewritten 48000 times a second with the baseband. The
+ * writes are bus slots clocked out of a buffer by a timer and DMA, so their
+ * timing is exact and the CPU only refills the buffer.
+ */
+
+/**
+ * Baseband output stream at 48kHz, the M17 modulator's: its symbols are
+ * recovered with the matched filter and shaped again with a pulse that also
+ * undoes the tone path's own response.
+ */
+extern const struct audioDriver bk4829_tone_audio_driver;
+
+/**
+ * Key a chip in tone transmit on a frequency, the tone stopped at its peak
+ * and at the level of a zero baseband. The transmit path switch is the
+ * caller's.
+ *
+ * @param chip: chip to key, tuned by this call.
+ * @param freq: frequency in Hz.
+ * @return zero on success, a negative error code otherwise.
+ */
+int bk4829Tone_keyUp(const struct BK4829 *chip, uint32_t freq);
+
+/**
+ * Stop transmitting and put back the registers the key-up changed.
+ */
+void bk4829Tone_keyDown(void);
+
+/**
+ * Handle the bus DMA's half and full transfer interrupts.
+ */
+void bk4829Tone_isr(void);
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif /* BK4829_TONE_H */
