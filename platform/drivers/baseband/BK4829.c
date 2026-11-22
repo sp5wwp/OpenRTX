@@ -254,6 +254,12 @@ void bk4829_enable_tx_ctcss(const struct BK4829 *dev, uint16_t frequency)
                      BK4829_REG07_MODE_CTC1 | (ctrl_word & 0x1FFF));
 }
 
+void bk4829_set_tx_ctcss_gain(const struct BK4829 *dev, uint8_t gain)
+{
+    bk4829_update_reg(dev, BK4829_REG_51, BK4829_REG51_CTCDCSS_TX_GAIN1(0x7F),
+                      BK4829_REG51_CTCDCSS_TX_GAIN1(gain));
+}
+
 void bk4829_enable_rx_ctcss(const struct BK4829 *dev, uint16_t frequency)
 {
     const uint32_t ctrl_word = ((uint32_t)frequency * 206488 + 50000) / 100000;

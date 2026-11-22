@@ -433,6 +433,15 @@ void bk4829_set_mic_gain(const struct BK4829 *dev, uint8_t gain);
 void bk4829_enable_tx_ctcss(const struct BK4829 *dev, uint16_t frequency);
 
 /**
+ * Set the level of the CTCSS and DCS encoder, which sets the tone's
+ * deviation.
+ *
+ * @param dev: pointer to device data.
+ * @param gain: encoder gain, 0 to 0x7F.
+ */
+void bk4829_set_tx_ctcss_gain(const struct BK4829 *dev, uint8_t gain);
+
+/**
  * Enable the CTCSS decoder.
  *
  * @param dev: pointer to device data.
