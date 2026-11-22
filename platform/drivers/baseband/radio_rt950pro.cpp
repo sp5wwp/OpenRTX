@@ -7,23 +7,100 @@
 #include <hwconfig.h>
 #include <interfaces/radio.h>
 #include <interfaces/delays.h>
+#include "drivers/GPIO/gpio_zephyr.h"
 #include "radioUtils.h"
+#include "radio_rt950pro.h"
+#include "BK4829_tone.h"
 
 /*
- * Reception-only radio driver for the Radtel RT-950 Pro.
+ * Radio driver for the Radtel RT-950 Pro: FM reception, and M17 both ways.
  *
  * The radio has two BK4829 transceivers, the first one wired to the VHF LNA
- * and PA and the second to the UHF ones. Only the receive RF path switches
- * are controlled. Transmission is not supported yet.
+ * and PA and the second to the UHF ones. FM transmission is not supported
+ * yet, and the PA is never driven: an M17 transmission leaves the antenna at
+ * what leaks through the unbiased finals.
+ *
+ * M17 uses neither chip's audio path as a baseband, the board's audio nets
+ * being shared and narrow:
+ * - to transmit, the band's chip sends its tone generator, whose gain is the
+ *   baseband (see BK4829_tone.h), while the other chip passes the
+ *   microphone to the MCU;
+ * - to receive, the band's chip is tuned LOW_IF_HZ below the signal and puts
+ *   its mixer's output on its AF pin, which the MCU demodulates (see
+ *   at32_adc.h).
  */
+
+static constexpr uint32_t LOW_IF_HZ = 8000;
+// AF output level of the chip that receives at the IF: enough over the ADC's
+// noise, and as little as that beside the speech DAC1 plays on the same net
+static constexpr uint16_t LOW_IF_AF_GAIN = 2;
+static constexpr uint16_t REG_AF_GAIN_MASK = 0x000F;  // REG_48
+static constexpr uint16_t REG_AFC_OFF = 0x0010;       // REG_73
+static constexpr uint16_t REG_MIC_GAIN_MASK = 0x001F; // REG_7D
+// TX DSP, AF DAC and mic ADC on, no PLL or PA: the mic input to the AF pin
+static constexpr uint16_t REG_30_MIC_CODEC = 0x0306;
+
+static const struct gpioPin paDrive = { &GpioA, 5 };
 
 static const rtxStatus_t *config;   // Pointer to the radio configuration
 static enum opstatus radioStatus;   // Current operating status
 static const struct BK4829 *rxChip; // Chip currently receiving, or NULL
+static enum opmode opMode;          // Operating mode
+static bool micCodec;               // The idle chip passes the microphone
+static uint16_t micGain;            // Its REG_7D before that
+
+/** A chip's registers as the driver's start-up left them. */
+struct chipDefaults {
+    uint16_t afGain; ///< REG_48
+    uint16_t afc;    ///< REG_73
+};
+static struct chipDefaults vhfDefaults;
+static struct chipDefaults uhfDefaults;
 
 static const struct BK4829 *getChip(const enum Band band)
 {
     return (band == BND_VHF) ? &rt950_bk4829_vhf : &rt950_bk4829_uhf_hf;
+}
+
+/**
+ * The chip that does not serve a band.
+ */
+static const struct BK4829 *getOtherChip(const enum Band band)
+{
+    return (band == BND_VHF) ? &rt950_bk4829_uhf_hf : &rt950_bk4829_vhf;
+}
+
+/**
+ * A chip's start-up registers.
+ */
+static const struct chipDefaults &getDefaults(const struct BK4829 *chip)
+{
+    return (chip == &rt950_bk4829_vhf) ? vhfDefaults : uhfDefaults;
+}
+
+/**
+ * Switch off the transmit RF paths, the switches are active high.
+ */
+static void rfPathTxOff()
+{
+    gpioPin_clear(&rt950_rf_v3t);
+    gpioPin_clear(&rt950_rf_u3t);
+    gpioPin_clear(&rt950_rf_sw3t);
+}
+
+/**
+ * Put the chip that does not transmit in its mic codec state, at full mic
+ * gain: the signal at the MCU is small.
+ */
+static void micCodecOn()
+{
+    const struct BK4829 *chip =
+        getOtherChip(getBandFromFrequency(config->txFrequency));
+
+    bk4829_write_reg(chip, BK4829_REG_7D, micGain | REG_MIC_GAIN_MASK);
+    bk4829_write_reg(chip, BK4829_REG_30, 0);
+    bk4829_write_reg(chip, BK4829_REG_30, REG_30_MIC_CODEC);
+    bk4829_set_af(chip, BK4829_AF_TYPE_FM);
 }
 
 /**
@@ -65,11 +142,26 @@ void radio_init(const rtxStatus_t *rtxState)
     radioStatus = OFF;
     rxChip = NULL;
 
-    rfPathIdle();
+    opMode = OPMODE_NONE;
+    micCodec = false;
 
-    gpioPin_setMode(&rt950_rf_u6r, OUTPUT); // HF RX switch
-    gpioPin_setMode(&rt950_rf_u3r, OUTPUT); // UHF RX switch
-    gpioPin_setMode(&rt950_rf_v3r, OUTPUT); // VHF RX switch
+    rfPathIdle();
+    rfPathTxOff();
+    gpioPin_clear(&paDrive);
+
+    gpioPin_setMode(&rt950_rf_u6r, OUTPUT);  // HF RX switch
+    gpioPin_setMode(&rt950_rf_u3r, OUTPUT);  // UHF RX switch
+    gpioPin_setMode(&rt950_rf_v3r, OUTPUT);  // VHF RX switch
+    gpioPin_setMode(&rt950_rf_u3t, OUTPUT);  // UHF TX switch
+    gpioPin_setMode(&rt950_rf_v3t, OUTPUT);  // VHF TX switch
+    gpioPin_setMode(&rt950_rf_sw3t, OUTPUT); // HF TX switch
+    gpioPin_setMode(&paDrive, OUTPUT);       // PA drive, 0V: finals unbiased
+
+    vhfDefaults = { bk4829_read_reg(&rt950_bk4829_vhf, BK4829_REG_48),
+                    bk4829_read_reg(&rt950_bk4829_vhf, BK4829_REG_73) };
+    uhfDefaults = { bk4829_read_reg(&rt950_bk4829_uhf_hf, BK4829_REG_48),
+                    bk4829_read_reg(&rt950_bk4829_uhf_hf, BK4829_REG_73) };
+    micGain = bk4829_read_reg(&rt950_bk4829_vhf, BK4829_REG_7D);
 
     bk4829_rtx_off(&rt950_bk4829_vhf);
     bk4829_rtx_off(&rt950_bk4829_uhf_hf);
@@ -84,7 +176,22 @@ void radio_terminate()
 
 void radio_setOpmode(const enum opmode mode)
 {
-    (void)mode;
+    opMode = mode;
+}
+
+void radio_rt950pro_micCodec(const bool enable)
+{
+    micCodec = enable;
+    if (enable) {
+        micCodecOn();
+        return;
+    }
+
+    const struct BK4829 *chip =
+        getOtherChip(getBandFromFrequency(config->txFrequency));
+    bk4829_rtx_off(chip);
+    bk4829_set_af(chip, BK4829_AF_TYPE_MUTE);
+    bk4829_write_reg(chip, BK4829_REG_7D, micGain);
 }
 
 bool radio_checkRxDigitalSquelch()
@@ -97,13 +204,14 @@ bool radio_checkRxDigitalSquelch()
 
 void radio_enableAfOutput()
 {
-    if (rxChip != NULL)
+    // In M17 the AF pin carries the IF, whatever the speaker is given
+    if ((rxChip != NULL) && (opMode != OPMODE_M17))
         bk4829_set_af(rxChip, BK4829_AF_TYPE_FM);
 }
 
 void radio_disableAfOutput()
 {
-    if (rxChip != NULL)
+    if ((rxChip != NULL) && (opMode != OPMODE_M17))
         bk4829_set_af(rxChip, BK4829_AF_TYPE_MUTE);
 }
 
@@ -114,7 +222,26 @@ void radio_disableAfOutput()
  */
 static int startRx(const struct BK4829 *chip)
 {
+    const struct chipDefaults &defaults = getDefaults(chip);
+
     bk4829_disable_ctdcss(chip);
+
+    if (opMode == OPMODE_M17) {
+        // The signal lands LOW_IF_HZ up the chip's mixer output, which goes
+        // out on the AF pin; AFC would follow the modulation
+        int ret = bk4829_set_freq(chip, config->rxFrequency - LOW_IF_HZ);
+        if (ret < 0)
+            return ret;
+
+        bk4829_set_filter_bandwidth(chip, BK4829_BW_25K);
+        bk4829_rx_on(chip);
+        bk4829_write_reg(chip, BK4829_REG_73, defaults.afc | REG_AFC_OFF);
+        bk4829_write_reg(chip, BK4829_REG_48,
+                         (defaults.afGain & ~REG_AF_GAIN_MASK)
+                             | LOW_IF_AF_GAIN);
+        bk4829_set_af(chip, BK4829_AF_TYPE_BASEBAND);
+        return 0;
+    }
 
     int ret = bk4829_set_freq(chip, config->rxFrequency);
     if (ret < 0)
@@ -127,6 +254,8 @@ static int startRx(const struct BK4829 *chip)
         bk4829_enable_rx_ctcss(chip, config->rxTone);
 
     bk4829_rx_on(chip);
+    bk4829_write_reg(chip, BK4829_REG_73, defaults.afc);
+    bk4829_write_reg(chip, BK4829_REG_48, defaults.afGain);
     return 0;
 }
 
@@ -139,10 +268,10 @@ void radio_enableRx()
     }
 
     const struct BK4829 *chip = getChip(band);
-    const struct BK4829 *other = (chip == &rt950_bk4829_vhf) ?
-                                   &rt950_bk4829_uhf_hf :
-                                   &rt950_bk4829_vhf;
+    const struct BK4829 *other = getOtherChip(band);
 
+    bk4829Tone_keyDown();
+    rfPathTxOff();
     bk4829_rtx_off(other);
     bk4829_set_af(other, BK4829_AF_TYPE_MUTE);
     rfPathRx(band);
@@ -161,11 +290,39 @@ void radio_enableRx()
 
 void radio_enableTx()
 {
-    // Transmission is not supported yet
+    // FM transmission is not supported yet
+    if ((opMode != OPMODE_M17) || config->txDisable)
+        return;
+
+    const enum Band band = getBandFromFrequency(config->txFrequency);
+    if (band == BND_NONE)
+        return;
+
+    const struct BK4829 *chip = getChip(band);
+
+    rfPathIdle();
+    bk4829_rtx_off(chip);
+    bk4829_set_af(chip, BK4829_AF_TYPE_MUTE);
+    rxChip = NULL;
+
+    // A reception on the other band's chip, or anything since the microphone
+    // was connected, may have taken the idle chip out of its mic codec state
+    if (micCodec)
+        micCodecOn();
+
+    gpioPin_set((band == BND_VHF) ? &rt950_rf_v3t : &rt950_rf_u3t);
+    if (bk4829Tone_keyUp(chip, config->txFrequency) < 0) {
+        radio_disableRtx();
+        return;
+    }
+
+    radioStatus = TX;
 }
 
 void radio_disableRtx()
 {
+    bk4829Tone_keyDown();
+    rfPathTxOff();
     bk4829_rtx_off(&rt950_bk4829_vhf);
     bk4829_rtx_off(&rt950_bk4829_uhf_hf);
     bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);

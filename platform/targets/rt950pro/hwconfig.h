@@ -30,6 +30,19 @@ extern "C" {
  */
 #define CONFIG_GFX_BAND_ROWS 8
 
+/* Device supports M17 mode */
+#define CONFIG_M17
+
+/*
+ * Microphone: PA2 at 24kHz, see at32_adc.h. Its samples are sixteen to
+ * an ADC count and the speech is a few tens of counts.
+ */
+#define CONFIG_MIC_OVERSAMPLE 3
+#define CONFIG_MIC_GAIN 8
+
+/* Codec2-mod's thread stack: its decoder takes 5kB, its encoder 1kB */
+#define CODEC2_THREAD_STKSIZE 8192
+
 /* Draw text with the anti-aliased fonts */
 #define CONFIG_FONT_AA
 
