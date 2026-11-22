@@ -505,6 +505,9 @@ void radio_enableTx()
     if (micCodec)
         micCodecOn();
 
+    // The chip keys at its least PA gain, paOn() sets the one of the power
+    // asked: the carrier is as weak as it can be until the PA comes up
+    bk4829_set_pa_gain(chip, 0, 0);
     gpioPin_set(path->txSelect);
 
     // M17's tone settles before this returns: the PA comes up on a steady
