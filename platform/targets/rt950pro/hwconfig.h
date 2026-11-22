@@ -40,6 +40,9 @@ extern "C" {
 #define CONFIG_MIC_OVERSAMPLE 3
 #define CONFIG_MIC_GAIN 8
 
+/* The radio's three calibrated powers */
+#define CONFIG_TX_POWER_STEPS_MW 1000, 5000, 10000
+
 /* Codec2-mod's thread stack: its decoder takes 5kB, its encoder 1kB */
 #define CODEC2_THREAD_STKSIZE 8192
 
