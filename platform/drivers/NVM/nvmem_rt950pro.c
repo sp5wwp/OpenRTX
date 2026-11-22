@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <stddef.h>
 #include <zephyr/device.h>
 #include <zephyr/drivers/flash.h>
 #include <zephyr/storage/flash_map.h>
@@ -127,11 +128,15 @@ void nvm_readCalibData(void *buf)
 {
     struct rt950proCalib *cal = (struct rt950proCalib *)buf;
 
-    /* Unreadable calibration reads as never programmed: no transmission */
+    /* An unreadable calibration is all zeroes: no PA drive */
     if (!device_is_ready(extFlash)
-        || (flash_read(extFlash, RT950PRO_CAL_NOR_ADDR, cal, sizeof(*cal))
+        || (flash_read(extFlash, RT950PRO_CAL_NOR_ADDR, cal,
+                       offsetof(struct rt950proCalib, ctcssGain))
+            != 0)
+        || (flash_read(extFlash, RT950PRO_CAL_NOR_CTCSS_ADDR, &cal->ctcssGain,
+                       sizeof(cal->ctcssGain))
             != 0))
-        memset(cal, 0xFF, sizeof(*cal));
+        memset(cal, 0x00, sizeof(*cal));
 }
 
 void nvm_readHwInfo(hwInfo_t *info)

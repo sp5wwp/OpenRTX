@@ -104,6 +104,10 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
         gpioPin_clear(&rt950_audio_sw); // DAC1 onto the audio bus
         gpioPin_set(&rt950_mic_mute);
         gpioPin_clear(&rt950_spk_mute);
+    } else if (source == SOURCE_MIC && sink == SINK_RTX) {
+        // The microphone on its line, into the chip that transmits; DAC1,
+        // which PC12 high puts on that line too, is off
+        gpioPin_clear(&rt950_mic_mute);
     } else if (source == SOURCE_MIC && sink == SINK_MCU) {
         gpioPin_clear(&rt950_mic_mute); // The microphone on its line
         gpioPin_clear(&rt950_audio_sw); // and at full level on the MCU's tap

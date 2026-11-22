@@ -29,19 +29,26 @@ enum rt950proCalRow {
 #define RT950PRO_CAL_POINTS 16
 
 /**
- * Factory calibration of the Radtel RT-950 Pro, as the vendor firmware keeps
- * it in the external SPI NOR from address 0xF000 (vendor firmware V0.27,
- * loader at 0x08011DC8, lookup at 0x0801E2E0; see docs/TX_SEQUENCE.md of the
- * reverse engineering notes). Bytes of 0x00 or 0xFF are not programmed.
+ * Factory calibration of the Radtel RT-950 Pro. Its first fields are as the
+ * vendor firmware keeps them in the external SPI NOR from address 0xF000
+ * (vendor firmware V0.27, loader at 0x08011DC8, lookup at 0x0801E2E0; see
+ * docs/TX_SEQUENCE.md of the reverse engineering notes); the tone level is
+ * read from further in. Bytes of 0x00 or 0xFF are not programmed.
  */
 struct rt950proCalib {
     /// PA drive (DAC2, 8 bit) per power level, band row and frequency point
     uint8_t txPower[RT950PRO_CAL_LEVELS][RT950PRO_CAL_ROWS][RT950PRO_CAL_POINTS];
     uint8_t unknownC0[0x20]; ///< 0xF0C0, not used
     uint8_t blank;           ///< 0xF0E0: 0xFF if never calibrated
+    /// 0xF211: CTCSS encoder gain (BK4829 REG_51 bits 6:0), which the vendor
+    /// firmware writes when it sends a tone (Ferrite, crates/ferrite-core
+    /// txcal.rs, https://github.com/FerriteFW/ferrite)
+    uint8_t ctcssGain;
 };
 
 /** Address of the calibration in the external SPI NOR */
 #define RT950PRO_CAL_NOR_ADDR 0xF000
+/** Address of the CTCSS encoder gain in the external SPI NOR */
+#define RT950PRO_CAL_NOR_CTCSS_ADDR 0xF211
 
 #endif // CALIBINFO_RT950PRO_H
