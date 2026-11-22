@@ -12,7 +12,7 @@
 #include <interfaces/nvmem.h>
 #include <calibration/calibInfo_RT950Pro.h>
 #include "drivers/GPIO/gpio_zephyr.h"
-#include "radioUtils.h"
+#include "core/utils.h"
 #include "radio_rt950pro.h"
 #include "BK4829_tone.h"
 
@@ -90,17 +90,56 @@ struct chipDefaults {
 static struct chipDefaults vhfDefaults;
 static struct chipDefaults uhfDefaults;
 
-static const struct BK4829 *getChip(const enum Band band)
+/** How the radio reaches one of its bands. */
+struct bandPath {
+    const struct BK4829 *chip;      ///< Chip that tunes the band
+    const struct gpioPin *rxSelect; ///< Switch of its receive path
+    const struct gpioPin *txSelect; ///< Switch of its transmit path
+    enum rt950proCalRow calRow;     ///< Row of its TX power calibration
+    uint16_t calStart;              ///< First point of the row, MHz
+    uint8_t calStep;                ///< MHz from a point to the next
+    uint8_t calLast;                ///< Last point of the row
+};
+
+/** The path of each band, in the order of CONFIG_RF_BANDS_MHZ. */
+static const struct bandPath BAND_PATHS[] = {
+    { &rt950_bk4829_vhf, &rt950_rf_v3r, &rt950_rf_v3t, RT950PRO_CAL_VHF, 130, 3,
+      15 },
+    { &rt950_bk4829_uhf_hf, &rt950_rf_u3r, &rt950_rf_u3t, RT950PRO_CAL_UHF, 400,
+      10, 12 },
+};
+
+static constexpr uint16_t RF_BANDS_MHZ[][2] = { CONFIG_RF_BANDS_MHZ };
+static_assert(ARRAY_SIZE(BAND_PATHS) == ARRAY_SIZE(RF_BANDS_MHZ),
+              "A path for each band of CONFIG_RF_BANDS_MHZ");
+
+/**
+ * Get the path of the band a frequency falls in.
+ *
+ * @param freq: frequency in Hz.
+ * @return the path, NULL outside the radio's bands.
+ */
+static const struct bandPath *getPath(const freq_t freq)
 {
-    return (band == BND_VHF) ? &rt950_bk4829_vhf : &rt950_bk4829_uhf_hf;
+    const int8_t band = freqBand(freq);
+
+    return (band < 0) ? NULL : &BAND_PATHS[band];
 }
 
 /**
- * The chip that does not serve a band.
+ * Get the chip that a frequency's band leaves idle.
+ *
+ * @param freq: frequency in Hz.
+ * @return the chip that does not tune it.
  */
-static const struct BK4829 *getOtherChip(const enum Band band)
+static const struct BK4829 *getIdleChip(const freq_t freq)
 {
-    return (band == BND_VHF) ? &rt950_bk4829_uhf_hf : &rt950_bk4829_vhf;
+    const struct bandPath *path = getPath(freq);
+
+    if ((path != NULL) && (path->chip == &rt950_bk4829_vhf))
+        return &rt950_bk4829_uhf_hf;
+
+    return &rt950_bk4829_vhf;
 }
 
 /**
@@ -164,20 +203,17 @@ static enum rt950proPowerLevel powerLevel(uint32_t mW)
  * takes it (V0.27, lookup at 0x0801E2E0), and between the powers of its
  * levels a straight line.
  *
+ * @param path: path of the transmit frequency's band.
  * @param freq: transmit frequency in Hz.
  * @param mW: power in mW.
  * @return the PA drive.
  */
-static uint8_t txDrive(uint32_t freq, uint32_t mW)
+static uint8_t txDrive(const struct bandPath *path, uint32_t freq, uint32_t mW)
 {
-    const uint32_t mhz = freq / 1000000;
-    enum rt950proCalRow row = RT950PRO_CAL_VHF;
-    uint32_t point = MIN((MAX(mhz, 130U) - 130U) / 3U, 15U);
-
-    if (mhz >= 400) {
-        row = RT950PRO_CAL_UHF;
-        point = MIN((mhz - 400U) / 10U, 12U);
-    }
+    const uint32_t mhz = MAX(freq / 1000000, path->calStart);
+    const enum rt950proCalRow row = path->calRow;
+    const uint32_t point = MIN((mhz - path->calStart) / path->calStep,
+                               path->calLast);
 
     const int32_t high = calib.txPower[RT950PRO_POWER_HIGH][row][point];
     const int32_t mid = calib.txPower[RT950PRO_POWER_MID][row][point];
@@ -198,13 +234,14 @@ static uint8_t txDrive(uint32_t freq, uint32_t mW)
 /**
  * Bring the PA up to the power asked on the chip that is keyed.
  *
- * @param chip: chip that transmits.
+ * @param path: path of the band that transmits.
  */
-static void paOn(const struct BK4829 *chip)
+static void paOn(const struct bandPath *path)
 {
-    const uint8_t drive = txDrive(config->txFrequency, config->txPower);
+    const uint8_t drive = txDrive(path, config->txFrequency, config->txPower);
 
-    bk4829_set_pa_gain(chip, PA_GAIN1[powerLevel(config->txPower)], PA_GAIN2);
+    bk4829_set_pa_gain(path->chip, PA_GAIN1[powerLevel(config->txPower)],
+                       PA_GAIN2);
     for (uint8_t step = 1; step <= APC_RAMP_STEPS; step++) {
         apcSet(static_cast<uint8_t>((drive * step) / APC_RAMP_STEPS));
         delayMs(1);
@@ -255,8 +292,7 @@ static int fmKeyUp(const struct BK4829 *chip)
  */
 static void micCodecOn()
 {
-    const struct BK4829 *chip =
-        getOtherChip(getBandFromFrequency(config->txFrequency));
+    const struct BK4829 *chip = getIdleChip(config->txFrequency);
 
     bk4829_write_reg(chip, BK4829_REG_7D, micGain | REG_MIC_GAIN_MASK);
     bk4829_write_reg(chip, BK4829_REG_30, 0);
@@ -275,9 +311,11 @@ static void rfPathIdle()
 }
 
 /**
- * Route the RF path for reception in the given band.
+ * Route the RF path for reception in a band.
+ *
+ * @param path: path of the band.
  */
-static void rfPathRx(const enum Band band)
+static void rfPathRx(const struct bandPath *path)
 {
     /*
      * Sweeps of the switch combinations with a signal in each band:
@@ -286,15 +324,8 @@ static void rfPathRx(const enum Band band)
      *   and V3R has little effect (a few dB less when high).
      * The switch of the unused band is left low, U6R is always low.
      */
-    gpioPin_clear(&rt950_rf_u6r);
-
-    if (band == BND_VHF) {
-        gpioPin_set(&rt950_rf_v3r);
-        gpioPin_clear(&rt950_rf_u3r);
-    } else {
-        gpioPin_set(&rt950_rf_u3r);
-        gpioPin_clear(&rt950_rf_v3r);
-    }
+    rfPathIdle();
+    gpioPin_set(path->rxSelect);
 }
 
 void radio_init(const rtxStatus_t *rtxState)
@@ -349,8 +380,7 @@ void radio_rt950pro_micCodec(const bool enable)
         return;
     }
 
-    const struct BK4829 *chip =
-        getOtherChip(getBandFromFrequency(config->txFrequency));
+    const struct BK4829 *chip = getIdleChip(config->txFrequency);
     bk4829_rtx_off(chip);
     bk4829_set_af(chip, BK4829_AF_TYPE_MUTE);
     bk4829_write_reg(chip, BK4829_REG_7D, micGain);
@@ -423,14 +453,14 @@ static int startRx(const struct BK4829 *chip)
 
 void radio_enableRx()
 {
-    const enum Band band = getBandFromFrequency(config->rxFrequency);
-    if (band == BND_NONE) {
+    const struct bandPath *path = getPath(config->rxFrequency);
+    if (path == NULL) {
         radio_disableRtx();
         return;
     }
 
-    const struct BK4829 *chip = getChip(band);
-    const struct BK4829 *other = getOtherChip(band);
+    const struct BK4829 *chip = path->chip;
+    const struct BK4829 *other = getIdleChip(config->rxFrequency);
 
     // Never a receive path switched on with a transmit one: leave TX first
     paOff();
@@ -438,7 +468,7 @@ void radio_enableRx()
     rfPathTxOff();
     bk4829_rtx_off(other);
     bk4829_set_af(other, BK4829_AF_TYPE_MUTE);
-    rfPathRx(band);
+    rfPathRx(path);
 
     // Allow the RF switches to settle
     delayMs(5);
@@ -457,11 +487,11 @@ void radio_enableTx()
     if (config->txDisable)
         return;
 
-    const enum Band band = getBandFromFrequency(config->txFrequency);
-    if (band == BND_NONE)
+    const struct bandPath *path = getPath(config->txFrequency);
+    if (path == NULL)
         return;
 
-    const struct BK4829 *chip = getChip(band);
+    const struct BK4829 *chip = path->chip;
 
     // Break before make: PA drive off, receive paths off, then the TX path
     apcSet(0);
@@ -475,7 +505,7 @@ void radio_enableTx()
     if (micCodec)
         micCodecOn();
 
-    gpioPin_set((band == BND_VHF) ? &rt950_rf_v3t : &rt950_rf_u3t);
+    gpioPin_set(path->txSelect);
 
     // M17's tone settles before this returns: the PA comes up on a steady
     // carrier
@@ -488,7 +518,7 @@ void radio_enableTx()
     }
 
     radioStatus = TX;
-    paOn(chip);
+    paOn(path);
 }
 
 void radio_disableRtx()

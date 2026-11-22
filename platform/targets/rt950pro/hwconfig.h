@@ -40,6 +40,9 @@ extern "C" {
 #define CONFIG_MIC_OVERSAMPLE 3
 #define CONFIG_MIC_GAIN 8
 
+/* The radio's bands, in MHz. The radio driver has a path for each, in order */
+#define CONFIG_RF_BANDS_MHZ RF_BAND(136, 174), RF_BAND(400, 480)
+
 /* The radio's three calibrated powers */
 #define CONFIG_TX_POWER_STEPS_MW 1000, 5000, 10000
 
