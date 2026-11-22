@@ -11,8 +11,10 @@
 
 #define USER_NODE DT_PATH(zephyr_user)
 
-#define GPIO_PIN(port_, node_, prop_, idx_) \
-    { .port = &(port_), .pin = DT_GPIO_PIN_BY_IDX(node_, prop_, idx_) }
+#define GPIO_PIN(port_, node_, prop_, idx_)                             \
+    {                                                                   \
+        .port = &(port_), .pin = DT_GPIO_PIN_BY_IDX(node_, prop_, idx_) \
+    }
 
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, pwr_switch_gpios),
                           DT_NODELABEL(gpioe)));

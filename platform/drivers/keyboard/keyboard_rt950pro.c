@@ -44,8 +44,10 @@ LOG_MODULE_REGISTER(keyboard, LOG_LEVEL_INF);
 
 #define USER_NODE DT_PATH(zephyr_user)
 
-#define GPIO_PIN(port_, prop_, idx_) \
-    { .port = &(port_), .pin = DT_GPIO_PIN_BY_IDX(USER_NODE, prop_, idx_) }
+#define GPIO_PIN(port_, prop_, idx_)                                        \
+    {                                                                       \
+        .port = &(port_), .pin = DT_GPIO_PIN_BY_IDX(USER_NODE, prop_, idx_) \
+    }
 
 static const struct gpioPin cols[NUM_COLS] = {
     GPIO_PIN(GpioC, kbd_col_gpios, 0),

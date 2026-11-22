@@ -1,4 +1,9 @@
 #!/usr/bin/env python3
+#
+# SPDX-FileCopyrightText: Copyright 2020-2026 OpenRTX Contributors
+#
+# SPDX-License-Identifier: GPL-3.0-or-later
+#
 """
 rt950_flash.py - Firmware update tool for the Radtel RT-950 Pro
 
