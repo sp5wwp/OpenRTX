@@ -15,6 +15,7 @@
 #include <cstdint>
 #include "base/UiText.hpp"
 #include "core/cps.h"
+#include "rtx/rtx.h"
 
 namespace ortxui
 {
@@ -63,14 +64,19 @@ void formatTone(uint8_t index, char *out, size_t n);
  */
 void formatPower(uint32_t mw, char *out, size_t n);
 
+/** TX powers the macro menu cycles through, in mW: the radio's own. */
+static constexpr uint32_t POWER_STEPS_MW[] = { CONFIG_TX_POWER_STEPS_MW };
+
 /** Highest TX power the macro menu sets, in mW. */
-static constexpr uint32_t POWER_MAX_MW = 5000;
+static constexpr uint32_t POWER_MAX_MW =
+    POWER_STEPS_MW[(sizeof(POWER_STEPS_MW) / sizeof(POWER_STEPS_MW[0])) - 1];
 
 /**
- * Get the TX power after another in the macro menu's cycle: 1, 2.5, 5 W.
+ * Get the TX power after another in the macro menu's cycle.
  *
  * @param mw: power in mW.
- * @return the next power in mW; 1 W after a power outside the cycle.
+ * @return the next power in mW; the lowest after the highest, and after a
+ * power outside the cycle.
  */
 uint32_t nextPower(uint32_t mw);
 

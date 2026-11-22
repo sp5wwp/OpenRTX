@@ -13,9 +13,6 @@
 namespace ortxui
 {
 
-/** TX powers the macro menu cycles through, in mW. */
-static constexpr uint32_t POWER_STEPS_MW[] = { 1000, 2500, POWER_MAX_MW };
-
 /** CTCSS use label, indexed by (txToneEn << 1) | rxToneEn. */
 static constexpr UiText TONE_ENABLE_LABELS[4] = {
     STR(None),

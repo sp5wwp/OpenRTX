@@ -12,6 +12,16 @@
 #include "core/cps.h"
 #include <pthread.h>
 #include <sys/types.h>
+#include "hwconfig.h"
+
+/**
+ * TX powers the radio offers, in mW and rising, for the UI and a remote
+ * controller to choose from: the elements of a list. A target with other
+ * ones than these lists them in its hwconfig.h.
+ */
+#ifndef CONFIG_TX_POWER_STEPS_MW
+#define CONFIG_TX_POWER_STEPS_MW 1000, 2500, 5000
+#endif
 
 #ifdef __cplusplus
 extern "C" {
