@@ -1477,6 +1477,17 @@ ui_screen_test = executable('ui_screen_test',
                             sources : unit_test_src + ['tests/unit/ui_screen.cpp'],
                             kwargs  : unit_test_opts)
 
+freq_band_test = executable('freq_band_test',
+                            sources : unit_test_src + ['tests/unit/freq_band.cpp'],
+                            kwargs  : unit_test_opts)
+
+# The same test on a radio that lists three bands
+rf_bands_def = '-DCONFIG_RF_BANDS_MHZ=RF_BAND(28, 30), RF_BAND(136, 174), RF_BAND(400, 480)'
+freq_band_list_test = executable('freq_band_list_test',
+                                 sources : unit_test_src + ['tests/unit/freq_band.cpp'],
+                                 kwargs  : unit_test_opts + {'c_args'   : linux_c_args + [rf_bands_def],
+                                                             'cpp_args' : linux_cpp_args + [rf_bands_def]})
+
 ui_key_repeat_test = executable('ui_key_repeat_test',
                                 sources : unit_test_src + ['tests/unit/ui_key_repeat.cpp'],
                                 kwargs  : unit_test_opts)
@@ -1628,6 +1639,8 @@ test('UI Event Queue Test', ui_event_queue_test)
 test('UI Strings Test', ui_strings_test)
 test('UI View Slot Test', ui_view_slot_test)
 test('UI Screen Test', ui_screen_test)
+test('Band of a Frequency Test', freq_band_test)
+test('Band of a Frequency Test, listed bands', freq_band_list_test)
 test('UI Key Repeat Test', ui_key_repeat_test)
 test('UI List Test', ui_list_test)
 test('UI Text Input Test', ui_text_input_test)

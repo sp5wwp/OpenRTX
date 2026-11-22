@@ -119,6 +119,30 @@ static const uint32_t FNV1A_BASIS = 2166136261u;
 uint32_t fnv1a(const uint32_t hash, const uint32_t value);
 
 /**
+ * A band in the list a target gives of its own, CONFIG_RF_BANDS_MHZ in its
+ * hwconfig.h: RF_BAND(136, 174), RF_BAND(220, 225), RF_BAND(400, 480).
+ *
+ * @param min: first frequency of the band, in MHz.
+ * @param max: last frequency of the band, in MHz.
+ */
+#define RF_BAND(min, max) \
+    {                     \
+        (min), (max)      \
+    }
+
+/**
+ * Get the band of the radio a frequency falls in.
+ *
+ * The bands of a target that lists them in CONFIG_RF_BANDS_MHZ count from zero
+ * in the order listed. A target that lists none has the VHF limits of its
+ * hardware info as band 0 and the UHF ones as band 1.
+ *
+ * @param freq: frequency in Hz.
+ * @return index of the band, -1 if the radio covers none.
+ */
+int8_t freqBand(const freq_t freq);
+
+/**
  * Check whether a frequency falls inside one of the radio's bands.
  *
  * @param freq: frequency in Hz.

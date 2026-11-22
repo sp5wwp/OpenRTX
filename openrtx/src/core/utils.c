@@ -128,18 +128,43 @@ uint32_t fnv1a(const uint32_t hash, const uint32_t value)
     return (hash ^ value) * FNV1A_PRIME;
 }
 
-bool freqInBand(const freq_t freq)
+#ifdef CONFIG_RF_BANDS_MHZ
+/** A band of the radio: its first and last frequency, in MHz. */
+struct rfBand
 {
+    uint16_t minFreq;
+    uint16_t maxFreq;
+};
+
+static const struct rfBand rfBands[] = { CONFIG_RF_BANDS_MHZ };
+#endif
+
+int8_t freqBand(const freq_t freq)
+{
+#ifdef CONFIG_RF_BANDS_MHZ
+    for(size_t i = 0; i < sizeof(rfBands) / sizeof(rfBands[0]); i++)
+    {
+        if((freq >= (freq_t) rfBands[i].minFreq * 1000000u)
+        && (freq <= (freq_t) rfBands[i].maxFreq * 1000000u))
+            return (int8_t) i;
+    }
+#else
     // hwInfo_t band limits are in MHz
     const hwInfo_t *hw = platform_getHwInfo();
 
     if(hw->vhf_band && (freq >= (freq_t) hw->vhf_minFreq * 1000000u)
                     && (freq <= (freq_t) hw->vhf_maxFreq * 1000000u))
-        return true;
+        return 0;
 
     if(hw->uhf_band && (freq >= (freq_t) hw->uhf_minFreq * 1000000u)
                     && (freq <= (freq_t) hw->uhf_maxFreq * 1000000u))
-        return true;
+        return 1;
+#endif
 
-    return false;
+    return -1;
+}
+
+bool freqInBand(const freq_t freq)
+{
+    return freqBand(freq) >= 0;
 }
