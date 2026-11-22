@@ -8,6 +8,7 @@
 #define THREADS_H
 
 #include <stddef.h>
+#include "hwconfig.h"
 
 /**
  * Threads' stack sizes
@@ -18,7 +19,9 @@
 #else
 #define RTX_THREAD_STKSIZE    512
 #endif
+#ifndef CODEC2_THREAD_STKSIZE
 #define CODEC2_THREAD_STKSIZE 16384
+#endif
 #define AUDIO_THREAD_STKSIZE  512
 
 /**
