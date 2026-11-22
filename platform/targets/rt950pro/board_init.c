@@ -43,8 +43,6 @@ void board_early_init_hook(void)
     __DSB();
     __ISB();
 
-    rt950_iwdg_feed();
-
     /*
      * Disable JTAG keeping SWD: PB3 (keypad backlight) and PB4 (encoder A)
      * are JTAG pins after reset.
@@ -67,13 +65,17 @@ void board_early_init_hook(void)
 }
 
 /*
- * The independent watchdog started by the vendor bootloader cannot be
- * stopped: feed it from the lowest priority thread, so that a system starved
- * by a stuck higher priority thread still gets reset. The thread is started
- * as soon as the kernel is up, so that it also runs while the device drivers
+ * The vendor bootloader leaves the independent watchdog off: it is started
+ * here and fed from the lowest priority thread, so that a system starved by a
+ * stuck higher priority thread gets reset. The thread is started as soon as
+ * the kernel is up, so that it also runs while the device drivers
  * initialization sleeps (e.g. the display controller power-up sequence).
  */
 #define IWDG_FEEDER_STACK_SIZE 384
+
+/* About 4s at the 40kHz the watchdog's clock nominally runs at */
+#define IWDG_DIVIDER WDT_CLK_DIV_64
+#define IWDG_RELOAD 2499
 
 static K_THREAD_STACK_DEFINE(iwdgFeederStack, IWDG_FEEDER_STACK_SIZE);
 static struct k_thread iwdgFeederThread;
@@ -92,6 +94,12 @@ static void iwdgFeeder(void *p1, void *p2, void *p3)
 
 static int iwdgFeederStart(void)
 {
+    WDT->cmd = WDT_CMD_UNLOCK;
+    WDT->div = IWDG_DIVIDER;
+    WDT->rld = IWDG_RELOAD;
+    rt950_iwdg_feed();
+    WDT->cmd = WDT_CMD_ENABLE;
+
     k_thread_create(&iwdgFeederThread, iwdgFeederStack,
                     K_THREAD_STACK_SIZEOF(iwdgFeederStack), iwdgFeeder, NULL,
                     NULL, NULL, K_LOWEST_APPLICATION_THREAD_PRIO, 0, K_NO_WAIT);
