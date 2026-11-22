@@ -396,8 +396,11 @@ void sdlEngine_run()
             }
         }
 
-        // we update the window only if there is a something ready to render
-        if (chan_can_send(&fb_sync)) {
+        // we update the window only if there is a something ready to render:
+        // a frame the display driver waits to hand over, or bands it was given
+        // short of a whole frame
+        const bool frame = chan_can_send(&fb_sync);
+        if (frame || sdlDisplay_bandsPending()) {
             PIXEL_SIZE *pixels;
             int pitch = 0;
 
@@ -406,8 +409,12 @@ void sdlEngine_run()
                 SDL_Log("SDL_lock failed: %s", SDL_GetError());
             }
 
-            chan_send(&fb_sync, pixels);
-            chan_recv(&fb_sync, NULL);
+            if (frame) {
+                chan_send(&fb_sync, pixels);
+                chan_recv(&fb_sync, NULL);
+            } else {
+                sdlDisplay_takeBands(pixels);
+            }
 
             uint64_t hash = hashFrame((const uint8_t *)pixels, pitch);
             SDL_LockMutex(frameLock);

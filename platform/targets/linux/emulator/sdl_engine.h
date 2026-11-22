@@ -72,6 +72,22 @@ uint64_t sdlEngine_getFrameHash(uint32_t *count);
 bool sdlEngine_ready();
 
 /**
+ * Check whether the display driver was given bands since the window last
+ * took the screen. The driver hands a whole frame over with its last band; a
+ * repaint of a few bands stops short of it.
+ *
+ * @return true if it was.
+ */
+bool sdlDisplay_bandsPending();
+
+/**
+ * Copy the screen with the bands the display driver was given so far.
+ *
+ * @param pixels: the window's pixels, a whole screen.
+ */
+void sdlDisplay_takeBands(void *pixels);
+
+/**
  * Thread-safe function returning the keys currently being pressed.
  *
  * @return a keyboard_t bit field with the keys currently being pressed.

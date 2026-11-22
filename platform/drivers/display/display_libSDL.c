@@ -27,6 +27,9 @@ static bool inProgress;             /* Flag to signal when rendering is in progr
  * band arrives.
  */
 static PIXEL_SIZE screen[CONFIG_SCREEN_HEIGHT * CONFIG_SCREEN_WIDTH];
+
+/** Bands were drawn since the window last took the screen. */
+static bool bandsPending;
 #endif
 
 /*
@@ -145,8 +148,39 @@ void display_renderBand(uint16_t startRow, uint16_t endRow, void *band)
     memcpy(&screen[startRow * CONFIG_SCREEN_WIDTH], band,
            (endRow - startRow) * rowSize);
 
+    /* The last band hands the whole frame over. A repaint of a few bands
+     * never reaches it: the SDL main loop takes those. */
     if(endRow == CONFIG_SCREEN_HEIGHT)
+    {
+        __atomic_store_n(&bandsPending, false, __ATOMIC_RELEASE);
         sendRows(0, CONFIG_SCREEN_HEIGHT, screen);
+    }
+    else
+    {
+        __atomic_store_n(&bandsPending, true, __ATOMIC_RELEASE);
+    }
+}
+
+bool sdlDisplay_bandsPending()
+{
+    return __atomic_load_n(&bandsPending, __ATOMIC_ACQUIRE);
+}
+
+void sdlDisplay_takeBands(void *pixels)
+{
+    /* Cleared first: a band drawn during the copy asks for another one. */
+    __atomic_store_n(&bandsPending, false, __ATOMIC_RELEASE);
+    memcpy(pixels, screen, sizeof(screen));
+}
+#else
+bool sdlDisplay_bandsPending()
+{
+    return false;
+}
+
+void sdlDisplay_takeBands(void *pixels)
+{
+    (void) pixels;
 }
 #endif
 
