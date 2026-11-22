@@ -50,6 +50,10 @@ elseif (${BOARD} STREQUAL "rt950pro")
     set(ZEPHYR_MODULES
         ${WEST_TOPDIR}/modules/hal/at32
         ${WEST_TOPDIR}/modules/hal/cmsis_6)
+
+    # Codec2-mod in place of codec2: codec2 takes 31kB of heap and 14kB of
+    # stack for both directions at once, of this MCU's 96kB of SRAM
+    set(OPENRTX_CODEC2_MOD ON)
 endif()
 
 #
@@ -92,9 +96,6 @@ target_include_directories(app
     openrtx/include
     platform
     openrtx/src/ui
-
-    subprojects/codec2
-    subprojects/codec2/src
 
     lib/minmea/include
     lib/qdec/include
@@ -206,25 +207,57 @@ target_sources(app
     openrtx/src/ui/views/MessageComposeView.cpp
     openrtx/src/ui/ui_strings.c
 
-    subprojects/codec2/src/dump.c
-    subprojects/codec2/src/lpc.c
-    subprojects/codec2/src/nlp.c
-    subprojects/codec2/src/phase.c
-    subprojects/codec2/src/quantise.c
-    subprojects/codec2/src/postfilter.c
-    subprojects/codec2/src/codec2.c
-    subprojects/codec2/src/codec2_fft.c
-    subprojects/codec2/src/lsp.c
-    subprojects/codec2/src/sine.c
-    subprojects/codec2/src/interp.c
-    subprojects/codec2/src/kiss_fft.c
-    subprojects/codec2/src/kiss_fftr.c
-    subprojects/codec2/src/newamp1.c
-    subprojects/codec2/src/codebook.c
-    subprojects/codec2/src/codebookd.c
-    subprojects/codec2/src/pack.c
-    subprojects/codec2/src/codebooknewamp1.c
-    subprojects/codec2/src/codebooknewamp1_energy.c
 
     lib/minmea/minmea.c
 )
+
+#
+# Speech codec: codec2, or on the boards that ask for it Codec2-mod, which is
+# its 3200 bps mode alone with separate encoder and decoder states
+#
+if(OPENRTX_CODEC2_MOD)
+  target_compile_definitions(app PRIVATE CONFIG_CODEC2_MOD)
+  target_include_directories(app PRIVATE subprojects/codec2-mod/inc)
+  target_sources(app
+    PRIVATE
+      subprojects/codec2-mod/src/analysis.c
+      subprojects/codec2-mod/src/codec2_mod.c
+      subprojects/codec2-mod/src/delta_lsp_cb.c
+      subprojects/codec2-mod/src/interp.c
+      subprojects/codec2-mod/src/kiss_fft.c
+      subprojects/codec2-mod/src/kiss_fftr.c
+      subprojects/codec2-mod/src/lpc.c
+      subprojects/codec2-mod/src/nlp.c
+      subprojects/codec2-mod/src/quantise.c
+      subprojects/codec2-mod/src/synthesis.c
+      subprojects/codec2-mod/src/util.c
+  )
+else()
+  target_include_directories(app
+    PRIVATE
+      subprojects/codec2
+      subprojects/codec2/src
+  )
+  target_sources(app
+    PRIVATE
+      subprojects/codec2/src/dump.c
+      subprojects/codec2/src/lpc.c
+      subprojects/codec2/src/nlp.c
+      subprojects/codec2/src/phase.c
+      subprojects/codec2/src/quantise.c
+      subprojects/codec2/src/postfilter.c
+      subprojects/codec2/src/codec2.c
+      subprojects/codec2/src/codec2_fft.c
+      subprojects/codec2/src/lsp.c
+      subprojects/codec2/src/sine.c
+      subprojects/codec2/src/interp.c
+      subprojects/codec2/src/kiss_fft.c
+      subprojects/codec2/src/kiss_fftr.c
+      subprojects/codec2/src/newamp1.c
+      subprojects/codec2/src/codebook.c
+      subprojects/codec2/src/codebookd.c
+      subprojects/codec2/src/pack.c
+      subprojects/codec2/src/codebooknewamp1.c
+      subprojects/codec2/src/codebooknewamp1_energy.c
+  )
+endif()

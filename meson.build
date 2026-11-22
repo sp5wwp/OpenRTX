@@ -165,6 +165,9 @@ openrtx_inc += ['lib/qdec/include']
 # find_library) so homebrew, Nix, and distro packages work. For cross
 # builds (embedded), use the subproject build.
 codec2_proj = subproject('codec2')
+# Codec2-mod, the 3200 bps mode alone: downloaded for the Zephyr builds that
+# use it in place of codec2 (see CMakeLists.txt)
+subproject('codec2-mod')
 if not meson.is_cross_build()
   # Try pkg-config first (homebrew, Nix, and other pkg-config-based installs)
   codec2_dep = dependency('codec2', method: 'pkg-config', required: false)

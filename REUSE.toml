@@ -66,6 +66,7 @@ path = [
     "subprojects/catch2.wrap",
     "subprojects/radio_tool.wrap",
     "subprojects/codec2.wrap",
+    "subprojects/codec2-mod.wrap",
     "subprojects/XPowersLib.wrap",
     "scripts/uf2families.json",
 ]

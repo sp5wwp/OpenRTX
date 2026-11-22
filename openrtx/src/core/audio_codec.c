@@ -8,12 +8,6 @@
 #include "core/audio_codec.h"
 #include <pthread.h>
 #include "core/threads.h"
-// codec2 system library has a weird include prefix
-#if defined(PLATFORM_LINUX)
-#include <codec2/codec2.h>
-#else
-#include "codec2.h"
-#endif
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
@@ -21,6 +15,15 @@
 #include "core/dsp.h"
 #include "core/utils.h"
 #include "hwconfig.h"
+// Last: Codec2-mod's header brings its internal macros along
+#if defined(CONFIG_CODEC2_MOD)
+#include "codec2_mod.h"
+// codec2 system library has a weird include prefix
+#elif defined(PLATFORM_LINUX)
+#include <codec2/codec2.h>
+#else
+#include "codec2.h"
+#endif
 
 #define BUF_SIZE 4
 #define CODEC2_FRAME_SAMPLES 160 /* Samples per codec2 3200-mode frame */
@@ -32,6 +35,85 @@
 
 #ifndef CONFIG_MIC_OVERSAMPLE
 #define CONFIG_MIC_OVERSAMPLE 1
+#endif
+
+#ifdef CONFIG_CODEC2_MOD
+// Codec2-mod: 3200 bps only, the encoder and the decoder each with its own
+// state, which is the caller's to allocate
+typedef codec2_encoder_t encoder_t;
+typedef codec2_decoder_t decoder_t;
+
+/**
+ * Allocate and initialise a 3200 bps encoder.
+ *
+ * @return the encoder, NULL if out of memory.
+ */
+static encoder_t *encoder_create(void)
+{
+    encoder_t *encoder = malloc(sizeof(encoder_t));
+    if (encoder != NULL)
+        codec2_encoder_init(encoder);
+
+    return encoder;
+}
+
+/**
+ * Allocate and initialise a 3200 bps decoder.
+ *
+ * @return the decoder, NULL if out of memory.
+ */
+static decoder_t *decoder_create(void)
+{
+    decoder_t *decoder = malloc(sizeof(decoder_t));
+    if (decoder != NULL)
+        codec2_decoder_init(decoder);
+
+    return decoder;
+}
+
+/**
+ * Free an encoder or a decoder.
+ *
+ * @param codec: encoder or decoder.
+ */
+static void codec_destroy(void *codec)
+{
+    free(codec);
+}
+#else
+// codec2: one state for both directions
+typedef struct CODEC2 encoder_t;
+typedef struct CODEC2 decoder_t;
+
+/**
+ * Allocate and initialise a 3200 bps encoder.
+ *
+ * @return the encoder, NULL on failure.
+ */
+static encoder_t *encoder_create(void)
+{
+    return codec2_create(CODEC2_MODE_3200);
+}
+
+/**
+ * Allocate and initialise a 3200 bps decoder.
+ *
+ * @return the decoder, NULL on failure.
+ */
+static decoder_t *decoder_create(void)
+{
+    return codec2_create(CODEC2_MODE_3200);
+}
+
+/**
+ * Free an encoder or a decoder.
+ *
+ * @param codec: encoder or decoder.
+ */
+static void codec_destroy(struct CODEC2 *codec)
+{
+    codec2_destroy(codec);
+}
 #endif
 
 static pathId audioPath;
@@ -193,7 +275,7 @@ static void *encodeFunc(void *arg)
 {
     streamId iStream;
     pathId iPath = *((pathId *)arg);
-    struct CODEC2 *codec2;
+    encoder_t *codec2;
     struct dcBlock dcBlock;
     struct decimatorState decimator;
 
@@ -213,7 +295,11 @@ static void *encodeFunc(void *arg)
 
     dsp_resetState(dcBlock);
     dsp_resetState(decimator);
-    codec2 = codec2_create(CODEC2_MODE_3200);
+    codec2 = encoder_create();
+    if (codec2 == NULL) {
+        audioStream_terminate(iStream);
+        goto exit;
+    }
 
     while (reqStop == false) {
         // Invalid audio path, quit
@@ -268,7 +354,7 @@ static void *encodeFunc(void *arg)
     }
 
     audioStream_terminate(iStream);
-    codec2_destroy(codec2);
+    codec_destroy(codec2);
 
 exit:
     free(adcBuf);
@@ -287,7 +373,7 @@ static void *decodeFunc(void *arg)
     streamId oStream;
     pathId oPath = *((pathId *)arg);
     int16_t audioBuf[DMA_BUF_SAMPLES];
-    struct CODEC2 *codec2;
+    decoder_t *codec2;
 
     // Open output stream
     memset(audioBuf, 0x00, DMA_BUF_SAMPLES * sizeof(stream_sample_t));
@@ -299,7 +385,13 @@ static void *decodeFunc(void *arg)
         return NULL;
     }
 
-    codec2 = codec2_create(CODEC2_MODE_3200);
+    codec2 = decoder_create();
+    if (codec2 == NULL) {
+        audioStream_terminate(oStream);
+        pthread_detach(pthread_self());
+        threadStopped();
+        return NULL;
+    }
 
     // Ensure that thread start is correctly synchronized with the output
     // stream to avoid having the decode function writing in a memory area
@@ -352,7 +444,7 @@ static void *decodeFunc(void *arg)
 
     // Stop stream and wait until its effective termination
     audioStream_stop(oStream);
-    codec2_destroy(codec2);
+    codec_destroy(codec2);
 
     // In case thread terminates due to invalid path or stream error, detach it
     // to ensure that its memory gets freed by the OS.

@@ -1,0 +1,4 @@
+[wrap-git]
+url = https://github.com/M17-Project/Codec2-mod
+revision = 7c334283794fa6304dc014f12df70afc8393143a
+patch_directory = codec2-mod
