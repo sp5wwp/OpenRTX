@@ -9,6 +9,7 @@
  * Zephyr GPIO driver header, whose flag macros clash with the HAL enums.
  */
 #include <soc.h>
+#include <zephyr/fatal.h>
 #include <zephyr/init.h>
 #include <zephyr/kernel.h>
 #include <zephyr/linker/linker-defs.h>
@@ -109,3 +110,16 @@ static int iwdgFeederStart(void)
 }
 
 SYS_INIT(iwdgFeederStart, POST_KERNEL, 0);
+
+/*
+ * A fatal error restarts the radio. The kernel's own handler halts, and a
+ * transmission under way would stay keyed until the watchdog's time is up.
+ */
+void k_sys_fatal_error_handler(unsigned int reason, const struct arch_esf *esf)
+{
+    ARG_UNUSED(reason);
+    ARG_UNUSED(esf);
+
+    NVIC_SystemReset();
+    CODE_UNREACHABLE;
+}
