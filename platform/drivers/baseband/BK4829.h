@@ -132,6 +132,7 @@ typedef enum {
     BK4829_REG_28 = 0x28,
     BK4829_REG_29 = 0x29,
     BK4829_REG_2A = 0x2A,
+    BK4829_REG_2B = 0x2B,
     BK4829_REG_2C = 0x2C,
     BK4829_REG_2F = 0x2F,
     BK4829_REG_30 = 0x30,
@@ -196,9 +197,10 @@ typedef enum {
 /** AF output selection, REG47 bits 11:8. */
 typedef enum {
     BK4829_AF_TYPE_MUTE = 0u,
-    BK4829_AF_TYPE_FM = 1u,      ///< Normal demodulated audio
-    BK4829_AF_TYPE_TONE_RX = 2u, ///< Tone1 on the RX path
-    BK4829_AF_TYPE_BEEP = 3u,    ///< Tone1 on the TX path
+    BK4829_AF_TYPE_FM = 1u,       ///< Normal demodulated audio
+    BK4829_AF_TYPE_TONE_RX = 2u,  ///< Tone1 on the RX path
+    BK4829_AF_TYPE_BEEP = 3u,     ///< Tone1 on the TX path
+    BK4829_AF_TYPE_BASEBAND = 4u, ///< Mixer output, ahead of the demodulator
     BK4829_AF_TYPE_CTCDCSS_TEST = 6u,
     BK4829_AF_TYPE_FSK_TEST = 8u,
 } bk4829_af_type_t;
