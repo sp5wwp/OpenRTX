@@ -151,14 +151,15 @@
 
 		/*
 		 * Audio path, found by reverse engineering. PE1 mutes the
-		 * speaker when high, PE4 powers the audio amplifier, PB8
-		 * enables it. PC12 selects the audio source: high for the
-		 * BK4829 chips, low for the MCU DAC. PE9 low routes the audio
-		 * to the speaker instead of the Bluetooth module.
+		 * speaker when high, PE4 powers the audio amplifier, PB8 high
+		 * takes the microphone off its line. PC12 selects the audio
+		 * source: high for the BK4829 chips, low for the MCU DAC. PE9
+		 * low routes the audio to the speaker instead of the Bluetooth
+		 * module.
 		 */
 		spk-mute-gpios = <&gpioe 1 GPIO_ACTIVE_HIGH>;
 		amp-pwr-gpios = <&gpioe 4 GPIO_ACTIVE_HIGH>;
-		amp-en-gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
+		mic-mute-gpios = <&gpiob 8 GPIO_ACTIVE_HIGH>;
 		audio-sw-gpios = <&gpioc 12 GPIO_ACTIVE_HIGH>;
 		bt-sw-gpios = <&gpioe 9 GPIO_ACTIVE_HIGH>;
 

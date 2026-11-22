@@ -165,8 +165,8 @@ static void si4732Test(void)
     // Route the audio to the speaker
     gpioPin_set(&rt950_audio_sw);
 
-    // Enable the audio amplifier and unmute the speaker
-    gpioPin_set(&rt950_amp_en);
+    // Mute the microphone and unmute the speaker
+    gpioPin_set(&rt950_mic_mute);
     gpioPin_clear(&rt950_spk_mute);
 }
 

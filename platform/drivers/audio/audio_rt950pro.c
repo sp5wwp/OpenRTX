@@ -45,8 +45,8 @@ void audio_init()
     gpioPin_set(&rt950_audio_sw); // BK4829 chips, not the MCU DAC
     gpioPin_setMode(&rt950_audio_sw, OUTPUT);
 
-    gpioPin_clear(&rt950_amp_en);
-    gpioPin_setMode(&rt950_amp_en, OUTPUT);
+    gpioPin_clear(&rt950_mic_mute);
+    gpioPin_setMode(&rt950_mic_mute, OUTPUT);
 
     gpioPin_set(&rt950_amp_pwr);
     gpioPin_setMode(&rt950_amp_pwr, OUTPUT);
@@ -55,7 +55,7 @@ void audio_init()
 void audio_terminate()
 {
     gpioPin_set(&rt950_spk_mute);
-    gpioPin_clear(&rt950_amp_en);
+    gpioPin_clear(&rt950_mic_mute);
     gpioPin_clear(&rt950_amp_pwr);
 }
 
@@ -63,7 +63,7 @@ void audio_connect(const enum AudioSource source, const enum AudioSink sink)
 {
     if (source == SOURCE_RTX && sink == SINK_SPK) {
         radio_enableAfOutput();
-        gpioPin_set(&rt950_amp_en);
+        gpioPin_set(&rt950_mic_mute);
         gpioPin_clear(&rt950_spk_mute);
     }
 }
@@ -72,7 +72,7 @@ void audio_disconnect(const enum AudioSource source, const enum AudioSink sink)
 {
     if (source == SOURCE_RTX && sink == SINK_SPK) {
         gpioPin_set(&rt950_spk_mute);
-        gpioPin_clear(&rt950_amp_en);
+        gpioPin_clear(&rt950_mic_mute);
         radio_disableAfOutput();
     }
 }
