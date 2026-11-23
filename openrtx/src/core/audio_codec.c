@@ -507,6 +507,24 @@ static bool startThread(const pathId path, void *(*func)(void *))
     void *codec_thread_stack = malloc(CODEC2_THREAD_STKSIZE * sizeof(uint8_t));
     pthread_attr_setstack(&codecAttr, codec_thread_stack,
                           CODEC2_THREAD_STKSIZE);
+
+#ifdef CONFIG_POSIX_THREAD_PRIORITY_SCHEDULING
+    // One step below the thread that starts it, the RTX thread for a call: a
+    // Zephyr thread otherwise inherits that priority. At the same one, a
+    // receiver that needs a little more of the CPU than usual and this thread
+    // together want more than there is, neither gets ahead again and nothing
+    // below them runs. Only where Zephyr is built with thread priority
+    // scheduling, which has the calls.
+    int policy;
+    struct sched_param param;
+    if ((pthread_getschedparam(pthread_self(), &policy, &param) == 0)
+        && (param.sched_priority > 0)) {
+        param.sched_priority -= 1;
+        pthread_attr_setinheritsched(&codecAttr, PTHREAD_EXPLICIT_SCHED);
+        pthread_attr_setschedpolicy(&codecAttr, policy);
+        pthread_attr_setschedparam(&codecAttr, &param);
+    }
+#endif
 #endif
 
     // Start thread
