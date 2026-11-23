@@ -319,7 +319,8 @@ int8_t platform_getChSelector()
 
 bool platform_getPttStatus()
 {
-    return !gpioPin_read(&rt950_ptt);
+    // Either PTT button, both low when pressed
+    return !gpioPin_read(&rt950_ptt) || !gpioPin_read(&rt950_ptt2);
 }
 
 bool platform_pwrButtonStatus()
