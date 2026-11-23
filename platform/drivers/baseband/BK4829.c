@@ -383,11 +383,34 @@ uint32_t bk4829_get_scan_freq(const struct BK4829 *dev)
     return ((high << 16) | low) * 10;
 }
 
-void bk4829_beep_start(const struct BK4829 *dev, uint16_t frequency)
+/**
+ * Get the control word of tone 1 for a frequency.
+ *
+ * @param frequency: tone frequency in Hz.
+ * @return the word for REG_71.
+ */
+static uint16_t tone1_word(uint16_t frequency)
 {
     /* Tone1 control word is freq(Hz) * 10.32444 for a 26MHz crystal */
-    const uint16_t tone_word = (((uint64_t)frequency * 1353245) + (1UL << 16))
-                            >> 17;
+    return (((uint64_t)frequency * 1353245) + (1UL << 16)) >> 17;
+}
+
+void bk4829_set_tx_tone(const struct BK4829 *dev, uint16_t frequency,
+                        uint8_t gain)
+{
+    if (frequency == 0) {
+        bk4829_update_reg(dev, BK4829_REG_70, BIT(15), 0);
+        return;
+    }
+
+    bk4829_write_reg(dev, BK4829_REG_71, tone1_word(frequency));
+    bk4829_update_reg(dev, BK4829_REG_70, 0xFF00,
+                      BIT(15) | BITV(gain & 0x7F, 8));
+}
+
+void bk4829_beep_start(const struct BK4829 *dev, uint16_t frequency)
+{
+    const uint16_t tone_word = tone1_word(frequency);
 
     bk4829_update_reg(dev, BK4829_REG_50, BIT(15), BIT(15)); /* TX mute */
     bk4829_set_af(dev, BK4829_AF_TYPE_BEEP);

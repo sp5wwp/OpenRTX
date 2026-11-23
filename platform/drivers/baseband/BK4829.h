@@ -575,6 +575,16 @@ bool bk4829_get_scan_freq_flag(const struct BK4829 *dev);
 uint32_t bk4829_get_scan_freq(const struct BK4829 *dev);
 
 /**
+ * Send a tone with the transmission, or stop sending it.
+ *
+ * @param dev: pointer to device data.
+ * @param frequency: tone frequency in Hz, zero to stop.
+ * @param gain: tone level, 0 to 127.
+ */
+void bk4829_set_tx_tone(const struct BK4829 *dev, uint16_t frequency,
+                        uint8_t gain);
+
+/**
  * Start the beeper.
  *
  * @param dev: pointer to device data.
