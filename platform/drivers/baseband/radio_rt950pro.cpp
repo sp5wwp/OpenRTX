@@ -101,10 +101,15 @@ struct bandPath {
     uint8_t calLast;                ///< Last point of the row
 };
 
-/** The path of each band, in the order of CONFIG_RF_BANDS_MHZ. */
+/**
+ * The path of each band, in the order of CONFIG_RF_BANDS_MHZ. 1.25m goes
+ * through the 2m path, with a calibration row of its own.
+ */
 static const struct bandPath BAND_PATHS[] = {
     { &rt950_bk4829_vhf, &rt950_rf_v3r, &rt950_rf_v3t, RT950PRO_CAL_VHF, 130, 3,
       15 },
+    { &rt950_bk4829_vhf, &rt950_rf_v3r, &rt950_rf_v3t, RT950PRO_CAL_200MHZ, 200,
+      5, 15 },
     { &rt950_bk4829_uhf_hf, &rt950_rf_u3r, &rt950_rf_u3t, RT950PRO_CAL_UHF, 400,
       10, 12 },
 };
