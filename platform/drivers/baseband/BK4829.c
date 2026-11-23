@@ -405,4 +405,5 @@ void bk4829_beep_stop(const struct BK4829 *dev)
     bk4829_update_reg(dev, BK4829_REG_50, BIT(15), BIT(15)); /* TX mute */
     bk4829_update_reg(dev, BK4829_REG_70, BIT(15), 0);
     bk4829_set_af(dev, BK4829_AF_TYPE_FM);
+    bk4829_update_reg(dev, BK4829_REG_50, BIT(15), 0);
 }
