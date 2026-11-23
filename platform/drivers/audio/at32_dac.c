@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/sys_io.h>
 #include <errno.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include "peripherals/gpio.h"
@@ -50,11 +51,28 @@
 #define DAC_HZ 48000
 #define UP (DAC_HZ / SPEECH_HZ)
 #define DAC_MID 2048
-// Speech to DAC1 counts: twice full scale, clipping the loudest peaks. DAC1
-// reaches the speaker far weaker than a BK4829 does, and beside the
-// receiver's IF on the same net the speech needs all the level it can have
-#define SPEECH_SHIFT 3
+// Speech to DAC1 counts: SPEECH_GAIN times full scale, with a limiter holding
+// its peaks under LIMIT_PEAK. DAC1 reaches the speaker far weaker than a BK4829
+// does, and beside the receiver's IF on the same net the speech needs all the
+// level it can have; clipped, its harmonics land in the IF's band
+#define SPEECH_UNITY (1.0f / 16.0f) // A stream sample in DAC1 counts
+#define SPEECH_GAIN 4.0f
+#define LIMIT_PEAK 1900.0f          // Of DAC1's 2047 either way
+#define LIMIT_LOOK 32               // Samples the limiter sees ahead: 4ms
+#define LIMIT_RELEASE (SPEECH_GAIN / 400.0f) // Gain back per sample: 50ms
 #define PHASE_TAPS 8
+#define SPEECH_LP_TAPS 43
+
+// Speech low-pass at the stream's 8kHz: flat to 2.7kHz and 60dB down from
+// 3.4kHz (Kaiser 5.65). The receiver's IF band starts at 3.5kHz on the same
+// net, and what speech has from 3kHz up costs it frames. Half of the
+// symmetric filter, its centre last
+static const float speechLp[SPEECH_LP_TAPS / 2 + 1] = {
+    0.000012f,  -0.000434f, 0.001047f,  -0.001246f, 0.000285f,  0.002017f,
+    -0.004619f, 0.005377f,  -0.002247f, -0.004854f, 0.012794f,  -0.015918f,
+    0.009057f,  0.008369f,  -0.029626f, 0.041688f,  -0.030532f, -0.011336f,
+    0.079068f,  -0.155028f, 0.214839f,  0.762578f,
+};
 
 // 3kHz low-pass at 48kHz in six phases, Kaiser 6: 78dB down from 5kHz, where
 // the receiver's low-pass starts to let through what the mixer puts there
@@ -80,9 +98,16 @@ static struct {
     uint16_t *out;             ///< DAC1's samples for the stream, on the heap
     struct k_sem sync;         ///< Given at each half of the stream
     float history[PHASE_TAPS]; ///< Last speech samples, newest first
-    volatile bool stopping;    ///< Stop at the stream's next half
-    volatile uint8_t playing;  ///< Half DAC1 is playing
-    uint8_t idle;              ///< Half last given to the writer
+    float lpHistory[SPEECH_LP_TAPS]; ///< Last stream samples, newest first
+    float delayed[LIMIT_LOOK];       ///< Speech the limiter has yet to let out
+    float needed[LIMIT_LOOK];        ///< Gain each of those samples allows
+    float eased[LIMIT_LOOK];         ///< Least gain needed, released slowly
+    float easedSum;                  ///< Sum of eased
+    float held;                      ///< Last of eased
+    uint8_t limitPos;         ///< Place of the newest sample in the three
+    volatile bool stopping;   ///< Stop at the stream's next half
+    volatile uint8_t playing; ///< Half DAC1 is playing
+    uint8_t idle;             ///< Half last given to the writer
 } dac;
 
 /**
@@ -94,6 +119,78 @@ static void halt(void)
     sys_write32(0, DMA2_C3_CTRL);
     sys_write32(DMA_C3_ALL, DMA2_CLR);
     sys_clear_bits(DAC_CTRL, DAC_CTRL_CH1_MASK);
+}
+
+/**
+ * Low-pass a stream sample with speechLp.
+ *
+ * @param sample: stream sample.
+ * @return the filter's output.
+ */
+__attribute__((optimize("O3"))) static float lowPass(const float sample)
+{
+    memmove(&dac.lpHistory[1], &dac.lpHistory[0],
+            (SPEECH_LP_TAPS - 1) * sizeof(float));
+    dac.lpHistory[0] = sample;
+
+    float acc = speechLp[SPEECH_LP_TAPS / 2]
+              * dac.lpHistory[SPEECH_LP_TAPS / 2];
+    for (size_t k = 0; k < SPEECH_LP_TAPS / 2; k++)
+        acc += speechLp[k]
+             * (dac.lpHistory[k] + dac.lpHistory[SPEECH_LP_TAPS - 1 - k]);
+
+    return acc;
+}
+
+/**
+ * Reset the limiter: full gain, nothing waiting.
+ */
+static void limitReset(void)
+{
+    memset(dac.delayed, 0, sizeof(dac.delayed));
+    for (size_t i = 0; i < LIMIT_LOOK; i++) {
+        dac.needed[i] = SPEECH_GAIN;
+        dac.eased[i] = SPEECH_GAIN;
+    }
+
+    dac.easedSum = SPEECH_GAIN * LIMIT_LOOK;
+    dac.held = SPEECH_GAIN;
+    dac.limitPos = 0;
+}
+
+/**
+ * Give a speech sample its gain, less whatever keeps the peaks around it
+ * under LIMIT_PEAK. The gain is the least one the samples LIMIT_LOOK ahead
+ * allow, eased down over as many samples and released slowly, so it is down
+ * by the time a peak comes out and never steps.
+ *
+ * @param sample: speech sample, in DAC1 counts at a gain of one.
+ * @return the sample that came LIMIT_LOOK - 1 before it, with its gain.
+ */
+__attribute__((optimize("O3"))) static float limit(const float sample)
+{
+    const float peak = fabsf(sample) * SPEECH_GAIN;
+    const size_t pos = dac.limitPos;
+    const size_t oldest = (pos + 1) % LIMIT_LOOK;
+
+    dac.delayed[pos] = sample;
+    dac.needed[pos] = (peak > LIMIT_PEAK) ? (SPEECH_GAIN * LIMIT_PEAK / peak) :
+                                            SPEECH_GAIN;
+
+    float least = dac.needed[0];
+    for (size_t i = 1; i < LIMIT_LOOK; i++)
+        least = MIN(least, dac.needed[i]);
+
+    dac.held = MIN(least, dac.held + LIMIT_RELEASE);
+    dac.eased[pos] = dac.held;
+    dac.limitPos = (uint8_t)oldest;
+
+    // Summed afresh each time: a running sum of floats drifts
+    dac.easedSum = 0.0f;
+    for (size_t i = 0; i < LIMIT_LOOK; i++)
+        dac.easedSum += dac.eased[i];
+
+    return dac.delayed[oldest] * (dac.easedSum / LIMIT_LOOK);
 }
 
 /**
@@ -114,14 +211,14 @@ __attribute__((optimize("O3"))) static void upsample(struct streamCtx *ctx,
     for (size_t n = 0; n < size; n++) {
         memmove(&dac.history[1], &dac.history[0],
                 (PHASE_TAPS - 1) * sizeof(float));
-        dac.history[0] = in[n];
+        dac.history[0] = limit(lowPass(in[n]) * SPEECH_UNITY);
 
         for (size_t phase = 0; phase < UP; phase++) {
             float acc = 0.0f;
             for (size_t k = 0; k < PHASE_TAPS; k++)
                 acc += interpolate[phase][k] * dac.history[k];
 
-            const int32_t v = DAC_MID + ((int32_t)acc >> SPEECH_SHIFT);
+            const int32_t v = DAC_MID + (int32_t)acc;
             *out++ = (uint16_t)CLAMP(v, 0, 4095);
         }
     }
@@ -174,6 +271,8 @@ static int dac_start(const uint8_t instance, const void *config,
     dac.playing = 0;
     dac.idle = 1;
     memset(dac.history, 0, sizeof(dac.history));
+    memset(dac.lpHistory, 0, sizeof(dac.lpHistory));
+    limitReset();
     for (size_t i = 0; i < count; i++)
         dac.out[i] = DAC_MID;
     k_sem_init(&dac.sync, 0, 1);
