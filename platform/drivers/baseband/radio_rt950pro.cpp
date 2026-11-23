@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: GPL-3.0-or-later
  */
 
+#include <zephyr/kernel.h>
 #include <zephyr/sys/sys_io.h>
 #include <zephyr/sys/util.h>
 #include <hwconfig.h>
@@ -74,13 +75,39 @@ static constexpr uint8_t PA_GAIN2 = 7;
 static constexpr uint8_t TX_MIC_GAIN = 0x24;
 static constexpr uint16_t TX_DEVIATION = 0x50A;
 
-static const rtxStatus_t *config;   // Pointer to the radio configuration
-static enum opstatus radioStatus;   // Current operating status
-static const struct BK4829 *rxChip; // Chip currently receiving, or NULL
-static enum opmode opMode;          // Operating mode
-static bool micCodec;               // The idle chip passes the microphone
-static uint16_t micGain;            // Its REG_7D before that
-static struct rt950proCalib calib;  // Factory calibration
+static const rtxStatus_t *config;      // Pointer to the radio configuration
+static enum opstatus radioStatus;      // Current operating status
+static const struct BK4829 *rxChip;    // Chip currently receiving, or NULL
+static enum opmode opMode;             // Operating mode
+static bool micCodec;                  // The idle chip passes the microphone
+static const struct BK4829 *beepChip;  // Chip playing a beep, or NULL
+static uint16_t beepSaved[2];          // Its REG_70 and REG_71 before that
+static const struct BK4829 *burstChip; // Chip sending the tone burst, or NULL
+static uint16_t burstSaved[2];         // Its REG_70 and REG_71 before that
+
+// The UI thread starts and stops beeps, on a chip the radio thread's key-up
+// and tuning sequences use too
+static K_MUTEX_DEFINE(chipLock);
+
+/** Holds chipLock for a scope. */
+struct ChipLock {
+    ChipLock()
+    {
+        k_mutex_lock(&chipLock, K_FOREVER);
+    }
+
+    ~ChipLock()
+    {
+        k_mutex_unlock(&chipLock);
+    }
+};
+
+// The FM tone burst: 3.1kHz of deviation in 25kHz FM and 1.56kHz in 12.5kHz,
+// measured on 2m and 70cm
+static constexpr uint16_t TX_BURST_HZ = 1750;
+static constexpr uint8_t TX_BURST_GAIN = 8;
+static uint16_t micGain;           // Its REG_7D before that
+static struct rt950proCalib calib; // Factory calibration
 
 /** A chip's registers as the driver's start-up left them. */
 struct chipDefaults {
@@ -266,6 +293,32 @@ static void paOff()
 }
 
 /**
+ * Send the tone burst with an FM transmission, or stop sending it. The tone
+ * generator is left as it was found: M17 transmits with it, and stops the
+ * tone at a point that depends on what its registers hold.
+ *
+ * @param chip: chip that transmits; not used to stop.
+ * @param send: whether the burst's key is held.
+ */
+static void txBurst(const struct BK4829 *chip, const bool send)
+{
+    if (send == (burstChip != NULL))
+        return;
+
+    if (send) {
+        burstSaved[0] = bk4829_read_reg(chip, BK4829_REG_70);
+        burstSaved[1] = bk4829_read_reg(chip, BK4829_REG_71);
+        bk4829_set_tx_tone(chip, TX_BURST_HZ, TX_BURST_GAIN);
+        burstChip = chip;
+        return;
+    }
+
+    bk4829_write_reg(burstChip, BK4829_REG_70, burstSaved[0]);
+    bk4829_write_reg(burstChip, BK4829_REG_71, burstSaved[1]);
+    burstChip = NULL;
+}
+
+/**
  * Key a chip in FM, with its microphone input as the modulation.
  *
  * @param chip: chip to key.
@@ -288,6 +341,7 @@ static int fmKeyUp(const struct BK4829 *chip)
     bk4829_set_mic_gain(chip, TX_MIC_GAIN);
     bk4829_set_tx_deviation(chip, TX_DEVIATION);
     bk4829_tx_on(chip);
+    txBurst(chip, config->toneEn);
     return 0;
 }
 
@@ -377,6 +431,43 @@ void radio_setOpmode(const enum opmode mode)
     opMode = mode;
 }
 
+/**
+ * Stop a beep and put its chip back to rest. With chipLock held.
+ */
+static void beepOff()
+{
+    if (beepChip == NULL)
+        return;
+
+    bk4829_beep_stop(beepChip);
+    bk4829_rtx_off(beepChip);
+    bk4829_set_af(beepChip, BK4829_AF_TYPE_MUTE);
+    // The tone generator as it was: M17 transmits with it, and stops the tone
+    // at a point that depends on what these hold
+    bk4829_write_reg(beepChip, BK4829_REG_70, beepSaved[0]);
+    bk4829_write_reg(beepChip, BK4829_REG_71, beepSaved[1]);
+    beepChip = NULL;
+}
+
+void radio_rt950pro_beep(const uint16_t freq)
+{
+    const ChipLock lock;
+
+    beepOff();
+
+    // The chip that is not receiving plays it: its AF output is on the
+    // speaker's net whichever way the audio switch stands. Not while
+    // transmitting, when M17 has that chip pass the microphone
+    if ((freq == 0) || (radioStatus == TX))
+        return;
+
+    beepChip = (rxChip == &rt950_bk4829_vhf) ? &rt950_bk4829_uhf_hf :
+                                               &rt950_bk4829_vhf;
+    beepSaved[0] = bk4829_read_reg(beepChip, BK4829_REG_70);
+    beepSaved[1] = bk4829_read_reg(beepChip, BK4829_REG_71);
+    bk4829_beep_start(beepChip, freq);
+}
+
 void radio_rt950pro_micCodec(const bool enable)
 {
     micCodec = enable;
@@ -458,6 +549,10 @@ static int startRx(const struct BK4829 *chip)
 
 void radio_enableRx()
 {
+    const ChipLock lock;
+
+    beepOff();
+    txBurst(NULL, false);
     const struct bandPath *path = getPath(config->rxFrequency);
     if (path == NULL) {
         radio_disableRtx();
@@ -489,6 +584,10 @@ void radio_enableRx()
 
 void radio_enableTx()
 {
+    const ChipLock lock;
+
+    beepOff();
+    txBurst(NULL, false);
     if (config->txDisable)
         return;
 
@@ -531,6 +630,10 @@ void radio_enableTx()
 
 void radio_disableRtx()
 {
+    const ChipLock lock;
+
+    beepOff();
+    txBurst(NULL, false);
     paOff();
     bk4829Tone_keyDown();
     rfPathTxOff();
@@ -549,6 +652,11 @@ void radio_updateConfiguration()
     // Retune and reconfigure the receiver if it is running
     if (radioStatus == RX)
         radio_enableRx();
+
+    // The tone burst follows its key while FM is transmitting
+    const struct bandPath *path = getPath(config->txFrequency);
+    if ((radioStatus == TX) && (opMode == OPMODE_FM) && (path != NULL))
+        txBurst(path->chip, config->toneEn);
 }
 
 rssi_t radio_getRssi()

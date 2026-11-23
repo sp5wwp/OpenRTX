@@ -16,6 +16,7 @@
 #include "drivers/GPS/gps_zephyr.h"
 #include "drivers/SPI/spi_zephyr.h"
 #include "drivers/I2C/i2c_bitbang.h"
+#include "drivers/baseband/radio_rt950pro.h"
 #ifdef CONFIG_BLUETOOTH
 #include "bluetooth_rt950pro.h"
 #endif
@@ -366,11 +367,12 @@ void platform_ledOff(led_t led)
 
 void platform_beepStart(uint16_t freq)
 {
-    (void)freq;
+    radio_rt950pro_beep(freq);
 }
 
 void platform_beepStop()
 {
+    radio_rt950pro_beep(0);
 }
 
 const hwInfo_t *platform_getHwInfo()
