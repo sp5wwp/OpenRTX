@@ -57,6 +57,9 @@ extern "C" {
 /* The radio's three calibrated powers */
 #define CONFIG_TX_POWER_STEPS_MW 1000, 5000, 10000
 
+/* The RTX thread's stack: receiving M17 was seen to use 600 bytes of it */
+#define RTX_THREAD_STKSIZE 2048
+
 /* Codec2-mod's thread stack: its decoder takes 5kB, its encoder 1kB */
 #define CODEC2_THREAD_STKSIZE 8192
 
