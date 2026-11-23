@@ -70,7 +70,7 @@
 #define IF_SCALE 8000.0f     // Demodulated sample for a radian of phase step
 #define IF_FIRST_HALF 8      // Half of the first filter's taps, and the centre
 #define IF_FIRST_TAPS (2 * IF_FIRST_HALF - 1)
-#define IF_SECOND_HALF 13
+#define IF_SECOND_HALF 25
 #define IF_SECOND_TAPS (2 * IF_SECOND_HALF - 1)
 
 // A sixth of the sample rate, the 8kHz IF
@@ -84,13 +84,17 @@ static const float firstTaps[IF_FIRST_HALF] = { -0.000535f, -0.006249f,
                                                 -0.015398f, -0.009309f,
                                                 0.038274f,  0.130560f,
                                                 0.227749f,  0.269815f };
-// 4.6kHz low-pass at 24kHz, 25 taps, Kaiser 5: speech on the net, which the
-// mixer puts 5kHz and more from the carrier. A high-pass ahead of the mixer
-// or a recursive low-pass distorts the signal's edge next to the speech
+// 4.4kHz low-pass at 24kHz, 49 taps, Kaiser 5: speech on the net, which the
+// mixer puts 5kHz and more from the carrier. 29dB down on speech at 3kHz and
+// 55dB at 2.7kHz; with 25 taps it was 11dB and 16dB, and speech cost a third
+// of the frames of a weak signal. A high-pass ahead of the mixer or a
+// recursive low-pass distorts the signal's edge next to the speech
 static const float secondTaps[IF_SECOND_HALF] = {
-    0.000926f, 0.001523f, -0.002361f, -0.008056f, -0.002716f,
-    0.016687f, 0.023735f, -0.011008f, -0.061378f, -0.041824f,
-    0.100080f, 0.292670f, 0.383442f
+    0.000286f,  0.000784f,  0.000251f, -0.001393f, -0.002043f,
+    0.000328f,  0.003875f,  0.003477f, -0.002654f, -0.008095f,
+    -0.004043f, 0.008102f,  0.013939f, 0.001847f,  -0.018401f,
+    -0.020676f, 0.006410f,  0.036628f, 0.027053f,  -0.028847f,
+    -0.074312f, -0.031642f, 0.116388f, 0.289506f,  0.366466f,
 };
 
 static const struct gpioPin pa2 = { &GpioA, ADC_CHANNEL };
@@ -138,6 +142,39 @@ symmetricFir(const float *taps, size_t half, const float *x)
         acc += taps[k] * (x[k] + x[2 * half - 2 - k]);
 
     return acc;
+}
+
+/**
+ * Angle of a vector, within 1.2e-5 rad (Abramowitz and Stegun 4.4.49).
+ * atan2f() at every sample took more of the CPU than both filters.
+ *
+ * @param y: the vector's sine side.
+ * @param x: its cosine side.
+ * @return the angle in radians, -pi to pi.
+ */
+__attribute__((optimize("O3"))) static inline float angle(const float y,
+                                                          const float x)
+{
+    const float ay = fabsf(y);
+    const float ax = fabsf(x);
+    const float hi = MAX(ax, ay);
+    if (hi == 0.0f)
+        return 0.0f;
+
+    const float z = MIN(ax, ay) / hi;
+    const float z2 = z * z;
+    float a =
+        z
+        * (0.9998660f
+           + z2
+                 * (-0.3302995f
+                    + z2 * (0.1801410f + z2 * (-0.0851330f + z2 * 0.0208351f))));
+    if (ay > ax)
+        a = 1.5707963f - a;
+    if (x < 0.0f)
+        a = 3.1415927f - a;
+
+    return (y < 0.0f) ? -a : a;
 }
 
 /**
@@ -190,7 +227,7 @@ demodulate(const uint16_t *in, stream_sample_t *out, size_t count)
         adc.lastI = fi;
         adc.lastQ = fq;
 
-        *out++ = (stream_sample_t)(atan2f(cross, dot) * IF_SCALE);
+        *out++ = (stream_sample_t)(angle(cross, dot) * IF_SCALE);
     }
 }
 
