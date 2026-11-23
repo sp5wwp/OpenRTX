@@ -21,7 +21,7 @@ The hardware description comes from the reverse engineering work done in
 | Transceivers     | 2x BK4829                                  |
 | Broadcast RX     | SI4732 (FM/AM/SSB)                         |
 | Display          | ST7789V, 240x320                           |
-| External Flash   | SPI 4MB, contains config, 64 KiB read back |
+| External Flash   | SPI 4MB, holds the factory calibration    |
 | GPS              | ATGM336H                                   |
 | Bluetooth        | BLE module, transparent UART link          |
 
@@ -34,7 +34,7 @@ Supported:
   framebuffer. The backlight brightness is adjustable from the OpenRTX settings
   (PWM on PC6, TMR8 channel 1). The keypad backlight (PB3) is switched on and
   off together with the display one.
-- keypad, side keys, PTT and rotary encoder
+- keypad, side keys, both PTT buttons and rotary encoder
 - serial logs (Zephyr console) on UART4, at 115200 baud, on the programming
   cable
 - power switch: the radio is switched off when the knob is turned off
@@ -47,26 +47,37 @@ Supported:
 - NVM settings storage in last 8kB of internal flash
 - BK4829 transceivers: both chips are reset and initialised at boot. They
   share a Zephyr SPI bit-banged, half-duplex 3-wire serial bus at 100 kHz
-  (SCLK PE10, SDATA PE11); chip 0 (PE8
-  chip select) is wired to the VHF LNA and PA, chip 1 (PE15) to the UHF ones.
-  Both chips use one generic OpenRTX SPI device with a shared transaction
-  mutex; the BK4829 driver controls chip select across command and data.
-  The Zephyr SPI adapter performs transfers directly, without a separate
-  bus bridge module.
-  The driver is not validated on hardware yet.
-- RF reception, for testing only: `radio_rt950pro.cpp` tunes the VHF
-  (136-174MHz) or UHF (400-470MHz) chip and reports the RSSI to the UI. The
-  receive RF path switches (PE13, PE12, PB0) are controlled according to the
-  selected band. Transmit path switches (PE7, PB1, PE14) and the band relay
-  (PC4) remain untouched.
-- RX audio: `audio_rt950pro.c` routes the receiving BK4829 to the speaker. At
-  boot the speaker is muted (PE1 high), the amplifier is powered (PE4), the
-  audio source switch selects the BK4829 chips (PC12 high) and the Bluetooth
-  switch the speaker (PE9 low). Connecting the transceiver to the speaker
-  enables the amplifier (PB8) and unmutes it, following the squelch. The
-  chip which is not receiving has its AF registers cleared, as both chips share
-  the same audio bus. The routing comes from the reverse engineering work and is
-  not validated on hardware yet.
+  (SCLK PE10, SDATA PE11); chip 0 (PE8 chip select) is wired to the VHF LNA
+  and PA, chip 1 (PE15) to the UHF ones. Both chips use one generic OpenRTX
+  SPI device with a shared transaction mutex; the BK4829 driver controls chip
+  select across command and data.
+- bands: 136-174MHz and 222-225MHz on chip 0, 400-480MHz on chip 1. The
+  target lists them in `CONFIG_RF_BANDS_MHZ` and `radio_rt950pro.cpp` has a
+  row for each: chip, receive and transmit path switch, calibration row. The
+  band relay (PC4) and the HF paths remain untouched.
+- FM: receive and transmit, 12.5kHz and 25kHz, CTCSS transmit at the level of
+  the factory calibration, the 1750Hz tone burst.
+- M17 voice, receive and transmit, done on the MCU: neither chip gives a
+  baseband. To transmit, the band's chip sends its tone generator, whose gain
+  is the baseband (`BK4829_tone.cpp`), and the other chip passes the
+  microphone to the MCU's ADC. To receive, the band's chip is tuned 8kHz below
+  the signal and its mixer output is demodulated from the ADC (`at32_adc.c`);
+  the speech is played from DAC1 (`at32_dac.c`). Codec2 is Codec2-mod, for its
+  smaller memory use. The receiver's IF is audible as a hiss behind the
+  speech: the chips' audio output and DAC1 share the net the speaker is fed
+  from.
+- M17 text messages, with an inbox of 8 entries: the heap has no room for
+  more beside M17 voice.
+- transmit power: 1, 5 and 10W from the factory calibration in the external
+  flash (`nvmem_rt950pro.c`), read only. On 222-225MHz the three settings give
+  the same output.
+- beeps, from the chip that is not receiving.
+- audio routing: `audio_rt950pro.c`. PE1 high mutes the speaker, PE4 powers
+  the amplifier, PB8 high takes the microphone off its line, PC12 selects the
+  BK4829 chips (high) or DAC1 (low) and PE9 the speaker (low) or Bluetooth.
+  The volume knob is analog, after these: the firmware cannot read it.
+- watchdog: started by the firmware, about 4s. A fatal error restarts the
+  radio.
 - SI4732 driver (FM only)
 - Bluetooth BLE module on USART1 (TX PA9, RX PA10), driven by
   `bluetooth_rt950pro.c` as a transparent data link. The module is enabled by
@@ -75,12 +86,12 @@ Supported:
 
 Not supported yet:
 
-- RF transmission
 - BK4829 GPIO driver (not required for RT950 pro)
 - SI4732 AM/SSB reception
-- Audio routing transmission
-- Baseband Audio access (to support digital modes)
-- External flash (e.g. calibration, CPS reading)
+- HF: the band relay and the HF receive and transmit paths
+- CTCSS receive and voice prompts: in the code, not checked on a radio yet
+- Channels: the codeplug is not stored
+- Time while the radio is off: there is no 32kHz crystal, GPS sets the time
 - Bluetooth core integration (CPS over Bluetooth, menu) and audio
 
 
