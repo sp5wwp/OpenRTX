@@ -304,6 +304,11 @@ static int dac_start(const uint8_t instance, const void *config,
  */
 static int dac_data(struct streamCtx *ctx, stream_sample_t **buf)
 {
+    // A stream that has ended has no buffer to give: its writer would
+    // otherwise go on filling one, without a wait in dac_sync() any more
+    if (dac.ctx != ctx)
+        return -1;
+
     const size_t half = ctx->bufSize / 2;
 
     dac.idle = 1 - dac.playing;
