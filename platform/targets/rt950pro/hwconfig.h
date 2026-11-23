@@ -40,6 +40,16 @@ extern "C" {
 #define CONFIG_MIC_OVERSAMPLE 3
 #define CONFIG_MIC_GAIN 8
 
+/*
+ * Message inbox and M17 SMS. A small inbox: M17 receive leaves 8kB of the
+ * heap, and with the 32 entries and 3200 bytes of other radios its Codec2
+ * decoder no longer starts.
+ */
+#define CONFIG_MESSAGES
+#define CONFIG_MESSAGES_MAX_ENTRIES 8
+#define CONFIG_MESSAGES_POOL_BYTES 1024
+#define CONFIG_M17_SMS
+
 /* The radio's bands, in MHz. The radio driver has a path for each, in order */
 #define CONFIG_RF_BANDS_MHZ \
     RF_BAND(136, 174), RF_BAND(222, 225), RF_BAND(400, 480)
