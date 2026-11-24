@@ -57,6 +57,8 @@
  *   hp                        largest block the heap can allocate now
  *   xr <v|u> <reg>            read a BK4829 register (v: VHF chip, u: UHF/HF)
  *   xw <v|u> <reg> <value>    write a BK4829 register
+ *   rx                        receiver state and last M17 link setup:
+ *                             source, destination, meta text
  *   ptt <ms> | ptt off        transmit through the normal path, released
  *                             after at most 10 s (decimal ms)
  *
@@ -79,6 +81,7 @@
 #define RX_BUF_SIZE 256
 #define LINE_SIZE 96
 #define MAX_READ 4096
+#define SF_CHUNK 256
 #define MAX_ARGS 8
 #define STACK_SIZE 1536
 /*
@@ -279,7 +282,8 @@ static const char *cmdSpiFlash(char **arg)
         return NULL;
     }
 
-    static uint8_t buf[MAX_READ];
+    /* Small: with newlib, static RAM is taken from the heap */
+    static uint8_t buf[SF_CHUNK];
     uint32_t addr, len;
     if ((arg[0] == NULL) || !parseHex(arg[1], &addr) || !parseHex(arg[2], &len))
         return "usage: sf id | sf r <addr> <len> | sf c <addr> <len>";
@@ -287,8 +291,8 @@ static const char *cmdSpiFlash(char **arg)
     /* CRC-32 (IEEE) of a region, to check a dump made with "sf r" */
     if (strcmp(arg[0], "c") == 0) {
         uint32_t crc = 0;
-        for (uint32_t pos = 0; pos < len; pos += MAX_READ) {
-            uint32_t n = MIN(MAX_READ, len - pos);
+        for (uint32_t pos = 0; pos < len; pos += SF_CHUNK) {
+            uint32_t n = MIN(SF_CHUNK, len - pos);
             if (flash_read(extFlash, addr + pos, buf, n) != 0)
                 return "read failed";
             crc = crc32_ieee_update(crc, buf, n);
@@ -302,10 +306,12 @@ static const char *cmdSpiFlash(char **arg)
     if (len > MAX_READ)
         return "too long";
 
-    if (flash_read(extFlash, addr, buf, len) != 0)
-        return "read failed";
-
-    hexLines(addr, buf, len);
+    for (uint32_t pos = 0; pos < len; pos += SF_CHUNK) {
+        uint32_t n = MIN(SF_CHUNK, len - pos);
+        if (flash_read(extFlash, addr + pos, buf, n) != 0)
+            return "read failed";
+        hexLines(addr + pos, buf, n);
+    }
 
     return NULL;
 }
@@ -455,10 +461,8 @@ static const char *cmdPtt(char **arg)
 
 #define HP_STEP 256
 
-static const char *cmdHeap(char **arg)
+static size_t largestFreeBlock(void)
 {
-    (void)arg;
-
     size_t size = 224 * 1024;
     while (size > 0) {
         void *p = malloc(size);
@@ -469,7 +473,14 @@ static const char *cmdHeap(char **arg)
         size -= HP_STEP;
     }
 
-    out("%u\n", (unsigned int)size);
+    return size;
+}
+
+static const char *cmdHeap(char **arg)
+{
+    (void)arg;
+
+    out("%u\n", (unsigned int)largestFreeBlock());
 
     return NULL;
 }
@@ -592,6 +603,21 @@ static const char *cmdMode(char **arg)
     return NULL;
 }
 
+/* Receiver state: operating mode and status, and the last M17 link setup */
+static const char *cmdRxStatus(char **arg)
+{
+    (void)arg;
+
+    const rtxStatus_t *s = rtx_getStatus();
+    out("mode %u status %u lsf %u\n", (unsigned)s->opMode,
+        (unsigned)s->opStatus, (unsigned)s->lsfOk);
+    out("src %.10s dst %.10s\n", s->M17_src, s->M17_dst);
+    out("meta %.52s\n", s->M17_meta_text);
+    out("heap %u\n", (unsigned)largestFreeBlock());
+
+    return NULL;
+}
+
 static const struct {
     const char *name;
     const char *(*func)(char **arg);
@@ -611,6 +637,7 @@ static const struct {
     { .name = "rtc", .func = cmdRtc },
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
+    { .name = "rx", .func = cmdRxStatus },
 };
 
 void monitor_exec(char *line)
