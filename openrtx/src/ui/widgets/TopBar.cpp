@@ -6,6 +6,7 @@
 
 #include "widgets/TopBar.hpp"
 #include "base/Layout.hpp"
+#include "core/datetime.h"
 #include "core/graphics.h"
 #include "core/messages.h"
 #include "render/DrawCtx.hpp"
@@ -110,10 +111,12 @@ int16_t TopBar::rightWidth() const
 
 void TopBar::update(const state_t &s, bool locked)
 {
-    /* The clock occupies the centre only when the screen has no title. */
-    if (!hasTitle && (s.time.minute != minute)) {
-        hour = s.time.hour;
-        minute = static_cast<int8_t>(s.time.minute);
+    /* The clock occupies the centre only when the screen has no title. It
+     * shows local time: the RTC keeps UTC. */
+    const datetime_t local = utcToLocalTime(s.time, s.settings.utc_timezone);
+    if (!hasTitle && ((local.minute != minute) || (local.hour != hour))) {
+        hour = local.hour;
+        minute = static_cast<int8_t>(local.minute);
         invalidate();
     }
 
