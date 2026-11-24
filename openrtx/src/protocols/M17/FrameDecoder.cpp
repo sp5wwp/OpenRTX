@@ -13,6 +13,8 @@
 #include "protocols/M17/Utils.hpp"
 #include <algorithm>
 
+struct m17StreamStats m17StreamStats;
+
 using namespace M17;
 
 FrameDecoder::FrameDecoder()
@@ -193,8 +195,12 @@ void FrameDecoder::decodeStream(const std::array<uint8_t, 46> &data)
 
     // Skip payload copy if BER is too high to avoid audio artifacts
     uint16_t bitErrs = viterbi.decodePunctured(punctured, tmp, DATA_PUNCTURE);
-    if (bitErrs < MAX_VITERBI_ERRORS)
+    m17StreamStats.frames++;
+    m17StreamStats.bitErrors += bitErrs;
+    if (bitErrs < MAX_VITERBI_ERRORS) {
+        m17StreamStats.accepted++;
         memcpy(&streamFrame.frameData, tmp.data(), tmp.size());
+    }
 }
 
 bool FrameDecoder::decodeLich(std::array<uint8_t, 6> &segment,

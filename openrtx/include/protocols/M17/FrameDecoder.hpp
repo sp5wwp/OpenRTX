@@ -19,6 +19,17 @@
 #include "StreamFrame.hpp"
 #include "PacketFrame.hpp"
 
+/**
+ * Stream frames decoded since start-up, for receiver measurements: all of
+ * them, the ones accepted (fewer corrected bit errors than the limit) and
+ * the bit errors the Viterbi decoder corrected in all of them.
+ */
+extern "C" struct m17StreamStats {
+    uint32_t frames;    ///< Stream frames decoded
+    uint32_t accepted;  ///< Stream frames whose payload was used
+    uint32_t bitErrors; ///< Corrected bit errors, all stream frames
+} m17StreamStats;
+
 namespace M17
 {
 
