@@ -25,10 +25,12 @@ extern "C" {
 #define CONFIG_PIX_FMT_RGB565
 
 /*
- * Draw the screen 8 rows at a time instead of keeping a framebuffer, which
- * would not fit in the 96kB of SRAM
+ * Draw the screen 80 rows at a time instead of keeping a framebuffer, which
+ * would leave too little heap for M17 (153.6kB of the 224kB of SRAM). Each
+ * band draws the whole screen: four bands draw it four times, the 8-row
+ * bands of the 96kB SRAM forty
  */
-#define CONFIG_GFX_BAND_ROWS 8
+#define CONFIG_GFX_BAND_ROWS 80
 
 /* Device supports M17 mode */
 #define CONFIG_M17
