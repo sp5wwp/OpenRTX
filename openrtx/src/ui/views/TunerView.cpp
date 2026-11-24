@@ -328,6 +328,15 @@ void TunerView::describe(uint8_t tuner, const state_t &s, uint8_t opStatus,
         sniprintf(t.name, sizeof(t.name), "%s",
                   (ch.name[0] != '\0') ? ch.name : "---");
     }
+
+    /* While an M17 stream is received, its caller and destination take the
+     * name's place. */
+    if ((ch.mode == OPMODE_M17) && t.receiving) {
+        const rtxStatus_t *rx = rtx_getStatus();
+        if (rx->lsfOk)
+            sniprintf(t.name, sizeof(t.name), "%.9s > %.9s", rx->M17_src,
+                      rx->M17_dst);
+    }
 }
 
 void TunerView::syncFromState(const state_t &s)
