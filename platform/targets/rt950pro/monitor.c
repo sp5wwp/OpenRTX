@@ -61,6 +61,7 @@
  *                             source, destination, meta text; free heap;
  *                             M17 stream frames decoded, accepted, and
  *                             their corrected bit errors since start-up
+ *   cpu                       CPU clock and the share of it left over
  *   tt <0|1|2>                M17 tone transmitter test levels in place of
  *                             the baseband: 0 off, 1 zero level, 2 sines,
  *                             3 each gain code against the zero code,
@@ -624,6 +625,42 @@ static const char *cmdToneTest(char **arg)
     return NULL;
 }
 
+/*
+ * Bench: the share of the CPU left to the lowest priority, this thread.
+ * Slices of 120 timer cycles are counted for half a second, against as
+ * many as fit 10ms with the interrupts off; the CPU clock is read from the
+ * DWT cycle counter.
+ */
+static uint32_t cpuSlices(uint32_t cycles)
+{
+    uint32_t t0 = k_cycle_get_32(), n = 0;
+    while ((k_cycle_get_32() - t0) < cycles) {
+        uint32_t c0 = k_cycle_get_32();
+        while ((k_cycle_get_32() - c0) < 120)
+            ;
+        n++;
+    }
+    return n;
+}
+
+static const char *cmdCpu(char **arg)
+{
+    (void)arg;
+    const uint32_t hz = sys_clock_hw_cycles_per_sec();
+    sys_write32(sys_read32(0xE000EDFC) | BIT(24), 0xE000EDFC); /* TRCENA */
+    sys_write32(0, 0xE0001004);                                /* CYCCNT */
+    sys_write32(sys_read32(0xE0001000) | 1, 0xE0001000);       /* CYCCNTENA */
+    unsigned int key = irq_lock();
+    uint32_t d0 = sys_read32(0xE0001004);
+    uint32_t full = cpuSlices(hz / 100);
+    uint32_t dcyc = sys_read32(0xE0001004) - d0;
+    irq_unlock(key);
+    uint32_t got = cpuSlices(hz / 2);
+    out("cpu %u MHz, left %u of %u slices\n", (unsigned)(dcyc / 10000),
+        (unsigned)got, (unsigned)(full * 50));
+    return NULL;
+}
+
 /* M17 stream frame counters (protocols/M17/FrameDecoder.hpp) */
 extern struct {
     uint32_t frames;
@@ -670,6 +707,7 @@ static const struct {
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
     { .name = "rx", .func = cmdRxStatus },
+    { .name = "cpu", .func = cmdCpu },
     { .name = "tt", .func = cmdToneTest },
 };
 
