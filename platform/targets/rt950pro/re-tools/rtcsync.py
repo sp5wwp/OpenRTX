@@ -4,16 +4,23 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
 # Set the RT-950 Pro RTC to the UTC time of this computer, and the timezone
-# setting to its UTC offset, through the debug monitor; then read it back.
-#   rtcsync.py [--port /dev/ttyUSB0]
+# setting to the UTC offset of a timezone, through the debug monitor; then
+# read it back.
+#   rtcsync.py [--port /dev/ttyUSB0] [--tz Europe/Warsaw]
+# The timezone is --tz, else the RT950_TZ environment variable (reflash.sh
+# passes it on), else the one of this computer; daylight saving included.
 # The RTC runs from the main crystal: it stops while the radio is off, so the
 # time is to be set again after each power-up (or taken from GPS).
-import sys, time, datetime
+import argparse, datetime, os, sys, time
+from zoneinfo import ZoneInfo
 sys.dont_write_bytecode = True
 from monitor import Monitor
 
-port = sys.argv[2] if sys.argv[1:2] == ['--port'] else '/dev/ttyUSB0'
-m = Monitor(port)
+ap = argparse.ArgumentParser()
+ap.add_argument('--port', default='/dev/ttyUSB0')
+ap.add_argument('--tz', default=os.environ.get('RT950_TZ'))
+a = ap.parse_args()
+m = Monitor(a.port)
 
 # Send right after a second boundary, so the second sent is the current one
 time.sleep(1.0 - (time.time() % 1.0) + 0.005)
@@ -21,8 +28,9 @@ now = datetime.datetime.now(datetime.timezone.utc)
 m.cmd(f'rtc {now.year % 100} {now.month} {now.day} {now.hour} {now.minute} '
       f'{now.second} {now.isoweekday()}')
 
-# Timezone setting: the UTC offset of this computer, in half hours
-offset = datetime.datetime.now().astimezone().utcoffset()
+# Timezone setting: the UTC offset now, in half hours
+zone = ZoneInfo(a.tz) if a.tz else None
+offset = datetime.datetime.now(zone).astimezone(zone).utcoffset()
 m.cmd(f'tz {round(offset.total_seconds() / 1800)}')
 
 time.sleep(1.0 - (time.time() % 1.0) + 0.3)
