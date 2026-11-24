@@ -257,7 +257,15 @@
 	status = "okay";
 };
 
-/* 8MHz crystal, PLL x15: 120MHz system clock as in the vendor firmware */
+/*
+ * 8MHz crystal, PLL x15: 120MHz system clock as in the vendor firmware.
+ *
+ * 240MHz works too (mul 29, div_fu 6, both clock-frequency 240MHz, both APB
+ * prescalers 4, see board_init.c): twice the CPU, but on one radio it put a
+ * spurious line about 300Hz from a 433.475MHz channel and took M17 frames
+ * from a strong signal (279 of 324 instead of 323). APB1 and APB2 stay at
+ * 60MHz either way, their timers at 120MHz
+ */
 &clk_hext {
 	clock-frequency = <DT_FREQ_M(8)>;
 	status = "okay";
@@ -283,6 +291,10 @@
 	clocks = <&pll>;
 	clock-frequency = <DT_FREQ_M(120)>;
 	ahb-prescaler = <1>;
+	/*
+	 * Divided by 2 to 60MHz each. The binding takes divisors, but the AT32
+	 * clock driver sets 4 as /8: board_init.c puts /4 right after it
+	 */
 	apb1-prescaler = <2>;
 	apb2-prescaler = <2>;
 	status = "okay";

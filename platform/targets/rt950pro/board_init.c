@@ -120,6 +120,31 @@ static int iwdgFeederStart(void)
 SYS_INIT(iwdgFeederStart, POST_KERNEL, 0);
 
 /*
+ * The AT32 clock driver turns an APB prescaler of 4 from the devicetree
+ * into a division by 8, (4 - 2) + 4 = CRM_APB1_DIV_8, while its binding
+ * takes divisors; 2 comes out right. Set the division by 4 meant, as at
+ * 240MHz, right after it and before the drivers that read the bus clocks
+ * from the registers: UARTs, timers.
+ */
+#if DT_PROP(DT_NODELABEL(crm), apb1_prescaler) == 4
+BUILD_ASSERT(DT_PROP(DT_NODELABEL(crm), apb2_prescaler) == 4,
+             "both APB prescalers 4, or neither");
+BUILD_ASSERT((CONFIG_CLOCK_CONTROL_INIT_PRIORITY < 31)
+                 && (CONFIG_GPIO_INIT_PRIORITY > 31)
+                 && (CONFIG_SERIAL_INIT_PRIORITY > 31),
+             "the APB dividers are set after the clock driver");
+
+static int apbDividers(void)
+{
+    crm_apb1_div_set(CRM_APB1_DIV_4);
+    crm_apb2_div_set(CRM_APB2_DIV_4);
+    return 0;
+}
+
+SYS_INIT(apbDividers, PRE_KERNEL_1, 31);
+#endif
+
+/*
  * A fatal error restarts the radio. The kernel's own handler halts, and a
  * transmission under way would stay keyed until the watchdog's time is up.
  */

@@ -98,6 +98,29 @@ static ALWAYS_INLINE void busPortWrite(uint32_t value)
     (void)sys_read32(BUS_PORT_BASE + GPIO_ODT);
 }
 
+/*
+ * Pad the strobes with NOPs: exact counts, no loop, each NOP its own
+ * statement so that the compiler knows the size of the code it branches
+ * over. At 240MHz the panel wanted more than twice the time of 120MHz
+ * (found on one radio: 24 and 12 NOPs showed artefacts, 32 and 16 none),
+ * the CPU's own instructions between the port writes having been part of
+ * the strobes.
+ */
+#define NOP2 "nop\n\tnop\n\t"
+#define NOP4 NOP2 NOP2
+#define NOP8 NOP4 NOP4
+#define NOP16 NOP8 NOP8
+#if CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 240000000
+#define WR_LOW_PAD NOP16 NOP16
+#define WR_HIGH_PAD NOP16
+#elif CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC == 120000000
+#define WR_LOW_PAD NOP8
+#define WR_HIGH_PAD NOP4
+#else
+#error "display strobe padding: CPU clock not handled"
+#endif
+#define busPad(nops) __asm__ volatile(nops)
+
 static ALWAYS_INLINE void busWrite(uint8_t value)
 {
     /* Data on the bus, WR still high */
@@ -108,23 +131,13 @@ static ALWAYS_INLINE void busWrite(uint8_t value)
     busPortWrite(PIN_CLR(BUS_WR_PIN));
 
     /* WR low pulse width, at least 15ns */
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
+    busPad(WR_LOW_PAD);
 
     /* WR rising edge latches the data */
     busPortWrite(PIN_SET(BUS_WR_PIN));
 
     /* WR high time and data hold time, at least 15ns */
-    arch_nop();
-    arch_nop();
-    arch_nop();
-    arch_nop();
+    busPad(WR_HIGH_PAD);
 }
 
 static ALWAYS_INLINE void busWritePixel(uint16_t pixel)
