@@ -21,8 +21,9 @@ namespace ortxui
 class DrawCtx;
 
 /**
- * A small battery glyph for the top bar: an outlined body with a terminal nub
- * and an inner fill proportional to charge. The fill turns to the warning
+ * A small battery glyph for the top bar, lying on its side: an outlined body
+ * with a terminal nub on the right and an inner fill from the left,
+ * proportional to charge. The fill turns to the warning
  * colour at low charge. The top bar paints it in the slot it lays out, so the
  * glyph keeps no state of its own.
  */

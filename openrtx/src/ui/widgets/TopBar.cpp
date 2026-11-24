@@ -43,7 +43,8 @@ static constexpr char FULL_CHARGE[] = "100%";
 /** Bar height. */
 static constexpr int16_t BAR_H = LARGE ? 22 : (REGULAR ? 16 : 12);
 
-static constexpr int16_t ICON_W = REGULAR ? 16 : 12; ///< Battery icon slot
+/// Battery icon slot, as wide as the glyph lying on its side
+static constexpr int16_t ICON_W = LARGE ? 24 : (REGULAR ? 20 : 15);
 
 /** Text font of the bar. */
 static constexpr fontSize_t FONT = LARGE ? FONT_SIZE_8PT : FONT_SIZE_6PT;

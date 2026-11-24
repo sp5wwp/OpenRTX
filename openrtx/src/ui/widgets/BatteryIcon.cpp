@@ -13,32 +13,38 @@
 namespace ortxui
 {
 
-static constexpr int16_t NUB_H = 2;      ///< Height of the terminal
-static constexpr int16_t MIN_BODY_H = 5; ///< Shortest body that reads as one
-static constexpr int16_t MIN_W = 6;      ///< Narrowest body
+static constexpr int16_t NUB_W = 2;      ///< Width of the terminal
+static constexpr int16_t MIN_BODY_W = 8; ///< Narrowest body that reads as one
+static constexpr int16_t MIN_H = 5;      ///< Lowest body
 
-static constexpr int16_t BODY_W_NUM = 4; ///< Body width per height, numerator
-static constexpr int16_t BODY_W_DEN = 5; ///< Body width per height, divisor
-static constexpr int16_t NUB_W_NUM = 3;  ///< Terminal width per body, numerator
-static constexpr int16_t NUB_W_DEN = 5;  ///< Terminal width per body, divisor
+static constexpr int16_t BODY_H_NUM = 3; ///< Body height per width, numerator
+static constexpr int16_t BODY_H_DEN = 5; ///< Body height per width, divisor
+static constexpr int16_t NUB_H_NUM = 3; ///< Terminal height per body, numerator
+static constexpr int16_t NUB_H_DEN = 5; ///< Terminal height per body, divisor
 
-/** Body width from which the corners round by 2 px rather than 1. */
-static constexpr int16_t ROUND2_W = 9;
+/** Body height from which the corners round by 2 px rather than 1. */
+static constexpr int16_t ROUND2_H = 9;
 
 static constexpr int16_t FILL_INSET = 2;   ///< Inset of the fill in the outline
 static constexpr uint16_t FILL_RADIUS = 1; ///< Corner radius of the fill
 
+/** Footprint on a large screen. */
+static constexpr Size SIZE_LARGE = { 24, 12 };
+
 /** Footprint on a regular screen, short of the bar height to leave a margin. */
-static constexpr Size SIZE_REGULAR = { 13, 12 };
+static constexpr Size SIZE_REGULAR = { 20, 10 };
 
 /** Footprint on a compact screen. */
-static constexpr Size SIZE_COMPACT = { 10, 9 };
+static constexpr Size SIZE_COMPACT = { 15, 8 };
 
 /** Charge at or below which the fill shows the warning colour. */
 static constexpr uint8_t LOW_CHARGE = 20;
 
 Size BatteryIcon::size()
 {
+    if (sizeClass() >= SizeClass::Large)
+        return SIZE_LARGE;
+
     return (sizeClass() >= SizeClass::Regular) ? SIZE_REGULAR : SIZE_COMPACT;
 }
 
@@ -49,63 +55,66 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
 
     charge = std::min<uint8_t>(charge, 100u);
 
-    const int16_t bodyH = static_cast<int16_t>(area.h - NUB_H);
-    if (bodyH < MIN_BODY_H)
+    const int16_t bodyW = static_cast<int16_t>(area.w - NUB_W);
+    if (bodyW < MIN_BODY_W)
         return;
 
-    /* Taller than wide, centred in the assigned width. */
-    const int16_t W =
-        std::max(std::min(static_cast<int16_t>(bodyH * BODY_W_NUM / BODY_W_DEN),
-                          static_cast<int16_t>(area.w)),
-                 MIN_W);
+    /* Wider than tall, lying on its side, centred in the assigned height. */
+    const int16_t H =
+        std::max(std::min(static_cast<int16_t>(bodyW * BODY_H_NUM / BODY_H_DEN),
+                          static_cast<int16_t>(area.h)),
+                 MIN_H);
 
-    const int16_t bx = static_cast<int16_t>(area.x + (area.w - W) / 2);
-    const int16_t byBody = static_cast<int16_t>(area.y + NUB_H);
-    const uint16_t r = (W >= ROUND2_W) ? 2u : 1u;
+    const int16_t bx = area.x;
+    const int16_t by = static_cast<int16_t>(area.y + (area.h - H) / 2);
+    const int16_t right = static_cast<int16_t>(bx + bodyW);
+    const uint16_t r = (H >= ROUND2_H) ? 2u : 1u;
 
-    /* A square terminal on top, overlapping the body by 1 px so they join. */
-    const int16_t nubW = static_cast<int16_t>((W * NUB_W_NUM) / NUB_W_DEN);
-    d.fillRect({ static_cast<int16_t>(bx + (W - nubW) / 2), area.y,
-                 static_cast<uint16_t>(nubW),
-                 static_cast<uint16_t>(NUB_H + 1) },
+    /* A square terminal on the right, overlapping the body by 1 px so they
+     * join. */
+    const int16_t nubH = static_cast<int16_t>((H * NUB_H_NUM) / NUB_H_DEN);
+    d.fillRect({ static_cast<int16_t>(right - 1),
+                 static_cast<int16_t>(by + (H - nubH) / 2),
+                 static_cast<uint16_t>(NUB_W + 1),
+                 static_cast<uint16_t>(nubH) },
                Sem::OnSurface);
 
-    /* The outline: a rounded body hollowed in the bar colour, with square top
-     * corners under the terminal. */
-    d.fillRoundRect({ bx, byBody, static_cast<uint16_t>(W),
-                      static_cast<uint16_t>(bodyH) },
+    /* The outline: a rounded body hollowed in the bar colour, with square
+     * right corners beside the terminal. */
+    d.fillRoundRect({ bx, by, static_cast<uint16_t>(bodyW),
+                      static_cast<uint16_t>(H) },
                     r, Sem::OnSurface);
-    d.fillRect({ bx, byBody, r, r }, Sem::OnSurface);
-    d.fillRect({ static_cast<int16_t>(bx + W - r), byBody, r, r },
+    d.fillRect({ static_cast<int16_t>(right - r), by, r, r }, Sem::OnSurface);
+    d.fillRect({ static_cast<int16_t>(right - r),
+                 static_cast<int16_t>(by + H - r), r, r },
                Sem::OnSurface);
 
     const uint16_t ir = (r > 0u) ? static_cast<uint16_t>(r - 1u) : 0u;
     d.fillRoundRect(
-        { static_cast<int16_t>(bx + 1), static_cast<int16_t>(byBody + 1),
-          static_cast<uint16_t>(W - 2), static_cast<uint16_t>(bodyH - 2) },
+        { static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1),
+          static_cast<uint16_t>(bodyW - 2), static_cast<uint16_t>(H - 2) },
         ir, Sem::Surface);
     if (ir > 0u) {
-        d.fillRect({ static_cast<int16_t>(bx + 1),
-                     static_cast<int16_t>(byBody + 1), ir, ir },
+        d.fillRect({ static_cast<int16_t>(right - 1 - ir),
+                     static_cast<int16_t>(by + 1), ir, ir },
                    Sem::Surface);
-        d.fillRect({ static_cast<int16_t>(bx + W - 1 - ir),
-                     static_cast<int16_t>(byBody + 1), ir, ir },
+        d.fillRect({ static_cast<int16_t>(right - 1 - ir),
+                     static_cast<int16_t>(by + H - 1 - ir), ir, ir },
                    Sem::Surface);
     }
 
-    /* The charge fills from the bottom up. */
-    const int innerH = bodyH - 2 * FILL_INSET;
-    const int fillH = innerH * static_cast<int>(charge) / 100;
-    if (fillH <= 0)
+    /* The charge fills from the left. */
+    const int innerW = bodyW - 2 * FILL_INSET;
+    const int fillW = innerW * static_cast<int>(charge) / 100;
+    if (fillW <= 0)
         return;
 
     const Sem fill = (charge <= LOW_CHARGE) ? Sem::Warning : Sem::OnSurface;
-    d.fillRoundRect(
-        { static_cast<int16_t>(bx + FILL_INSET),
-          static_cast<int16_t>(byBody + FILL_INSET + (innerH - fillH)),
-          static_cast<uint16_t>(W - 2 * FILL_INSET),
-          static_cast<uint16_t>(fillH) },
-        FILL_RADIUS, fill);
+    d.fillRoundRect({ static_cast<int16_t>(bx + FILL_INSET),
+                      static_cast<int16_t>(by + FILL_INSET),
+                      static_cast<uint16_t>(fillW),
+                      static_cast<uint16_t>(H - 2 * FILL_INSET) },
+                    FILL_RADIUS, fill);
 }
 
 } // namespace ortxui
