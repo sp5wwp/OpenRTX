@@ -574,6 +574,28 @@ void gfx_drawRect(point_t start, uint16_t width, uint16_t height, color_t color,
     int16_t x_to = ((int16_t)x_max < clip_x1) ? (int16_t)x_max : clip_x1;
     int16_t y_to = ((int16_t)y_max < clip_y1) ? (int16_t)y_max : clip_y1;
 
+#ifdef CONFIG_PIX_FMT_RGB565
+    // An opaque fill sets whole rows at once, with no per-pixel checks: the
+    // clip already lies inside the screen and the rows the buffer holds
+    if (fill && (color.alpha == 255)) {
+        if (x_from < 0)
+            x_from = 0;
+        if (y_from < 0)
+            y_from = 0;
+        if ((x_from > x_to) || (y_from > y_to))
+            return;
+
+        const rgb565_t pixel = _true2highColor(color);
+        for (int16_t y = y_from; y <= y_to; y++) {
+            PIXEL_T *row =
+                &framebuffer[(y - band_y0) * CONFIG_SCREEN_WIDTH + x_from];
+            for (int16_t x = x_from; x <= x_to; x++)
+                *row++ = pixel;
+        }
+        return;
+    }
+#endif
+
     for (int16_t y = y_from; y <= y_to; y++) {
         for (int16_t x = x_from; x <= x_to; x++) {
             if (y == start.y || y == y_max || x == start.x || x == x_max)
