@@ -52,6 +52,18 @@ enum at32AdcInstance {
 extern const struct audioDriver at32_adc_audio_driver;
 
 /**
+ * Bench: a capture of PA2's raw samples on the low IF, at 48kHz, taken before
+ * they are demodulated. Armed by setting size and count, then buf.
+ */
+struct at32AdcCapture {
+    uint16_t *buf;           ///< Samples, NULL when no capture is armed
+    uint32_t size;           ///< Samples wanted
+    volatile uint32_t count; ///< Samples taken
+};
+
+extern struct at32AdcCapture at32AdcCapture;
+
+/**
  * Handle the ADC DMA's half and full transfer interrupts.
  */
 void at32Adc_isr(void);

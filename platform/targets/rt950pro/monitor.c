@@ -20,6 +20,8 @@
 #include <zephyr/sys/crc.h>
 #include <zephyr/sys/ring_buffer.h>
 #include "bench.h"
+#include "drivers/audio/at32_adc.h"
+#include "drivers/audio/at32_dac.h"
 #include "bootloader.h"
 #include "monitor.h"
 #include "rtx/rtx.h"
@@ -62,6 +64,9 @@
  *                             M17 stream frames decoded, accepted, and
  *                             their corrected bit errors since start-up
  *   cpu                       CPU clock and the share of it left over
+ *   cap <ms> | cap free | cap capture of the receiver's raw IF at 48kHz,
+ *                             from the heap; read with rb
+ *   smute on|off              speech playback off the receiver's net
  *   tt <0|1|2>                M17 tone transmitter test levels in place of
  *                             the baseband: 0 off, 1 zero level, 2 sines,
  *                             3 each gain code against the zero code,
@@ -661,6 +666,58 @@ static const char *cmdCpu(char **arg)
     return NULL;
 }
 
+/*
+ * Bench: capture of the receiver's raw IF samples (at32_adc.h), read out
+ * with rb. The buffer is taken from the heap when armed and given back by
+ * "cap free", after the receiver has stopped writing to it.
+ */
+static const char *cmdCapture(char **arg)
+{
+    struct at32AdcCapture *cap = &at32AdcCapture;
+
+    if (arg[0] == NULL) {
+        out("cap %08x count %u size %u\n", (unsigned)(uintptr_t)cap->buf,
+            (unsigned)cap->count, (unsigned)cap->size);
+        return NULL;
+    }
+
+    if (strcmp(arg[0], "free") == 0) {
+        uint16_t *buf = cap->buf;
+        cap->buf = NULL;
+        k_msleep(50);
+        free(buf);
+        return NULL;
+    }
+
+    char *end;
+    unsigned long ms = strtoul(arg[0], &end, 10);
+    if ((*end != '\0') || (ms == 0) || (ms > 2000))
+        return "usage: cap <ms, 1 to 2000> | cap free | cap";
+    if (cap->buf != NULL)
+        return "capture armed: cap free first";
+
+    const uint32_t size = (uint32_t)(ms * 48);
+    uint16_t *buf = malloc(size * sizeof(uint16_t));
+    if (buf == NULL)
+        return "no heap for the capture";
+
+    cap->size = size;
+    cap->count = 0;
+    cap->buf = buf;
+    return NULL;
+}
+
+/* Bench: speech playback off the shared net, for the receiver (at32_dac.h) */
+static const char *cmdSpeechMute(char **arg)
+{
+    if ((arg[0] == NULL) || ((strcmp(arg[0], "on") != 0)
+                             && (strcmp(arg[0], "off") != 0)))
+        return "usage: smute on | smute off";
+
+    at32DacSilent = (strcmp(arg[0], "on") == 0);
+    return NULL;
+}
+
 /* M17 stream frame counters (protocols/M17/FrameDecoder.hpp) */
 extern struct {
     uint32_t frames;
@@ -708,6 +765,8 @@ static const struct {
     { .name = "xw", .func = cmdBkWrite },
     { .name = "rx", .func = cmdRxStatus },
     { .name = "cpu", .func = cmdCpu },
+    { .name = "cap", .func = cmdCapture },
+    { .name = "smute", .func = cmdSpeechMute },
     { .name = "tt", .func = cmdToneTest },
 };
 

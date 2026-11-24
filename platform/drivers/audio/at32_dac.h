@@ -23,6 +23,12 @@ extern "C" {
 extern const struct audioDriver at32_dac_audio_driver;
 
 /**
+ * Bench: DAC1 holds its mid level instead of the speech, which then leaves
+ * the net the receiver's IF is read from.
+ */
+extern volatile bool at32DacSilent;
+
+/**
  * Handle the DAC DMA's half and full transfer interrupts.
  */
 void at32Dac_isr(void);

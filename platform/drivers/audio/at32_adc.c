@@ -106,6 +106,8 @@ static const float secondTaps[IF_SECOND_HALF] = {
 
 static const struct gpioPin pa2 = { &GpioA, ADC_CHANNEL };
 
+struct at32AdcCapture at32AdcCapture;
+
 static struct {
     struct streamCtx *ctx; ///< Running stream, NULL when none
     struct k_sem sync;     ///< Given when a half of the stream is ready
@@ -396,9 +398,18 @@ static int adc_data(struct streamCtx *ctx, stream_sample_t **buf)
     const size_t half = ctx->bufSize / 2;
 
     if (!adc.cooked) {
+        const uint16_t *raw = &adc.raw[adc.ready * IF_OVERSAMPLE * half];
+        struct at32AdcCapture *cap = &at32AdcCapture;
+
+        if ((adc.instance == AT32_ADC_LOW_IF) && (cap->buf != NULL)
+            && (cap->count < cap->size)) {
+            const size_t n = MIN(IF_OVERSAMPLE * half, cap->size - cap->count);
+            memcpy(&cap->buf[cap->count], raw, n * sizeof(uint16_t));
+            cap->count += n;
+        }
+
         if (adc.instance == AT32_ADC_LOW_IF)
-            demodulate(&adc.raw[adc.ready * IF_OVERSAMPLE * half],
-                       &ctx->buffer[adc.ready * half], half);
+            demodulate(raw, &ctx->buffer[adc.ready * half], half);
         else
             microphone(ctx, adc.ready);
 

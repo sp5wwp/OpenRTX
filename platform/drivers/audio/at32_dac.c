@@ -93,6 +93,8 @@ static const float interpolate[UP][PHASE_TAPS] = {
 
 static const struct gpioPin pa4 = { &GpioA, 4 };
 
+volatile bool at32DacSilent;
+
 static struct {
     struct streamCtx *ctx;     ///< Running stream, NULL when none
     uint16_t *out;             ///< DAC1's samples for the stream, on the heap
@@ -218,7 +220,7 @@ __attribute__((optimize("O3"))) static void upsample(struct streamCtx *ctx,
             for (size_t k = 0; k < PHASE_TAPS; k++)
                 acc += interpolate[phase][k] * dac.history[k];
 
-            const int32_t v = DAC_MID + (int32_t)acc;
+            const int32_t v = DAC_MID + (at32DacSilent ? 0 : (int32_t)acc);
             *out++ = (uint16_t)CLAMP(v, 0, 4095);
         }
     }
