@@ -37,6 +37,7 @@ target_sources(app
     ${OPENRTX_ROOT}/platform/targets/rt950pro/monitor.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/board_init.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/hwconfig.c
+    ${OPENRTX_ROOT}/platform/targets/rt950pro/optionbytes.c
     ${OPENRTX_ROOT}/platform/targets/rt950pro/platform.c
 )
 

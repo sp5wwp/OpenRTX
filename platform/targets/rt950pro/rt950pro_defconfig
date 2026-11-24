@@ -47,3 +47,7 @@ CONFIG_SPI_NOR_SFDP_RUNTIME=y
 CONFIG_REBOOT=y
 CONFIG_CRC=y
 CONFIG_FLASH_JESD216_API=y
+
+# 224 kB of SRAM, selected by EOPB0 in the option bytes (optionbytes.c);
+# must match the sram0 node of the device tree
+CONFIG_SRAM_SIZE=224

@@ -5,7 +5,7 @@
  */
 
 /*
- * Radtel RT-950 Pro, Artery AT32F403AVGT7 (Cortex-M4F, 1MB flash, 96kB SRAM)
+ * Radtel RT-950 Pro, Artery AT32F403AVGT7 (Cortex-M4F, 1MB flash, 96kB or 224kB SRAM)
  */
 
 /dts-v1/;
@@ -344,6 +344,14 @@
 		size = <DT_SIZE_M(32)>;
 		has-dpd;
 	};
+};
+
+/*
+ * 224 kB of SRAM, selected by EOPB0 in the option bytes: platform_init()
+ * makes sure it is (optionbytes.c).
+ */
+&sram0 {
+	reg = <0x20000000 DT_SIZE_K(224)>;
 };
 
 &flash0 {

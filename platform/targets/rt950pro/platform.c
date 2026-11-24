@@ -18,12 +18,14 @@
 #include "drivers/SPI/spi_zephyr.h"
 #include "drivers/I2C/i2c_bitbang.h"
 #include "drivers/baseband/radio_rt950pro.h"
+#include "optionbytes.h"
 #ifdef CONFIG_BLUETOOTH
 #include "bluetooth_rt950pro.h"
 #endif
 #include <zephyr/drivers/adc.h>
 #include <zephyr/drivers/uart.h>
 #include <zephyr/logging/log.h>
+#include <zephyr/sys/reboot.h>
 #include <errno.h>
 #include <string.h>
 
@@ -229,6 +231,18 @@ void platform_init()
     } else {
         vbatAdcReady = true;
         LOG_INF("Battery voltage %u mV", (unsigned int)platform_getVbat());
+    }
+
+    /*
+     * The firmware is linked for 224 kB of SRAM. Select it in the option
+     * bytes if the radio still runs with 96 kB, then restart for it to take
+     * effect. This runs before the heap can grow past 96 kB.
+     */
+    if (!optionbytes_sram224()) {
+        int obRet = optionbytes_setSram224();
+        LOG_WRN("Selecting 224 kB of SRAM (%d), restarting", obRet);
+        if (obRet == 0)
+            sys_reboot(SYS_REBOOT_COLD);
     }
 
 #ifdef CONFIG_BROADCAST_FM
