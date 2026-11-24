@@ -461,7 +461,7 @@ linux_mod17_def = linux_def + {'CONFIG_SCREEN_WIDTH': '128', 'CONFIG_SCREEN_HEIG
 # RAM instead of the 150 KB of a framebuffer.
 #
 linux_rt950pro_def = linux_def + {'CONFIG_SCREEN_WIDTH': '240', 'CONFIG_SCREEN_HEIGHT': '320', 'CONFIG_PIX_FMT_RGB565': '',
-                                  'CONFIG_GFX_BAND_ROWS': '8', 'CONFIG_UI_TUNERS': '3',
+                                  'CONFIG_GFX_BAND_ROWS': '80', 'CONFIG_UI_TUNERS': '3',
                                   'CONFIG_GPS': '', 'CONFIG_RTC': '', 'CONFIG_KBD_HAS_ARROWS': '', 'CONFIG_KBD_HAS_NUMERIC': ''}
 
 linux_c_args   = ['-ffunction-sections', '-fdata-sections', '-std=gnu17']
