@@ -55,10 +55,33 @@
 #define BK_SDA 11
 
 #define TIMER_HZ 120000000 // APB1 at 60MHz, its timers at twice that
-#define WRITE_HZ 48000     // Gain writes, one a stream sample
-#define SLOT_CYCLES 50     // 417ns a bus slot
-#define SLOTS (TIMER_HZ / WRITE_HZ / SLOT_CYCLES) // 50 slots a gain write
-#define HALF_WRITES 12                            // 0.25ms a buffer half
+#define STREAM_HZ 48000    // Baseband stream samples a second
+#define SLOT_CYCLES 47     // 392ns a bus slot
+#define BIT_SLOTS 2        // Slots a bit of a register write
+#define WRITE_SLOTS (24 * BIT_SLOTS + 2) // A gain write
+#define HALF_SAMPLES 47                  // Stream samples a buffer half, 0.98ms
+#define HALF_SLOTS (HALF_SAMPLES * (TIMER_HZ / STREAM_HZ) / SLOT_CYCLES)
+static_assert((HALF_SAMPLES * (TIMER_HZ / STREAM_HZ)) % SLOT_CYCLES == 0,
+              "a buffer half is a whole number of slots");
+// The chip reads the gain on its own crystal, 26MHz / 512 times a second:
+// written at another rate, the images of the writes alias into the
+// baseband, at the difference of the rates minus the baseband frequency
+// (2781Hz - f at 48kHz, measured on air). The writes follow the chip's
+// rate, each with the level of its own time. A rate off by tens of ppm, as
+// whole timer cycles would be, sweeps the chip's reads through the writes
+// a few times a second, a sawtooth of the delay; the right rate leaves the
+// slot's length of jitter. Time in ticks, 1/13 of a timer cycle: a stream
+// sample is 32500 ticks, a read of the chip 30720
+#define TICKS_CYCLE 13
+#define SLOT_TICKS (SLOT_CYCLES * TICKS_CYCLE)
+#define SAMPLE_TICKS ((TIMER_HZ / STREAM_HZ) * TICKS_CYCLE)
+#define READ_TICKS 30720
+#define HALF_TICKS (HALF_SLOTS * SLOT_TICKS)
+static_assert(static_cast<uint64_t>(READ_TICKS) * 26000000ULL
+                  == 512ULL * TIMER_HZ * TICKS_CYCLE,
+              "a read of the chip is 512 periods of its 26MHz crystal");
+static_assert(WRITE_SLOTS <= (READ_TICKS / SLOT_TICKS),
+              "a write fits between two reads of the chip");
 
 // Gain curve units (see toneGain) of a +3 symbol and of a zero baseband.
 // The baseband is inverted, so the EOT frame, nearly all +3, pulls the level
@@ -115,21 +138,27 @@ static const bk4829_reg_t regs[] = { BK4829_REG_2B, BK4829_REG_30,
                                      BK4829_REG_71, BK4829_REG_7E };
 
 static struct {
-    const struct BK4829 *chip;             ///< Keyed chip, NULL when none
-    uint16_t saved[ARRAY_SIZE(regs)];      ///< Its registers before the key-up
-    struct streamCtx *ctx;                 ///< Running stream, NULL when none
-    volatile bool stopping;                ///< Stop at the stream's next half
-    size_t pos;                            ///< Next stream sample to take
-    struct k_sem sync;                     ///< Given at each half of the stream
-    uint32_t bus[2 * HALF_WRITES * SLOTS]; ///< Slot words, two halves
-    uint8_t gainSlot[7];                   ///< Slot of each gain bit, MSB first
-    std::array<float, 2 * 81> filter;      ///< Last stream samples, twice
+    const struct BK4829 *chip;        ///< Keyed chip, NULL when none
+    uint16_t saved[ARRAY_SIZE(regs)]; ///< Its registers before the key-up
+    struct streamCtx *ctx;            ///< Running stream, NULL when none
+    volatile bool stopping;           ///< Stop at the stream's next half
+    size_t pos;                       ///< Next stream sample to take
+    struct k_sem sync;                ///< Given at each half of the stream
+    uint32_t bus[2 * HALF_SLOTS];     ///< Slot words, two halves
+    uint32_t write[WRITE_SLOTS];      ///< A gain write's slot words
+    uint8_t gainSlot[7];              ///< Slot of each gain bit, MSB first
+    int32_t writeTick;  ///< Next write, ticks from the half being filled
+    int32_t sampleTick; ///< Next stream sample, the same
+    int32_t toTick;     ///< The 24kHz level in to, the same
+    uint32_t carryWords[WRITE_SLOTS]; ///< A write the half end cut
+    uint8_t carry;                    ///< Its slots left for the next half
+    std::array<float, 2 * 81> filter; ///< Last stream samples, twice
     size_t filterHead;
-    int8_t symbols[PULSE_SYMBOLS];         ///< Last symbols, newest first
-    uint8_t phase;                         ///< Pulse sample within the symbol
-    int32_t from;     ///< Last 24kHz sample, 1/16 of a unit
-    int32_t to;       ///< This one
-    int32_t lowFreq;  ///< Leaky sum of the baseband
+    int8_t symbols[PULSE_SYMBOLS];    ///< Last symbols, newest first
+    uint8_t phase;                    ///< Pulse sample within the symbol
+    int32_t from;                     ///< Last 24kHz sample, 1/16 of a unit
+    int32_t to;                       ///< This one
+    int32_t lowFreq;                  ///< Leaky sum of the baseband
     int32_t quantErr; ///< Error of the last gain code, sixteenths of a unit
     float unit;       ///< A symbol unit out of the filter
 } tone;
@@ -267,11 +296,13 @@ static void takeSample(stream_sample_t sample)
  */
 volatile uint8_t bk4829ToneTest;
 volatile int32_t bk4829ToneLowFreqGain = LOW_FREQ_GAIN;
+volatile int32_t bk4829ToneTestAmp = 48;
+volatile int32_t bk4829ToneTestHz1 = 500;
+volatile int32_t bk4829ToneTestHz2;
 
 static int32_t nextLevel(void)
 {
     // Bench test levels, in place of the baseband
-    static uint32_t testPhase;
     if (bk4829ToneTest == BK4829_TONE_TEST_ZERO)
         return UNITS_ZERO << 4;
     if (bk4829ToneTest == BK4829_TONE_TEST_CODES) {
@@ -295,11 +326,17 @@ static int32_t nextLevel(void)
         return (UNITS_ZERO + ((n < 12000) ? 40 : -40)) << 4;
     }
     if (bk4829ToneTest == BK4829_TONE_TEST_SINE) {
-        // 500Hz on the 24kHz level grid, 48 units peak
-        testPhase = (testPhase + 1) % 48;
+        // One or two tones on the 24kHz level grid, each of the amplitude
+        static uint32_t ph1, ph2;
+        ph1 +=
+            static_cast<uint32_t>(bk4829ToneTestHz1 * (4294967296.0 / 24000));
+        ph2 +=
+            static_cast<uint32_t>(bk4829ToneTestHz2 * (4294967296.0 / 24000));
+        float v = sinf(ph1 * (2.0f * 3.14159265f / 4294967296.0f));
+        if (bk4829ToneTestHz2 != 0)
+            v += sinf(ph2 * (2.0f * 3.14159265f / 4294967296.0f));
         return (UNITS_ZERO << 4)
-             + static_cast<int32_t>(lroundf(
-                 48.0f * 16.0f * sinf(2.0f * 3.14159265f * testPhase / 48.0f)));
+             + static_cast<int32_t>(lroundf(bk4829ToneTestAmp * 16.0f * v));
     }
 
     int32_t acc = 0;
@@ -323,76 +360,130 @@ static int32_t nextLevel(void)
 }
 
 /**
- * Fill the bus buffer with REG_70 writes at the zero level: SCN low with the
- * first data bit, data set as SCK falls, SCK up a slot later, SCN up a slot
- * after the last bit. A slot's word is for GPIOE's set and clear register;
- * zero changes nothing.
+ * Build a REG_70 write's slot words: SCN low with the first data bit, data
+ * set as SCK falls, SCK up a slot later, SCN up a slot after the last bit.
+ * A slot's word is for GPIOE's set and clear register; zero changes nothing.
  */
 static void busTemplate(void)
 {
     const uint32_t scn = tone.chip->scn.pin;
     const uint32_t word = (0x70 << 16) | 0x8000 | (toneGain(UNITS_ZERO) << 8);
+    uint32_t *base = tone.write;
 
-    for (size_t w = 0; w < (2 * HALF_WRITES); w++) {
-        uint32_t *base = &tone.bus[w * SLOTS];
-
-        memset(base, 0, SLOTS * sizeof(uint32_t));
-        for (uint32_t k = 0; k < 24; k++) {
-            base[2 * k] = BUS_CLR(BK_SCK)
-                        | ((word & BIT(23 - k)) ? BUS_SET(BK_SDA) :
-                                                  BUS_CLR(BK_SDA))
-                        | ((k == 0) ? BUS_CLR(scn) : 0);
-            base[2 * k + 1] = BUS_SET(BK_SCK);
-            // Bits 14 to 8 are the gain
-            if ((k >= 9) && (k <= 15))
-                tone.gainSlot[k - 9] = static_cast<uint8_t>(2 * k);
-        }
-        base[48] = BUS_CLR(BK_SCK);
-        base[49] = BUS_SET(scn);
+    memset(base, 0, sizeof(tone.write));
+    for (uint32_t k = 0; k < 24; k++) {
+        base[BIT_SLOTS * k] = BUS_CLR(BK_SCK)
+                            | ((word & BIT(23 - k)) ? BUS_SET(BK_SDA) :
+                                                      BUS_CLR(BK_SDA))
+                            | ((k == 0) ? BUS_CLR(scn) : 0);
+        base[BIT_SLOTS * k + BIT_SLOTS / 2] = BUS_SET(BK_SCK);
+        // Bits 14 to 8 are the gain
+        if ((k >= 9) && (k <= 15))
+            tone.gainSlot[k - 9] = static_cast<uint8_t>(BIT_SLOTS * k);
     }
+    base[24 * BIT_SLOTS] = BUS_CLR(BK_SCK);
+    base[24 * BIT_SLOTS + 1] = BUS_SET(scn);
 }
 
 /**
- * Put the next gain codes in half of the bus buffer, a write a stream
- * sample: a 24kHz level every other sample and the midpoint in between,
- * since the chip reads the gain on its own clock and shorter steps leave
- * less timing error.
+ * A gain write's slot words.
+ *
+ * @param out: WRITE_SLOTS words.
+ * @param gain: the gain code.
+ */
+static inline void busWrite(uint32_t *out, uint8_t gain)
+{
+    memcpy(out, tone.write, sizeof(tone.write));
+    for (size_t b = 0; b < ARRAY_SIZE(tone.gainSlot); b++)
+        out[tone.gainSlot[b]] = BUS_CLR(BK_SCK)
+                              | ((gain & BIT(6 - b)) ? BUS_SET(BK_SDA) :
+                                                       BUS_CLR(BK_SDA));
+}
+
+/**
+ * Take the next stream sample, and every other one a new 24kHz level. With
+ * no stream the time just follows the writes.
+ *
+ * @param tick: time of the write waiting for it.
+ * @return false when there is no stream.
+ */
+static bool busAdvance(int32_t tick)
+{
+    struct streamCtx *ctx = tone.ctx;
+    if (ctx == NULL) {
+        tone.sampleTick = tick;
+        tone.toTick = tick;
+        return false;
+    }
+
+    takeSample(ctx->buffer[tone.pos]);
+    if ((tone.pos % 2) == 0) {
+        tone.from = tone.to;
+        tone.to = nextLevel();
+        // A level counts from the next sample on, as when the writes were
+        // a sample each: the midpoint, then the level
+        tone.toTick = tone.sampleTick + SAMPLE_TICKS;
+    }
+    tone.sampleTick += SAMPLE_TICKS;
+
+    tone.pos = (tone.pos + 1) % ctx->bufSize;
+    if ((tone.pos % (ctx->bufSize / 2)) == 0) {
+        k_sem_give(&tone.sync);
+        if (tone.stopping) {
+            ctx->running = 0;
+            tone.ctx = NULL;
+        }
+    }
+    return true;
+}
+
+/**
+ * Put the next gain writes in half of the bus buffer, at the rate the chip
+ * reads them, each with the level between the two 24kHz ones around it.
  *
  * @param half: 0 or 1.
  */
 static void busFill(int half)
 {
-    struct streamCtx *ctx = tone.ctx;
-    uint32_t *w = &tone.bus[half * HALF_WRITES * SLOTS];
+    uint32_t *buf = &tone.bus[half * HALF_SLOTS];
 
-    for (size_t i = 0; i < HALF_WRITES; i++, w += SLOTS) {
-        int32_t level = tone.to;
+    memset(buf, 0, HALF_SLOTS * sizeof(uint32_t));
 
-        if (ctx != NULL) {
-            takeSample(ctx->buffer[tone.pos]);
-            if ((tone.pos % 2) == 0) {
-                tone.from = tone.to;
-                tone.to = nextLevel();
-                level = (tone.from + tone.to) / 2;
-            }
+    // The end of the write the last half cut
+    memcpy(buf, &tone.carryWords[WRITE_SLOTS - tone.carry],
+           tone.carry * sizeof(uint32_t));
+    tone.carry = 0;
 
-            tone.pos = (tone.pos + 1) % ctx->bufSize;
-            if ((tone.pos % (ctx->bufSize / 2)) == 0) {
-                k_sem_give(&tone.sync);
-                if (tone.stopping) {
-                    ctx->running = 0;
-                    tone.ctx = NULL;
-                    ctx = NULL;
-                }
-            }
-        }
+    while (tone.writeTick < HALF_TICKS) {
+        const int32_t t = tone.writeTick;
+        while ((tone.toTick < t) && busAdvance(t))
+            ;
 
+        int32_t since = t - (tone.toTick - 2 * SAMPLE_TICKS);
+        since = std::max<int32_t>(0,
+                                  std::min<int32_t>(2 * SAMPLE_TICKS, since));
+        const int32_t level =
+            tone.from
+            + static_cast<int32_t>(
+                (static_cast<int64_t>(tone.to - tone.from) * since)
+                / (2 * SAMPLE_TICKS));
         const uint8_t gain = shapedGain(level);
-        for (size_t b = 0; b < ARRAY_SIZE(tone.gainSlot); b++)
-            w[tone.gainSlot[b]] = BUS_CLR(BK_SCK)
-                                | ((gain & BIT(6 - b)) ? BUS_SET(BK_SDA) :
-                                                         BUS_CLR(BK_SDA));
+
+        const size_t slot = static_cast<size_t>(t / SLOT_TICKS);
+        if ((slot + WRITE_SLOTS) <= HALF_SLOTS) {
+            busWrite(&buf[slot], gain);
+        } else {
+            busWrite(tone.carryWords, gain);
+            const size_t here = HALF_SLOTS - slot;
+            memcpy(&buf[slot], tone.carryWords, here * sizeof(uint32_t));
+            tone.carry = static_cast<uint8_t>(WRITE_SLOTS - here);
+        }
+        tone.writeTick += READ_TICKS;
     }
+
+    tone.writeTick -= HALF_TICKS;
+    tone.sampleTick -= HALF_TICKS;
+    tone.toTick -= HALF_TICKS;
 }
 
 void bk4829Tone_isr(void)
@@ -487,7 +578,7 @@ static int tone_start(const uint8_t instance, const void *config,
 
     if ((tone.chip == NULL) || (ctx == NULL) || (ctx->running != 0))
         return -EINVAL;
-    if ((ctx->sampleRate != WRITE_HZ) || (ctx->bufMode != BUF_CIRC_DOUBLE)
+    if ((ctx->sampleRate != STREAM_HZ) || (ctx->bufMode != BUF_CIRC_DOUBLE)
         || ((ctx->bufSize % (2 * SYMBOL_SAMPLES)) != 0))
         return -EINVAL;
 
@@ -509,9 +600,17 @@ static int tone_start(const uint8_t instance, const void *config,
                                    M17::rrc_taps_48k.begin(), 0.0f);
     k_sem_init(&tone.sync, 0, 1);
     ctx->running = 1;
-    tone.ctx = ctx;
 
+    // The buffer starts with writes of the zero level, the stream after it
     busTemplate();
+    tone.ctx = NULL;
+    tone.writeTick = 0;
+    tone.sampleTick = 0;
+    tone.toTick = 0;
+    tone.carry = 0;
+    busFill(0);
+    busFill(1);
+    tone.ctx = ctx;
     sys_set_bits(CRM_APB1EN, APB1_TMR7);
     sys_set_bits(CRM_AHBEN, AHB_DMA2);
     sys_write32(0, TMR7_CTRL1);

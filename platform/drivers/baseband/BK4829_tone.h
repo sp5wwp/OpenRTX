@@ -54,7 +54,7 @@ void bk4829Tone_keyDown(void);
 enum bk4829ToneTest {
     BK4829_TONE_TEST_OFF = 0,   ///< The baseband, normal operation
     BK4829_TONE_TEST_ZERO = 1,  ///< The zero level: an unmodulated carrier
-    BK4829_TONE_TEST_SINE = 2,  ///< A 500Hz sine, 48 gain units peak
+    BK4829_TONE_TEST_SINE = 2,  ///< Sines, bk4829ToneTestHz1 and Hz2
     BK4829_TONE_TEST_CODES = 3, ///< Every gain code against the zero code
     BK4829_TONE_TEST_SLOW = 4,  ///< A 1Hz square wave, 40 units each way
 };
@@ -64,6 +64,13 @@ extern volatile uint8_t bk4829ToneTest;
 
 /** Bench: the high-pass compensation's gain, 2 pi fc / 24kHz in Q20. */
 extern volatile int32_t bk4829ToneLowFreqGain;
+
+/** Bench: the test sine's peak, gain units (48 by default). */
+extern volatile int32_t bk4829ToneTestAmp;
+
+/** Bench: the test sines' frequencies, Hz; the second off at 0. */
+extern volatile int32_t bk4829ToneTestHz1;
+extern volatile int32_t bk4829ToneTestHz2;
 
 /**
  * Handle the bus DMA's half and full transfer interrupts.
