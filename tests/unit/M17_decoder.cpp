@@ -317,3 +317,33 @@ TEST_CASE("Soft decoder assembles the LSF from the LICH through noise",
     CAPTURE(assembled);
     REQUIRE(assembled >= TRIALS * 60 / 100);
 }
+
+TEST_CASE("Soft decoder rejects stream frames of noise symbols",
+          "[m17][decoder]")
+{
+    // No signal after the syncword, only noise of several levels around the
+    // symbol unit: the path metric stays above the acceptance threshold
+    std::mt19937 rng(2026);
+    FrameDecoder dec;
+
+    for (double level : { 1.0, 2.0, 3.0 }) {
+        for (int k = 0; k < 200; k++) {
+            payload_t payload;
+            softFrame_t soft;
+            makeNoisyStreamFrame(rng, 0.0, dec, payload, soft);
+
+            payload_t before;
+            memcpy(before.data(), dec.getStreamFrame().data(), before.size());
+            for (size_t i = SYNCWORD_SYMBOLS; i < FRAME_SYMBOLS; i++) {
+                double x = level * gaussian(rng) * 1000.0;
+                x = std::max(-32768.0, std::min(32767.0, x));
+                sliceSymbol(static_cast<int16_t>(x), 1000, i, soft);
+            }
+            dec.decodeFrame(soft);
+
+            REQUIRE(memcmp(dec.getStreamFrame().data(), before.data(),
+                           before.size())
+                    == 0);
+        }
+    }
+}

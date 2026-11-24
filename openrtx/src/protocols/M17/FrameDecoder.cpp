@@ -195,15 +195,15 @@ void FrameDecoder::decodeStream(const softFrame_t &soft)
     };
 
     std::array<uint8_t, sizeof(StreamFrame)> tmp;
-    viterbi.decodePunctured<STREAM_BITS>(stream, tmp, DATA_PUNCTURE);
+    const uint16_t metric =
+        viterbi.decodePunctured<STREAM_BITS>(stream, tmp, DATA_PUNCTURE);
 
     StreamFrame decoded;
     memcpy(&decoded.frameData, tmp.data(), tmp.size());
 
-    // Acceptance check: re-encode the decoded payload as the transmitter did
-    // and count the coded bits that differ from the received hard decisions.
-    // A decode from noise disagrees with many of them, a genuine frame only
-    // where the channel flipped a bit.
+    // The channel's bit errors: re-encode the decoded payload as the
+    // transmitter did and count the coded bits that differ from the received
+    // hard decisions.
     FrameEncoder encoder;
     std::array<uint8_t, STREAM_BITS / 8> punctured;
     encoder.encodeStreamPayload(decoded, punctured);
@@ -215,10 +215,15 @@ void FrameDecoder::decodeStream(const softFrame_t &soft)
             errors++;
     }
 
-    // A rejected payload is not copied, so the previous stream frame is kept.
+    // Acceptance check on the Viterbi path metric, the distance of the
+    // received soft bits from the decoded sequence: unlike a count of hard
+    // bit errors it weighs each disagreement by its confidence, so it tells
+    // a decode from noise from a weak but genuine frame better. A rejected
+    // payload is not copied, so the previous stream frame is kept.
     m17StreamStats.frames++;
     m17StreamStats.bitErrors += errors;
-    if (errors < MAX_STREAM_BIT_ERRORS) {
+    m17StreamStats.lastMetric = metric;
+    if (metric < MAX_STREAM_METRIC) {
         m17StreamStats.accepted++;
         streamFrame = decoded;
     }

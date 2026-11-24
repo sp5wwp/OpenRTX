@@ -29,6 +29,7 @@ extern "C" struct m17StreamStats {
     uint32_t frames;    ///< Stream frames decoded
     uint32_t accepted;  ///< Stream frames whose payload was used
     uint32_t bitErrors; ///< Corrected bit errors, all stream frames
+    uint32_t lastMetric; ///< Viterbi path metric of the last stream frame
 } m17StreamStats;
 
 namespace M17
@@ -168,7 +169,13 @@ private:
     static constexpr size_t PAYLOAD_BITS = (2 * FRAME_SYMBOLS) - SYNC_BITS;
     static constexpr size_t STREAM_BITS = PAYLOAD_BITS - LICH_BITS;
     static constexpr uint8_t MAX_SYNC_HAMM_DISTANCE = 4;
-    static constexpr uint16_t MAX_STREAM_BIT_ERRORS = 20;
+    // Viterbi path metric of a stream frame from which it is rejected, in
+    // fully confident bits (see SoftViterbi). Simulated through Gaussian
+    // noise on the symbols, it lets as many wrong decodes through as a
+    // re-encoded count of 20 bit errors, 1.5% of frames from 0.6 to 0.9 of
+    // a symbol unit of noise, and keeps 2 to 3% more of the right ones;
+    // noise alone scores 40 or more
+    static constexpr uint16_t MAX_STREAM_METRIC = 31;
 
     uint8_t lsfSegmentMap;      ///< Bitmap for LSF reassembly from LICH
     LinkSetupFrame lsf;         ///< Latest LSF received.
