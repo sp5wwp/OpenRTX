@@ -447,11 +447,10 @@ static void busFill(int half)
 {
     uint32_t *buf = &tone.bus[half * HALF_SLOTS];
 
-    memset(buf, 0, HALF_SLOTS * sizeof(uint32_t));
-
     // The end of the write the last half cut
     memcpy(buf, &tone.carryWords[WRITE_SLOTS - tone.carry],
            tone.carry * sizeof(uint32_t));
+    size_t next = tone.carry; // First slot not written yet
     tone.carry = 0;
 
     while (tone.writeTick < HALF_TICKS) {
@@ -469,17 +468,22 @@ static void busFill(int half)
                 / (2 * SAMPLE_TICKS));
         const uint8_t gain = shapedGain(level);
 
+        // Only the slots between the writes are cleared, none or one each
         const size_t slot = static_cast<size_t>(t / SLOT_TICKS);
+        memset(&buf[next], 0, (slot - next) * sizeof(uint32_t));
         if ((slot + WRITE_SLOTS) <= HALF_SLOTS) {
             busWrite(&buf[slot], gain);
+            next = slot + WRITE_SLOTS;
         } else {
             busWrite(tone.carryWords, gain);
             const size_t here = HALF_SLOTS - slot;
             memcpy(&buf[slot], tone.carryWords, here * sizeof(uint32_t));
             tone.carry = static_cast<uint8_t>(WRITE_SLOTS - here);
+            next = HALF_SLOTS;
         }
         tone.writeTick += READ_TICKS;
     }
+    memset(&buf[next], 0, (HALF_SLOTS - next) * sizeof(uint32_t));
 
     tone.writeTick -= HALF_TICKS;
     tone.sampleTick -= HALF_TICKS;
