@@ -391,6 +391,7 @@ void Demodulator::reset()
     syncSign        = 0;
     missedSyncs     = 0;
     lastSyncValid   = false;
+    syncDistance    = 0.0f;
     corrThreshold   = 0.0f;
     newFrame        = false;
     resetClockRec   = false;
@@ -431,15 +432,29 @@ void Demodulator::quantizeSyncword(const uint32_t samplePoint)
     // quantizer thresholds are based on the actual signal level.
     devEstimator.init(deviation);
 
-    // Quantize the syncword taking data from the correlator memory.
+    // The symbols the syncword is expected to have
+    const syncw_t &syncword = (syncSign > 0) ? LSF_SYNC_WORD : STREAM_SYNC_WORD;
+    std::array<int8_t, SYNCWORD_SYMBOLS> ideal;
+    for(size_t i = 0; i < SYNCWORD_SYMBOLS; i++)
+        ideal[i] = byteToSymbols(syncword[i / 4])[i % 4];
+
+    // Quantize the syncword taking data from the correlator memory, and
+    // measure how far its symbols lie from the ideal ones, in symbol units
+    float dist2 = 0.0f;
     for(size_t i = 0; i < SYNCWORD_SAMPLES; i++) {
         size_t  pos = (correlator.index() + i) % SYNCWORD_SAMPLES;
 
         if((pos % SAMPLES_PER_SYMBOL) == samplePoint) {
             int16_t val = correlator.data()[pos];
+            int32_t outer = (val >= 0) ? deviation.first : -deviation.second;
+            if(frameIndex < SYNCWORD_SYMBOLS && outer > 0) {
+                float x = (3.0f * val) / outer - ideal[frameIndex];
+                dist2 += x * x;
+            }
             quantize(val);
         }
     }
+    syncDistance = sqrtf(dist2);
 }
 
 bool Demodulator::validSyncSigns(const frame_t &frame)
@@ -466,7 +481,8 @@ void Demodulator::syncedState()
 
     // Positive correlation peak: LSF syncword, negative: stream syncword
     const syncw_t &syncword = (syncSign > 0) ? LSF_SYNC_WORD : STREAM_SYNC_WORD;
-    bool valid = compareSyncwords(demodFrame->data(), syncword, 0);
+    bool valid = compareSyncwords(demodFrame->data(), syncword, 0)
+              && (syncDistance <= MAX_SYNC_DISTANCE);
 
     if(valid) {
         // Forget the symbol timing gathered before this lock

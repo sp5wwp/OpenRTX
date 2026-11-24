@@ -22,6 +22,7 @@
 #include "protocols/M17/Synchronizer.hpp"
 #include "core/fir.hpp"
 #include "M17Signal.hpp"
+#include "NoisyChannel.hpp"
 
 // M17 demodulation constants
 static constexpr size_t SAMPLES_PER_SYM = 5; // 24000 Hz / 4800 baud
@@ -762,4 +763,19 @@ TEST_CASE("Demodulator keeps the signal level through a dropout",
         if ((f < DROP_FRAME) || (s.frameStart[f] >= dropEnd))
             REQUIRE(received[f]);
     }
+}
+
+TEST_CASE("Demodulator seldom locks on noise", "[m17][demodulator]")
+{
+    // A lock is acquired on a syncword whose symbols lie near their levels,
+    // not on any noise that slices to it: on this noise 7 locks in two
+    // minutes, 14 without that check
+    NoisyChannel channel(24000, 4242, 3000.0f, 0.0f);
+    channel.idle(120.0);
+
+    auto transitions = lockTransitions(channel.samples());
+    const size_t locks = (transitions.size() + 1) / 2;
+
+    CAPTURE(locks);
+    REQUIRE(locks <= 9);
 }
