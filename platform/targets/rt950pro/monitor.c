@@ -58,7 +58,9 @@
  *   xr <v|u> <reg>            read a BK4829 register (v: VHF chip, u: UHF/HF)
  *   xw <v|u> <reg> <value>    write a BK4829 register
  *   rx                        receiver state and last M17 link setup:
- *                             source, destination, meta text
+ *                             source, destination, meta text; free heap;
+ *                             M17 stream frames decoded, accepted, and
+ *                             their corrected bit errors since start-up
  *   ptt <ms> | ptt off        transmit through the normal path, released
  *                             after at most 10 s (decimal ms)
  *
@@ -603,6 +605,13 @@ static const char *cmdMode(char **arg)
     return NULL;
 }
 
+/* M17 stream frame counters (protocols/M17/FrameDecoder.hpp) */
+extern struct {
+    uint32_t frames;
+    uint32_t accepted;
+    uint32_t bitErrors;
+} m17StreamStats;
+
 /* Receiver state: operating mode and status, and the last M17 link setup */
 static const char *cmdRxStatus(char **arg)
 {
@@ -614,6 +623,10 @@ static const char *cmdRxStatus(char **arg)
     out("src %.10s dst %.10s\n", s->M17_src, s->M17_dst);
     out("meta %.52s\n", s->M17_meta_text);
     out("heap %u\n", (unsigned)largestFreeBlock());
+    out("frames %lu accepted %lu biterrors %lu\n",
+        (unsigned long)m17StreamStats.frames,
+        (unsigned long)m17StreamStats.accepted,
+        (unsigned long)m17StreamStats.bitErrors);
 
     return NULL;
 }
