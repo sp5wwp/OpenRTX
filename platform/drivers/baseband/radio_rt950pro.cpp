@@ -14,6 +14,7 @@
 #include <calibration/calibInfo_RT950Pro.h>
 #include "drivers/GPIO/gpio_zephyr.h"
 #include "core/utils.h"
+#include "drivers/audio/at32_adc.h"
 #include "radio_rt950pro.h"
 #include "BK4829_tone.h"
 
@@ -37,7 +38,7 @@
  *   at32_adc.h).
  */
 
-static constexpr uint32_t LOW_IF_HZ = 8000;
+static constexpr uint32_t LOW_IF_HZ = AT32_ADC_LOW_IF_HZ;
 // AF output level of the chip that receives at the IF: enough over the ADC's
 // noise, and as little as that beside the speech DAC1 plays on the same net
 static constexpr uint16_t LOW_IF_AF_GAIN = 2;

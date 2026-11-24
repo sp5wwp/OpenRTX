@@ -73,11 +73,18 @@
 #define IF_SECOND_HALF 25
 #define IF_SECOND_TAPS (2 * IF_SECOND_HALF - 1)
 
-// A sixth of the sample rate, the 8kHz IF
+// The mixer's oscillator, at the IF
+#if (AT32_ADC_LOW_IF_HZ * 4) == IF_RATE
+static const float mixCos[4] = { 1.0f, 0.0f, -1.0f, 0.0f };
+static const float mixSin[4] = { 0.0f, 1.0f, 0.0f, -1.0f };
+#elif (AT32_ADC_LOW_IF_HZ * 6) == IF_RATE
 static const float mixCos[6] = { 1.000000f,  0.500000f,  -0.500000f,
                                  -1.000000f, -0.500000f, 0.500000f };
 static const float mixSin[6] = { 0.000000f, 0.866025f,  0.866025f,
                                  0.000000f, -0.866025f, -0.866025f };
+#else
+#error "AT32_ADC_LOW_IF_HZ: a quarter or a sixth of IF_RATE"
+#endif
 // 6.5kHz low-pass at 48kHz, 15 taps, Kaiser 5: the mixer's image, which
 // halving the rate would fold onto the signal
 static const float firstTaps[IF_FIRST_HALF] = { -0.000535f, -0.006249f,
@@ -178,8 +185,7 @@ __attribute__((optimize("O3"))) static inline float angle(const float y,
 }
 
 /**
- * Demodulate PA2's samples from the 8kHz IF: mixed down by a sixth of the
- * sample rate, low-passed and halved in rate, low-passed again, and the phase
+ * Demodulate PA2's samples from the IF (AT32_ADC_LOW_IF_HZ): mixed down, low-passed and halved in rate, low-passed again, and the phase
  * step between samples is the deviation.
  *
  * @param in: IF_OVERSAMPLE * count samples at IF_RATE.
