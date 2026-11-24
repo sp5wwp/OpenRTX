@@ -166,6 +166,14 @@ void state_task()
     ui_pushEvent(EVENT_STATUS, 0);
 
     pthread_mutex_unlock(&state_mutex);
+
+    // Store settings and VFO once they have been left unchanged for a while,
+    // so that they survive a power loss, not only a clean power off
+    bool settingsChanged =
+        hasChanged(&settingsDebouncer, &settings, sizeof(settings));
+    bool vfoChanged = hasChanged(&vfoDebouncer, &vfo, sizeof(vfo));
+    if (settingsChanged || vfoChanged)
+        nvm_writeSettingsAndVfo(&settings, &vfo);
 }
 
 void state_resetSettingsAndVfo()
