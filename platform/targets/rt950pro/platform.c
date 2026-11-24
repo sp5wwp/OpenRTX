@@ -5,6 +5,7 @@
  */
 
 #include <interfaces/platform.h>
+#include "bench.h"
 #include <interfaces/audio.h>
 #include <interfaces/display.h>
 #include <interfaces/keyboard.h>
@@ -319,8 +320,9 @@ int8_t platform_getChSelector()
 
 bool platform_getPttStatus()
 {
-    // Either PTT button, both low when pressed
-    return !gpioPin_read(&rt950_ptt) || !gpioPin_read(&rt950_ptt2);
+    // Either PTT button, both low when pressed, or the bench PTT
+    return !gpioPin_read(&rt950_ptt) || !gpioPin_read(&rt950_ptt2)
+        || bench_getPtt();
 }
 
 bool platform_pwrButtonStatus()

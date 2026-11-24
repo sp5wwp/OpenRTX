@@ -42,3 +42,8 @@ CONFIG_SPI=y
 CONFIG_SPI_NOR=y
 # Geometry read from the chip (SFDP): its JEDEC ID is not known in advance
 CONFIG_SPI_NOR_SFDP_RUNTIME=y
+
+# Debug monitor (monitor.c): restart into the bootloader, SPI NOR ID and CRC
+CONFIG_REBOOT=y
+CONFIG_CRC=y
+CONFIG_FLASH_JESD216_API=y
