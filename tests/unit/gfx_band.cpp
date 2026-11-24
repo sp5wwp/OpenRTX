@@ -221,6 +221,32 @@ TEST_CASE("Filled rectangles cover every band they cross", "[gfx][band]")
         }
     }
 
+    SECTION("rectangle starting left of and above the screen")
+    {
+        drawScreen([] { gfx_drawRect({ -10, -6 }, 40, 30, RED, true); });
+
+        for (int16_t y = 0; y < H; y++) {
+            for (int16_t x = 0; x < W; x++) {
+                const bool in = inside(x, y, -10, -6, 40, 30);
+                REQUIRE(pixel(x, y) == (in ? rgb565(RED) : 0));
+            }
+        }
+    }
+
+    SECTION("rectangles wholly off the screen")
+    {
+        drawScreen([] {
+            gfx_drawRect({ -60, 10 }, 50, 20, RED, true);
+            gfx_drawRect({ 10, -40 }, 50, 20, RED, true);
+            gfx_drawRect({ W, 10 }, 50, 20, RED, true);
+            gfx_drawRect({ 10, H }, 50, 20, RED, true);
+        });
+
+        for (int16_t y = 0; y < H; y++)
+            for (int16_t x = 0; x < W; x++)
+                REQUIRE(pixel(x, y) == 0);
+    }
+
     SECTION("rectangle outline across a band edge")
     {
         drawScreen([] { gfx_drawRect({ 20, 10 }, 30, 20, RED, false); });

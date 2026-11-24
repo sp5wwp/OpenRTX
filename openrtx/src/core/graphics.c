@@ -560,8 +560,11 @@ void gfx_drawRect(point_t start, uint16_t width, uint16_t height, color_t color,
         return;
     if (height == 0)
         return;
-    uint16_t x_max = start.x + width - 1;
-    uint16_t y_max = start.y + height - 1;
+    // Signed: a rectangle wholly left of or above the screen ends before it
+    int32_t x_max = start.x + width - 1;
+    int32_t y_max = start.y + height - 1;
+    if ((x_max < 0) || (y_max < 0))
+        return;
     bool perimeter = 0;
     if (x_max > (CONFIG_SCREEN_WIDTH - 1))
         x_max = CONFIG_SCREEN_WIDTH - 1;
