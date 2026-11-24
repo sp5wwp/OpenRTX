@@ -168,7 +168,13 @@ void state_task()
     pthread_mutex_unlock(&state_mutex);
 
     // Store settings and VFO once they have been left unchanged for a while,
-    // so that they survive a power loss, not only a clean power off
+    // so that they survive a power loss, not only a clean power off. Not
+    // while transmitting or receiving: the flash driver polls through the
+    // erase from this thread, above the codec thread, which would stop for
+    // that long. The wait starts again once the radio is idle.
+    if ((rtx_getStatus()->opStatus == TX) || rtx_rxSquelchOpen())
+        return;
+
     bool settingsChanged = hasChanged(&settingsDebouncer, &settings,
                                       sizeof(settings));
     bool vfoChanged = hasChanged(&vfoDebouncer, &vfo, sizeof(vfo));
