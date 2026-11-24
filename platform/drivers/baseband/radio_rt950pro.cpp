@@ -39,9 +39,12 @@
  */
 
 static constexpr uint32_t LOW_IF_HZ = AT32_ADC_LOW_IF_HZ;
-// AF output level of the chip that receives at the IF: enough over the ADC's
-// noise, and as little as that beside the speech DAC1 plays on the same net
-static constexpr uint16_t LOW_IF_AF_GAIN = 2;
+// AF output level of the chip that receives at the IF, the lowest: the IF
+// shares the speaker's net with the speech DAC1 plays and is heard as a hiss
+// behind it. At the lowest level it is about 14dB weaker than at 2, still
+// some 7 ADC counts rms against about 1 of noise, and a strong signal
+// decodes as before (bench, a USRP B210 transmitting)
+static constexpr uint16_t LOW_IF_AF_GAIN = 0;
 static constexpr uint16_t REG_AF_GAIN_MASK = 0x000F;  // REG_48
 static constexpr uint16_t REG_AFC_OFF = 0x0010;       // REG_73
 static constexpr uint16_t REG_MIC_GAIN_MASK = 0x001F; // REG_7D
