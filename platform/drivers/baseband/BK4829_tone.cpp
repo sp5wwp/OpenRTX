@@ -75,10 +75,12 @@
 // where the level it stops at hardly depends on the timing
 #define FREEZE_US 550
 // Carrier at the zero level before the baseband starts: the tone path is a
-// 4Hz high-pass and has to forget the step to that level
+// high-pass and has to forget the step to that level
 #define SETTLE_MS 200
-// The same high-pass, undone on the baseband: 2 pi 4Hz / 24kHz in Q20
-#define LOW_FREQ_GAIN 1098
+// The same high-pass, undone on the baseband: 2 pi 7.9Hz / 24kHz in Q20. A
+// step of the gain decays with a 20.1ms time constant, first order (on
+// air, a 1Hz square wave of the gain)
+#define LOW_FREQ_GAIN 2169
 
 #define SYMBOL_SAMPLES 10 // Stream samples a symbol
 #define PULSE_SPS 5       // Pulse samples a symbol, 24kHz
@@ -264,6 +266,7 @@ static void takeSample(stream_sample_t sample)
  * @return the sample in sixteenths of a gain curve unit.
  */
 volatile uint8_t bk4829ToneTest;
+volatile int32_t bk4829ToneLowFreqGain = LOW_FREQ_GAIN;
 
 static int32_t nextLevel(void)
 {
@@ -285,6 +288,12 @@ static int32_t nextLevel(void)
                                      224 + (c - 96) * 8;
         return u << 4;
     }
+    if (bk4829ToneTest == BK4829_TONE_TEST_SLOW) {
+        // A 1Hz square wave, 40 units each way
+        static uint32_t n;
+        n = (n + 1) % 24000;
+        return (UNITS_ZERO + ((n < 12000) ? 40 : -40)) << 4;
+    }
     if (bk4829ToneTest == BK4829_TONE_TEST_SINE) {
         // 500Hz on the 24kHz level grid, 48 units peak
         testPhase = (testPhase + 1) % 48;
@@ -302,12 +311,12 @@ static int32_t nextLevel(void)
     // path inverts
     int32_t v = -static_cast<int32_t>(
         (static_cast<int64_t>(acc) * UNITS_SYMBOL3 * 16) / (3 * 16384));
-    // A run of one sign sags through the 4Hz high-pass, the EOT frame's most
+    // A run of one sign sags through the high-pass, the EOT frame's most
     // of all. Its inverse is the baseband plus its integral, which leaks
     // here below 1Hz: lower, a small bias in the data walks the level away
     tone.lowFreq += v - (tone.lowFreq >> 12);
     v += static_cast<int32_t>(
-        (static_cast<int64_t>(tone.lowFreq) * LOW_FREQ_GAIN) >> 20);
+        (static_cast<int64_t>(tone.lowFreq) * bk4829ToneLowFreqGain) >> 20);
 
     return std::max<int32_t>(0, std::min<int32_t>(UNITS_MAX << 4,
                                                   (UNITS_ZERO << 4) + v));

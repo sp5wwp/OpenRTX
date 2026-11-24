@@ -56,10 +56,14 @@ enum bk4829ToneTest {
     BK4829_TONE_TEST_ZERO = 1,  ///< The zero level: an unmodulated carrier
     BK4829_TONE_TEST_SINE = 2,  ///< A 500Hz sine, 48 gain units peak
     BK4829_TONE_TEST_CODES = 3, ///< Every gain code against the zero code
+    BK4829_TONE_TEST_SLOW = 4,  ///< A 1Hz square wave, 40 units each way
 };
 
 /** Bench: an enum bk4829ToneTest, set from the debug monitor. */
 extern volatile uint8_t bk4829ToneTest;
+
+/** Bench: the high-pass compensation's gain, 2 pi fc / 24kHz in Q20. */
+extern volatile int32_t bk4829ToneLowFreqGain;
 
 /**
  * Handle the bus DMA's half and full transfer interrupts.
