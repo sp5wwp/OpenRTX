@@ -195,8 +195,8 @@ void FrameDecoder::decodeStream(const softFrame_t &soft)
     };
 
     std::array<uint8_t, sizeof(StreamFrame)> tmp;
-    const uint16_t metric =
-        viterbi.decodePunctured<STREAM_BITS>(stream, tmp, DATA_PUNCTURE);
+    const uint16_t metric = viterbi.decodePunctured<STREAM_BITS>(stream, tmp,
+                                                                 DATA_PUNCTURE);
 
     StreamFrame decoded;
     memcpy(&decoded.frameData, tmp.data(), tmp.size());
