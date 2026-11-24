@@ -95,8 +95,9 @@ static_assert(WRITE_SLOTS <= (READ_TICKS / SLOT_TICKS),
 // REG_40 for 2.4kHz of outer deviation at those units, in the 25kHz mode
 #define DEVIATION 0x681
 // The tone runs at 1kHz for this long before it is stopped: at its peak,
-// where the level it stops at hardly depends on the timing
-#define FREEZE_US 550
+// where the level it stops at hardly depends on the timing (measured on air:
+// 25us off it costs 1% of the deviation)
+#define FREEZE_US 707
 // Carrier at the zero level before the baseband starts: the tone path is a
 // high-pass and has to forget the step to that level
 #define SETTLE_MS 200
@@ -541,6 +542,11 @@ int bk4829Tone_keyUp(const struct BK4829 *chip, uint32_t freq)
     bk4829_write_reg(chip, BK4829_REG_47, tone.saved[4] & ~0x0F01);
     // No TX DC filter
     bk4829_write_reg(chip, BK4829_REG_7E, tone.saved[7] & ~0x0038);
+    // The tone stopped before the transmitter restarts: from there its phase
+    // stays where the restart leaves it until it runs at 1kHz below, else it
+    // runs at the receiver's tone 1 frequency and stops wherever the time the
+    // CPU takes to get there leaves it
+    bk4829_write_reg(chip, BK4829_REG_71, 0);
     // Tone transmit, the mic ADC off
     bk4829_write_reg(chip, BK4829_REG_30, 0);
     bk4829_write_reg(chip, BK4829_REG_30, 0xC3FA);
@@ -565,6 +571,7 @@ void bk4829Tone_keyDown(void)
         return;
 
     busStop();
+
     bk4829_rtx_off(chip);
     for (size_t i = 0; i < ARRAY_SIZE(regs); i++)
         bk4829_write_reg(chip, regs[i], tone.saved[i]);
