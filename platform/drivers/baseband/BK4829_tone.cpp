@@ -170,9 +170,6 @@ static struct {
  */
 static inline void busDelay(uint32_t turns)
 {
-    // Turns are sized at 120MHz
-    static_assert(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC >= 120000000, "slow CPU");
-    turns *= CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC / 120000000;
     while (turns--)
         __asm__ volatile("nop");
 }

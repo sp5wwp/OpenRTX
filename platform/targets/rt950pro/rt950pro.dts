@@ -243,37 +243,34 @@
 	status = "okay";
 };
 
-/*
- * 8MHz crystal, PLL x30: 240MHz system clock, twice the vendor firmware's.
- * APB1 and APB2 stay at 60MHz, their timers at 120MHz
- */
+/* 8MHz crystal, PLL x15: 120MHz system clock as in the vendor firmware */
 &clk_hext {
 	clock-frequency = <DT_FREQ_M(8)>;
 	status = "okay";
 };
 
 &pll {
-	/* Values are the HAL enumerators: mul = 29 is CRM_PLL_MULT_30 */
-	mul = <29>;
+	/* Values are the HAL enumerators: mul = 13 is CRM_PLL_MULT_15 */
+	mul = <13>;
 	/* xtpre = 0 selects HEXT undivided as PLL input */
 	xtpre = <0>;
-	/* CRM_USB_DIV_4: 60MHz, no 48MHz from 240MHz; USB is not used */
-	div_fu = <6>;
+	/* CRM_USB_DIV_2_5: 120MHz / 2.5 = 48MHz */
+	div_fu = <2>;
 	clocks = <&clk_hext>;
 	status = "okay";
 };
 
 &sysclk {
-	clock-frequency = <DT_FREQ_M(240)>;
+	clock-frequency = <DT_FREQ_M(120)>;
 	status = "okay";
 };
 
 &crm {
 	clocks = <&pll>;
-	clock-frequency = <DT_FREQ_M(240)>;
+	clock-frequency = <DT_FREQ_M(120)>;
 	ahb-prescaler = <1>;
-	apb1-prescaler = <4>;
-	apb2-prescaler = <4>;
+	apb1-prescaler = <2>;
+	apb2-prescaler = <2>;
 	status = "okay";
 };
 
