@@ -275,6 +275,11 @@
 };
 
 &usart4 {
+	/*
+	 * Above the DMA interrupts (audio_rt950pro.c): a received character must
+	 * be read before the next one, 87us later at 115200 Bd
+	 */
+	interrupts = <52 0>;
 	pinctrl-0 = <&usart4_default>;
 	pinctrl-names = "default";
 	current-speed = <115200>;
@@ -283,6 +288,10 @@
 
 /* Bluetooth serial module (SPP) */
 &usart1 {
+	/*
+	 * Below the audio DMA interrupts (audio_rt950pro.c)
+	 */
+	interrupts = <37 2>;
 	pinctrl-0 = <&usart1_default>;
 	pinctrl-names = "default";
 	current-speed = <9600>;
@@ -290,6 +299,10 @@
 };
 
 &usart3 {
+	/*
+	 * Below the audio DMA interrupts (audio_rt950pro.c)
+	 */
+	interrupts = <39 2>;
 	pinctrl-0 = <&usart3_default>;
 	pinctrl-names = "default";
 	current-speed = <9600>;
@@ -297,6 +310,11 @@
 };
 
 &adc1 {
+	/*
+	 * Below the audio DMA interrupts (audio_rt950pro.c): the battery voltage
+	 * conversions must not delay them
+	 */
+	interrupts = <18 2>;
 	at,adc-clock-source = "SYNC";
 	at,adc-prescaler = <2>;
 	status = "okay";

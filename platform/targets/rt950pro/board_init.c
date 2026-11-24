@@ -45,6 +45,14 @@ void board_early_init_hook(void)
     __ISB();
 
     /*
+     * The vendor bootloader leaves the interrupt priority grouping at 7 (no
+     * preemption bits): no interrupt would preempt another, and the debug
+     * UART would wait for any running handler, losing characters. Restore the
+     * reset value, all bits for preemption, which Zephyr relies on.
+     */
+    NVIC_SetPriorityGrouping(0);
+
+    /*
      * Disable JTAG keeping SWD: PB3 (keypad backlight) and PB4 (encoder A)
      * are JTAG pins after reset.
      */

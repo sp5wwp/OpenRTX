@@ -61,8 +61,9 @@ static void busAdcIsr(const void *arg)
 
 void audio_init()
 {
-    IRQ_CONNECT(DMA2_CHANNEL3_IRQ, 1, dacIsr, NULL, 0);
-    IRQ_CONNECT(DMA2_CHANNEL4_5_IRQ, 0, busAdcIsr, NULL, 0);
+    /* Below the debug UART (UART4, priority 0, see rt950pro.dts) */
+    IRQ_CONNECT(DMA2_CHANNEL3_IRQ, 2, dacIsr, NULL, 0);
+    IRQ_CONNECT(DMA2_CHANNEL4_5_IRQ, 1, busAdcIsr, NULL, 0);
     irq_enable(DMA2_CHANNEL3_IRQ);
     irq_enable(DMA2_CHANNEL4_5_IRQ);
 
