@@ -15,6 +15,7 @@
 #include "drivers/GPIO/gpio_zephyr.h"
 #include "core/utils.h"
 #include "drivers/audio/at32_adc.h"
+#include "protocols/M17/FrameDecoder.hpp"
 #include "radio_rt950pro.h"
 #include "BK4829_tone.h"
 
@@ -47,6 +48,29 @@ static constexpr uint32_t LOW_IF_HZ = AT32_ADC_LOW_IF_HZ;
 // than at 1, and at 0 even a strong signal mostly fails, its IF under the
 // speech.
 static constexpr uint16_t LOW_IF_AF_GAIN = 2;
+
+/*
+ * During a call the IF's AF level follows the signal: lower levels make less
+ * hiss, and a strong signal decodes at the lowest one (bench). Each window
+ * of IF_WINDOW_MS, the stream frames decoded and their corrected bit errors
+ * (m17StreamStats) decide: few errors, one level down at most each
+ * IF_STEP_MS; more, or frames lost, straight back to LOW_IF_AF_GAIN, which
+ * then holds until the call ends (no frame for IF_CALL_END_MS) so that the
+ * level does not hunt within a call.
+ */
+static constexpr uint32_t IF_WINDOW_MS = 200;
+static constexpr int64_t IF_STEP_MS = 1000;
+static constexpr int64_t IF_CALL_END_MS = 3000;
+static constexpr uint32_t IF_MIN_FRAMES = 3;       // Frames for a decision
+static constexpr uint32_t IF_DOWN_ERRORS_X10 = 10; // Mean errors x10, below
+static constexpr uint32_t IF_UP_ERRORS_X10 = 30;   // Mean errors x10, above
+
+static uint16_t ifLevel = LOW_IF_AF_GAIN;          // AF level of the IF now
+static bool ifHeld;                  // Back up once: no more steps
+static int64_t ifLastStep;           // When the level last went down
+static int64_t ifLastFrame;          // When a frame was last decoded
+static struct m17StreamStats ifLast; // Counts at the last window
+static struct k_work_delayable ifWork;
 static constexpr uint16_t REG_AF_GAIN_MASK = 0x000F;  // REG_48
 static constexpr uint16_t REG_AFC_OFF = 0x0010;       // REG_73
 static constexpr uint16_t REG_MIC_GAIN_MASK = 0x001F; // REG_7D
@@ -393,6 +417,61 @@ static void rfPathRx(const struct bandPath *path)
     gpioPin_set(path->rxSelect);
 }
 
+/**
+ * Set the IF's AF level of the receiving chip. With chipLock held.
+ *
+ * @param level: AF level, 0 to LOW_IF_AF_GAIN.
+ */
+static void setIfLevel(uint16_t level)
+{
+    ifLevel = level;
+    const struct chipDefaults &defaults = getDefaults(rxChip);
+    bk4829_write_reg(rxChip, BK4829_REG_48,
+                     (defaults.afGain & ~REG_AF_GAIN_MASK) | ifLevel);
+}
+
+static void ifWorkHandler(struct k_work *work)
+{
+    ARG_UNUSED(work);
+
+    const ChipLock lock;
+    const int64_t now = k_uptime_get();
+    const struct m17StreamStats s = m17StreamStats;
+    const uint32_t frames = s.frames - ifLast.frames;
+    const uint32_t accepted = s.accepted - ifLast.accepted;
+    const uint32_t errors = s.bitErrors - ifLast.bitErrors;
+    ifLast = s;
+
+    if ((opMode == OPMODE_M17) && (radioStatus == RX) && (rxChip != NULL)) {
+        if (frames > 0)
+            ifLastFrame = now;
+
+        const bool justStepped = (now - ifLastStep) < IF_STEP_MS;
+        const bool callEnded = (now - ifLastFrame) > IF_CALL_END_MS;
+        const bool bad = ((frames >= IF_MIN_FRAMES)
+                          && (((errors * 10) > (frames * IF_UP_ERRORS_X10))
+                              || (accepted < frames)))
+                      || ((frames == 0) && justStepped
+                          && (ifLevel < LOW_IF_AF_GAIN));
+        const bool good = (frames >= IF_MIN_FRAMES) && (accepted == frames)
+                       && ((errors * 10) <= (frames * IF_DOWN_ERRORS_X10));
+
+        if (callEnded) {
+            ifHeld = false;
+            if (ifLevel != LOW_IF_AF_GAIN)
+                setIfLevel(LOW_IF_AF_GAIN);
+        } else if (bad && (ifLevel < LOW_IF_AF_GAIN)) {
+            ifHeld = true;
+            setIfLevel(LOW_IF_AF_GAIN);
+        } else if (good && !ifHeld && (ifLevel > 0) && !justStepped) {
+            ifLastStep = now;
+            setIfLevel(ifLevel - 1);
+        }
+    }
+
+    k_work_reschedule(&ifWork, K_MSEC(IF_WINDOW_MS));
+}
+
 void radio_init(const rtxStatus_t *rtxState)
 {
     config = rtxState;
@@ -425,10 +504,14 @@ void radio_init(const rtxStatus_t *rtxState)
     bk4829_rtx_off(&rt950_bk4829_uhf_hf);
     bk4829_set_af(&rt950_bk4829_vhf, BK4829_AF_TYPE_MUTE);
     bk4829_set_af(&rt950_bk4829_uhf_hf, BK4829_AF_TYPE_MUTE);
+
+    k_work_init_delayable(&ifWork, ifWorkHandler);
+    k_work_reschedule(&ifWork, K_MSEC(IF_WINDOW_MS));
 }
 
 void radio_terminate()
 {
+    k_work_cancel_delayable(&ifWork);
     radio_disableRtx();
 }
 
@@ -531,8 +614,7 @@ static int startRx(const struct BK4829 *chip)
         bk4829_rx_on(chip);
         bk4829_write_reg(chip, BK4829_REG_73, defaults.afc | REG_AFC_OFF);
         bk4829_write_reg(chip, BK4829_REG_48,
-                         (defaults.afGain & ~REG_AF_GAIN_MASK)
-                             | LOW_IF_AF_GAIN);
+                         (defaults.afGain & ~REG_AF_GAIN_MASK) | ifLevel);
         bk4829_set_af(chip, BK4829_AF_TYPE_BASEBAND);
         return 0;
     }
