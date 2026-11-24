@@ -6,8 +6,9 @@
 
 # Radtel RT-950 Pro
 
-This target is based on the Artery AT32F403A (Cortex-M4F, 1MB flash, 96kB
-SRAM). It runs on Zephyr, using the Artery fork of Zephyr and the `hal_at32`
+This target is based on the Artery AT32F403A (Cortex-M4F, 1MB flash, 224kB
+SRAM, selected at the first start by the EOPB0 option byte, see
+`optionbytes.c`). It runs on Zephyr, using the Artery fork of Zephyr and the `hal_at32`
 module (`artery` group of `west.yml`).
 
 The hardware description comes from the reverse engineering work done in
@@ -30,8 +31,8 @@ The hardware description comes from the reverse engineering work done in
 Supported:
 
 - display: ST7789V 240x320 panel on a bit-banged 8-bit 8080 bus. The OpenRTX
-  UI covers the whole panel, drawn 8 rows at a time instead of in a
-  framebuffer. The backlight brightness is adjustable from the OpenRTX settings
+  UI covers the whole panel, drawn 80 rows at a time instead of in a
+  framebuffer, which would leave too little heap for M17. The backlight brightness is adjustable from the OpenRTX settings
   (PWM on PC6, TMR8 channel 1). The keypad backlight (PB3) is switched on and
   off together with the display one.
 - keypad, side keys, both PTT buttons and rotary encoder
@@ -44,7 +45,8 @@ Supported:
 - time/date: the AT32 hardware RTC, using the existing 8 MHz main crystal
   divided by 128 (62,500 Hz). Manual setting and optional GPS time
   synchronization use the existing OpenRTX settings.
-- NVM settings storage in last 8kB of internal flash
+- NVM settings storage in last 8kB of internal flash, written 3s after the
+  settings or the VFO last changed, so a power loss or an update keeps them
 - BK4829 transceivers: both chips are reset and initialised at boot. They
   share a Zephyr SPI bit-banged, half-duplex 3-wire serial bus at 100 kHz
   (SCLK PE10, SDATA PE11); chip 0 (PE8 chip select) is wired to the VHF LNA
@@ -65,7 +67,10 @@ Supported:
   the speech is played from DAC1 (`at32_dac.c`). Codec2 is Codec2-mod, for its
   smaller memory use. The receiver's IF is audible as a hiss behind the
   speech: the chips' audio output and DAC1 share the net the speaker is fed
-  from.
+  from. The IF's AF level steps down during a call while the frames decode
+  cleanly, which lowers the hiss on strong signals. Frames are decoded from
+  soft symbols; a stream frame is accepted on its Viterbi path metric, set so
+  that almost no wrong decode is played (see below).
 - M17 text messages, with an inbox of 8 entries: the heap has no room for
   more beside M17 voice.
 - transmit power: 1, 5 and 10W from the factory calibration in the external
@@ -107,6 +112,60 @@ Not supported yet:
 | Top side key         | `KEY_MONI`   |
 | Bottom side key      | `KEY_F3`     |
 | Encoder              | `KNOB_LEFT` / `KNOB_RIGHT` |
+
+## Bench findings
+
+Measured on one radio with a USRP B210 at 433.475MHz, the radio through a
+40dB attenuator. The B210's reference was itself measured against GSM base
+stations (`re-tools/b210_gsm_cal.py`): it runs 2.35ppm fast. The tools are in
+`re-tools/`; `monitor.py` talks to the debug monitor on UART4 (`monitor.c`).
+
+M17 transmitter (`BK4829_tone.cpp`):
+
+- The chip reads the tone gain 26MHz / 512 times a second, on its own
+  crystal. Written at another rate, the writes' images alias into the
+  baseband at the difference of the rates minus the baseband frequency:
+  2781Hz - f for writes at 48kHz (a 2kHz test tone showed its image at 782Hz,
+  -31dBc). The writes now follow the chip's rate, 50.28 bus slots of 392ns
+  apart, each with the level of its own time. With a whole number of timer
+  cycles per write, 33ppm off, the chip's reads sweep through the writes a
+  few times a second: a sawtooth of the delay, MER 11dB. 142ns slots lose DMA
+  transfers to GPIOE.
+- The tone path is a first-order 7.9Hz high-pass (a step of the gain decays
+  in 20.1ms), compensated on the baseband.
+- The gain curve's 128 codes are as assumed, to 0.15 units rms; 42.4Hz of
+  deviation a unit. The deviation stops growing 280 units above code 0
+  (3.8kHz over the old zero level of 190): the zero is now 156.
+- In the band, the path is flat to 2.4kHz, 2dB down at 2.8kHz and 13dB at
+  3.2kHz. The pulse is designed by least squares against that response for
+  no intersymbol interference after the receiver's RRC; the excess bandwidth
+  lost at 3.2kHz is made up from its fold below 2.4kHz.
+- Each gain write takes the nearest code and carries its error into the next
+  write: first order noise shaping.
+- Together: MER from 21.7dB to 30.7-30.9dB median (an occasional 0.5s block
+  near 23dB, while the chip's reads cross the writes' slot of jitter), and
+  the microphone has no path into the modulation. The `tt` monitor command
+  sends test levels in place of the baseband.
+- The carrier is 0.03 to 0.14ppm high.
+
+M17 receiver:
+
+- At B210 gain 15, 12 and 10dB, 93%, 27% and 3% of the frames sent were
+  accepted. At 12dB only 193 of 324 frames reached the decoder: the sync
+  loses them, which Gaussian noise in a host simulation does not reproduce
+  (FM clicks are a suspect).
+- The IF's AF level: level 1 costs 10 to 15dB of sensitivity, level 0 fails
+  on all but strong signals.
+- Stream frames carry no CRC. Simulated, the path metric threshold of 23 lets
+  1 wrong decode of 33000 frames through, from 0.4 to 1.0 of a symbol unit of
+  noise, and keeps 94% of the right ones at 0.5 and 36% at 0.6.
+
+Clocks:
+
+- The CPU runs at 120MHz, as in the vendor firmware. At 240MHz (PLL x30,
+  APB1 and APB2 divided by 4) the screen redrew twice as fast, but M17
+  transmissions went out unmodulated and the display showed a bar at the
+  start of each band: not used yet.
 
 ## Building
 
