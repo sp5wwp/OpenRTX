@@ -26,9 +26,9 @@
  * the bit errors the Viterbi decoder corrected in all of them.
  */
 extern "C" struct m17StreamStats {
-    uint32_t frames;    ///< Stream frames decoded
-    uint32_t accepted;  ///< Stream frames whose payload was used
-    uint32_t bitErrors; ///< Corrected bit errors, all stream frames
+    uint32_t frames;     ///< Stream frames decoded
+    uint32_t accepted;   ///< Stream frames whose payload was used
+    uint32_t bitErrors;  ///< Corrected bit errors, all stream frames
     uint32_t lastMetric; ///< Viterbi path metric of the last stream frame
 } m17StreamStats;
 
