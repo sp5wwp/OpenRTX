@@ -100,13 +100,13 @@ extern "C" {
 extern const struct gpioPin rt950_vbat;
 extern const struct gpioPin rt950_pwr_switch;
 extern const struct gpioPin rt950_power_enable;
-extern const struct gpioPin rt950_kbd_bl;
 extern const struct gpioPin rt950_led_red;
 extern const struct gpioPin rt950_led_green;
 extern const struct gpioPin rt950_ptt;
 extern const struct gpioPin rt950_ptt2;
 extern const struct gpioPin rt950_gps_pwr;
 extern const struct pwm_dt_spec rt950_lcd_bl_pwm;
+extern const struct pwm_dt_spec rt950_kbd_bl_pwm;
 
 /*
  * Audio path: speaker mute (high mutes), amplifier power, microphone mute

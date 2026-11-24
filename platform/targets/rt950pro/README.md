@@ -32,9 +32,10 @@ Supported:
 
 - display: ST7789V 240x320 panel on a bit-banged 8-bit 8080 bus. The OpenRTX
   UI covers the whole panel, drawn 80 rows at a time instead of in a
-  framebuffer, which would leave too little heap for M17. The backlight brightness is adjustable from the OpenRTX settings
-  (PWM on PC6, TMR8 channel 1). The keypad backlight (PB3) is switched on and
-  off together with the display one.
+  framebuffer, which would leave too little heap for M17. The backlight
+  brightness is adjustable from the OpenRTX settings (PWM on PC6, TMR8
+  channel 1); the keypad backlight follows it (PWM on PB3, TMR2 channel 2,
+  remap 1).
 - keypad, side keys, both PTT buttons and rotary encoder
 - serial logs (Zephyr console) on UART4, at 115200 baud, on the programming
   cable

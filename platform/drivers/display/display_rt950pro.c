@@ -25,6 +25,10 @@ BUILD_ASSERT(DT_PROP(DISPLAY_NODE, height) == CONFIG_SCREEN_HEIGHT);
 #define LCD_BL_TIMER_BASE \
     DT_REG_ADDR(DT_PARENT(DT_PWMS_CTLR(DT_NODELABEL(lcd_bl_pwm))))
 #define TMR_BRK_OFFSET 0x44
+/* IOMUX remap register 4: TMR2's remap, bits 4 and 5 */
+#define IOMUX_REMAP4 0x40010024
+#define IOMUX_REMAP4_TMR2_MASK (0x3UL << 4)
+#define IOMUX_REMAP4_TMR2_RMP1 (0x1UL << 4)
 #define TMR_BRK_OEN_BIT 15
 
 /*
@@ -217,16 +221,15 @@ static void backlight(uint8_t level)
     backlightLevel = level;
 
     if (level == 0) {
-        gpioPin_clear(&rt950_kbd_bl);
+        pwm_set_pulse_dt(&rt950_kbd_bl_pwm, 0);
         pwm_set_pulse_dt(&rt950_lcd_bl_pwm, 0);
         return;
     }
 
+    // The keypad follows the display's brightness
     uint32_t duty = MIN(((uint32_t)level * level) / 105 + 5, 100);
-    uint32_t pulse = (rt950_lcd_bl_pwm.period * duty) / 100;
-
-    pwm_set_pulse_dt(&rt950_lcd_bl_pwm, pulse);
-    gpioPin_set(&rt950_kbd_bl);
+    pwm_set_pulse_dt(&rt950_lcd_bl_pwm, (rt950_lcd_bl_pwm.period * duty) / 100);
+    pwm_set_pulse_dt(&rt950_kbd_bl_pwm, (rt950_kbd_bl_pwm.period * duty) / 100);
 }
 
 /**
@@ -253,9 +256,19 @@ static void sendRows(uint16_t startRow, uint16_t endRow, const uint16_t *pixels)
 void display_init()
 {
     /* Keep the backlights off until the first frame has been drawn */
-    gpioPin_clear(&rt950_kbd_bl);
-    if (gpioPin_setMode(&rt950_kbd_bl, OUTPUT) < 0)
-        LOG_ERR("Keypad backlight GPIO configuration failed");
+    if (pwm_is_ready_dt(&rt950_kbd_bl_pwm))
+        pwm_set_pulse_dt(&rt950_kbd_bl_pwm, 0);
+    else
+        LOG_ERR("Keypad backlight PWM not ready");
+
+    /*
+     * TMR2's partial remap 1 puts its channel 2 on PB3. The pin control sets
+     * it, but it was found cleared once the drivers were up, the cause not
+     * found: set it again here, after them.
+     */
+    sys_write32((sys_read32(IOMUX_REMAP4) & ~IOMUX_REMAP4_TMR2_MASK)
+                    | IOMUX_REMAP4_TMR2_RMP1,
+                IOMUX_REMAP4);
 
     if (pwm_is_ready_dt(&rt950_lcd_bl_pwm)) {
         pwm_set_pulse_dt(&rt950_lcd_bl_pwm, 0);

@@ -122,9 +122,6 @@
 		/* GPS power enable, active low */
 		gps-pwr-gpios = <&gpioa 8 GPIO_ACTIVE_LOW>;
 
-		/* Keypad backlight, on/off only */
-		kbd-bl-gpios = <&gpiob 3 GPIO_ACTIVE_HIGH>;
-
 		led-red-gpios = <&gpioc 13 GPIO_ACTIVE_HIGH>;
 		led-green-gpios = <&gpioc 14 GPIO_ACTIVE_HIGH>;
 
@@ -208,6 +205,11 @@
 		lcd_bl_pwm: lcd-bl-pwm {
 			pwms = <&pwm8 1 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
 		};
+
+		/* Keypad backlight brightness, PB3 driven by TMR2 channel 2 */
+		kbd_bl_pwm: kbd-bl-pwm {
+			pwms = <&pwm2 2 PWM_MSEC(1) PWM_POLARITY_NORMAL>;
+		};
 	};
 };
 
@@ -218,6 +220,18 @@
 
 	pwm8: pwm {
 		pinctrl-0 = <&tmr8_ch1_default>;
+		pinctrl-names = "default";
+		status = "okay";
+	};
+};
+
+/* 1MHz timer clock: 120MHz / (119 + 1) */
+&timer2 {
+	at,prescaler = <119>;
+	status = "okay";
+
+	pwm2: pwm {
+		pinctrl-0 = <&tmr2_ch2_default>;
 		pinctrl-names = "default";
 		status = "okay";
 	};

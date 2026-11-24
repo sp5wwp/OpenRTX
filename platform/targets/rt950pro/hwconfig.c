@@ -20,8 +20,6 @@ BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, pwr_switch_gpios),
                           DT_NODELABEL(gpioe)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, pwr_enable_gpios),
                           DT_NODELABEL(gpioa)));
-BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, kbd_bl_gpios),
-                          DT_NODELABEL(gpiob)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, led_red_gpios),
                           DT_NODELABEL(gpioc)));
 BUILD_ASSERT(DT_SAME_NODE(DT_GPIO_CTLR(USER_NODE, led_green_gpios),
@@ -76,7 +74,6 @@ const struct gpioPin rt950_pwr_switch = GPIO_PIN(GpioE, USER_NODE,
                                                  pwr_switch_gpios, 0);
 const struct gpioPin rt950_power_enable = GPIO_PIN(GpioA, USER_NODE,
                                                    pwr_enable_gpios, 0);
-const struct gpioPin rt950_kbd_bl = GPIO_PIN(GpioB, USER_NODE, kbd_bl_gpios, 0);
 const struct gpioPin rt950_led_red = GPIO_PIN(GpioC, USER_NODE, led_red_gpios,
                                               0);
 const struct gpioPin rt950_led_green = GPIO_PIN(GpioC, USER_NODE,
@@ -108,6 +105,8 @@ const struct gpioPin rt950_rf_sw3t = GPIO_PIN(GpioE, USER_NODE, rf_sw3t_gpios,
 
 const struct pwm_dt_spec rt950_lcd_bl_pwm =
     PWM_DT_SPEC_GET(DT_NODELABEL(lcd_bl_pwm));
+const struct pwm_dt_spec rt950_kbd_bl_pwm =
+    PWM_DT_SPEC_GET(DT_NODELABEL(kbd_bl_pwm));
 
 /*
  * BK4829 serial bus: SCLK PE10, SDATA PE11 (half duplex), shared by both

@@ -43,4 +43,14 @@
 			pinmux = <TMR8_CH1_PC6_OUTPUT_NORMP>;
 		};
 	};
+
+	/*
+	 * Keypad backlight PWM. Remap 1 moves only TMR2's channel 1 and 2 pins;
+	 * remap 3 would move channels 3 and 4 onto USART3's PB10 and PB11
+	 */
+	tmr2_ch2_default: tmr2_ch2_default {
+		group1 {
+			pinmux = <TMR2_CH2_PB3_OUTPUT_RMP1>;
+		};
+	};
 };
