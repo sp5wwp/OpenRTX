@@ -18,7 +18,7 @@
  * the protocol literal (see BROADCAST_CALL in Callsign.cpp), distinct from
  * any localized string displayed for it.
  */
-#define M17_BROADCAST_CALLSIGN "ALL"
+#define M17_BROADCAST_CALLSIGN "@ALL"
 
 /**
  * M17 packet buffer with embedded src/dst callsigns.
