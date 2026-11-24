@@ -62,9 +62,12 @@
 
 // Gain curve units (see toneGain) of a +3 symbol and of a zero baseband.
 // The baseband is inverted, so the EOT frame, nearly all +3, pulls the level
-// down: the zero sits well above the swing
+// down, through the high-pass compensation below, to 139 units under the
+// zero; stream peaks reach 121 units over it, and the deviation stops
+// growing past 280 units (3.8kHz over a zero of 190, measured on air). The
+// zero sits in between, on a code (79)
 #define UNITS_SYMBOL3 70
-#define UNITS_ZERO 190
+#define UNITS_ZERO 156
 #define UNITS_MAX 472
 // REG_40 for 2.4kHz of outer deviation at those units, in the 25kHz mode
 #define DEVIATION 0x681
@@ -122,10 +125,11 @@ static struct {
     size_t filterHead;
     int8_t symbols[PULSE_SYMBOLS];         ///< Last symbols, newest first
     uint8_t phase;                         ///< Pulse sample within the symbol
-    int32_t from;    ///< Last 24kHz sample, 1/16 of a unit
-    int32_t to;      ///< This one
-    int32_t lowFreq; ///< Leaky sum of the baseband
-    float unit;      ///< A symbol unit out of the filter
+    int32_t from;     ///< Last 24kHz sample, 1/16 of a unit
+    int32_t to;       ///< This one
+    int32_t lowFreq;  ///< Leaky sum of the baseband
+    int32_t quantErr; ///< Error of the last gain code, sixteenths of a unit
+    float unit;       ///< A symbol unit out of the filter
 } tone;
 
 /**
@@ -185,6 +189,43 @@ static uint8_t toneGain(int32_t units)
     if (units < 224)
         return static_cast<uint8_t>(64 + (units - 96) / 4);
     return static_cast<uint8_t>(96 + (units - 224) / 8);
+}
+
+/**
+ * Gain curve units of a gain code, the inverse of toneGain.
+ *
+ * @param gain: 0 to 127.
+ * @return the units, 0 to 472.
+ */
+static int32_t gainUnits(uint8_t gain)
+{
+    if (gain < 32)
+        return gain;
+    if (gain < 64)
+        return 32 + (gain - 32) * 2;
+    if (gain < 96)
+        return 96 + (gain - 64) * 4;
+    return 224 + (gain - 96) * 8;
+}
+
+/**
+ * The gain code nearest a level plus the error left by the last one, which
+ * this one's error replaces: first order noise shaping, the error of the
+ * coarse codes moved up towards 24kHz, away from the baseband.
+ *
+ * @param level: in sixteenths of a unit.
+ * @return the gain, 0 to 127.
+ */
+static uint8_t shapedGain(int32_t level)
+{
+    const int32_t want = std::max<int32_t>(
+        0, std::min<int32_t>(UNITS_MAX << 4, level + tone.quantErr));
+    uint8_t gain = toneGain(want >> 4);
+    if ((gain < 127)
+        && ((gainUnits(gain + 1) << 4) - want < want - (gainUnits(gain) << 4)))
+        gain++;
+    tone.quantErr = want - (gainUnits(gain) << 4);
+    return gain;
 }
 
 /**
@@ -337,7 +378,7 @@ static void busFill(int half)
             }
         }
 
-        const uint8_t gain = toneGain((level + 8) >> 4);
+        const uint8_t gain = shapedGain(level);
         for (size_t b = 0; b < ARRAY_SIZE(tone.gainSlot); b++)
             w[tone.gainSlot[b]] = BUS_CLR(BK_SCK)
                                 | ((gain & BIT(6 - b)) ? BUS_SET(BK_SDA) :
@@ -450,6 +491,7 @@ static int tone_start(const uint8_t instance, const void *config,
     tone.from = UNITS_ZERO << 4;
     tone.to = UNITS_ZERO << 4;
     tone.lowFreq = 0;
+    tone.quantErr = 0;
     // The modulator scales a symbol by 23000; a symbol through its filter
     // and the matched one is the sum of the squared taps
     tone.unit = 23000.0f
