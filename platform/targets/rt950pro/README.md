@@ -153,20 +153,35 @@ M17 receiver:
 
 - At B210 gain 15, 12 and 10dB, 93%, 27% and 3% of the frames sent were
   accepted. At 12dB only 193 of 324 frames reached the decoder: the sync
-  loses them, which Gaussian noise in a host simulation does not reproduce
-  (FM clicks are a suspect).
+  loses them, which Gaussian noise in a host simulation does not reproduce.
+  IF captures (`cap`, `re-tools/ifcap.py`) replayed through the receiver's
+  demodulator on the host (`re-tools/sim`) explain it: at 12dB the IF is far
+  below the FM threshold, about 290 clicks a second, near -1dB CNR. The
+  radio's own speech on the IF's net is not the cause (`smute`).
 - The IF's AF level: level 1 costs 10 to 15dB of sensitivity, level 0 fails
   on all but strong signals.
 - Stream frames carry no CRC. Simulated, the path metric threshold of 23 lets
   1 wrong decode of 33000 frames through, from 0.4 to 1.0 of a symbol unit of
   noise, and keeps 94% of the right ones at 0.5 and 36% at 0.6.
+- Below threshold, in the host model of the IF (500 frames, right ones
+  accepted at 6/4/2dB CNR: 97.8/69.4/4.6%), neither of these helped:
+  - shrinking each demodulated sample towards zero as the IF's power dips
+    below its mean: it takes most of the clicks away, but bends the symbol
+    levels more, and decodes fewer frames at every weight (63% at 4dB with
+    the lightest);
+  - a narrower or wider second IF filter: at 3.4, 3.8, 4.1 and 5kHz, 43.6,
+    62.0, 66.2 and 67.8% at 4dB. The 4.4kHz filter is the best.
+  Blanking clicks on the demodulated signal or gating on the IF's power
+  lost frames too. Gains below threshold need another demodulator (a PLL,
+  or the symbols detected straight from the IF).
 
 Clocks:
 
-- The CPU runs at 120MHz, as in the vendor firmware. At 240MHz (PLL x30,
-  APB1 and APB2 divided by 4) the screen redrew twice as fast, but M17
-  transmissions went out unmodulated and the display showed a bar at the
-  start of each band: not used yet.
+- The CPU runs at 120MHz, as in the vendor firmware. 240MHz works and can
+  be selected in `rt950pro.dts` (see the comment there), but a spur lands
+  near 433.4747MHz and strong-signal M17 reception drops from 323 to 279
+  frames of 324, so it is not the default. The Artery clock driver sets
+  APB dividers of 4 as 8; `board_init.c` corrects them.
 
 ## Building
 
