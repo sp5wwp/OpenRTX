@@ -9,7 +9,8 @@
 
 using namespace M17;
 
-static const char BROADCAST_CALL[] = "ALL";
+// The broadcast address: "ALL" alone is a callsign like any other
+static const char BROADCAST_CALL[] = "@ALL";
 static const char INVALID_CALL[] = "INVALID";
 static const char charMap[] = " ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-/.";
 
@@ -67,7 +68,7 @@ Callsign::Callsign(const call_t &encodedCall)
 bool Callsign::isSpecial() const
 {
     if ((std::strcmp(call, "INFO") == 0) || (std::strcmp(call, "ECHO") == 0)
-        || (std::strcmp(call, "ALL") == 0))
+        || (std::strcmp(call, BROADCAST_CALL) == 0))
         return true;
 
     return false;

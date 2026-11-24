@@ -66,7 +66,7 @@ public:
     /**
      * Test if callsign is a special one.
      *
-     * @return true if the callsign is either ALL, INFO or ECHO
+     * @return true if the callsign is either @ALL, INFO or ECHO
      */
     bool isSpecial() const;
 

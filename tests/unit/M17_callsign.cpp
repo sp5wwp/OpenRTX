@@ -43,3 +43,26 @@ TEST_CASE("Decode callsign AB1CD", "[m17][callsign]")
     const char *actual = test;
     REQUIRE(strcmp(expected, actual) == 0);
 }
+
+TEST_CASE("Encode and decode the broadcast address", "[m17][callsign]")
+{
+    M17::call_t broadcast = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
+
+    M17::call_t encoded = M17::Callsign("@ALL");
+    REQUIRE(equal(begin(encoded), end(encoded), begin(broadcast),
+                  end(broadcast)));
+
+    const char *decoded = M17::Callsign(broadcast);
+    REQUIRE(strcmp(decoded, "@ALL") == 0);
+}
+
+TEST_CASE("Encode callsign ALL, not the broadcast address", "[m17][callsign]")
+{
+    M17::call_t expected = { 0x00, 0x00, 0x00, 0x00, 0x4c, 0xe1 };
+
+    M17::call_t actual = M17::Callsign("ALL");
+    REQUIRE(equal(begin(actual), end(actual), begin(expected), end(expected)));
+
+    const char *decoded = M17::Callsign(expected);
+    REQUIRE(strcmp(decoded, "ALL") == 0);
+}
