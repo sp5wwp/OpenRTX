@@ -169,8 +169,8 @@ void state_task()
 
     // Store settings and VFO once they have been left unchanged for a while,
     // so that they survive a power loss, not only a clean power off
-    bool settingsChanged =
-        hasChanged(&settingsDebouncer, &settings, sizeof(settings));
+    bool settingsChanged = hasChanged(&settingsDebouncer, &settings,
+                                      sizeof(settings));
     bool vfoChanged = hasChanged(&vfoDebouncer, &vfo, sizeof(vfo));
     if (settingsChanged || vfoChanged)
         nvm_writeSettingsAndVfo(&settings, &vfo);
