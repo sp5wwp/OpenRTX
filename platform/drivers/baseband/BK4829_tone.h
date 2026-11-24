@@ -50,6 +50,17 @@ int bk4829Tone_keyUp(const struct BK4829 *chip, uint32_t freq);
  */
 void bk4829Tone_keyDown(void);
 
+/** Bench test levels of the tone transmitter, in place of the baseband. */
+enum bk4829ToneTest {
+    BK4829_TONE_TEST_OFF = 0,   ///< The baseband, normal operation
+    BK4829_TONE_TEST_ZERO = 1,  ///< The zero level: an unmodulated carrier
+    BK4829_TONE_TEST_SINE = 2,  ///< A 500Hz sine, 48 gain units peak
+    BK4829_TONE_TEST_CODES = 3, ///< Every gain code against the zero code
+};
+
+/** Bench: an enum bk4829ToneTest, set from the debug monitor. */
+extern volatile uint8_t bk4829ToneTest;
+
 /**
  * Handle the bus DMA's half and full transfer interrupts.
  */

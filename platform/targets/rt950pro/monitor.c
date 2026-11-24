@@ -61,6 +61,9 @@
  *                             source, destination, meta text; free heap;
  *                             M17 stream frames decoded, accepted, and
  *                             their corrected bit errors since start-up
+ *   tt <0|1|2>                M17 tone transmitter test levels in place of
+ *                             the baseband: 0 off, 1 zero level, 2 500Hz sine,
+ *                             3 each gain code against the zero code
  *   ptt <ms> | ptt off        transmit through the normal path, released
  *                             after at most 10 s (decimal ms)
  *
@@ -605,6 +608,21 @@ static const char *cmdMode(char **arg)
     return NULL;
 }
 
+/* Bench: tone transmitter test levels (drivers/baseband/BK4829_tone.h) */
+extern volatile uint8_t bk4829ToneTest;
+
+static const char *cmdToneTest(char **arg)
+{
+    uint32_t mode;
+
+    if ((arg[0] == NULL) || !parseHex(arg[0], &mode) || (mode > 3))
+        return "usage: tt <0 baseband | 1 zero | 2 500Hz sine | 3 code steps>";
+
+    bk4829ToneTest = (uint8_t)mode;
+
+    return NULL;
+}
+
 /* M17 stream frame counters (protocols/M17/FrameDecoder.hpp) */
 extern struct {
     uint32_t frames;
@@ -651,6 +669,7 @@ static const struct {
     { .name = "xr", .func = cmdBkRead },
     { .name = "xw", .func = cmdBkWrite },
     { .name = "rx", .func = cmdRxStatus },
+    { .name = "tt", .func = cmdToneTest },
 };
 
 void monitor_exec(char *line)

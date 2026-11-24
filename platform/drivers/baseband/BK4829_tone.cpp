@@ -83,22 +83,25 @@
 
 /**
  * A symbol's pulse at 24kHz, Q14 with 1.0 the level of a run of equal
- * symbols: the RRC convolved with the inverse of the tone path's measured
- * response (flat to 2.4kHz, 2dB down at 2.8kHz, 235us more delay at 2.4kHz
- * than at 500Hz).
+ * symbols. Least squares, against the tone path's response measured end to
+ * end on air (gain writes to FM deviation: flat to 2.4kHz, 2dB down at
+ * 2.8kHz, 13dB at 3.2kHz): no intersymbol interference after the
+ * receiver's RRC, the waveform otherwise close to an RRC, and little energy
+ * above 2.8kHz, where the tone path cuts. The excess bandwidth the cut takes
+ * is made up from its fold below 2.4kHz.
  */
 static const int16_t pulse[PULSE_SPS * PULSE_SYMBOLS] = {
-    0,     0,     0,    0,     0,     0,     0,     1,    2,     1,     -1,
-    -4,    -7,    -6,   -1,    7,     12,    10,    -1,   -12,   -10,   14,
-    46,    53,    -12,  -171,  -392,  -581,  -613,  -400, 37,    543,   883,
-    855,   421,   -235, -771,  -857,  -376,  469,   1229, 1437,  889,   -189,
-    -1208, -1519, -788, 746,   2317,  2982,  2128,  -138, -2933, -4929, -4942,
-    -2484, 1984,  7217, 11693, 14206, 14285, 12267, 9044, 5642,  2842,  994,
-    50,    -254,  -210, -22,   208,   432,   609,   693,  658,   520,   338,
-    190,   127,   150,  219,   281,   300,   281,   251,  240,   259,   297,
-    327,   331,   309,  277,   255,   256,   282,   320,  354,   372,   367,
-    341,   295,   235,  169,   104,   49,    11,    -10,  -15,   -10,   -3,
-    1,     3,     2,    1,     0,     0,     1,     1,    0,     0
+    -124,  -42,   52,    135,   155,   91,    -37,   -172,  -245,  -209,  -64,
+    136,   304,   354,   249,   17,    -251,  -437,  -448,  -263,  53,    370,
+    545,   491,   217,   -167,  -494,  -617,  -478,  -138,  244,   486,   473,
+    215,   -149,  -421,  -444,  -191,  208,   519,   526,   152,   -471,  -1035,
+    -1193, -731,  288,   1497,  2345,  2322,  1207,  -778,  -2973, -4482, -4487,
+    -2568, 1097,  5744,  10247, 13471, 14635, 13548, 10643, 6796,  3023,  155,
+    -1386, -1644, -1026, -86,   693,   1046,  967,   630,   270,   53,    20,
+    97,    162,   122,   -29,   -216,  -326,  -275,  -57,   248,   510,   609,
+    493,   206,   -136,  -390,  -456,  -314,  -28,   279,   485,   518,   380,
+    140,   -100,  -253,  -277,  -188,  -44,   89,    161,   158,   102,   29,
+    -28,   -52,   -48,   -30,   -16,   -11,   -9,    -1,    17,    61
 };
 
 static const bk4829_reg_t regs[] = { BK4829_REG_2B, BK4829_REG_30,
@@ -219,8 +222,36 @@ static void takeSample(stream_sample_t sample)
  *
  * @return the sample in sixteenths of a gain curve unit.
  */
+volatile uint8_t bk4829ToneTest;
+
 static int32_t nextLevel(void)
 {
+    // Bench test levels, in place of the baseband
+    static uint32_t testPhase;
+    if (bk4829ToneTest == BK4829_TONE_TEST_ZERO)
+        return UNITS_ZERO << 4;
+    if (bk4829ToneTest == BK4829_TONE_TEST_CODES) {
+        // Each gain code against the zero code, a 500Hz square wave for
+        // 40ms, code 0 to 127, after 200ms of the zero code
+        static uint32_t n;
+        n = (n + 1) % (4800 + 128 * 960);
+        if ((n < 4800) || ((n % 48) >= 24))
+            return UNITS_ZERO << 4;
+        const int32_t c = (n - 4800) / 960;
+        const int32_t u = (c < 32) ? c :
+                          (c < 64) ? 32 + (c - 32) * 2 :
+                          (c < 96) ? 96 + (c - 64) * 4 :
+                                     224 + (c - 96) * 8;
+        return u << 4;
+    }
+    if (bk4829ToneTest == BK4829_TONE_TEST_SINE) {
+        // 500Hz on the 24kHz level grid, 48 units peak
+        testPhase = (testPhase + 1) % 48;
+        return (UNITS_ZERO << 4)
+             + static_cast<int32_t>(lroundf(
+                 48.0f * 16.0f * sinf(2.0f * 3.14159265f * testPhase / 48.0f)));
+    }
+
     int32_t acc = 0;
     for (size_t i = 0; i < PULSE_SYMBOLS; i++)
         acc += tone.symbols[i] * pulse[tone.phase + PULSE_SPS * i];
