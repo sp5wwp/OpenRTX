@@ -14,7 +14,18 @@ PORT=${2:-/dev/ttyUSB0}
 DIR=$(dirname "$0")
 ROOT=$DIR/../../../..
 
-python3 "$ROOT/scripts/rt950_flash.py" upload "$PORT" "$BTF"
+# From OpenRTX the first attempt often only restarts the radio into the
+# bootloader; the next one then uploads within its start-up window
+n=0
+until python3 "$ROOT/scripts/rt950_flash.py" upload "$PORT" "$BTF" 2>&1 \
+        | tr '\r' '\n' | grep -q "upload complete"; do
+    n=$((n + 1))
+    if [ $n -ge 3 ]; then
+        echo "upload failed" >&2
+        exit 1
+    fi
+done
+echo "Firmware upload complete"
 
 # OpenRTX answers the monitor once it has started; the stock firmware does not
 i=0
