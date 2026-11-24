@@ -79,29 +79,17 @@ void BatteryIcon::paint(DrawCtx &d, const Rect &area, uint8_t charge)
                  static_cast<uint16_t>(nubH) },
                Sem::OnSurface);
 
-    /* The outline: a rounded body hollowed in the bar colour, with square
-     * right corners beside the terminal. */
+    /* The outline: a body with rounded corners all round, hollowed in the
+     * bar colour. */
     d.fillRoundRect({ bx, by, static_cast<uint16_t>(bodyW),
                       static_cast<uint16_t>(H) },
                     r, Sem::OnSurface);
-    d.fillRect({ static_cast<int16_t>(right - r), by, r, r }, Sem::OnSurface);
-    d.fillRect({ static_cast<int16_t>(right - r),
-                 static_cast<int16_t>(by + H - r), r, r },
-               Sem::OnSurface);
 
     const uint16_t ir = (r > 0u) ? static_cast<uint16_t>(r - 1u) : 0u;
     d.fillRoundRect(
         { static_cast<int16_t>(bx + 1), static_cast<int16_t>(by + 1),
           static_cast<uint16_t>(bodyW - 2), static_cast<uint16_t>(H - 2) },
         ir, Sem::Surface);
-    if (ir > 0u) {
-        d.fillRect({ static_cast<int16_t>(right - 1 - ir),
-                     static_cast<int16_t>(by + 1), ir, ir },
-                   Sem::Surface);
-        d.fillRect({ static_cast<int16_t>(right - 1 - ir),
-                     static_cast<int16_t>(by + H - 1 - ir), ir, ir },
-                   Sem::Surface);
-    }
 
     /* The charge fills from the left. */
     const int innerW = bodyW - 2 * FILL_INSET;
