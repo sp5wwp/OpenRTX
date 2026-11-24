@@ -58,6 +58,9 @@ set_source_files_properties(${RT950PRO_M17_SOURCES}
 
 zephyr_linker_sources(ROM_START SORT_KEY 0x3rt950 rt950pro_model_sig.ld)
 
+# Time-critical code within the zero-wait Flash, after the signatures
+zephyr_linker_sources(ROM_START SORT_KEY 0x5hot rt950pro_hot_code.ld)
+
 # Package the raw binary in the .BTF format accepted by the vendor bootloader
 set(RT950PRO_BTF ${CMAKE_BINARY_DIR}/openrtx_rt950pro.BTF)
 
