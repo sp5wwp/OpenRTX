@@ -49,8 +49,8 @@ TEST_CASE("Encode and decode the broadcast address", "[m17][callsign]")
     M17::call_t broadcast = { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff };
 
     M17::call_t encoded = M17::Callsign("@ALL");
-    REQUIRE(equal(begin(encoded), end(encoded), begin(broadcast),
-                  end(broadcast)));
+    REQUIRE(
+        equal(begin(encoded), end(encoded), begin(broadcast), end(broadcast)));
 
     const char *decoded = M17::Callsign(broadcast);
     REQUIRE(strcmp(decoded, "@ALL") == 0);
