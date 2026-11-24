@@ -170,12 +170,12 @@ private:
     static constexpr size_t STREAM_BITS = PAYLOAD_BITS - LICH_BITS;
     static constexpr uint8_t MAX_SYNC_HAMM_DISTANCE = 4;
     // Viterbi path metric of a stream frame from which it is rejected, in
-    // fully confident bits (see SoftViterbi). Simulated through Gaussian
-    // noise on the symbols, it lets as many wrong decodes through as a
-    // re-encoded count of 20 bit errors, 1.5% of frames from 0.6 to 0.9 of
-    // a symbol unit of noise, and keeps 2 to 3% more of the right ones;
-    // noise alone scores 40 or more
-    static constexpr uint16_t MAX_STREAM_METRIC = 31;
+    // fully confident bits (see SoftViterbi): low enough that a wrong decode
+    // almost never passes, a stream frame carrying no CRC. Simulated through
+    // Gaussian noise on the symbols, 1 of 33000 frames from 0.4 to 1.0 of a
+    // symbol unit of noise, keeping 94% of the right ones at 0.5 and 36% at
+    // 0.6; noise alone scores 40 or more
+    static constexpr uint16_t MAX_STREAM_METRIC = 23;
 
     uint8_t lsfSegmentMap;      ///< Bitmap for LSF reassembly from LICH
     LinkSetupFrame lsf;         ///< Latest LSF received.

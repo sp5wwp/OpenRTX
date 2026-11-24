@@ -160,7 +160,7 @@ TEST_CASE("Soft decoder accepts a noisy but decodable stream frame",
         FrameDecoder dec;
         payload_t payload;
         softFrame_t soft;
-        makeNoisyStreamFrame(rng, 0.5, dec, payload, soft);
+        makeNoisyStreamFrame(rng, 0.4, dec, payload, soft);
         REQUIRE(dec.decodeFrame(soft) == FrameType::STREAM);
         REQUIRE(
             memcmp(dec.getStreamFrame().data(), payload.data(), payload.size())
@@ -252,8 +252,8 @@ TEST_CASE("Soft decoder recovers most link setup frames through noise",
 TEST_CASE("Soft decoder accepts most stream frames through noise",
           "[m17][decoder][soft]")
 {
-    // At this noise level about 87% decode correctly and pass the limit, but
-    // only 64% would pass a limit of 17.
+    // At this noise level about 94% decode correctly and pass the limit,
+    // which lets almost no wrong decode through
     static constexpr size_t TRIALS = 400;
     std::mt19937 rng(2000);
     size_t accepted = 0;
@@ -262,7 +262,7 @@ TEST_CASE("Soft decoder accepts most stream frames through noise",
         FrameDecoder dec;
         payload_t payload;
         softFrame_t soft;
-        makeNoisyStreamFrame(rng, 0.7, dec, payload, soft);
+        makeNoisyStreamFrame(rng, 0.5, dec, payload, soft);
         dec.decodeFrame(soft);
         if (memcmp(dec.getStreamFrame().data(), payload.data(), payload.size())
             == 0)
@@ -270,7 +270,32 @@ TEST_CASE("Soft decoder accepts most stream frames through noise",
     }
 
     CAPTURE(accepted);
-    REQUIRE(accepted >= TRIALS * 75 / 100);
+    REQUIRE(accepted >= TRIALS * 85 / 100);
+}
+
+TEST_CASE("Soft decoder adopts no wrong stream payload through noise",
+          "[m17][decoder][soft]")
+{
+    // At this noise level about one frame in seven decodes wrong: each frame
+    // either decodes right or leaves the previous payload in place
+    static constexpr size_t TRIALS = 400;
+    std::mt19937 rng(3000);
+
+    for (size_t t = 0; t < TRIALS; t++) {
+        FrameDecoder dec;
+        payload_t payload;
+        softFrame_t soft;
+        makeNoisyStreamFrame(rng, 0.7, dec, payload, soft);
+
+        payload_t before;
+        memcpy(before.data(), dec.getStreamFrame().data(), before.size());
+        dec.decodeFrame(soft);
+
+        const uint8_t *now = dec.getStreamFrame().data();
+        const bool right = memcmp(now, payload.data(), payload.size()) == 0;
+        const bool kept = memcmp(now, before.data(), before.size()) == 0;
+        REQUIRE((right || kept));
+    }
 }
 
 TEST_CASE("Soft decoder assembles the LSF from the LICH through noise",
