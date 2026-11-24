@@ -30,8 +30,9 @@ BUILD_ASSERT(DT_PROP(DISPLAY_NODE, height) == CONFIG_SCREEN_HEIGHT);
 /*
  * Fast 8080 bus write path.
  *
- * Commands are sent through the Zephyr MIPI DBI bit-bang driver, while pixel
- * data is streamed by writing directly the set/clear register of the bus
+ * The panel's initialisation goes through the Zephyr MIPI DBI bit-bang
+ * driver. The commands of a redraw and the pixel data are written directly
+ * to the set/clear register of the bus
  * GPIO port: a single write puts a byte on the data lines and drives WR low,
  * a second one drives WR high, latching the byte. This is about ten times
  * faster than the generic bit-bang driver, which matters because the OpenRTX
@@ -76,10 +77,6 @@ BUILD_ASSERT((DT_GPIO_FLAGS(MIPI_NODE, cs_gpios) & GPIO_ACTIVE_LOW) != 0);
 #define CMD_RAMWR 0x2C
 
 static const struct device *const displayDev = DEVICE_DT_GET(DISPLAY_NODE);
-static const struct device *const mipiDev = DEVICE_DT_GET(MIPI_NODE);
-static const struct mipi_dbi_config dbiConfig = {
-    .mode = MIPI_DBI_MODE_8080_BUS_8_BIT,
-};
 
 static bool displayReady;
 static uint8_t backlightLevel;
@@ -171,6 +168,24 @@ static void busSetFastOutputs()
 }
 
 /*
+ * Send a command and its parameters with the same timed strobes as the pixel
+ * data. The Zephyr MIPI DBI bit-bang driver spaces its strobes by the time
+ * its GPIO calls take, which shrinks with a faster CPU.
+ */
+static void busCommand(uint8_t cmd, const uint8_t *params, size_t len)
+{
+    busPortWrite(PIN_CLR(BUS_DC_PIN) | PIN_SET(BUS_WR_PIN));
+    busPortWrite(PIN_CLR(BUS_CS_PIN));
+    busWrite(cmd);
+
+    busPortWrite(PIN_SET(BUS_DC_PIN));
+    for (size_t i = 0; i < len; i++)
+        busWrite(params[i]);
+
+    busPortWrite(PIN_SET(BUS_CS_PIN));
+}
+
+/*
  * Set the panel memory window and start a memory write: the pixel data has
  * to be sent right after, between busStartData() and busEndData().
  */
@@ -181,9 +196,9 @@ static void setWindow(uint16_t x, uint16_t y, uint16_t w, uint16_t h)
     uint8_t col[] = { x >> 8, x & 0xFF, xEnd >> 8, xEnd & 0xFF };
     uint8_t row[] = { y >> 8, y & 0xFF, yEnd >> 8, yEnd & 0xFF };
 
-    mipi_dbi_command_write(mipiDev, &dbiConfig, CMD_CASET, col, sizeof(col));
-    mipi_dbi_command_write(mipiDev, &dbiConfig, CMD_RASET, row, sizeof(row));
-    mipi_dbi_command_write(mipiDev, &dbiConfig, CMD_RAMWR, NULL, 0);
+    busCommand(CMD_CASET, col, sizeof(col));
+    busCommand(CMD_RASET, row, sizeof(row));
+    busCommand(CMD_RAMWR, NULL, 0);
 }
 
 /*
